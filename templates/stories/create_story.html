@@ -1,0 +1,724 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }} - HasanPortfolio{% endblock %}
+
+{% block content %}
+    <div class="story-form-wrapper">
+        <div class="container story-form-container">
+            <!-- Form Header -->
+            <div class="form-header">
+                <div class="header-content">
+                    <div class="header-icon">
+                        <i class="fas fa-pen-fancy"></i>
+                    </div>
+                    <div>
+                        <h1 class="form-title">{{ title }}</h1>
+                        <p class="form-subtitle">Share your knowledge and inspire others</p>
+                    </div>
+                </div>
+                <a href="{% url 'stories:story_list' %}" class="btn-back">
+                    <i class="fas fa-arrow-left me-2"></i>Back to Stories
+                </a>
+            </div>
+
+            <!-- Error Messages -->
+            {% if form.errors %}
+                <div class="error-banner">
+                    <div class="error-icon">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                    <div class="error-content">
+                        <strong>Please correct the following errors:</strong>
+                        <ul>
+                            {% for field, errors in form.errors.items %}
+                                {% for error in errors %}
+                                    <li>{{ field|title }}: {{ error }}</li>
+                                {% endfor %}
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            {% endif %}
+
+            <div class="form-layout">
+                <!-- Main Form -->
+                <div class="form-main">
+                    <form method="post" enctype="multipart/form-data" class="story-form" id="story-form">
+                        {% csrf_token %}
+
+                        <!-- Title Section -->
+                        <div class="form-section">
+                            <div class="section-header">
+                                <h2 class="section-title">
+                                    <i class="fas fa-heading me-2"></i>Story Title
+                                </h2>
+                                <p class="section-description">Write a compelling title that captures your story</p>
+                            </div>
+                            <div class="form-group">
+                                <label for="{{ form.title.id_for_label }}" class="form-label">
+                                    Title <span class="required">*</span>
+                                </label>
+                                {{ form.title }}
+                                <div class="form-hint">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    Make it clear, engaging, and descriptive (max 200 characters)
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Summary Section -->
+                        <div class="form-section">
+                            <div class="section-header">
+                                <h2 class="section-title">
+                                    <i class="fas fa-align-left me-2"></i>Summary
+                                </h2>
+                                <p class="section-description">Provide a brief overview of your story</p>
+                            </div>
+                            <div class="form-group">
+                                <label for="{{ form.summary.id_for_label }}" class="form-label">
+                                    Summary
+                                </label>
+                                {{ form.summary }}
+                                <div class="form-hint">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    This will appear in story previews and search results
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Content Section -->
+                        <div class="form-section">
+                            <div class="section-header">
+                                <h2 class="section-title">
+                                    <i class="fas fa-file-alt me-2"></i>Story Content
+                                </h2>
+                                <p class="section-description">Write your full story with all the details</p>
+                            </div>
+                            <div class="form-group">
+                                <label for="{{ form.content.id_for_label }}" class="form-label">
+                                    Content <span class="required">*</span>
+                                </label>
+                                {{ form.content }}
+                                <div class="form-hint">
+                                    <i class="fas fa-lightbulb me-1"></i>
+                                    Tip: Use clear paragraphs and formatting to make your content easy to read
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Featured Image Section -->
+                        <div class="form-section">
+                            <div class="section-header">
+                                <h2 class="section-title">
+                                    <i class="fas fa-image me-2"></i>Featured Image
+                                </h2>
+                                <p class="section-description">Add a visual to make your story stand out</p>
+                            </div>
+                            <div class="form-group">
+                                <label for="{{ form.featured_image.id_for_label }}" class="form-label">
+                                    Upload Image
+                                </label>
+                                <div class="file-upload-wrapper">
+                                    {{ form.featured_image }}
+                                    <div class="file-upload-info">
+                                        <i class="fas fa-cloud-upload-alt upload-icon"></i>
+                                        <p class="upload-text">Click to upload or drag and drop</p>
+                                        <span class="upload-hint">PNG, JPG, or GIF (Max 5MB)</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Category & Tags Section -->
+                        <div class="form-section">
+                            <div class="section-header">
+                                <h2 class="section-title">
+                                    <i class="fas fa-tags me-2"></i>Categorization
+                                </h2>
+                                <p class="section-description">Help readers discover your story</p>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="{{ form.category.id_for_label }}" class="form-label">
+                                        Category
+                                    </label>
+                                    {{ form.category }}
+                                    <div class="form-hint">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        Select the primary category
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="{{ form.tags.id_for_label }}" class="form-label">
+                                        Tags
+                                    </label>
+                                    {{ form.tags }}
+                                    <div class="form-hint">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        Separate with commas (e.g., python, machine-learning)
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Form Actions -->
+                        <div class="form-actions">
+                            <button type="submit" class="btn-submit">
+                                <i class="fas fa-paper-plane me-2"></i>
+                                Publish Story
+                            </button>
+                            <button type="submit" name="save_draft" class="btn-draft">
+                                <i class="fas fa-save me-2"></i>
+                                Save as Draft
+                            </button>
+                            <a href="{% url 'stories:story_list' %}" class="btn-cancel">
+                                Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Sidebar Tips -->
+                <aside class="form-sidebar">
+                    <div class="tip-card">
+                        <div class="tip-icon">
+                            <i class="fas fa-lightbulb"></i>
+                        </div>
+                        <h3>Writing Tips</h3>
+                        <ul class="tips-list">
+                            <li>
+                                <i class="fas fa-check"></i>
+                                Start with a clear, engaging introduction
+                            </li>
+                            <li>
+                                <i class="fas fa-check"></i>
+                                Use headings to organize your content
+                            </li>
+                            <li>
+                                <i class="fas fa-check"></i>
+                                Include examples and code snippets
+                            </li>
+                            <li>
+                                <i class="fas fa-check"></i>
+                                End with key takeaways
+                            </li>
+                            <li>
+                                <i class="fas fa-check"></i>
+                                Proofread before publishing
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div class="tip-card card-info">
+                        <div class="info-icon">
+                            <i class="fas fa-question-circle"></i>
+                        </div>
+                        <h3>Need Help?</h3>
+                        <p>Check out our <a href="#">writing guide</a> for more detailed tips on creating great content.
+                        </p>
+                    </div>
+
+                    <div class="tip-card card-preview">
+                        <div class="preview-icon">
+                            <i class="fas fa-eye"></i>
+                        </div>
+                        <h3>Preview</h3>
+                        <p>Your story will be reviewed before going live. We'll notify you once it's published.</p>
+                    </div>
+                </aside>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .story-form-wrapper {
+            background: #f8fafc;
+            min-height: 100vh;
+            padding: 2rem 0 3rem;
+        }
+
+        .story-form-container {
+            max-width: 1400px;
+        }
+
+        /* Form Header */
+        .form-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+        }
+
+        .header-content {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .header-icon {
+            width: 64px;
+            height: 64px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 2rem;
+        }
+
+        .form-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1e293b;
+            margin: 0;
+        }
+
+        .form-subtitle {
+            color: #64748b;
+            margin: 0.25rem 0 0 0;
+        }
+
+        .btn-back {
+            padding: 0.875rem 1.5rem;
+            background: white;
+            color: #667eea;
+            border: 2px solid #667eea;
+            border-radius: 12px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+        }
+
+        .btn-back:hover {
+            background: #667eea;
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+        }
+
+        /* Error Banner */
+        .error-banner {
+            background: #fee2e2;
+            border: 2px solid #dc2626;
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            display: flex;
+            gap: 1.5rem;
+        }
+
+        .error-icon {
+            width: 48px;
+            height: 48px;
+            background: #dc2626;
+            color: white;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            flex-shrink: 0;
+        }
+
+        .error-content {
+            flex: 1;
+        }
+
+        .error-content strong {
+            display: block;
+            color: #991b1b;
+            font-size: 1.125rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .error-content ul {
+            margin: 0;
+            padding-left: 1.5rem;
+            color: #b91c1c;
+        }
+
+        /* Form Layout */
+        .form-layout {
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: 2rem;
+        }
+
+        /* Main Form */
+        .form-main {
+            background: white;
+            border-radius: 20px;
+            padding: 3rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e2e8f0;
+        }
+
+        .form-section {
+            margin-bottom: 3rem;
+            padding-bottom: 3rem;
+            border-bottom: 2px solid #f1f5f9;
+        }
+
+        .form-section:last-of-type {
+            border-bottom: none;
+            margin-bottom: 2rem;
+            padding-bottom: 0;
+        }
+
+        .section-header {
+            margin-bottom: 1.5rem;
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #1e293b;
+            margin: 0 0 0.5rem 0;
+            display: flex;
+            align-items: center;
+        }
+
+        .section-title i {
+            color: #667eea;
+        }
+
+        .section-description {
+            color: #64748b;
+            margin: 0;
+            font-size: 0.9375rem;
+        }
+
+        /* Form Groups */
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-label {
+            display: block;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 0.75rem;
+            font-size: 1rem;
+        }
+
+        .required {
+            color: #dc2626;
+            margin-left: 0.25rem;
+        }
+
+        .story-form input[type="text"],
+        .story-form select,
+        .story-form textarea {
+            width: 100%;
+            padding: 0.875rem 1rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-family: inherit;
+            transition: all 0.3s;
+        }
+
+        .story-form input:focus,
+        .story-form select:focus,
+        .story-form textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .story-form textarea {
+            min-height: 300px;
+            resize: vertical;
+            line-height: 1.6;
+        }
+
+        .form-hint {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            margin-top: 0.5rem;
+            font-size: 0.875rem;
+            color: #64748b;
+        }
+
+        .form-hint i {
+            color: #667eea;
+        }
+
+        /* File Upload */
+        .file-upload-wrapper {
+            position: relative;
+        }
+
+        .file-upload-wrapper input[type="file"] {
+            position: absolute;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+
+        .file-upload-info {
+            padding: 3rem 2rem;
+            border: 2px dashed #cbd5e1;
+            border-radius: 16px;
+            text-align: center;
+            background: #f8fafc;
+            transition: all 0.3s;
+        }
+
+        .file-upload-wrapper:hover .file-upload-info {
+            border-color: #667eea;
+            background: #f0f4ff;
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            color: #cbd5e1;
+            margin-bottom: 1rem;
+        }
+
+        .upload-text {
+            font-weight: 600;
+            color: #1e293b;
+            margin: 0 0 0.5rem 0;
+        }
+
+        .upload-hint {
+            font-size: 0.875rem;
+            color: #64748b;
+        }
+
+        /* Form Row */
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+
+        /* Form Actions */
+        .form-actions {
+            display: flex;
+            gap: 1rem;
+            padding-top: 2rem;
+            border-top: 2px solid #f1f5f9;
+        }
+
+        .btn-submit,
+        .btn-draft,
+        .btn-cancel {
+            padding: 1rem 2rem;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            text-decoration: none;
+            border: none;
+        }
+
+        .btn-submit {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .btn-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-draft {
+            background: white;
+            color: #667eea;
+            border: 2px solid #667eea;
+        }
+
+        .btn-draft:hover {
+            background: #f0f4ff;
+        }
+
+        .btn-cancel {
+            background: white;
+            color: #64748b;
+            border: 2px solid #e2e8f0;
+        }
+
+        .btn-cancel:hover {
+            border-color: #cbd5e1;
+            color: #1e293b;
+        }
+
+        /* Sidebar */
+        .form-sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .tip-card {
+            background: white;
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e2e8f0;
+        }
+
+        .tip-card h3 {
+            font-size: 1.125rem;
+            font-weight: 700;
+            color: #1e293b;
+            margin: 0 0 1rem 0;
+        }
+
+        .tip-icon,
+        .info-icon,
+        .preview-icon {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .tips-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .tips-list li {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            color: #475569;
+            font-size: 0.9375rem;
+            line-height: 1.6;
+        }
+
+        .tips-list i {
+            color: #10b981;
+            margin-top: 0.25rem;
+            flex-shrink: 0;
+        }
+
+        .card-info {
+            background: linear-gradient(135deg, #e0e7ff, #f0f4ff);
+            border-color: #667eea;
+        }
+
+        .card-info .info-icon {
+            background: #667eea;
+        }
+
+        .card-info p {
+            color: #475569;
+            line-height: 1.6;
+            margin: 0;
+        }
+
+        .card-info a {
+            color: #667eea;
+            font-weight: 600;
+            text-decoration: none;
+        }
+
+        .card-info a:hover {
+            text-decoration: underline;
+        }
+
+        .card-preview {
+            background: linear-gradient(135deg, #fef3c7, #fef9e5);
+            border-color: #f59e0b;
+        }
+
+        .card-preview .preview-icon {
+            background: #f59e0b;
+        }
+
+        .card-preview p {
+            color: #78350f;
+            line-height: 1.6;
+            margin: 0;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1200px) {
+            .form-layout {
+                grid-template-columns: 1fr;
+            }
+
+            .form-sidebar {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            }
+        }
+
+        @media (max-width: 768px) {
+            .form-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .header-content {
+                width: 100%;
+            }
+
+            .btn-back {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .form-main {
+                padding: 2rem 1.5rem;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .form-actions {
+                flex-direction: column;
+            }
+
+            .btn-submit,
+            .btn-draft,
+            .btn-cancel {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .form-sidebar {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .form-title {
+                font-size: 1.75rem;
+            }
+
+            .header-icon {
+                width: 56px;
+                height: 56px;
+                font-size: 1.75rem;
+            }
+        }
+    </style>
+{% endblock %}

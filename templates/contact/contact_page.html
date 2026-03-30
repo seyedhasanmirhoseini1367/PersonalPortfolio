@@ -1,0 +1,400 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Contact - HasanPortfolio{% endblock %}
+
+{% block extra_css %}
+    <style>
+        /* Contact Page Styles */
+        .contact-hero {
+            text-align: center;
+            padding: 3rem 0;
+            margin-bottom: 3rem;
+        }
+
+        .contact-title {
+            font-size: 3rem;
+            color: #1e293b;
+            margin-bottom: 1rem;
+            font-weight: 700;
+        }
+
+        .contact-subtitle {
+            font-size: 1.2rem;
+            color: #64748b;
+            max-width: 600px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        .contact-layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4rem;
+            margin-bottom: 4rem;
+        }
+
+        /* Contact Methods Section */
+        .contact-methods {
+            background: white;
+            padding: 2.5rem;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .methods-title {
+            font-size: 1.8rem;
+            color: #1e293b;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        .methods-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .method-card {
+            display: flex;
+            align-items: center;
+            padding: 1.5rem;
+            background: #f8fafc;
+            border-radius: 10px;
+            transition: all 0.3s;
+            border: 1px solid #e2e8f0;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .method-card:hover {
+            background: #ffffff;
+            transform: translateX(5px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            border-color: #2563eb;
+        }
+
+        .method-icon {
+            font-size: 2rem;
+            margin-right: 1.5rem;
+            width: 60px;
+            text-align: center;
+        }
+
+        .method-content {
+            flex: 1;
+        }
+
+        .method-platform {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 0.3rem;
+        }
+
+        .method-username {
+            color: #64748b;
+            font-size: 0.9rem;
+        }
+
+        .method-description {
+            color: #64748b;
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+        }
+
+        /* Contact Form Section */
+        .contact-form-section {
+            background: white;
+            padding: 2.5rem;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .form-title {
+            font-size: 1.8rem;
+            color: #1e293b;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: #374151;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        textarea.form-control {
+            resize: vertical;
+            min-height: 120px;
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 1rem;
+            background: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .submit-btn:hover {
+            background: #1d4ed8;
+        }
+
+        .submit-btn:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+
+        /* Messages/Alerts */
+        .alert {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+        }
+
+        .alert-success {
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+        }
+
+        .alert-error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+
+        /* Availability Section */
+        .availability-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 3rem;
+            border-radius: 15px;
+            text-align: center;
+            margin-top: 3rem;
+        }
+
+        .availability-title {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        .availability-text {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            margin-bottom: 1.5rem;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            line-height: 1.6;
+        }
+
+        .response-badge {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 0.8rem 1.5rem;
+            border-radius: 25px;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 968px) {
+            .contact-layout {
+                grid-template-columns: 1fr;
+                gap: 2rem;
+            }
+
+            .contact-title {
+                font-size: 2.5rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .contact-methods,
+            .contact-form-section {
+                padding: 2rem 1.5rem;
+            }
+
+            .method-card {
+                padding: 1rem;
+            }
+
+            .method-icon {
+                font-size: 1.5rem;
+                margin-right: 1rem;
+                width: 50px;
+            }
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+    <!-- Contact Hero Section -->
+    <section class="contact-hero">
+        <div class="container">
+            <h1 class="contact-title">Get In Touch</h1>
+            <p class="contact-subtitle">
+                I'm always excited to connect with fellow data enthusiasts, discuss new opportunities,
+                or collaborate on interesting projects. Reach out through any method below!
+            </p>
+        </div>
+    </section>
+
+    <!-- Messages/Alerts -->
+    <div class="container">
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+    </div>
+
+    <!-- Main Contact Content -->
+    <div class="container">
+        <div class="contact-layout">
+            <!-- Contact Methods -->
+            <section class="contact-methods">
+                <h2 class="methods-title">Connect With Me</h2>
+                <div class="methods-grid">
+                    {% for contact in contact_profiles %}
+                        <a href="{{ contact.url }}" target="_blank" class="method-card">
+                            <div class="method-icon">
+                                {% if contact.platform == 'GITHUB' %}💻
+                                {% elif contact.platform == 'LINKEDIN' %}💼
+                                {% elif contact.platform == 'KAGGLE' %}🏆
+                                {% elif contact.platform == 'EMAIL' %}📧
+                                {% else %}🔗{% endif %}
+                            </div>
+                            <div class="method-content">
+                                <div class="method-platform">{{ contact.display_name }}</div>
+                                {% if contact.username %}
+                                    <div class="method-username">@{{ contact.username }}</div>
+                                {% endif %}
+                                {% if contact.description %}
+                                    <div class="method-description">{{ contact.description }}</div>
+                                {% endif %}
+                            </div>
+                        </a>
+                    {% empty %}
+                        <div class="method-card">
+                            <div class="method-content">
+                                <div class="method-platform">No contact methods configured</div>
+                                <div class="method-description">Please add contact methods in the admin panel.</div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </section>
+
+            <!-- Contact Form -->
+            <section class="contact-form-section">
+                <h2 class="form-title">Send Me a Message</h2>
+                <form method="post" class="contact-form">
+                    {% csrf_token %}
+
+                    <div class="form-group">
+                        <label for="id_name" class="form-label">Your Name *</label>
+                        {{ form.name }}
+                        {% if form.name.errors %}
+                            <div class="error-text" style="color: #dc2626; font-size: 0.9rem; margin-top: 0.5rem;">
+                                {{ form.name.errors }}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="form-group">
+                        <label for="id_email" class="form-label">Email Address *</label>
+                        {{ form.email }}
+                        {% if form.email.errors %}
+                            <div class="error-text" style="color: #dc2626; font-size: 0.9rem; margin-top: 0.5rem;">
+                                {{ form.email.errors }}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="form-group">
+                        <label for="id_subject" class="form-label">Subject *</label>
+                        {{ form.subject }}
+                        {% if form.subject.errors %}
+                            <div class="error-text" style="color: #dc2626; font-size: 0.9rem; margin-top: 0.5rem;">
+                                {{ form.subject.errors }}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="form-group">
+                        <label for="id_message" class="form-label">Your Message *</label>
+                        {{ form.message }}
+                        {% if form.message.errors %}
+                            <div class="error-text" style="color: #dc2626; font-size: 0.9rem; margin-top: 0.5rem;">
+                                {{ form.message.errors }}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <button type="submit" class="submit-btn">
+                        Send Message
+                    </button>
+                </form>
+            </section>
+        </div>
+
+        <!-- Availability Section -->
+        {% if contact_settings %}
+            <section class="availability-section">
+                <h2 class="availability-title">Let's Create Something Amazing</h2>
+                <p class="availability-text">
+                    {{ contact_settings.availability_message }}
+                </p>
+                <div class="response-badge">
+                    ⏱️ Typical response time: {{ contact_settings.response_time }}
+                </div>
+            </section>
+        {% endif %}
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+    <script>
+        // Add loading state to form submission
+        document.addEventListener('DOMContentLoaded', function () {
+            const form = document.querySelector('.contact-form');
+            const submitBtn = form.querySelector('.submit-btn');
+
+            form.addEventListener('submit', function () {
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Sending...';
+            });
+        });
+    </script>
+{% endblock %}

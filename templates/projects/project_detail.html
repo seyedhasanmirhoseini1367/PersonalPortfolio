@@ -1,0 +1,627 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ project.title }} - HasanPortfolio{% endblock %}
+
+{% block extra_css %}
+    <style>
+        /* Project Detail Styles */
+        .project-detail-header {
+            background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+            color: white;
+            padding: 3rem 0;
+            border-radius: 15px;
+            margin-bottom: 3rem;
+        }
+
+        .project-title {
+            font-size: 2.8rem;
+            margin-bottom: 1rem;
+            font-weight: 700;
+            text-align: center;
+        }
+
+        .project-short-desc {
+            font-size: 1.3rem;
+            opacity: 0.9;
+            margin-bottom: 2rem;
+            {#max-width: 800px;#}
+            text-align: center;
+        }
+
+        .project-meta-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .meta-item {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 1rem;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .meta-label {
+            display: block;
+            font-size: 0.9rem;
+            opacity: 0.8;
+            margin-bottom: 0.5rem;
+        }
+
+        .meta-value {
+            display: block;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        /* Content Sections */
+        .content-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 3rem;
+        }
+
+        .main-content {
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        .sidebar-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .section {
+            margin-bottom: 3rem;
+        }
+
+        .section:last-child {
+            margin-bottom: 0;
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            color: #1e293b;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 3px solid #2563eb;
+        }
+
+        .section-content {
+            line-height: 1.7;
+            color: #475569;
+        }
+
+        /* Skills & Links */
+        .skills-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.8rem;
+            margin-top: 1rem;
+        }
+
+        .skill-tag {
+            background: #e0f2fe;
+            color: #0369a1;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .links-container {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .project-link {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            padding: 1rem;
+            background: #f8fafc;
+            border-radius: 8px;
+            text-decoration: none;
+            color: #475569;
+            transition: all 0.3s;
+            border: 1px solid #e2e8f0;
+        }
+
+        .project-link:hover {
+            background: #2563eb;
+            color: white;
+            transform: translateX(5px);
+        }
+
+        .link-icon {
+            font-size: 1.2rem;
+        }
+
+        /* Metrics */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .metric-card {
+            background: #f0f9ff;
+            padding: 1.5rem;
+            border-radius: 10px;
+            text-align: center;
+            border-left: 4px solid #2563eb;
+        }
+
+        .metric-value {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #2563eb;
+            margin-bottom: 0.5rem;
+        }
+
+        .metric-label {
+            color: #64748b;
+            font-size: 0.9rem;
+        }
+
+        /* Prediction Section */
+        .prediction-section {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            padding: 2.5rem;
+            border-radius: 15px;
+            text-align: center;
+            margin: 3rem 0;
+        }
+
+        .prediction-content {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .prediction-title {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            font-weight: 700;
+        }
+
+        .prediction-description {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            margin-bottom: 2rem;
+            line-height: 1.6;
+        }
+
+        .prediction-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.8rem;
+            padding: 1rem 2rem;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            text-decoration: none;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 1.1rem;
+            transition: all 0.3s;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .prediction-button:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            color: white;
+        }
+
+        /* Related Projects */
+        .related-projects {
+            margin-top: 4rem;
+        }
+
+        .related-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+
+        .related-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 10px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .related-card:hover {
+            transform: translateY(-3px);
+        }
+
+        .related-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .related-type {
+            background: #f1f5f9;
+            color: #475569;
+            padding: 0.2rem 0.6rem;
+            border-radius: 10px;
+            font-size: 0.7rem;
+            display: inline-block;
+            margin-bottom: 0.5rem;
+        }
+
+        /* Back Button */
+        .back-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.8rem 1.5rem;
+            background: #64748b;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: background 0.3s;
+            margin-top: 2rem;
+        }
+
+        .back-button:hover {
+            background: #475569;
+            color: white;
+        }
+
+        /* Responsive */
+        @media (max-width: 968px) {
+            .content-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .project-title {
+                font-size: 2.2rem;
+            }
+
+            .project-meta-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .project-meta-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .prediction-section {
+                padding: 2rem 1.5rem;
+            }
+
+            .prediction-title {
+                font-size: 1.6rem;
+            }
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+    <!-- Project Header -->
+    <section class="project-detail-header">
+        <div class="container">
+            <h1 class="project-title">{{ project.title }}</h1>
+
+            {% if project.short_description %}
+                <p class="project-short-desc" >{{ project.short_description }}</p>
+            {% endif %}
+
+            <div class="project-meta-grid">
+                <div class="meta-item">
+                    <span class="meta-label">Model Type</span>
+                    <span class="meta-value">{{ project.model_type }}</span>
+                </div>
+
+                <div class="meta-item">
+                    <span class="meta-label">Evaluation Metric</span>
+                    <span class="meta-value">{{ project.evaluation_metric }}</span>
+                </div>
+
+                <div class="meta-item">
+                    <span class="meta-label">Accuracy score</span>
+                    <span class="meta-value">{{ project.accuracy_score }}</span>
+                </div>
+
+
+                <div class="meta-item">
+                    <span class="meta-label">Difficulty</span>
+                    <span class="meta-value">{{ project.get_difficulty_level_display }}</span>
+                </div>
+
+{#                <div class="meta-item">#}
+{#                    <span class="meta-label">Data Type</span>#}
+{#                    <span class="meta-value">{{ project.get_data_type_display }}</span>#}
+{#                </div>#}
+
+                {% if project.start_date %}
+                    <div class="meta-item">
+                        <span class="meta-label">Timeline</span>
+                        <span class="meta-value">
+                    {{ project.start_date|date:"M Y" }}
+                            {% if project.end_date %} - {{ project.end_date|date:"M Y" }}{% endif %}
+                </span>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </section>
+
+    <div class="container">
+        <!-- Prediction Section -->
+        {% if project.has_prediction_capability %}
+            <section class="prediction-section">
+                <div class="prediction-content">
+                    <h2 class="prediction-title">🚀 Live Prediction Demo</h2>
+                    <p class="prediction-description">
+                        Experience this machine learning model in action! Enter your own data and get real-time
+                        predictions.
+                        Test the model's capabilities with custom inputs and see how it performs.
+                    </p>
+                    <a href="{% url 'prediction_demo' project.id %}" class="prediction-button">
+                        <span>Try Live Prediction</span>
+                        <span>→</span>
+                    </a>
+                </div>
+            </section>
+        {% endif %}
+    </div>
+
+    <div class="content-grid">
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Description Section -->
+            <section class="section">
+                <h2 class="section-title">Project Overview</h2>
+                <div class="section-content">
+                    {{ project.description|linebreaks }}
+                </div>
+            </section>
+
+            <!-- Business Problem -->
+            {% if project.business_problem %}
+                <section class="section">
+                    <h2 class="section-title">Business Problem</h2>
+                    <div class="section-content">
+                        {{ project.business_problem|linebreaks }}
+                    </div>
+                </section>
+            {% endif %}
+
+            <!-- Technical Approach -->
+            {% if project.technical_approach %}
+                <section class="section">
+                    <h2 class="section-title">Technical Approach</h2>
+                    <div class="section-content">
+                        {{ project.technical_approach|linebreaks }}
+                    </div>
+                </section>
+            {% endif %}
+
+            <!-- Challenges -->
+            {% if project.challenges %}
+                <section class="section">
+                    <h2 class="section-title">Challenges & Solutions</h2>
+                    <div class="section-content">
+                        {{ project.challenges|linebreaks }}
+                    </div>
+                </section>
+            {% endif %}
+
+            <!-- Key Achievements -->
+            {% if project.key_achievements %}
+                <section class="section">
+                    <h2 class="section-title">Key Achievements</h2>
+                    <div class="section-content">
+                        {{ project.key_achievements|linebreaks }}
+                    </div>
+                </section>
+            {% endif %}
+
+            <!-- Lessons Learned -->
+            {% if project.lessons_learned %}
+                <section class="section">
+                    <h2 class="section-title">Lessons Learned</h2>
+                    <div class="section-content">
+                        {{ project.lessons_learned|linebreaks }}
+                    </div>
+                </section>
+            {% endif %}
+        </div>
+
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <!-- Project Links -->
+            <div class="sidebar-card">
+                <h3 style="margin-bottom: 1rem; color: #1e293b;">Project Links</h3>
+                <div class="links-container">
+                    {% if project.github_url %}
+                        <a href="{{ project.github_url }}" target="_blank" class="project-link">
+                            <span class="link-icon">💻</span>
+                            <span>GitHub Repository</span>
+                        </a>
+                    {% endif %}
+
+                    {% if project.kaggle_url %}
+                        <a href="{{ project.kaggle_url }}" target="_blank" class="project-link">
+                            <span class="link-icon">🏆</span>
+                            <span>Kaggle Notebook</span>
+                        </a>
+                    {% endif %}
+
+                    {% if project.live_demo_url %}
+                        <a href="{{ project.live_demo_url }}" target="_blank" class="project-link">
+                            <span class="link-icon">🚀</span>
+                            <span>Live Demo</span>
+                        </a>
+                    {% endif %}
+
+                    {% if project.dataset_url %}
+                        <a href="{{ project.dataset_url }}" target="_blank" class="project-link">
+                            <span class="link-icon">📊</span>
+                            <span>Dataset Source</span>
+                        </a>
+                    {% endif %}
+
+                    <!-- Prediction Demo Link in Sidebar -->
+                    {% if project.has_prediction_capability %}
+                        <a href="{% url 'prediction_demo' project.id %}" class="project-link"
+                           style="background: #ecfdf5; border-color: #10b981;">
+                            <span class="link-icon">🤖</span>
+                            <span>Live Prediction Demo</span>
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Skills Used -->
+            <div class="sidebar-card">
+                <h3 style="margin-bottom: 1rem; color: #1e293b;">Skills & Technologies</h3>
+                <div class="skills-container">
+                    {% for skill in skills_display %}
+                        <span class="skill-tag">{{ skill }}</span>
+                    {% endfor %}
+                </div>
+
+                {% if project.libraries_used %}
+                    <div style="margin-top: 1rem;">
+                        <h4 style="margin-bottom: 0.5rem; font-size: 0.9rem; color: #64748b;">Libraries Used:</h4>
+                        <p style="font-size: 0.9rem; color: #475569;">{{ project.libraries_used }}</p>
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Performance Metrics -->
+            {% if project.accuracy_score or project.kaggle_rank %}
+                <div class="sidebar-card">
+                    <h3 style="margin-bottom: 1rem; color: #1e293b;">Performance Metrics</h3>
+                    <div class="metrics-grid">
+                        {% if project.accuracy_score %}
+                            <div class="metric-card">
+                                <div class="metric-value">{{ project.accuracy_score|floatformat:3 }}</div>
+                                <div class="metric-label">
+                                    {{ project.evaluation_metric|default:"Accuracy" }}
+                                </div>
+                            </div>
+                        {% endif %}
+
+                        {% if project.kaggle_rank %}
+                            <div class="metric-card">
+                                <div class="metric-value">#{{ project.kaggle_rank }}</div>
+                                <div class="metric-label">
+                                    Kaggle Rank
+                                    {% if kaggle_percentile %}
+                                        <br>(Top {{ kaggle_percentile }}%)
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endif %}
+
+            <!-- Model Information -->
+            {% if project.has_prediction_capability %}
+                <div class="sidebar-card">
+                    <h3 style="margin-bottom: 1rem; color: #1e293b;">Model Information</h3>
+                    <div style="display: flex; flex-direction: column; gap: 0.8rem;">
+                        {% if project.model_type %}
+                            <div>
+                                <strong>Model Type:</strong><br>
+                                {{ project.get_model_type_display }}
+                            </div>
+                        {% endif %}
+
+                        {% if project.target_feature %}
+                            <div>
+                                <strong>Target Variable:</strong><br>
+                                {{ project.target_feature }}
+                            </div>
+                        {% endif %}
+
+                        {% if project.input_features %}
+                            <div>
+                                <strong>Input Features:</strong><br>
+                                {{ project.input_features|length }} features
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endif %}
+
+            <!-- Project Info -->
+            <div class="sidebar-card">
+                <h3 style="margin-bottom: 1rem; color: #1e293b;">Project Information</h3>
+                <div style="display: flex; flex-direction: column; gap: 0.8rem;">
+                    {% if project.time_spent %}
+                        <div>
+                            <strong>Time Spent:</strong><br>
+                            {{ project.time_spent }}
+                        </div>
+                    {% endif %}
+
+                    <div>
+                        <strong>Created:</strong><br>
+                        {{ project.created_at|date:"F j, Y" }}
+                    </div>
+
+                    {% if project.updated_at != project.created_at %}
+                        <div>
+                            <strong>Last Updated:</strong><br>
+                            {{ project.updated_at|date:"F j, Y" }}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Related Projects -->
+    {% if related_projects %}
+        <section class="related-projects">
+            <div class="container">
+                <h2 class="section-title" style="text-align: center;">Related Projects</h2>
+                <div class="related-grid">
+                    {% for related_project in related_projects %}
+                        <a href="{% url 'project_detail' related_project.id %}" class="related-card">
+                            <span class="related-type">{{ related_project.get_project_type_display }}</span>
+                            <h3 class="related-title">{{ related_project.title }}</h3>
+                            <p style="color: #64748b; font-size: 0.9rem;">
+                                {{ related_project.short_description|default:related_project.description|truncatewords:15 }}
+                            </p>
+                        </a>
+                    {% endfor %}
+                </div>
+            </div>
+        </section>
+    {% endif %}
+
+    <!-- Back Button -->
+    <div class="container">
+        <a href="{% url 'projects_list' %}" class="back-button">
+            ← Back to All Projects
+        </a>
+    </div>
+{% endblock %}

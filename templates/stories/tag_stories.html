@@ -1,0 +1,288 @@
+{% extends 'base.html' %}
+
+{% block title %}Stories tagged "{{ tag.name }}" - HasanPortfolio{% endblock %}
+
+{% block extra_css %}
+    <style>
+        .tag-header {
+            text-align: center;
+            margin-bottom: 3rem;
+            padding: 2rem 0;
+            background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+            color: white;
+            border-radius: 10px;
+        }
+
+        .tag-header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .tag-description {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            max-width: 600px;
+            margin: 0 auto 1.5rem;
+        }
+
+        .tag-stats {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-top: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .tag-stat {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 0.75rem 1.5rem;
+            border-radius: 20px;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .stories-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-bottom: 2rem;
+            color: #2563eb;
+            text-decoration: none;
+            font-weight: 500;
+            padding: 0.5rem 1rem;
+            border: 1px solid #2563eb;
+            border-radius: 5px;
+            transition: all 0.3s;
+        }
+
+        .back-link:hover {
+            background: #2563eb;
+            color: white;
+            text-decoration: none;
+        }
+
+        .story-card {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .story-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .story-image {
+            width: 100%;
+            height: 250px;
+            object-fit: cover;
+        }
+
+        .story-content {
+            padding: 1.5rem;
+        }
+
+        .story-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            color: #1e293b;
+        }
+
+        .story-title a {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        .story-title a:hover {
+            color: #2563eb;
+        }
+
+        .story-meta {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            color: #64748b;
+            font-size: 0.875rem;
+            flex-wrap: wrap;
+        }
+
+        .story-excerpt {
+            color: #475569;
+            line-height: 1.6;
+            margin-bottom: 1rem;
+        }
+
+        .story-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .tag {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            background: #e2e8f0;
+            color: #475569;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            text-decoration: none;
+            transition: all 0.3s;
+        }
+
+        .tag:hover {
+            background: #2563eb;
+            color: white;
+        }
+
+        .story-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 1rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .story-stats {
+            display: flex;
+            gap: 1.5rem;
+            color: #64748b;
+            font-size: 0.875rem;
+        }
+
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .read-more {
+            display: inline-block;
+            color: #2563eb;
+            font-weight: 600;
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            border: 1px solid #2563eb;
+            border-radius: 5px;
+            transition: all 0.3s;
+        }
+
+        .read-more:hover {
+            background: #2563eb;
+            color: white;
+            text-decoration: none;
+        }
+
+        .no-stories {
+            text-align: center;
+            padding: 3rem;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .no-stories h3 {
+            margin-bottom: 1rem;
+            color: #1e293b;
+        }
+
+        .no-stories p {
+            color: #64748b;
+            margin-bottom: 1.5rem;
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+    <div class="tag-header">
+        <h1>Tag: {{ tag.name }}</h1>
+        {% if tag.description %}
+            <p class="tag-description">{{ tag.description }}</p>
+        {% endif %}
+        <div class="tag-stats">
+            <div class="tag-stat">{{ stories.paginator.count }} stories in this list</div>
+            <div class="tag-stat">{{ tag.stories.count }} total stories with this tag</div>
+        </div>
+    </div>
+
+    <a href="{% url 'stories:story_list' %}" class="back-link">← Back to all stories</a>
+
+    <div class="stories-grid">
+        {% for story in stories %}
+            <article class="story-card">
+                {% if story.featured_image %}
+                    <img src="{{ story.featured_image.url }}" alt="{{ story.title }}" class="story-image">
+                {% endif %}
+                <div class="story-content">
+                    <h2 class="story-title">
+                        <a href="{% url 'stories:story_detail' pk=story.pk %}">{{ story.title }}</a>
+                    </h2>
+
+                    <div class="story-meta">
+                        <span class="author">By {{ story.author.username }}</span>
+                        <span class="date">{{ story.published_at|date:"F j, Y" }}</span>
+                        <span class="read-time">{{ story.read_time_minutes }} min read</span>
+                    </div>
+
+                    <p class="story-excerpt">
+                        {{ story.get_excerpt }}
+                    </p>
+
+                    <div class="story-tags">
+                        {% for tag in story.tags.all %}
+                            <a href="{% url 'stories:tag_stories' tag.slug %}" class="tag">{{ tag.name }}</a>
+                        {% endfor %}
+                    </div>
+
+                    <div class="story-footer">
+                        <div class="story-stats">
+                    <span class="stat-item">
+                        👁️ {{ story.view_count }} views
+                    </span>
+                            <span class="stat-item">
+                        ❤️ {{ story.likes_count }} likes
+                    </span>
+                        </div>
+                        <a href="{% url 'stories:story_detail' pk=story.pk %}" class="read-more">
+                            Read Full Story →
+                        </a>
+                    </div>
+                </div>
+            </article>
+        {% empty %}
+            <div class="no-stories">
+                <h3>No stories found with this tag.</h3>
+                <p>Check back later for new stories tagged "{{ tag.name }}".</p>
+                <a href="{% url 'stories:story_list' %}" class="btn">Browse All Stories</a>
+            </div>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if is_paginated %}
+        <div class="pagination">
+            {% if page_obj.has_previous %}
+                <a href="?page=1" class="btn btn-secondary">First</a>
+                <a href="?page={{ page_obj.previous_page_number }}" class="btn btn-secondary">Previous</a>
+            {% endif %}
+
+            <span class="current-page">
+        Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+    </span>
+
+            {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}" class="btn btn-secondary">Next</a>
+                <a href="?page={{ page_obj.paginator.num_pages }}" class="btn btn-secondary">Last</a>
+            {% endif %}
+        </div>
+    {% endif %}
+{% endblock %}

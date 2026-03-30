@@ -1,0 +1,154 @@
+{% extends 'base.html' %}
+
+{% block title %}Delete Story - HasanPortfolio{% endblock %}
+
+{% block extra_css %}
+    <style>
+        .delete-confirmation {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .delete-confirmation h1 {
+            text-align: center;
+            margin-bottom: 2rem;
+            color: #1e293b;
+            font-size: 2rem;
+        }
+
+        .confirmation-card {
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .confirmation-card h2 {
+            color: #dc2626;
+            margin-bottom: 1.5rem;
+            font-size: 1.5rem;
+            text-align: center;
+        }
+
+        .story-preview {
+            background: #f8fafc;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            border-left: 4px solid #2563eb;
+        }
+
+        .story-preview h3 {
+            margin-bottom: 0.5rem;
+            color: #1e293b;
+            font-size: 1.25rem;
+        }
+
+        .story-preview .meta {
+            color: #64748b;
+            font-size: 0.875rem;
+            margin-bottom: 1rem;
+        }
+
+        .story-preview .excerpt {
+            color: #475569;
+            line-height: 1.6;
+        }
+
+        .warning-message {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+        }
+
+        .warning-message p {
+            color: #991b1b;
+            margin: 0;
+            line-height: 1.5;
+        }
+
+        .warning-icon {
+            font-size: 1.5rem;
+            color: #dc2626;
+        }
+
+        .confirmation-form .form-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn-danger {
+            background: #dc2626;
+            border: none;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 5px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .btn-danger:hover {
+            background: #b91c1c;
+        }
+
+        @media (max-width: 768px) {
+            .delete-confirmation {
+                padding: 1rem;
+            }
+
+            .confirmation-card {
+                padding: 1.5rem;
+            }
+
+            .confirmation-form .form-actions {
+                flex-direction: column;
+            }
+
+            .confirmation-form .form-actions .btn {
+                width: 100%;
+            }
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+    <div class="delete-confirmation">
+        <h1>Delete Story</h1>
+
+        <div class="confirmation-card">
+            <h2>Are you sure you want to delete this story?</h2>
+
+            <div class="story-preview">
+                <h3>{{ story.title }}</h3>
+                <p class="meta">
+                    Published: {{ story.published_at|date:"F j, Y"|default:"Not published yet" }} |
+                    Views: {{ story.view_count }} |
+                    Likes: {{ story.likes_count }}
+                </p>
+                <p class="excerpt">{{ story.get_excerpt }}</p>
+            </div>
+
+            <div class="warning-message">
+                <div class="warning-icon">⚠️</div>
+                <p>This action cannot be undone. All comments and associated data will be permanently deleted.</p>
+            </div>
+
+            <form method="post" class="confirmation-form">
+                {% csrf_token %}
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-danger">Yes, Delete Story</button>
+                    <a href="{% url 'stories:story_detail' pk=story.pk %}" class="btn btn-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+{% endblock %}

@@ -1,0 +1,597 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Login - HasanPortfolio{% endblock %}
+
+{% block content %}
+    <div class="auth-wrapper">
+        <div class="auth-container-login">
+            <div class="auth-grid-login">
+                <!-- Left Side - Branding -->
+                <div class="auth-branding-login">
+                    <div class="branding-content-login">
+                        <div class="brand-icon-login">
+                            <i class="fas fa-book-reader"></i>
+                        </div>
+                        <h1 class="brand-title-login">Welcome Back!</h1>
+                        <p class="brand-description-login">
+                            Sign in to continue your creative journey. Access your stories,
+                            manage your content, and engage with the community.
+                        </p>
+                        <div class="stats-showcase">
+                            <div class="stat-showcase-item">
+                                <div class="stat-number">1000+</div>
+                                <div class="stat-label">Active Writers</div>
+                            </div>
+                            <div class="stat-showcase-item">
+                                <div class="stat-number">5000+</div>
+                                <div class="stat-label">Stories Published</div>
+                            </div>
+                            <div class="stat-showcase-item">
+                                <div class="stat-number">10K+</div>
+                                <div class="stat-label">Community Members</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Side - Form -->
+                <div class="auth-form-container-login">
+                    <div class="auth-form-content-login">
+                        <div class="form-header-login">
+                            <h2 class="form-title-login">Sign In</h2>
+                            <p class="form-subtitle-login">Enter your credentials to access your account</p>
+                        </div>
+
+                        {% if messages %}
+                            <div class="messages-container-login">
+                                {% for message in messages %}
+                                    <div class="alert-message-login alert-{{ message.tags }}">
+                                        <i class="fas fa-info-circle me-2"></i>
+                                        {{ message }}
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+
+                        <form method="post" class="auth-form-login" novalidate>
+                            {% csrf_token %}
+                            <input type="hidden" name="next" value="{{ next }}">
+
+                            <div class="form-group-login">
+                                <label for="{{ form.username.id_for_label }}" class="form-label-login">
+                                    <i class="fas fa-user me-2"></i>Username or Email
+                                </label>
+                                {{ form.username }}
+                                {% if form.username.errors %}
+                                    <div class="field-error-login">
+                                        {% for error in form.username.errors %}
+                                            <i class="fas fa-exclamation-circle me-1"></i>{{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <div class="form-group-login">
+                                <div class="label-with-link">
+                                    <label for="{{ form.password.id_for_label }}" class="form-label-login">
+                                        <i class="fas fa-lock me-2"></i>Password
+                                    </label>
+                                    <a href="{% url 'accounts:password_reset' %}" class="forgot-link">
+                                        Forgot Password?
+                                    </a>
+                                </div>
+                                {{ form.password }}
+                                {% if form.password.errors %}
+                                    <div class="field-error-login">
+                                        {% for error in form.password.errors %}
+                                            <i class="fas fa-exclamation-circle me-1"></i>{{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <div class="form-checkbox-login">
+                                <input type="checkbox" id="remember" name="remember">
+                                <label for="remember">Remember me for 30 days</label>
+                            </div>
+
+                            <button type="submit" class="btn-submit-login">
+                                <i class="fas fa-sign-in-alt me-2"></i>
+                                Sign In
+                            </button>
+                        </form>
+
+                        <div class="divider-login">
+                            <span>or</span>
+                        </div>
+
+                        <div class="social-login">
+                            <button class="social-btn social-btn-google">
+                                <i class="fab fa-google me-2"></i>
+                                Continue with Google
+                            </button>
+                            <button class="social-btn social-btn-github">
+                                <i class="fab fa-github me-2"></i>
+                                Continue with GitHub
+                            </button>
+                        </div>
+
+                        <div class="form-footer-login">
+                            <p class="footer-text-login">Don't have an account?</p>
+                            <a href="{% url 'accounts:register' %}{% if next %}?next={{ next }}{% endif %}"
+                               class="footer-link-login">
+                                <i class="fas fa-user-plus me-2"></i>Create New Account
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        /* Auth Wrapper */
+        .auth-wrapper {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        .auth-container-login {
+            width: 100%;
+            max-width: 1100px;
+        }
+
+        .auth-grid-login {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            background: white;
+            border-radius: 24px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Branding Side */
+        .auth-branding-login {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 3rem;
+            display: flex;
+            align-items: center;
+            color: white;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .auth-branding-login::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+            animation: pulse 15s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+                opacity: 0.5;
+            }
+            50% {
+                transform: scale(1.1);
+                opacity: 0.8;
+            }
+        }
+
+        .branding-content-login {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+        }
+
+        .brand-icon-login {
+            width: 80px;
+            height: 80px;
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            margin-bottom: 2rem;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .brand-title-login {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            line-height: 1.2;
+        }
+
+        .brand-description-login {
+            font-size: 1.125rem;
+            line-height: 1.6;
+            opacity: 0.95;
+            margin-bottom: 3rem;
+        }
+
+        .stats-showcase {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.5rem;
+        }
+
+        .stat-showcase-item {
+            text-align: center;
+            padding: 1.5rem 1rem;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .stat-number {
+            font-size: 1.75rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            font-size: 0.875rem;
+            opacity: 0.9;
+        }
+
+        /* Form Side */
+        .auth-form-container-login {
+            padding: 3rem;
+            display: flex;
+            align-items: center;
+        }
+
+        .auth-form-content-login {
+            width: 100%;
+            max-width: 420px;
+            margin: 0 auto;
+        }
+
+        .form-header-login {
+            margin-bottom: 2rem;
+        }
+
+        .form-title-login {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 0.5rem;
+        }
+
+        .form-subtitle-login {
+            color: #64748b;
+            font-size: 1rem;
+        }
+
+        /* Messages */
+        .messages-container-login {
+            margin-bottom: 1.5rem;
+        }
+
+        .alert-message-login {
+            padding: 1rem;
+            border-radius: 12px;
+            font-size: 0.875rem;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+        }
+
+        .alert-message-login.alert-success {
+            background: #d1fae5;
+            color: #065f46;
+            border-left: 4px solid #10b981;
+        }
+
+        .alert-message-login.alert-error {
+            background: #fee2e2;
+            color: #991b1b;
+            border-left: 4px solid #ef4444;
+        }
+
+        /* Form Styles */
+        .auth-form-login {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .form-group-login {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .label-with-link {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .form-label-login {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #1e293b;
+            display: flex;
+            align-items: center;
+        }
+
+        .form-label-login i {
+            color: #667eea;
+        }
+
+        .forgot-link {
+            font-size: 0.8125rem;
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.2s;
+        }
+
+        .forgot-link:hover {
+            color: #764ba2;
+            text-decoration: underline;
+        }
+
+        .auth-form-login input[type="text"],
+        .auth-form-login input[type="password"] {
+            width: 100%;
+            padding: 0.875rem 1rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 0.9375rem;
+            transition: all 0.3s ease;
+            background: #f8fafc;
+        }
+
+        .auth-form-login input:focus {
+            outline: none;
+            border-color: #667eea;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .field-error-login {
+            font-size: 0.8125rem;
+            color: #dc2626;
+            display: flex;
+            align-items: center;
+            margin-top: 0.25rem;
+        }
+
+        .form-checkbox-login {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .form-checkbox-login input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .form-checkbox-login label {
+            font-size: 0.875rem;
+            color: #64748b;
+            cursor: pointer;
+        }
+
+        .btn-submit-login {
+            width: 100%;
+            padding: 1rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: 0.5rem;
+        }
+
+        .btn-submit-login:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-submit-login:active {
+            transform: translateY(0);
+        }
+
+        /* Divider */
+        .divider-login {
+            margin: 1.5rem 0;
+            text-align: center;
+            position: relative;
+        }
+
+        .divider-login::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: #e2e8f0;
+        }
+
+        .divider-login span {
+            background: white;
+            padding: 0 1rem;
+            color: #94a3b8;
+            font-size: 0.875rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Social Login */
+        .social-login {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .social-btn {
+            width: 100%;
+            padding: 0.875rem;
+            border: 2px solid #e2e8f0;
+            background: white;
+            border-radius: 10px;
+            font-size: 0.9375rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .social-btn-google {
+            color: #ea4335;
+        }
+
+        .social-btn-google:hover {
+            background: #ea4335;
+            color: white;
+            border-color: #ea4335;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(234, 67, 53, 0.2);
+        }
+
+        .social-btn-github {
+            color: #24292e;
+        }
+
+        .social-btn-github:hover {
+            background: #24292e;
+            color: white;
+            border-color: #24292e;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(36, 41, 46, 0.2);
+        }
+
+        /* Form Footer */
+        .form-footer-login {
+            margin-top: 2rem;
+            text-align: center;
+            padding-top: 2rem;
+            border-top: 2px solid #f1f5f9;
+        }
+
+        .footer-text-login {
+            color: #64748b;
+            font-size: 0.875rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .footer-link-login {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.75rem 1.5rem;
+            background: #f8fafc;
+            color: #667eea;
+            text-decoration: none;
+            border-radius: 10px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            border: 2px solid #e2e8f0;
+        }
+
+        .footer-link-login:hover {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 992px) {
+            .auth-grid-login {
+                grid-template-columns: 1fr;
+            }
+
+            .auth-branding-login {
+                padding: 2rem;
+                min-height: auto;
+            }
+
+            .brand-title-login {
+                font-size: 2rem;
+            }
+
+            .stats-showcase {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .auth-wrapper {
+                padding: 1rem;
+            }
+
+            .auth-form-container-login {
+                padding: 2rem;
+            }
+
+            .form-title-login {
+                font-size: 1.75rem;
+            }
+
+            .stats-showcase {
+                gap: 1rem;
+            }
+
+            .stat-showcase-item {
+                padding: 1rem 0.75rem;
+            }
+
+            .stat-number {
+                font-size: 1.5rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .auth-branding-login {
+                padding: 1.5rem;
+            }
+
+            .auth-form-container-login {
+                padding: 1.5rem;
+            }
+
+            .brand-icon-login {
+                width: 60px;
+                height: 60px;
+                font-size: 2rem;
+            }
+
+            .brand-title-login {
+                font-size: 1.5rem;
+            }
+
+            .stats-showcase {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+{% endblock %}

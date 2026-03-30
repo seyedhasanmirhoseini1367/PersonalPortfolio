@@ -1,0 +1,14 @@
+<!-- templates/projects/no_prediction.html -->
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container text-center">
+    <div class="mt-5">
+        <h1>Prediction Not Available</h1>
+        <p class="lead">This project does not have online prediction capability.</p>
+        <a href="{% url 'project_detail' project.id %}" class="btn">
+            Back to Project Page
+        </a>
+    </div>
+</div>
+{% endblock %}

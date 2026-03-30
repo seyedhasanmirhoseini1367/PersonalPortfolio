@@ -1,0 +1,936 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ profile_user.username }}'s Profile - HasanPortfolio{% endblock %}
+
+{% block content %}
+    <div class="profile-wrapper">
+        <!-- Profile Header -->
+        <div class="profile-header">
+            <div class="container">
+                <div class="profile-header-content">
+                    <!-- Profile Picture -->
+                    <div class="profile-picture-section">
+                        {% if profile_user.profile_picture %}
+                            <img src="{{ profile_user.profile_picture.url }}"
+                                 alt="{{ profile_user.username }}"
+                                 class="profile-picture">
+                        {% else %}
+                            <div class="profile-picture-placeholder">
+                                {{ profile_user.username|first|upper }}
+                            </div>
+                        {% endif %}
+
+                        {% if is_own_profile %}
+                            <a href="{% url 'accounts:profile_update' %}" class="edit-profile-btn">
+                                <i class="fas fa-edit"></i> Edit Profile
+                            </a>
+                        {% endif %}
+                    </div>
+
+                    <!-- Profile Info -->
+                    <div class="profile-info">
+                        <h1 class="profile-name">
+                            {{ profile_user.get_full_name|default:profile_user.username }}
+                            {% if profile_user.is_staff %}
+                                <span class="badge-staff">Staff</span>
+                            {% endif %}
+                        </h1>
+
+                        {% if profile_user.profile.job_title %}
+                            <p class="profile-title">
+                                <i class="fas fa-briefcase"></i>
+                                {{ profile_user.profile.job_title }}
+                                {% if profile_user.profile.company %}
+                                    at {{ profile_user.profile.company }}
+                                {% endif %}
+                            </p>
+                        {% endif %}
+
+                        {% if profile_user.location %}
+                            <p class="profile-location">
+                                <i class="fas fa-map-marker-alt"></i>
+                                {{ profile_user.location }}
+                            </p>
+                        {% endif %}
+
+                        <p class="profile-member-since">
+                            <i class="fas fa-calendar-alt"></i>
+                            Member since {{ profile_user.date_joined|date:"F Y" }}
+                        </p>
+
+                        <!-- Stats -->
+                        <div class="profile-stats">
+                            <div class="stat-item">
+                                <span class="stat-number">{{ user_stories.count }}</span>
+                                <span class="stat-label">Stories</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-number">{{ user_comments.count }}</span>
+                                <span class="stat-label">Comments</span>
+                            </div>
+                            {% if is_own_profile %}
+                                <div class="stat-item">
+                                    <span class="stat-number">{{ total_views|default:0 }}</span>
+                                    <span class="stat-label">Views</span>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Profile Content -->
+        <div class="container profile-container">
+            <div class="profile-grid">
+                <!-- Main Content -->
+                <div class="main-content">
+                    <!-- About Section -->
+                    {% if profile_user.bio %}
+                        <div class="profile-card">
+                            <div class="card-header">
+                                <i class="fas fa-user"></i>
+                                <h3>About</h3>
+                            </div>
+                            <div class="card-content">
+                                <p class="about-text">{{ profile_user.bio|linebreaks }}</p>
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    <!-- Skills Section -->
+                    {% if profile_user.profile.skills %}
+                        <div class="profile-card">
+                            <div class="card-header">
+                                <i class="fas fa-code"></i>
+                                <h3>Skills & Expertise</h3>
+                            </div>
+                            <div class="card-content">
+                                <div class="skills-grid">
+                                    {% for skill in profile_user.profile.skills.split %}
+                                        <span class="skill-badge">{{ skill.strip }}</span>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    <!-- Education Section -->
+                    {% if profile_user.profile.education %}
+                        <div class="profile-card">
+                            <div class="card-header">
+                                <i class="fas fa-graduation-cap"></i>
+                                <h3>Education</h3>
+                            </div>
+                            <div class="card-content">
+                                <p class="education-text">{{ profile_user.profile.education|linebreaks }}</p>
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    <!-- User Stories -->
+                    <div class="profile-card">
+                        <div class="card-header">
+                            <div>
+                                <i class="fas fa-newspaper"></i>
+                                <h3>
+                                    {% if is_own_profile %}My Stories{% else %}Stories by
+                                        {{ profile_user.username }}{% endif %}
+                                </h3>
+                            </div>
+                            {% if user_stories.count > 5 %}
+                                <a href="{% url 'stories:story_list' %}?author={{ profile_user.username }}"
+                                   class="view-all-link">
+                                    View All <i class="fas fa-arrow-right"></i>
+                                </a>
+                            {% endif %}
+                        </div>
+                        <div class="card-content">
+                            {% if user_stories %}
+                                <div class="stories-grid">
+                                    {% for story in user_stories|slice:":5" %}
+                                        <div class="story-card">
+                                            <div class="story-header">
+                                                <h4>
+                                                    <a href="{% url 'stories:story_detail' story.slug %}">{{ story.title }}</a>
+                                                </h4>
+                                                <span class="story-date">{{ story.created_at|date:"M d, Y" }}</span>
+                                            </div>
+                                            <p class="story-excerpt">{{ story.excerpt|default:story.content|truncatewords:25 }}</p>
+                                            <div class="story-footer">
+                                                <div class="story-meta">
+                                                <span class="meta-item">
+                                                    <i class="far fa-eye"></i>
+                                                    {{ story.view_count }}
+                                                </span>
+                                                    <span class="meta-item">
+                                                    <i class="far fa-comment"></i>
+                                                    {{ story.comments.count }}
+                                                </span>
+                                                </div>
+                                                {% if story.tags.exists %}
+                                                    <div class="story-tags">
+                                                        {% for tag in story.tags.all|slice:":2" %}
+                                                            <span class="tag">{{ tag.name }}</span>
+                                                        {% endfor %}
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <div class="empty-state">
+                                    <div class="empty-icon">
+                                        <i class="fas fa-edit"></i>
+                                    </div>
+                                    <h4>No stories yet</h4>
+                                    <p>
+                                        {% if is_own_profile %}
+                                            You haven't written any stories yet.
+                                        {% else %}
+                                            {{ profile_user.username }} hasn't written any stories yet.
+                                        {% endif %}
+                                    </p>
+                                    {% if is_own_profile %}
+                                        <a href="{% url 'stories:create_story' %}" class="btn-primary">
+                                            Write Your First Story
+                                        </a>
+                                    {% endif %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sidebar -->
+                <div class="sidebar">
+                    <!-- Contact Information -->
+                    <div class="sidebar-card">
+                        <div class="card-header">
+                            <i class="fas fa-info-circle"></i>
+                            <h3>Contact Info</h3>
+                        </div>
+                        <div class="card-content">
+                            {% if profile_user.email and profile_user.profile.show_email or is_own_profile %}
+                                <div class="contact-item">
+                                    <i class="fas fa-envelope"></i>
+                                    <div>
+                                        <strong>Email</strong>
+                                        <a href="mailto:{{ profile_user.email }}">{{ profile_user.email }}</a>
+                                    </div>
+                                </div>
+                            {% endif %}
+
+                            {% if profile_user.phone_number and profile_user.profile.show_phone or is_own_profile %}
+                                <div class="contact-item">
+                                    <i class="fas fa-phone"></i>
+                                    <div>
+                                        <strong>Phone</strong>
+                                        <p>{{ profile_user.phone_number }}</p>
+                                    </div>
+                                </div>
+                            {% endif %}
+
+                            {% if profile_user.website %}
+                                <div class="contact-item">
+                                    <i class="fas fa-globe"></i>
+                                    <div>
+                                        <strong>Website</strong>
+                                        <a href="{{ profile_user.website }}" target="_blank">
+                                            {{ profile_user.website|truncatechars:30 }}
+                                        </a>
+                                    </div>
+                                </div>
+                            {% endif %}
+
+                            {% if not profile_user.email or not profile_user.website %}
+                                <p class="text-muted">No contact information available</p>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Social Links -->
+                    {% if profile_user.github or profile_user.linkedin or profile_user.twitter %}
+                        <div class="sidebar-card">
+                            <div class="card-header">
+                                <i class="fas fa-share-alt"></i>
+                                <h3>Connect</h3>
+                            </div>
+                            <div class="card-content">
+                                <div class="social-links">
+                                    {% if profile_user.github %}
+                                        <a href="{{ profile_user.github }}" target="_blank" class="social-link">
+                                            <i class="fab fa-github"></i>
+                                            <span>GitHub</span>
+                                        </a>
+                                    {% endif %}
+
+                                    {% if profile_user.linkedin %}
+                                        <a href="{{ profile_user.linkedin }}" target="_blank" class="social-link">
+                                            <i class="fab fa-linkedin"></i>
+                                            <span>LinkedIn</span>
+                                        </a>
+                                    {% endif %}
+
+                                    {% if profile_user.twitter %}
+                                        <a href="{{ profile_user.twitter }}" target="_blank" class="social-link">
+                                            <i class="fab fa-twitter"></i>
+                                            <span>Twitter</span>
+                                        </a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    <!-- Recent Comments -->
+                    {% if recent_comments %}
+                        <div class="sidebar-card">
+                            <div class="card-header">
+                                <i class="fas fa-comments"></i>
+                                <h3>Recent Activity</h3>
+                            </div>
+                            <div class="card-content">
+                                <div class="comments-list">
+                                    {% for comment in recent_comments|slice:":3" %}
+                                        <div class="comment-item">
+                                            <p class="comment-text">{{ comment.content|truncatewords:15 }}</p>
+                                            <small>
+                                                On <a href="{% url 'stories:story_detail' comment.story.slug %}">
+                                                {{ comment.story.title|truncatechars:30 }}
+                                            </a>
+                                            </small>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    <!-- Quick Actions (for own profile) -->
+                    {% if is_own_profile %}
+                        <div class="sidebar-card card-highlight">
+                            <div class="card-header">
+                                <i class="fas fa-bolt"></i>
+                                <h3>Quick Actions</h3>
+                            </div>
+                            <div class="card-content">
+                                <div class="quick-actions">
+                                    <a href="{% url 'stories:create_story' %}" class="quick-action-btn">
+                                        <i class="fas fa-edit"></i>
+                                        Write New Story
+                                    </a>
+                                    <a href="{% url 'accounts:dashboard' %}" class="quick-action-btn">
+                                        <i class="fas fa-tachometer-alt"></i>
+                                        Dashboard
+                                    </a>
+                                    <a href="{% url 'accounts:profile_update' %}" class="quick-action-btn">
+                                        <i class="fas fa-cog"></i>
+                                        Settings
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        /* Profile Wrapper */
+        .profile-wrapper {
+            background: #f8fafc;
+            min-height: 100vh;
+        }
+
+        /* Profile Header */
+        .profile-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 3rem 0;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .profile-header-content {
+            display: flex;
+            align-items: center;
+            gap: 3rem;
+        }
+
+        .profile-picture-section {
+            text-align: center;
+        }
+
+        .profile-picture {
+            width: 160px;
+            height: 160px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 5px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+        }
+
+        .profile-picture-placeholder {
+            width: 160px;
+            height: 160px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            border: 5px solid rgba(255, 255, 255, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 4rem;
+            font-weight: bold;
+            color: white;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+        }
+
+        .edit-profile-btn {
+            display: inline-block;
+            margin-top: 1rem;
+            padding: 0.625rem 1.25rem;
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            color: white;
+            border-radius: 10px;
+            text-decoration: none;
+            font-size: 0.875rem;
+            font-weight: 600;
+            transition: all 0.3s;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .edit-profile-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            color: white;
+        }
+
+        .profile-info {
+            flex: 1;
+        }
+
+        .profile-name {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .badge-staff {
+            padding: 0.375rem 0.875rem;
+            background: rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .profile-title,
+        .profile-location,
+        .profile-member-since {
+            font-size: 1.125rem;
+            margin-bottom: 0.5rem;
+            opacity: 0.95;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .profile-stats {
+            display: flex;
+            gap: 2rem;
+            margin-top: 1.5rem;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 0.75rem 1.25rem;
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .stat-number {
+            display: block;
+            font-size: 1.875rem;
+            font-weight: 700;
+        }
+
+        .stat-label {
+            font-size: 0.875rem;
+            opacity: 0.9;
+        }
+
+        /* Profile Container */
+        .profile-container {
+            max-width: 1400px;
+            padding-bottom: 3rem;
+        }
+
+        .profile-grid {
+            display: grid;
+            grid-template-columns: 1fr 380px;
+            gap: 2rem;
+        }
+
+        /* Cards */
+        .profile-card,
+        .sidebar-card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e2e8f0;
+            margin-bottom: 1.5rem;
+        }
+
+        .card-highlight {
+            border: 2px solid #667eea;
+            background: linear-gradient(135deg, #f8fafc, #fff);
+        }
+
+        .card-header {
+            padding: 1.5rem;
+            border-bottom: 2px solid #f1f5f9;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+        }
+
+        .card-header > div {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .card-header i {
+            color: #667eea;
+            font-size: 1.25rem;
+        }
+
+        .card-header h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #1e293b;
+            margin: 0;
+        }
+
+        .card-content {
+            padding: 1.5rem;
+        }
+
+        .view-all-link {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.875rem;
+            display: flex;
+            align-items: center;
+            gap: 0.375rem;
+            transition: all 0.2s;
+        }
+
+        .view-all-link:hover {
+            color: #764ba2;
+            transform: translateX(4px);
+        }
+
+        /* About Text */
+        .about-text,
+        .education-text {
+            color: #4a5568;
+            line-height: 1.7;
+            margin: 0;
+        }
+
+        /* Skills Grid */
+        .skills-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+        }
+
+        .skill-badge {
+            padding: 0.5rem 1rem;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border-radius: 20px;
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+
+        /* Stories Grid */
+        .stories-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .story-card {
+            padding: 1.25rem;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            transition: all 0.3s;
+        }
+
+        .story-card:hover {
+            border-color: #667eea;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.1);
+            transform: translateX(4px);
+        }
+
+        .story-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 1rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .story-header h4 {
+            font-size: 1.125rem;
+            font-weight: 600;
+            margin: 0;
+            flex: 1;
+        }
+
+        .story-header h4 a {
+            color: #1e293b;
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        .story-header h4 a:hover {
+            color: #667eea;
+        }
+
+        .story-date {
+            font-size: 0.8125rem;
+            color: #94a3b8;
+            white-space: nowrap;
+        }
+
+        .story-excerpt {
+            color: #64748b;
+            font-size: 0.875rem;
+            line-height: 1.6;
+            margin: 0 0 0.75rem 0;
+        }
+
+        .story-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+        }
+
+        .story-meta {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 0.375rem;
+            font-size: 0.8125rem;
+            color: #64748b;
+            padding: 0.25rem 0.75rem;
+            background: #f8fafc;
+            border-radius: 6px;
+        }
+
+        .story-tags {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .tag {
+            padding: 0.25rem 0.75rem;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 3rem 2rem;
+        }
+
+        .empty-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 20px;
+            color: white;
+            font-size: 2rem;
+        }
+
+        .empty-state h4 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #1e293b;
+            margin: 0 0 0.5rem 0;
+        }
+
+        .empty-state p {
+            color: #64748b;
+            margin: 0 0 1.5rem 0;
+        }
+
+        .btn-primary {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.75rem 1.5rem;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border-radius: 10px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+            color: white;
+        }
+
+        /* Contact Items */
+        .contact-item {
+            display: flex;
+            gap: 1rem;
+            align-items: flex-start;
+            padding: 1rem;
+            background: #f8fafc;
+            border-radius: 10px;
+            margin-bottom: 0.75rem;
+        }
+
+        .contact-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .contact-item i {
+            color: #667eea;
+            font-size: 1.25rem;
+            margin-top: 0.125rem;
+        }
+
+        .contact-item strong {
+            display: block;
+            color: #1e293b;
+            font-size: 0.875rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .contact-item p,
+        .contact-item a {
+            margin: 0;
+            color: #64748b;
+            font-size: 0.875rem;
+            text-decoration: none;
+        }
+
+        .contact-item a:hover {
+            color: #667eea;
+        }
+
+        .text-muted {
+            color: #94a3b8;
+            font-size: 0.875rem;
+            text-align: center;
+            padding: 1rem;
+        }
+
+        /* Social Links */
+        .social-links {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .social-link {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.875rem 1rem;
+            background: #f8fafc;
+            border-radius: 10px;
+            text-decoration: none;
+            color: #1e293b;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .social-link:hover {
+            background: white;
+            transform: translateX(4px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.1);
+            color: #667eea;
+        }
+
+        .social-link i {
+            font-size: 1.5rem;
+            width: 24px;
+            text-align: center;
+        }
+
+        /* Comments List */
+        .comments-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .comment-item {
+            padding: 0.875rem;
+            background: #f8fafc;
+            border-radius: 8px;
+            border-left: 3px solid #667eea;
+        }
+
+        .comment-text {
+            color: #1e293b;
+            font-size: 0.875rem;
+            margin: 0 0 0.5rem 0;
+            line-height: 1.5;
+        }
+
+        .comment-item small {
+            font-size: 0.75rem;
+            color: #94a3b8;
+        }
+
+        .comment-item a {
+            color: #667eea;
+            text-decoration: none;
+        }
+
+        .comment-item a:hover {
+            text-decoration: underline;
+        }
+
+        /* Quick Actions */
+        .quick-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .quick-action-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.875rem 1rem;
+            background: #f8fafc;
+            border-radius: 10px;
+            text-decoration: none;
+            color: #1e293b;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .quick-action-btn:hover {
+            background: white;
+            color: #667eea;
+            transform: translateX(4px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.1);
+        }
+
+        .quick-action-btn i {
+            font-size: 1.125rem;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1200px) {
+            .profile-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .sidebar {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+                gap: 1.5rem;
+            }
+
+            .sidebar-card {
+                margin-bottom: 0;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .profile-header {
+                padding: 2rem 0;
+            }
+
+            .profile-header-content {
+                flex-direction: column;
+                text-align: center;
+                gap: 1.5rem;
+            }
+
+            .profile-name {
+                font-size: 2rem;
+                flex-direction: column;
+            }
+
+            .profile-stats {
+                justify-content: center;
+                flex-wrap: wrap;
+            }
+
+            .sidebar {
+                grid-template-columns: 1fr;
+            }
+
+            .story-header {
+                flex-direction: column;
+            }
+
+            .story-footer {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .profile-picture,
+            .profile-picture-placeholder {
+                width: 120px;
+                height: 120px;
+                font-size: 3rem;
+            }
+
+            .profile-name {
+                font-size: 1.75rem;
+            }
+
+            .card-content {
+                padding: 1rem;
+            }
+
+            .story-card {
+                padding: 1rem;
+            }
+        }
+    </style>
+{% endblock %}

@@ -1,0 +1,931 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - HasanPortfolio{% endblock %}
+
+{% block content %}
+    <div class="dashboard-wrapper">
+        <!-- Dashboard Header -->
+        <div class="dashboard-header">
+            <div class="container">
+                <div class="header-content">
+                    <div>
+                        <h1 class="dashboard-title">Welcome
+                            back, {{ profile_user.get_short_name|default:profile_user.username }}</h1>
+                        <p class="dashboard-subtitle">Here's what's happening with your content</p>
+                    </div>
+                    <a href="{% url 'stories:create_story' %}" class="btn-create-story">
+                        <i class="fas fa-plus-circle me-2"></i>
+                        New Story
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="container dashboard-container">
+            <!-- Stats Overview -->
+            <div class="stats-grid">
+                <div class="stat-card stat-primary">
+                    <div class="stat-icon">
+                        <i class="fas fa-file-alt"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3 class="stat-value">{{ user_stories.count }}</h3>
+                        <p class="stat-label">Total Stories</p>
+                        <span class="stat-trend">
+                        <i class="fas fa-arrow-up"></i> Active
+                    </span>
+                    </div>
+                </div>
+
+                <div class="stat-card stat-success">
+                    <div class="stat-icon">
+                        <i class="fas fa-eye"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3 class="stat-value">{{ total_views|default:0 }}</h3>
+                        <p class="stat-label">Total Views</p>
+                        <span class="stat-trend">
+                        <i class="fas fa-chart-line"></i> Growing
+                    </span>
+                    </div>
+                </div>
+
+                <div class="stat-card stat-info">
+                    <div class="stat-icon">
+                        <i class="fas fa-comments"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3 class="stat-value">{{ user_comments.count }}</h3>
+                        <p class="stat-label">Total Comments</p>
+                        <span class="stat-trend">
+                        <i class="fas fa-chart-bar"></i> Engaged
+                    </span>
+                    </div>
+                </div>
+
+                <div class="stat-card stat-warning">
+                    <div class="stat-icon">
+                        <i class="fas fa-calendar-check"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3 class="stat-value">{{ days_since_join }}</h3>
+                        <p class="stat-label">Days Active</p>
+                        <span class="stat-trend">
+                        <i class="fas fa-trophy"></i> Member
+                    </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Content Grid -->
+            <div class="content-grid">
+                <!-- Recent Stories -->
+                <div class="content-section">
+                    <div class="section-header">
+                        <div>
+                            <h2 class="section-title">Recent Stories</h2>
+                            <p class="section-description">Your latest published content</p>
+                        </div>
+                        {% if user_stories.count > 5 %}
+                            <a href="{% url 'stories:story_list' %}?author={{ profile_user.username }}"
+                               class="view-all-link">
+                                View All <i class="fas fa-arrow-right ms-1"></i>
+                            </a>
+                        {% endif %}
+                    </div>
+
+                    <div class="stories-list">
+                        {% if recent_stories %}
+                            {% for story in recent_stories %}
+                                <div class="story-item">
+                                    <div class="story-item-header">
+                                        <h3 class="story-item-title">
+                                            <a href="{% url 'stories:story_detail' story.slug %}">{{ story.title }}</a>
+                                        </h3>
+                                        <div class="story-item-actions">
+                                            {% url 'stories:story_detail' story.slug as story_url %}
+                                            <a href="{{ story_url }}" class="action-btn" title="View">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                        </div>
+                                    </div>
+                                    <p class="story-item-excerpt">{{ story.excerpt|default:story.content|truncatewords:20 }}</p>
+                                    <div class="story-item-footer">
+                                        <div class="story-meta-group">
+                                    <span class="meta-badge">
+                                        <i class="far fa-calendar"></i>
+                                        {{ story.published_at|date:"M d, Y" }}
+                                    </span>
+                                            <span class="meta-badge">
+                                        <i class="far fa-eye"></i>
+                                        {{ story.view_count }}
+                                    </span>
+                                            <span class="meta-badge">
+                                        <i class="far fa-comment"></i>
+                                        {{ story.comments.count }}
+                                    </span>
+                                        </div>
+                                        {% if story.tags.exists %}
+                                            <div class="story-tags-mini">
+                                                {% for tag in story.tags.all|slice:":2" %}
+                                                    <span class="tag-mini">{{ tag.name }}</span>
+                                                {% endfor %}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="empty-state-card">
+                                <div class="empty-icon">
+                                    <i class="fas fa-file-alt"></i>
+                                </div>
+                                <h3 class="empty-title">No stories yet</h3>
+                                <p class="empty-description">Start sharing your thoughts and ideas with the world</p>
+                                <a href="{% url 'stories:create_story' %}" class="btn-empty-action">
+                                    <i class="fas fa-plus me-2"></i>Write Your First Story
+                                </a>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Sidebar -->
+                <div class="sidebar-section">
+                    <!-- Quick Actions -->
+                    <div class="sidebar-card">
+                        <h3 class="sidebar-card-title">
+                            <i class="fas fa-bolt me-2"></i>Quick Actions
+                        </h3>
+                        <div class="quick-actions-grid">
+                            <a href="{% url 'stories:create_story' %}" class="quick-action-item">
+                                <div class="action-icon action-icon-primary">
+                                    <i class="fas fa-pen"></i>
+                                </div>
+                                <span>Write Story</span>
+                            </a>
+                            <a href="{% url 'accounts:profile_update' %}" class="quick-action-item">
+                                <div class="action-icon action-icon-info">
+                                    <i class="fas fa-user-edit"></i>
+                                </div>
+                                <span>Edit Profile</span>
+                            </a>
+                            <a href="{% url 'accounts:profile' profile_user.username %}" class="quick-action-item">
+                                <div class="action-icon action-icon-success">
+                                    <i class="fas fa-user-circle"></i>
+                                </div>
+                                <span>View Profile</span>
+                            </a>
+                            <a href="{% url 'stories:story_list' %}" class="quick-action-item">
+                                <div class="action-icon action-icon-warning">
+                                    <i class="fas fa-globe"></i>
+                                </div>
+                                <span>Explore</span>
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Account Overview -->
+                    <div class="sidebar-card">
+                        <h3 class="sidebar-card-title">
+                            <i class="fas fa-user-circle me-2"></i>Account Overview
+                        </h3>
+                        <div class="account-info-list">
+                            <div class="account-info-item">
+                                <span class="info-label">Username</span>
+                                <span class="info-value">@{{ profile_user.username }}</span>
+                            </div>
+                            <div class="account-info-item">
+                                <span class="info-label">Email</span>
+                                <span class="info-value">{{ profile_user.email }}</span>
+                            </div>
+                            <div class="account-info-item">
+                                <span class="info-label">Member Since</span>
+                                <span class="info-value">{{ profile_user.date_joined|date:"M Y" }}</span>
+                            </div>
+                            {% if profile_user.profile.job_title %}
+                                <div class="account-info-item">
+                                    <span class="info-label">Position</span>
+                                    <span class="info-value">{{ profile_user.profile.job_title }}</span>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Recent Comments -->
+                    {% if recent_comments %}
+                        <div class="sidebar-card">
+                            <h3 class="sidebar-card-title">
+                                <i class="fas fa-comment-dots me-2"></i>Recent Comments
+                            </h3>
+                            <div class="comments-list-mini">
+                                {% for comment in recent_comments %}
+                                    <div class="comment-mini-item">
+                                        <p class="comment-mini-text">{{ comment.content|truncatewords:15 }}</p>
+                                        <a href="{% url 'stories:story_detail' comment.story.slug %}"
+                                           class="comment-mini-link">
+                                            <i class="fas fa-external-link-alt me-1"></i>
+                                            {{ comment.story.title|truncatechars:25 }}
+                                        </a>
+                                        <span class="comment-mini-time">{{ comment.created_at|timesince }} ago</span>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    <!-- Activity Summary -->
+                    <div class="sidebar-card card-highlight">
+                        <h3 class="sidebar-card-title">
+                            <i class="fas fa-chart-line me-2"></i>Activity Summary
+                        </h3>
+                        <div class="activity-progress">
+                            <div class="progress-item">
+                                <div class="progress-header">
+                                    <span class="progress-label">Stories Published</span>
+                                    <span class="progress-value">{{ user_stories.count }}</span>
+                                </div>
+                                <div class="progress-bar-wrapper">
+                                    <div class="progress-bar"
+                                         style="width: {% widthratio user_stories.count 10 100 %}%"></div>
+                                </div>
+                            </div>
+                            <div class="progress-item">
+                                <div class="progress-header">
+                                    <span class="progress-label">Engagement</span>
+                                    <span class="progress-value">{{ user_comments.count }}</span>
+                                </div>
+                                <div class="progress-bar-wrapper">
+                                    <div class="progress-bar progress-bar-success"
+                                         style="width: {% widthratio user_comments.count 20 100 %}%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        /* Dashboard Wrapper */
+        .dashboard-wrapper {
+            background: #f8fafc;
+            min-height: 100vh;
+            padding-bottom: 3rem;
+        }
+
+        /* Dashboard Header */
+        .dashboard-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2.5rem 0;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+        }
+
+        .dashboard-title {
+            font-size: 2rem;
+            font-weight: 700;
+            margin: 0;
+            letter-spacing: -0.025em;
+        }
+
+        .dashboard-subtitle {
+            margin: 0.5rem 0 0 0;
+            opacity: 0.9;
+            font-size: 1rem;
+        }
+
+        .btn-create-story {
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 10px;
+            text-decoration: none;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            transition: all 0.3s ease;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .btn-create-story:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            color: white;
+        }
+
+        .dashboard-container {
+            max-width: 1400px;
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 16px;
+            padding: 1.75rem;
+            display: flex;
+            align-items: center;
+            gap: 1.25rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e2e8f0;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--stat-color-1), var(--stat-color-2));
+        }
+
+        .stat-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-primary {
+            --stat-color-1: #667eea;
+            --stat-color-2: #764ba2;
+        }
+
+        .stat-success {
+            --stat-color-1: #10b981;
+            --stat-color-2: #059669;
+        }
+
+        .stat-info {
+            --stat-color-1: #3b82f6;
+            --stat-color-2: #2563eb;
+        }
+
+        .stat-warning {
+            --stat-color-1: #f59e0b;
+            --stat-color-2: #d97706;
+        }
+
+        .stat-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            background: linear-gradient(135deg, var(--stat-color-1), var(--stat-color-2));
+            color: white;
+            flex-shrink: 0;
+        }
+
+        .stat-content {
+            flex: 1;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1e293b;
+            margin: 0;
+            line-height: 1;
+        }
+
+        .stat-label {
+            color: #64748b;
+            font-size: 0.875rem;
+            margin: 0.5rem 0;
+            font-weight: 500;
+        }
+
+        .stat-trend {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            font-size: 0.75rem;
+            color: #10b981;
+            font-weight: 600;
+        }
+
+        /* Content Grid */
+        .content-grid {
+            display: grid;
+            grid-template-columns: 1fr 380px;
+            gap: 2rem;
+        }
+
+        /* Content Section */
+        .content-section {
+            background: white;
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e2e8f0;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #f1f5f9;
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #1e293b;
+            margin: 0;
+        }
+
+        .section-description {
+            color: #64748b;
+            font-size: 0.875rem;
+            margin: 0.25rem 0 0 0;
+        }
+
+        .view-all-link {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.875rem;
+            display: flex;
+            align-items: center;
+            transition: all 0.2s;
+        }
+
+        .view-all-link:hover {
+            color: #764ba2;
+            transform: translateX(4px);
+        }
+
+        /* Story Items */
+        .stories-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .story-item {
+            padding: 1.25rem;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+
+        .story-item:hover {
+            border-color: #667eea;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.1);
+            transform: translateX(4px);
+        }
+
+        .story-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 1rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .story-item-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            margin: 0;
+            flex: 1;
+        }
+
+        .story-item-title a {
+            color: #1e293b;
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        .story-item-title a:hover {
+            color: #667eea;
+        }
+
+        .story-item-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .action-btn {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            color: #64748b;
+            background: #f8fafc;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+
+        .action-btn:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        .story-item-excerpt {
+            color: #64748b;
+            font-size: 0.875rem;
+            line-height: 1.6;
+            margin: 0 0 0.75rem 0;
+        }
+
+        .story-item-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+        }
+
+        .story-meta-group {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .meta-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.375rem;
+            font-size: 0.8125rem;
+            color: #64748b;
+            padding: 0.25rem 0.75rem;
+            background: #f8fafc;
+            border-radius: 6px;
+        }
+
+        .story-tags-mini {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .tag-mini {
+            padding: 0.25rem 0.75rem;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        /* Empty State */
+        .empty-state-card {
+            text-align: center;
+            padding: 3rem 2rem;
+        }
+
+        .empty-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 20px;
+            color: white;
+            font-size: 2rem;
+        }
+
+        .empty-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #1e293b;
+            margin: 0 0 0.5rem 0;
+        }
+
+        .empty-description {
+            color: #64748b;
+            margin: 0 0 1.5rem 0;
+        }
+
+        .btn-empty-action {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.75rem 1.5rem;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border-radius: 10px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .btn-empty-action:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+            color: white;
+        }
+
+        /* Sidebar */
+        .sidebar-section {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .sidebar-card {
+            background: white;
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e2e8f0;
+        }
+
+        .card-highlight {
+            background: linear-gradient(135deg, #f8fafc, #fff);
+            border: 2px solid #667eea;
+        }
+
+        .sidebar-card-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: #1e293b;
+            margin: 0 0 1.25rem 0;
+            display: flex;
+            align-items: center;
+        }
+
+        /* Quick Actions */
+        .quick-actions-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.75rem;
+        }
+
+        .quick-action-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 1rem;
+            background: #f8fafc;
+            border-radius: 12px;
+            text-decoration: none;
+            color: #1e293b;
+            font-weight: 600;
+            font-size: 0.875rem;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+        }
+
+        .quick-action-item:hover {
+            background: white;
+            border-color: #667eea;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.1);
+            color: #667eea;
+        }
+
+        .action-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            color: white;
+        }
+
+        .action-icon-primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+        }
+
+        .action-icon-info {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+        }
+
+        .action-icon-success {
+            background: linear-gradient(135deg, #10b981, #059669);
+        }
+
+        .action-icon-warning {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+        }
+
+        /* Account Info */
+        .account-info-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .account-info-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem;
+            background: #f8fafc;
+            border-radius: 8px;
+        }
+
+        .info-label {
+            font-size: 0.875rem;
+            color: #64748b;
+            font-weight: 500;
+        }
+
+        .info-value {
+            font-size: 0.875rem;
+            color: #1e293b;
+            font-weight: 600;
+        }
+
+        /* Comments Mini */
+        .comments-list-mini {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .comment-mini-item {
+            padding: 0.75rem;
+            background: #f8fafc;
+            border-radius: 8px;
+            border-left: 3px solid #667eea;
+        }
+
+        .comment-mini-text {
+            color: #1e293b;
+            font-size: 0.875rem;
+            margin: 0 0 0.5rem 0;
+            line-height: 1.5;
+        }
+
+        .comment-mini-link {
+            display: flex;
+            align-items: center;
+            color: #667eea;
+            font-size: 0.8125rem;
+            text-decoration: none;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .comment-mini-link:hover {
+            color: #764ba2;
+        }
+
+        .comment-mini-time {
+            display: block;
+            font-size: 0.75rem;
+            color: #94a3b8;
+        }
+
+        /* Activity Progress */
+        .activity-progress {
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+        }
+
+        .progress-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .progress-label {
+            font-size: 0.875rem;
+            color: #64748b;
+            font-weight: 500;
+        }
+
+        .progress-value {
+            font-size: 0.875rem;
+            color: #1e293b;
+            font-weight: 700;
+        }
+
+        .progress-bar-wrapper {
+            height: 8px;
+            background: #e2e8f0;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            border-radius: 10px;
+            transition: width 1s ease;
+        }
+
+        .progress-bar-success {
+            background: linear-gradient(90deg, #10b981, #059669);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1200px) {
+            .content-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .sidebar-section {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            }
+        }
+
+        @media (max-width: 768px) {
+            .dashboard-header {
+                padding: 1.5rem 0;
+            }
+
+            .dashboard-title {
+                font-size: 1.5rem;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                gap: 1rem;
+            }
+
+            .stat-card {
+                padding: 1.25rem;
+            }
+
+            .stat-icon {
+                width: 48px;
+                height: 48px;
+                font-size: 1.25rem;
+            }
+
+            .stat-value {
+                font-size: 1.5rem;
+            }
+
+            .content-section,
+            .sidebar-card {
+                padding: 1.25rem;
+            }
+
+            .quick-actions-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .sidebar-section {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .header-content {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .btn-create-story {
+                justify-content: center;
+                width: 100%;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .story-item-header {
+                flex-direction: column;
+            }
+
+            .story-item-footer {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+    </style>
+{% endblock %}

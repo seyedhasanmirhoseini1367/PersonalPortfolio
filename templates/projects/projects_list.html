@@ -1,0 +1,347 @@
+{% extends 'base.html' %}
+
+{% block title %}Projects - HasanPortfolio{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page-header {
+        text-align: center;
+        margin-bottom: 3rem;
+    }
+
+    .page-title {
+        font-size: 2.5rem;
+        color: #1e293b;
+        margin-bottom: 0.5rem;
+    }
+
+    .page-subtitle {
+        color: #64748b;
+        font-size: 1.1rem;
+    }
+
+    /* Filters */
+    .filters {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        margin-bottom: 2rem;
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+        align-items: center;
+    }
+
+    .filter-group {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+    }
+
+    .filter-label {
+        font-weight: 500;
+        color: #475569;
+    }
+
+    .filter-select {
+        padding: 0.5rem;
+        border: 1px solid #d1d5db;
+        border-radius: 5px;
+        background: white;
+    }
+
+    .active-filters {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        margin-bottom: 1rem;
+    }
+
+    .active-filter {
+        background: #2563eb;
+        color: white;
+        padding: 0.3rem 0.8rem;
+        border-radius: 15px;
+        font-size: 0.8rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .active-filter a {
+        color: white;
+        text-decoration: none;
+    }
+
+    /* Projects Grid */
+    .projects-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+        gap: 2rem;
+    }
+
+    .project-card {
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        overflow: hidden;
+        transition: transform 0.3s, box-shadow 0.3s;
+    }
+
+    .project-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+    }
+
+    .project-image {
+        width: 100%;
+        height: 200px;
+        object-fit: cover;
+        background: #f8f9fa;
+    }
+
+    .project-content {
+        padding: 1.5rem;
+    }
+
+    .project-title {
+        font-size: 1.3rem;
+        font-weight: 600;
+        color: #1e293b;
+        margin-bottom: 0.5rem;
+    }
+
+    .project-meta {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+        font-size: 0.9rem;
+    }
+
+    .project-type {
+        background: #dbeafe;
+        color: #1e40af;
+        padding: 0.3rem 0.8rem;
+        border-radius: 15px;
+        font-size: 0.8rem;
+        font-weight: 500;
+    }
+
+    .difficulty-level {
+        color: #f59e0b;
+        font-weight: 500;
+    }
+
+    .project-description {
+        color: #475569;
+        line-height: 1.5;
+        margin-bottom: 1rem;
+    }
+
+    .project-skills {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+    }
+
+    .skill-badge {
+        background: #f1f5f9;
+        color: #475569;
+        padding: 0.2rem 0.6rem;
+        border-radius: 10px;
+        font-size: 0.7rem;
+        font-weight: 500;
+    }
+
+    .project-metrics {
+        background: #f8fafc;
+        padding: 0.8rem;
+        border-radius: 5px;
+        margin-bottom: 1rem;
+    }
+
+    .metric {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.9rem;
+    }
+
+    .metric-value {
+        font-weight: 600;
+        color: #2563eb;
+    }
+
+    .project-link {
+        display: inline-block;
+        color: #2563eb;
+        text-decoration: none;
+        font-weight: 500;
+        transition: color 0.3s;
+    }
+
+    .project-link:hover {
+        color: #1d4ed8;
+    }
+
+    .no-projects {
+        text-align: center;
+        padding: 3rem;
+        color: #64748b;
+        grid-column: 1 / -1;
+    }
+
+    .stats-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+        padding: 1rem;
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">{{ page_title }}</h1>
+    <p class="page-subtitle">Showcasing {{ total_projects }} data science and machine learning projects</p>
+</div>
+
+<!-- Stats Bar -->
+<div class="stats-bar">
+    <div>Total Projects: <strong>{{ total_projects }}</strong></div>
+    <div>Featured: <strong>{{ featured_count }}</strong></div>
+    <div>Kaggle Competitions: <strong>{{ projects|length }}</strong></div>
+</div>
+
+<!-- Active Filters -->
+{% if active_type or active_skill %}
+<div class="active-filters">
+    {% if active_type %}
+    <span class="active-filter">
+        Type: {{ active_type }}
+        <a href="?{% if active_skill %}skill={{ active_skill }}{% endif %}">×</a>
+    </span>
+    {% endif %}
+    {% if active_skill %}
+    <span class="active-filter">
+        Skill: {{ active_skill }}
+        <a href="?{% if active_type %}type={{ active_type }}{% endif %}">×</a>
+    </span>
+    {% endif %}
+</div>
+{% endif %}
+
+<!-- Filters -->
+<div class="filters">
+    <div class="filter-group">
+        <span class="filter-label">Filter by:</span>
+        <select class="filter-select" onchange="window.location.href=this.value">
+            <option value="?">All Project Types</option>
+            {% for type_value, type_label in project_types %}
+            <option value="?type={{ type_value }}" {% if active_type == type_value %}selected{% endif %}>
+                {{ type_label }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="filter-group">
+        <select class="filter-select" onchange="window.location.href=this.value">
+            <option value="?{% if active_type %}type={{ active_type }}{% endif %}">All Skills</option>
+            {% for skill_value, skill_label in skills %}
+            <option value="?{% if active_type %}type={{ active_type }}&{% endif %}skill={{ skill_value }}" {% if active_skill == skill_value %}selected{% endif %}>
+                {{ skill_label }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="filter-group">
+        <a href="?featured=1{% if active_type %}&type={{ active_type }}{% endif %}{% if active_skill %}&skill={{ active_skill }}{% endif %}"
+           class="btn {% if request.GET.featured %}btn-outline{% endif %}">
+           ⭐ Featured Only
+        </a>
+    </div>
+
+    <div class="filter-group" style="margin-left: auto;">
+        <a href="{% url 'projects_list' %}" class="btn btn-outline">Clear Filters</a>
+    </div>
+</div>
+
+<!-- Projects Grid -->
+<div class="projects-grid">
+    {% for project in projects %}
+    <div class="project-card">
+        {% if project.featured_image %}
+        <img src="{{ project.featured_image.url }}" alt="{{ project.title }}" class="project-image">
+        {% else %}
+        <div class="project-image" style="display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; font-size: 3rem;">
+            📊
+        </div>
+        {% endif %}
+
+        <div class="project-content">
+            <h3 class="project-title">{{ project.title }}</h3>
+
+            <div class="project-meta">
+                <span class="project-type">{{ project.get_project_type_display }}</span>
+                <span class="difficulty-level">{{ project.get_difficulty_level_display }}</span>
+            </div>
+
+            <p class="project-description">
+                {{ project.short_description|default:project.description|truncatewords:25 }}
+            </p>
+
+            {% if project.skills_used %}
+            <div class="project-skills">
+                {% for skill in project.skills_used|slice:":3" %}
+                    {% for skill_value, skill_label in skills %}
+                        {% if skill_value == skill %}
+                            <span class="skill-badge">{{ skill_label }}</span>
+                        {% endif %}
+                    {% endfor %}
+                {% endfor %}
+                {% if project.skills_used|length > 3 %}
+                    <span class="skill-badge">+{{ project.skills_used|length|add:"-3" }} more</span>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            {% if project.accuracy_score or project.kaggle_rank %}
+            <div class="project-metrics">
+                {% if project.accuracy_score %}
+                <div class="metric">
+                    <span>Accuracy:</span>
+                    <span class="metric-value">{{ project.accuracy_score|floatformat:3 }}</span>
+                </div>
+                {% endif %}
+                {% if project.kaggle_rank %}
+                <div class="metric">
+                    <span>Kaggle Rank:</span>
+                    <span class="metric-value">#{{ project.kaggle_rank }}</span>
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <a href="{% url 'project_detail' project.id %}" class="project-link">
+                View Project Details →
+            </a>
+        </div>
+    </div>
+    {% empty %}
+    <div class="no-projects">
+        <div style="font-size: 4rem; margin-bottom: 1rem;">🔍</div>
+        <h3>No Projects Found</h3>
+        <p>Try adjusting your filters or check back later for new projects.</p>
+        <a href="{% url 'projects_list' %}" class="btn mt-3">Clear Filters</a>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

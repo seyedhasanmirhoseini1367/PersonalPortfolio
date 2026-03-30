@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}HasanPortfolio - Data Science & ML Projects{% endblock %}</title>
+    <style>
+        /* Base Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f8f9fa;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        /* Header Styles */
+        header {
+            background: linear-gradient(135deg, #3563eb 0%, #7c3aed 100%);
+            color: white;
+            padding: 0.8rem 0;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.7rem;
+            font-weight: bold;
+        }
+
+        .logo a {
+            color: white;
+            text-decoration: none;
+        }
+
+        .logo .tagline {
+            font-size: 0.9rem;
+            opacity: 0.8;
+            font-weight: normal;
+        }
+
+        nav ul {
+            list-style: none;
+            display: flex;
+            gap: 1.5rem;
+            align-items: center;
+        }
+
+        nav a {
+            color: white;
+            text-decoration: none;
+            font-weight: 500;
+            transition: opacity 0.3s;
+            padding: 0.4rem 0.1rem;
+            border-radius: 5px;
+        }
+
+        nav a:hover, nav a.active {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        /* User Dropdown */
+        .user-menu {
+            position: relative;
+        }
+
+        .user-dropdown {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 5px;
+            transition: background 0.3s;
+        }
+
+        .user-dropdown:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        .user-name {
+            font-size: 0.9rem;
+        }
+
+        .dropdown-content {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background: white;
+            min-width: 200px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            padding: 0.5rem 0;
+            display: none;
+            z-index: 1001;
+        }
+
+        .dropdown-content.show {
+            display: block;
+        }
+
+        .dropdown-content a {
+            display: block;
+            padding: 0.75rem 1rem;
+            color: #333;
+            text-decoration: none;
+            transition: background 0.3s;
+        }
+
+        .dropdown-content a:hover {
+            background: #f8f9fa;
+        }
+
+        .dropdown-divider {
+            height: 1px;
+            background: #e9ecef;
+            margin: 0.5rem 0;
+        }
+
+        /* Alert Messages */
+        .alert-container {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            z-index: 9999;
+            max-width: 400px;
+        }
+
+        .alert {
+            padding: 1rem 1.5rem;
+            margin-bottom: 1rem;
+            border-radius: 8px;
+            background: white;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            border-left: 4px solid;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .alert-success {
+            border-left-color: #10b981;
+            background: #f0fdf4;
+        }
+
+        .alert-error {
+            border-left-color: #ef4444;
+            background: #fef2f2;
+        }
+
+        .alert-info {
+            border-left-color: #3b82f6;
+            background: #eff6ff;
+        }
+
+        .alert-warning {
+            border-left-color: #f59e0b;
+            background: #fffbeb;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        /* Main Content */
+        main {
+            min-height: calc(100vh - 140px);
+            padding: 2rem 0;
+        }
+
+        /* Footer */
+        footer {
+            background: #1e293b;
+            color: white;
+            text-align: center;
+            padding: 2rem 0;
+            margin-top: 4rem;
+        }
+
+        .footer-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 2rem;
+        }
+
+        .footer-links {
+            display: flex;
+            gap: 1.5rem;
+        }
+
+        .footer-links a {
+            color: #cbd5e1;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        .footer-links a:hover {
+            color: white;
+        }
+
+        /* Auth Buttons */
+        .auth-buttons {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .auth-buttons .btn {
+            padding: 0.5rem 1rem;
+            font-size: 0.9rem;
+        }
+
+        /* Utility Classes */
+        .text-center {
+            text-align: center;
+        }
+
+        .mb-3 {
+            margin-bottom: 1rem;
+        }
+
+        .mt-3 {
+            margin-top: 1rem;
+        }
+
+        .mb-4 {
+            margin-bottom: 2rem;
+        }
+
+        .mt-4 {
+            margin-top: 2rem;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        /* Button Styles */
+        .btn {
+            display: inline-block;
+            padding: 0.8rem 1.5rem;
+            background: #2563eb;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            border: none;
+            cursor: pointer;
+            transition: background 0.3s;
+            font-weight: 500;
+        }
+
+        .btn:hover {
+            background: #1d4ed8;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 2px solid #2563eb;
+            color: #2563eb;
+        }
+
+        .btn-outline:hover {
+            background: #2563eb;
+            color: white;
+        }
+
+        .btn-success {
+            background: #10b981;
+        }
+
+        .btn-success:hover {
+            background: #0ea271;
+        }
+
+        .btn-login {
+            background: #f59e0b;
+        }
+
+        .btn-login:hover {
+            background: #d97706;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header-content {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            nav ul {
+                flex-direction: column;
+                gap: 1rem;
+                width: 100%;
+            }
+
+            .auth-buttons {
+                flex-direction: column;
+                width: 100%;
+            }
+
+            .auth-buttons .btn {
+                width: 100%;
+            }
+
+            .user-dropdown {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .dropdown-content {
+                position: static;
+                width: 100%;
+            }
+
+            .container {
+                padding: 0 15px;
+            }
+
+            .alert-container {
+                left: 15px;
+                right: 15px;
+                max-width: none;
+            }
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+<header>
+    <div class="container">
+        <div class="header-content">
+            <div class="logo">
+                <a href="{% url 'home' %}">
+                    HasanPortfolio
+                    <span class="tagline">Data Science & ML</span>
+                </a>
+            </div>
+            <nav>
+                <ul>
+                    <!-- Public Navigation (Always Visible) -->
+                    <li><a href="{% url 'home' %}"
+                           {% if request.resolver_match.url_name == 'home' %}class="active"{% endif %}>Home</a></li>
+
+                    <li><a href="{% url 'projects_list' %}"
+                           {% if request.resolver_match.url_name == 'projects_list' %}class="active"{% endif %}>Projects</a>
+                    </li>
+
+                    <li><a href="{% url 'resume:resume_page' %}"
+                           {% if request.resolver_match.url_name == 'resume_page' %}class="active"{% endif %}>Resume</a>
+                    </li>
+
+                    <li><a href="{% url 'stories:story_list' %}"
+                           {% if request.resolver_match.url_name == 'story_list' %}class="active"{% endif %}>Stories</a>
+                    </li>
+
+                    <!-- Conditional Navigation Based on Authentication -->
+                    {% if user.is_authenticated %}
+                        <!-- Authenticated User Navigation -->
+                        <li><a href="{% url 'rag_system:chat' %}"
+                               {% if request.resolver_match.url_name == 'chat' %}class="active"{% endif %}>AI
+                            Assistant</a>
+                        </li>
+
+                        <li><a href="{% url 'accounts:dashboard' %}"
+                               {% if request.resolver_match.url_name == 'dashboard' %}class="active"{% endif %}>Dashboard</a>
+                        </li>
+
+                        <!-- User Dropdown Menu -->
+                        <li class="user-menu">
+                            <div class="user-dropdown" onclick="toggleDropdown()">
+                                <div class="user-avatar">
+                                    {{ user.username|first|upper }}
+                                </div>
+                                <span class="user-name">{{ user.username }}</span>
+                                <span>▼</span>
+                            </div>
+                            <div class="dropdown-content" id="userDropdown">
+                                <a href="{% url 'accounts:profile' username=user.username %}">
+                                    <span>👤</span> My Profile
+                                </a>
+                                <a href="{% url 'accounts:dashboard' %}">
+                                    <span>📊</span> Dashboard
+                                </a>
+                                <a href="{% url 'stories:create_story' %}">
+                                    <span>✍️</span> Write Story
+                                </a>
+                                <div class="dropdown-divider"></div>
+                                <a href="{% url 'accounts:profile_update' %}">
+                                    <span>⚙️</span> Settings
+                                </a>
+                                <a href="{% url 'accounts:logout' %}">
+                                    <span>🚪</span> Logout
+                                </a>
+                            </div>
+                        </li>
+
+                    {% else %}
+                        <!-- Guest User Navigation -->
+                        <li><a href="{% url 'contact:contact_page' %}"
+                               {% if request.resolver_match.url_name == 'contact_page' %}class="active"{% endif %}>Contact</a>
+                        </li>
+
+                        <!-- Authentication Buttons -->
+                        <li class="auth-buttons">
+                            <a href="{% url 'accounts:login' %}?next={{ request.path }}" class="btn btn-login">
+                                Login
+                            </a>
+                            <a href="{% url 'accounts:register' %}?next={{ request.path }}" class="btn btn-success">
+                                Sign Up
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+    </div>
+</header>
+
+<!-- Alert Messages Display -->
+<div class="alert-container">
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">
+                {{ message }}
+                <button onclick="this.parentElement.style.display='none'"
+                        style="float: right; background: none; border: none; cursor: pointer;">✕
+                </button>
+            </div>
+        {% endfor %}
+    {% endif %}
+</div>
+
+<main>
+    <div class="container">
+        {% block content %}
+            <!-- Main content will be injected here -->
+        {% endblock %}
+    </div>
+</main>
+
+<footer>
+    <div class="container">
+        <div class="footer-content">
+            <div class="footer-copyright">
+                <p>&copy; 2025 HasanPortfolio. All rights reserved.</p>
+                <p style="font-size: 0.9rem; opacity: 0.8; margin-top: 0.5rem;">
+                    {% if user.is_authenticated %}
+                        Welcome back, {{ user.username }}! •
+                        <a href="{% url 'accounts:logout' %}" style="color: #cbd5e1;">Logout</a>
+                    {% else %}
+                        <a href="{% url 'accounts:login' %}" style="color: #cbd5e1;">Login</a> •
+                        <a href="{% url 'accounts:register' %}" style="color: #cbd5e1;">Join our community</a>
+                    {% endif %}
+                </p>
+            </div>
+            <div class="footer-links">
+                <a href="https://github.com/seyedhasanmirhoseini1367" target="_blank">GitHub</a>
+                <a href="https://www.linkedin.com/in/seyedhasanmirhosseini/" target="_blank">LinkedIn</a>
+                <a href="https://www.kaggle.com/seyedhasanmirhoseini" target="_blank">Kaggle</a>
+                <a href="{% url 'contact:contact_page' %}">Contact</a>
+                {% if user.is_staff %}
+                    <a href="/admin/" target="_blank">Admin</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</footer>
+
+<script>
+    // User dropdown toggle
+    function toggleDropdown() {
+        const dropdown = document.getElementById('userDropdown');
+        dropdown.classList.toggle('show');
+    }
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function (event) {
+        const dropdown = document.getElementById('userDropdown');
+        const userMenu = document.querySelector('.user-menu');
+
+        if (!userMenu.contains(event.target)) {
+            dropdown.classList.remove('show');
+        }
+    });
+
+    // Auto-hide alerts after 5 seconds
+    document.addEventListener('DOMContentLoaded', function () {
+        setTimeout(function () {
+            const alerts = document.querySelectorAll('.alert');
+            alerts.forEach(alert => {
+                alert.style.opacity = '0';
+                alert.style.transition = 'opacity 0.5s';
+                setTimeout(() => alert.remove(), 500);
+            });
+        }, 5000);
+    });
+
+    // Check if user is authenticated and show appropriate content
+    {% if user.is_authenticated %}
+        console.log('User is authenticated:', '{{ user.username }}');
+    {% else %}
+        console.log('User is not authenticated');
+        // Optional: Redirect protected pages
+        const protectedPages = ['/accounts/dashboard/', '/accounts/profile/', '/stories/create/'];
+        const currentPath = window.location.pathname;
+
+        if (protectedPages.some(page => currentPath.includes(page))) {
+            // If user tries to access protected pages while not logged in
+            // They will be redirected by Django's @login_required decorator
+            // But we can add client-side handling if needed
+        }
+    {% endif %}
+</script>
+
+{% block extra_js %}{% endblock %}
+</body>
+</html>

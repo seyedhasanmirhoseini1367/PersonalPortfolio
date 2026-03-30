@@ -1,0 +1,476 @@
+{% extends 'base.html' %}
+
+{% block title %}
+    {% if form.instance.pk %}Edit Story{% else %}Write New Story{% endif %} - HasanPortfolio
+{% endblock %}
+
+{% block extra_css %}
+    <style>
+        .form-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .form-header {
+            background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+            color: white;
+            padding: 2rem;
+            text-align: center;
+        }
+
+        .form-header h1 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .form-subtitle {
+            opacity: 0.9;
+            font-size: 1.1rem;
+        }
+
+        .story-form {
+            padding: 2rem;
+        }
+
+        .form-section {
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            background: #f8fafc;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .section-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #2563eb;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: #374151;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 5px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .form-text {
+            display: block;
+            margin-top: 0.25rem;
+            font-size: 0.875rem;
+            color: #6b7280;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .checkbox-label {
+            font-weight: 500;
+            color: #374151;
+        }
+
+        .error-list {
+            margin-top: 0.5rem;
+        }
+
+        .error {
+            display: block;
+            color: #dc2626;
+            font-size: 0.875rem;
+            margin-top: 0.25rem;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 1rem;
+            padding: 1.5rem;
+            background: #f8fafc;
+            border-radius: 8px;
+            margin-top: 2rem;
+            border-top: 1px solid #e2e8f0;
+            flex-wrap: wrap;
+        }
+
+        .preview-section {
+            padding: 2rem;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .preview-container {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 1.5rem;
+            min-height: 300px;
+        }
+
+        #preview-title {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            color: #1e293b;
+        }
+
+        .preview-excerpt {
+            font-style: italic;
+            color: #64748b;
+            margin-bottom: 1rem;
+            padding: 1rem;
+            background: #f8fafc;
+            border-radius: 5px;
+        }
+
+        .preview-content-text {
+            line-height: 1.6;
+            color: #334155;
+        }
+
+        .char-counter {
+            text-align: right;
+            font-size: 0.875rem;
+            color: #6b7280;
+            margin-top: 0.25rem;
+        }
+
+        .current-image {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: #f8fafc;
+            border-radius: 5px;
+        }
+
+        .current-image p {
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+
+        textarea.form-control {
+            resize: vertical;
+            min-height: 150px;
+        }
+
+        @media (max-width: 768px) {
+            .story-form {
+                padding: 1rem;
+            }
+
+            .form-section {
+                padding: 1rem;
+            }
+
+            .form-actions {
+                flex-direction: column;
+            }
+
+            .form-actions .btn {
+                width: 100%;
+            }
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+    <div class="form-container">
+        <div class="form-header">
+            <h1>{% if form.instance.pk %}Edit Story{% else %}Write New Story{% endif %}</h1>
+            <p class="form-subtitle">
+                Share your knowledge, experiences, and insights with the community.
+            </p>
+        </div>
+
+        <form method="post" enctype="multipart/form-data" class="story-form">
+            {% csrf_token %}
+
+            {% if messages %}
+                <div class="messages">
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }}" style="margin-bottom: 1.5rem;">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <div class="form-section">
+                <h2 class="section-title">Basic Information</h2>
+
+                <div class="form-group">
+                    <label for="id_title" class="form-label">Story Title *</label>
+                    <input type="text" name="title" id="id_title" class="form-control"
+                           value="{{ form.title.value|default:'' }}"
+                           placeholder="Enter your story title" required maxlength="200">
+                    {% if form.title.errors %}
+                        <div class="error-list">
+                            {% for error in form.title.errors %}
+                                <span class="error">{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                    <div class="form-text">
+                        A clear, descriptive title helps readers find your story (10-200 characters).
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="id_excerpt" class="form-label">Excerpt (Optional)</label>
+                    <textarea name="excerpt" id="id_excerpt" class="form-control" rows="3"
+                              placeholder="Brief summary of your story (optional)"
+                              maxlength="500">{{ form.excerpt.value|default:'' }}</textarea>
+                    <div class="form-text">
+                        A brief summary of your story. This appears in story listings (max 500 characters).
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h2 class="section-title">Story Content</h2>
+
+                <div class="form-group">
+                    <label for="id_content" class="form-label">Story Content *</label>
+                    <textarea name="content" id="id_content" class="form-control" rows="15"
+                              placeholder="Write your story here..."
+                              required>{{ form.content.value|default:'' }}</textarea>
+                    {% if form.content.errors %}
+                        <div class="error-list">
+                            {% for error in form.content.errors %}
+                                <span class="error">{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                    <div class="form-text">
+                        Write your full story here. Minimum 100 characters.
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="id_featured_image" class="form-label">Featured Image</label>
+                        <input type="file" name="featured_image" id="id_featured_image" class="form-control">
+                        {% if form.instance.featured_image %}
+                            <div class="current-image">
+                                <p>Current image:</p>
+                                <img src="{{ form.instance.featured_image.url }}" alt="Current featured image"
+                                     style="max-width: 200px; margin-top: 0.5rem; border-radius: 5px;">
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="form-group">
+                        <label for="id_tag_input" class="form-label">Tags</label>
+                        <input type="text" name="tag_input" id="id_tag_input" class="form-control"
+                               value="{{ form.tag_input.value|default:'' }}"
+                               placeholder="Enter tags separated by commas (e.g., python, django, machine-learning)">
+                        <div class="form-text">
+                            Separate tags with commas
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h2 class="section-title">Publication Settings</h2>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="id_status" class="form-label">Publication Status</label>
+                        <select name="status" id="id_status" class="form-control">
+                            {% for value, label in form.fields.status.choices %}
+                                <option value="{{ value }}" {% if form.status.value == value %}selected{% endif %}>
+                                    {{ label }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text">
+                            Choose whether to publish now or save as draft.
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <div class="checkbox-group">
+                            <input type="checkbox" name="is_featured" id="id_is_featured"
+                                   {% if form.is_featured.value %}checked{% endif %}>
+                            <label for="id_is_featured" class="checkbox-label">Feature this story</label>
+                        </div>
+                        <div class="form-text">
+                            Featured stories appear prominently on the homepage.
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <div class="checkbox-group">
+                            <input type="checkbox" name="allow_comments" id="id_allow_comments"
+                                   {% if form.allow_comments.value %}checked{% endif %}>
+                            <label for="id_allow_comments" class="checkbox-label">Allow comments</label>
+                        </div>
+                        <div class="form-text">
+                            Enable or disable comments for this story.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn">
+                    {% if form.instance.pk %}Update Story{% else %}Publish Story{% endif %}
+                </button>
+                <a href="
+                        {% if form.instance.pk %}{% url 'stories:story_detail' slug=form.instance.slug %}{% else %}{% url 'stories:story_list' %}{% endif %}"
+                   class="btn btn-secondary">
+                    Cancel
+                </a>
+                {% if form.instance.pk %}
+                    <a href="{% url 'stories:story_delete' pk=form.instance.pk %}"
+                       class="btn btn-danger">
+                        Delete Story
+                    </a>
+                {% endif %}
+            </div>
+        </form>
+
+        <!-- Preview Section -->
+        <div class="preview-section">
+            <h2 class="section-title">Story Preview</h2>
+            <div class="preview-container">
+                <div class="preview-content" id="story-preview">
+                    <h3 id="preview-title">Title will appear here</h3>
+                    <div class="preview-excerpt" id="preview-excerpt"></div>
+                    <div class="preview-content-text" id="preview-content">Story content will appear here</div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Get form elements
+            const titleInput = document.getElementById('id_title');
+            const excerptInput = document.getElementById('id_excerpt');
+            const contentInput = document.getElementById('id_content');
+
+            // Get preview elements
+            const previewTitle = document.getElementById('preview-title');
+            const previewExcerpt = document.getElementById('preview-excerpt');
+            const previewContent = document.getElementById('preview-content');
+
+            // Update preview functions
+            function updatePreview() {
+                // Update title
+                previewTitle.textContent = titleInput.value || 'Title will appear here';
+
+                // Update excerpt
+                if (excerptInput.value) {
+                    previewExcerpt.textContent = excerptInput.value;
+                    previewExcerpt.style.display = 'block';
+                } else {
+                    previewExcerpt.style.display = 'none';
+                }
+
+                // Update content
+                previewContent.textContent = contentInput.value || 'Story content will appear here';
+            }
+
+            // Add event listeners
+            [titleInput, excerptInput, contentInput].forEach(input => {
+                input.addEventListener('input', updatePreview);
+            });
+
+            // Initial preview update
+            updatePreview();
+
+            // Character counters
+            const titleCounter = document.createElement('div');
+            titleCounter.className = 'char-counter';
+            titleInput.parentNode.appendChild(titleCounter);
+
+            const excerptCounter = document.createElement('div');
+            excerptCounter.className = 'char-counter';
+            excerptInput.parentNode.appendChild(excerptCounter);
+
+            const contentCounter = document.createElement('div');
+            contentCounter.className = 'char-counter';
+            contentInput.parentNode.appendChild(contentCounter);
+
+            function updateCounters() {
+                const titleLength = titleInput.value.length;
+                const excerptLength = excerptInput.value.length;
+                const contentLength = contentInput.value.length;
+
+                titleCounter.textContent = `${titleLength}/200 characters`;
+                titleCounter.style.color = titleLength > 200 ? '#dc2626' :
+                    (titleLength < 10 ? '#f59e0b' : '#6b7280');
+
+                excerptCounter.textContent = `${excerptLength}/500 characters`;
+                excerptCounter.style.color = excerptLength > 500 ? '#dc2626' : '#6b7280';
+
+                contentCounter.textContent = `${contentLength} characters`;
+                contentCounter.style.color = contentLength < 100 ? '#f59e0b' : '#6b7280';
+            }
+
+            [titleInput, excerptInput, contentInput].forEach(input => {
+                input.addEventListener('input', updateCounters);
+            });
+
+            updateCounters();
+
+            // Form validation
+            const form = document.querySelector('.story-form');
+            form.addEventListener('submit', function (e) {
+                let isValid = true;
+                let errorMessages = [];
+
+                // Validate title
+                if (titleInput.value.length < 10) {
+                    isValid = false;
+                    errorMessages.push('Title must be at least 10 characters long.');
+                }
+
+                // Validate content
+                if (contentInput.value.length < 100) {
+                    isValid = false;
+                    errorMessages.push('Story content must be at least 100 characters.');
+                }
+
+                if (!isValid) {
+                    e.preventDefault();
+                    alert('Please fix the following errors:\n\n' + errorMessages.join('\n'));
+                }
+            });
+        });
+    </script>
+{% endblock %}

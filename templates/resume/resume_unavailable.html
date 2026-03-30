@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+
+{% block title %}Resume Unavailable - HasanPortfolio{% endblock %}
+
+{% block content %}
+<div class="container" style="text-align: center; padding: 4rem 0;">
+    <div style="font-size: 4rem; margin-bottom: 2rem;">📄</div>
+    <h1 style="font-size: 2.5rem; margin-bottom: 1rem; color: #1e293b;">Resume Unavailable</h1>
+    <p style="font-size: 1.2rem; color: #64748b; margin-bottom: 2rem; max-width: 500px; margin-left: auto; margin-right: auto;">
+        My resume is currently being updated. Please check back soon or contact me directly.
+    </p>
+    <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+        <a href="{% url 'contact:contact_page' %}" class="btn">Contact Me</a>
+        <a href="{% url 'projects_list' %}" class="btn btn-outline">View Projects</a>
+    </div>
+</div>
+{% endblock %}
