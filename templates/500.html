@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+
+{% block title %}Server Error — HasanPortfolio{% endblock %}
+
+{% block content %}
+<div style="min-height: 70vh; display: flex; align-items: center; justify-content: center; text-align: center; padding: 2rem;">
+    <div>
+        <div style="font-size: 6rem; line-height: 1; margin-bottom: 1rem;">⚙️</div>
+        <h1 style="font-size: 5rem; font-weight: 800; color: #ef4444; margin: 0 0 0.25rem;">500</h1>
+        <h2 style="font-size: 1.5rem; font-weight: 600; color: #1e293b; margin: 0 0 1rem;">Something Went Wrong</h2>
+        <p style="color: #64748b; font-size: 1rem; max-width: 420px; margin: 0 auto 2rem; line-height: 1.6;">
+            An unexpected error occurred on the server. Please try again in a moment.
+        </p>
+        <a href="/" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1.5rem; background: linear-gradient(135deg, #667eea, #764ba2); color: white; border-radius: 10px; text-decoration: none; font-weight: 600;"
+           onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+            <i class="fas fa-home"></i> Back to Home
+        </a>
+    </div>
+</div>
+{% endblock %}

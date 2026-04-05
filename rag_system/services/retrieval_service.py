@@ -57,7 +57,7 @@ class RetrievalService:
         all_results = []
 
         if document_types is None:
-            document_types = ['project', 'resume', 'blog', 'skill']
+            document_types = ['project', 'resume', 'blog', 'skill', 'project_documentation']
 
         print(f"Hybrid retrieval for query: {query}, types: {document_types}")
 

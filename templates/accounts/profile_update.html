@@ -800,7 +800,32 @@
                 grid-template-columns: 1fr;
             }
         }
+
+        .alert-error {
+            background: #fee2e2;
+            color: #991b1b;
+            border-left: 4px solid #dc2626;
+        }
     </style>
+
+    {% if user_form.errors or profile_form.errors %}
+        <div class="alert-message alert-error">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            Please correct the errors below:
+            <ul class="mb-0 mt-2">
+                {% for field, errors in user_form.errors.items %}
+                    {% for error in errors %}
+                        <li>{{ field }}: {{ error }}</li>
+                    {% endfor %}
+                {% endfor %}
+                {% for field, errors in profile_form.errors.items %}
+                    {% for error in errors %}
+                        <li>{{ field }}: {{ error }}</li>
+                    {% endfor %}
+                {% endfor %}
+            </ul>
+        </div>
+    {% endif %}
 
     <script>
         // Image preview

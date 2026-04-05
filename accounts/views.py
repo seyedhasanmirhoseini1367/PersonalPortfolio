@@ -138,12 +138,14 @@ class ProfileDetailView(LoginRequiredMixin, DetailView):
         context = super().get_context_data(**kwargs)
         user = self.get_object()
 
-        # Get user's stories and comments
-        context['user_stories'] = Story.objects.filter(author=user).order_by('-created_at')
-        context['user_comments'] = Comment.objects.filter(author=user).order_by('-created_at')
+        user_stories = Story.objects.filter(author=user).order_by('-created_at')
+        user_comments = Comment.objects.filter(author=user).order_by('-created_at')
 
-        # Check if viewing own profile
+        context['user_stories'] = user_stories
+        context['user_comments'] = user_comments
         context['is_own_profile'] = (self.request.user == user)
+        context['total_views'] = user_stories.aggregate(Sum('view_count'))['view_count__sum'] or 0
+        context['recent_comments'] = user_comments[:5]
 
         return context
 
@@ -154,7 +156,12 @@ def profile_update_view(request):
     Update user profile
     """
     if request.method == 'POST':
-        user_form = CustomUserChangeForm(request.POST, instance=request.user)
+        # Add request.FILES to handle file uploads
+        user_form = CustomUserChangeForm(
+            request.POST,
+            request.FILES,  # Important: add this to handle file uploads
+            instance=request.user
+        )
         profile_form = ProfileUpdateForm(
             request.POST,
             instance=request.user.profile
@@ -165,6 +172,11 @@ def profile_update_view(request):
             profile_form.save()
             messages.success(request, 'Your profile has been updated!')
             return redirect('accounts:profile', username=request.user.username)
+        else:
+            # Add error messages for debugging
+            print("User form errors:", user_form.errors)
+            print("Profile form errors:", profile_form.errors)
+            messages.error(request, 'Please correct the errors below.')
     else:
         user_form = CustomUserChangeForm(instance=request.user)
         profile_form = ProfileUpdateForm(instance=request.user.profile)
@@ -175,7 +187,6 @@ def profile_update_view(request):
         'title': 'Edit Profile'
     }
     return render(request, 'accounts/profile_update.html', context)
-
 
 def password_reset_request_view(request):
     """

@@ -42,12 +42,22 @@ def resume_page(request):
 
 def download_resume_pdf(request):
     """
-    Generate and download resume as PDF using xhtml2pdf
+    Download resume as PDF.
+    If a PDF has been uploaded in admin (cv_pdf field), serve it directly.
+    Otherwise, generate one from the HTML template using xhtml2pdf.
     """
     resume_settings = ResumeSetting.objects.first()
 
     if not resume_settings or not resume_settings.is_active:
         return HttpResponse("Resume not available", status=404)
+
+    # Prefer the uploaded PDF — always higher quality than generated
+    if resume_settings.cv_pdf:
+        import os
+        filename = os.path.basename(resume_settings.cv_pdf.name)
+        response = HttpResponse(resume_settings.cv_pdf.read(), content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        return response
 
     # Group skills by category
     skills = Skill.objects.all().order_by('category', 'display_order', 'name')

@@ -8,20 +8,20 @@
         .project-detail-header {
             background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
             color: white;
-            padding: 3rem 0;
+            padding: 1rem 0;
             border-radius: 15px;
-            margin-bottom: 3rem;
+            margin-bottom: 1rem;
         }
 
         .project-title {
-            font-size: 2.8rem;
+            font-size: 1.8rem;
             margin-bottom: 1rem;
             font-weight: 700;
             text-align: center;
         }
 
         .project-short-desc {
-            font-size: 1.3rem;
+            font-size: 1.1rem;
             opacity: 0.9;
             margin-bottom: 2rem;
             {#max-width: 800px;#}
@@ -37,7 +37,7 @@
 
         .meta-item {
             background: rgba(255, 255, 255, 0.1);
-            padding: 1rem;
+            padding: 0.5rem;
             border-radius: 10px;
             text-align: center;
         }
@@ -51,15 +51,15 @@
 
         .meta-value {
             display: block;
-            font-size: 1.1rem;
-            font-weight: 600;
+            font-size: 1.0rem;
+            font-weight: 500;
         }
 
         /* Content Sections */
         .content-grid {
             display: grid;
             grid-template-columns: 2fr 1fr;
-            gap: 3rem;
+            gap: 1.5rem;
         }
 
         .main-content {
@@ -72,12 +72,12 @@
         .sidebar {
             display: flex;
             flex-direction: column;
-            gap: 2rem;
+            gap: 1rem;
         }
 
         .sidebar-card {
             background: white;
-            padding: 1.5rem;
+            padding: 1.2rem;
             border-radius: 10px;
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
         }
@@ -159,7 +159,7 @@
 
         .metric-card {
             background: #f0f9ff;
-            padding: 1.5rem;
+            padding: 0.5rem;
             border-radius: 10px;
             text-align: center;
             border-left: 4px solid #2563eb;
@@ -181,27 +181,27 @@
         .prediction-section {
             background: linear-gradient(135deg, #10b981 0%, #059669 100%);
             color: white;
-            padding: 2.5rem;
+            padding: 1.0rem;
             border-radius: 15px;
             text-align: center;
-            margin: 3rem 0;
+            margin: 2rem 0;
         }
 
         .prediction-content {
-            max-width: 600px;
+            max-width: 1000px;
             margin: 0 auto;
         }
 
         .prediction-title {
-            font-size: 2rem;
+            font-size: 1.6rem;
             margin-bottom: 1rem;
             font-weight: 700;
         }
 
         .prediction-description {
-            font-size: 1.1rem;
+            font-size: 1.0rem;
             opacity: 0.9;
-            margin-bottom: 2rem;
+            margin-bottom: 1rem;
             line-height: 1.6;
         }
 
@@ -215,7 +215,7 @@
             text-decoration: none;
             border-radius: 50px;
             font-weight: 600;
-            font-size: 1.1rem;
+            font-size: 1.0rem;
             transition: all 0.3s;
             border: 2px solid rgba(255, 255, 255, 0.3);
         }
@@ -597,6 +597,321 @@
             </div>
         </div>
     </div>
+
+    <!-- ── Comments Section ──────────────────────────────────────────────── -->
+    <section class="project-comments-section container">
+        <div class="pc-header">
+            <h2 class="pc-title">
+                <i class="fas fa-comments me-2"></i>
+                Comments
+                <span class="pc-count">{{ comment_count }}</span>
+            </h2>
+            <p class="pc-subtitle">Share your thoughts, questions, or feedback about this project.</p>
+        </div>
+
+        <!-- Comment form -->
+        {% if user.is_authenticated %}
+            <div class="pc-form-card">
+                <form method="post" action="{% url 'add_project_comment' project.id %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="parent_id" value="">
+                    <div class="pc-form-group">
+                        <label class="pc-label">
+                            <span class="pc-avatar-sm">{{ user.username|first|upper }}</span>
+                            Add a comment
+                        </label>
+                        <textarea name="content" class="pc-textarea" rows="4"
+                                  placeholder="What do you think about this project or model?" required minlength="5"></textarea>
+                    </div>
+                    <button type="submit" class="pc-btn-submit">
+                        <i class="fas fa-paper-plane me-2"></i>Post Comment
+                    </button>
+                </form>
+            </div>
+        {% else %}
+            <div class="pc-login-prompt">
+                <i class="fas fa-lock fa-2x mb-3" style="color:#667eea;"></i>
+                <p>
+                    <a href="{% url 'accounts:login' %}">Log in</a> to leave a comment.
+                </p>
+            </div>
+        {% endif %}
+
+        <!-- Messages -->
+        {% for message in messages %}
+            <div class="pc-message pc-message-{{ message.tags }}">{{ message }}</div>
+        {% endfor %}
+
+        <!-- Comment list -->
+        <div class="pc-list">
+            {% for comment in comments %}
+                <div class="pc-comment" id="comment-{{ comment.id }}">
+                    <div class="pc-comment-avatar">{{ comment.author.username|first|upper }}</div>
+                    <div class="pc-comment-body">
+                        <div class="pc-comment-meta">
+                            <span class="pc-comment-author">{{ comment.author.username }}</span>
+                            <span class="pc-comment-date">{{ comment.created_at|date:"M j, Y · g:i a" }}</span>
+                        </div>
+                        <p class="pc-comment-text">{{ comment.content|linebreaksbr }}</p>
+
+                        <!-- Replies -->
+                        {% if comment.replies.all %}
+                            <div class="pc-replies">
+                                {% for reply in comment.replies.all %}
+                                    {% if reply.is_approved %}
+                                        <div class="pc-comment pc-reply">
+                                            <div class="pc-comment-avatar pc-avatar-sm">{{ reply.author.username|first|upper }}</div>
+                                            <div class="pc-comment-body">
+                                                <div class="pc-comment-meta">
+                                                    <span class="pc-comment-author">{{ reply.author.username }}</span>
+                                                    <span class="pc-comment-date">{{ reply.created_at|date:"M j, Y · g:i a" }}</span>
+                                                </div>
+                                                <p class="pc-comment-text">{{ reply.content|linebreaksbr }}</p>
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+
+                        <!-- Reply form trigger -->
+                        {% if user.is_authenticated %}
+                            <button class="pc-reply-toggle" data-comment="{{ comment.id }}">
+                                <i class="fas fa-reply me-1"></i>Reply
+                            </button>
+                            <div class="pc-reply-form" id="reply-form-{{ comment.id }}" style="display:none;">
+                                <form method="post" action="{% url 'add_project_comment' project.id %}">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="parent_id" value="{{ comment.id }}">
+                                    <textarea name="content" class="pc-textarea pc-textarea-sm" rows="3"
+                                              placeholder="Write a reply…" required minlength="5"></textarea>
+                                    <div class="pc-reply-actions">
+                                        <button type="submit" class="pc-btn-submit pc-btn-sm">
+                                            <i class="fas fa-paper-plane me-1"></i>Reply
+                                        </button>
+                                        <button type="button" class="pc-btn-cancel" data-comment="{{ comment.id }}">Cancel</button>
+                                    </div>
+                                </form>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            {% empty %}
+                <div class="pc-empty">
+                    <i class="fas fa-comment-slash fa-2x mb-3" style="color:#cbd5e1;"></i>
+                    <p>No comments yet. Be the first to share your thoughts!</p>
+                </div>
+            {% endfor %}
+        </div>
+    </section>
+
+    <style>
+        .project-comments-section {
+            margin: 2rem auto 2rem;
+            max-width: 860px;
+        }
+        .pc-header { margin-bottom: 1.5rem; }
+        .pc-title {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: #1e293b;
+            margin: 0 0 0.4rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .pc-title i { color: #667eea; }
+        .pc-count {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            font-size: 0.9rem;
+            font-weight: 700;
+            border-radius: 20px;
+            padding: 0.15rem 0.7rem;
+        }
+        .pc-subtitle { color: #64748b; margin: 0; font-size: 1rem; }
+
+        .pc-form-card {
+            background: white;
+            border-radius: 16px;
+            padding: 1.75rem;
+            box-shadow: 0 1px 4px rgba(0,0,0,.07);
+            border: 1px solid #e2e8f0;
+            margin-bottom: 2rem;
+        }
+        .pc-form-group { margin-bottom: 1rem; }
+        .pc-label {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 0.75rem;
+            font-size: 1rem;
+        }
+        .pc-avatar-sm {
+            width: 32px; height: 32px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.9rem;
+            flex-shrink: 0;
+        }
+        .pc-textarea {
+            width: 100%;
+            padding: 0.875rem 1rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-family: inherit;
+            line-height: 1.6;
+            resize: vertical;
+            transition: border-color .2s;
+        }
+        .pc-textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102,126,234,.1);
+        }
+        .pc-textarea-sm { font-size: 0.95rem; }
+        .pc-btn-submit {
+            padding: 0.75rem 1.75rem;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all .2s;
+        }
+        .pc-btn-submit:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(102,126,234,.3); }
+        .pc-btn-sm { padding: 0.5rem 1.25rem; font-size: 0.9rem; }
+        .pc-btn-cancel {
+            padding: 0.5rem 1.25rem;
+            background: white;
+            color: #64748b;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all .2s;
+        }
+        .pc-btn-cancel:hover { border-color: #cbd5e1; color: #1e293b; }
+
+        .pc-login-prompt {
+            text-align: center;
+            padding: 2.5rem;
+            background: #f8fafc;
+            border-radius: 16px;
+            border: 2px dashed #cbd5e1;
+            margin-bottom: 2rem;
+            color: #64748b;
+            font-size: 1rem;
+        }
+        .pc-login-prompt a { color: #667eea; font-weight: 600; text-decoration: none; }
+        .pc-login-prompt a:hover { text-decoration: underline; }
+
+        .pc-message {
+            padding: 0.875rem 1.25rem;
+            border-radius: 10px;
+            margin-bottom: 1rem;
+            font-weight: 500;
+            font-size: 1rem;
+        }
+        .pc-message-success { background: #d1fae5; color: #065f46; }
+        .pc-message-error   { background: #fee2e2; color: #991b1b; }
+
+        .pc-list { display: flex; flex-direction: column; gap: 1.25rem; }
+
+        .pc-comment {
+            display: flex;
+            gap: 1rem;
+            background: white;
+            border-radius: 14px;
+            padding: 1.25rem 1.5rem;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 1px 3px rgba(0,0,0,.04);
+        }
+        .pc-reply {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            box-shadow: none;
+            padding: 1rem 1.25rem;
+        }
+        .pc-comment-avatar {
+            width: 44px; height: 44px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 1.1rem;
+            flex-shrink: 0;
+        }
+        .pc-avatar-sm { width: 36px; height: 36px; font-size: 0.9rem; }
+        .pc-comment-body { flex: 1; }
+        .pc-comment-meta {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.5rem;
+            flex-wrap: wrap;
+        }
+        .pc-comment-author { font-weight: 700; color: #1e293b; font-size: 0.975rem; }
+        .pc-comment-date   { color: #94a3b8; font-size: 0.875rem; }
+        .pc-comment-text   { color: #334155; line-height: 1.65; margin: 0 0 0.75rem; font-size: 1rem; }
+
+        .pc-replies { margin-top: 1rem; display: flex; flex-direction: column; gap: 0.75rem; }
+
+        .pc-reply-toggle {
+            background: none;
+            border: none;
+            color: #667eea;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            padding: 0.35rem 0.75rem;
+            border-radius: 8px;
+            transition: background .2s;
+        }
+        .pc-reply-toggle:hover { background: #f1f5f9; }
+
+        .pc-reply-form { margin-top: 0.75rem; }
+        .pc-reply-actions { display: flex; gap: 0.75rem; margin-top: 0.5rem; }
+
+        .pc-empty {
+            text-align: center;
+            padding: 3rem 2rem;
+            color: #94a3b8;
+            background: white;
+            border-radius: 14px;
+            border: 1px dashed #e2e8f0;
+            font-size: 1rem;
+        }
+    </style>
+
+    <script>
+        document.querySelectorAll('.pc-reply-toggle').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const id = btn.dataset.comment;
+                const form = document.getElementById('reply-form-' + id);
+                form.style.display = form.style.display === 'none' ? 'block' : 'none';
+            });
+        });
+        document.querySelectorAll('.pc-btn-cancel').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.getElementById('reply-form-' + btn.dataset.comment).style.display = 'none';
+            });
+        });
+    </script>
 
     <!-- Related Projects -->
     {% if related_projects %}

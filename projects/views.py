@@ -1,254 +1,271 @@
-from django.shortcuts import render, get_object_or_404
+# projects/views.py
+from django.shortcuts import render, get_object_or_404, redirect
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
 from django.db.models import Q
-import pickle
 import json
-import numpy as np
 import pandas as pd
 import os
-from .models import Projects
+from .models import Projects, ProjectComment
 
+# Auto-import all handlers so @register() decorators run at startup
+import projects.inference.seizure_eeg          # noqa: F401
+import projects.inference.image_classifier     # noqa: F401
+import projects.inference.tabular_passthrough  # noqa: F401
+import projects.inference.personality_predictor  # noqa: F401
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# List / detail / home
+# ──────────────────────────────────────────────────────────────────────────────
 
 def projects_list(request):
-    """
-    View to display all portfolio projects with filtering options
-    """
-    # Get filter parameters from URL
-    project_type = request.GET.get('type', '')
-    skill_filter = request.GET.get('skill', '')
+    project_type  = request.GET.get('type', '')
+    skill_filter  = request.GET.get('skill', '')
     featured_only = request.GET.get('featured', '')
 
-    # Start with all public projects
     projects = Projects.objects.filter(is_public=True)
-
-    # Apply filters
-    if project_type:
-        projects = projects.filter(project_type=project_type)
-
-    if skill_filter:
-        # For TextField, we use contains lookup
-        projects = projects.filter(skills_used__contains=skill_filter)
-
-    if featured_only:
-        projects = projects.filter(is_featured=True)
-
-    # Get unique project types and skills for filters
-    project_types = Projects.PROJECT_TYPE_CHOICES
-    skills = Projects.SKILL_CHOICES
+    if project_type:   projects = projects.filter(project_type=project_type)
+    if skill_filter:   projects = projects.filter(skills_used__contains=skill_filter)
+    if featured_only:  projects = projects.filter(is_featured=True)
 
     context = {
         'projects': projects,
-        'project_types': project_types,
-        'skills': skills,
+        'project_types': Projects.PROJECT_TYPE_CHOICES,
+        'skills': Projects.SKILL_CHOICES,
         'active_type': project_type,
         'active_skill': skill_filter,
         'page_title': 'My Data Science Portfolio',
         'total_projects': projects.count(),
         'featured_count': projects.filter(is_featured=True).count(),
     }
-
-    return render(
-        request=request,
-        template_name="projects/projects_list.html",
-        context=context
-    )
+    return render(request, 'projects/projects_list.html', context)
 
 
 def project_detail(request, project_id):
-    """
-    View to display details of a specific project
-    """
     project = get_object_or_404(Projects, id=project_id, is_public=True)
+    related_q = Q(project_type=project.project_type)
+    for skill in project.get_skills_list():
+        related_q |= Q(skills_used__contains=skill)
+    related_projects = Projects.objects.filter(is_public=True).exclude(id=project_id).filter(related_q)[:3]
 
-    # Calculate additional context data
-    kaggle_percentile = project.get_kaggle_percentile()
-    skills_display = project.get_skills_display()
+    comments = project.comments.filter(
+        is_approved=True,
+        parent__isnull=True,
+    ).select_related('author').prefetch_related('replies__author').order_by('-created_at')
 
-    # Get related projects (same type or shared skills)
-    # Since skills_used is now TextField, we need to handle it differently
-    related_projects = Projects.objects.filter(
-        is_public=True
-    ).exclude(id=project_id)
-
-    # Build Q objects for related projects
-    related_q_objects = Q(project_type=project.project_type)
-
-    # For skills, check if any of the current project's skills appear in other projects
-    current_skills = project.get_skills_list()
-    for skill in current_skills:
-        related_q_objects |= Q(skills_used__contains=skill)
-
-    related_projects = related_projects.filter(related_q_objects)[:3]
-
-    context = {
+    return render(request, 'projects/project_detail.html', {
         'project': project,
-        'kaggle_percentile': kaggle_percentile,
-        'skills_display': skills_display,
-        'related_projects': related_projects,
-    }
+        'kaggle_percentile': project.get_kaggle_percentile(),
+        'skills_display':    project.get_skills_display(),
+        'related_projects':  related_projects,
+        'comments':          comments,
+        'comment_count':     project.comments.filter(is_approved=True).count(),
+    })
 
-    return render(
-        request=request,
-        template_name="projects/project_detail.html",
-        context=context
+
+@require_POST
+@login_required
+def add_project_comment(request, project_id):
+    project = get_object_or_404(Projects, id=project_id, is_public=True)
+    content = request.POST.get('content', '').strip()
+    parent_id = request.POST.get('parent_id', '').strip()
+
+    if len(content) < 5:
+        messages.error(request, 'Comment must be at least 5 characters.')
+        return redirect('project_detail', project_id=project_id)
+
+    parent = None
+    if parent_id:
+        parent = get_object_or_404(ProjectComment, id=parent_id, project=project)
+
+    ProjectComment.objects.create(
+        project=project,
+        author=request.user,
+        parent=parent,
+        content=content,
+        is_approved=True,
     )
+    messages.success(request, 'Your comment has been posted!')
+    return redirect('project_detail', project_id=project_id)
 
 
 def home(request):
-    """
-    Homepage view featuring highlighted projects and stats
-    """
-    featured_projects = Projects.objects.filter(
-        is_featured=True,
-        is_public=True
-    )[:6]
-
-    # Calculate portfolio statistics
-    total_projects = Projects.objects.filter(is_public=True).count()
-    kaggle_projects = Projects.objects.filter(
-        project_type='KAGGLE_COMPETITION',
-        is_public=True
-    ).count()
-
-    # Get skills frequency for skills cloud
-    all_projects = Projects.objects.filter(is_public=True)
     skill_count = {}
-    for project in all_projects:
-        skills_list = project.get_skills_list()
-        for skill in skills_list:
-            skill_count[skill] = skill_count.get(skill, 0) + 1
+    for p in Projects.objects.filter(is_public=True):
+        for s in p.get_skills_list():
+            skill_count[s] = skill_count.get(s, 0) + 1
 
-    # Convert to list of tuples for template
-    top_skills = sorted(skill_count.items(), key=lambda x: x[1], reverse=True)[:10]
+    return render(request, 'projects/home.html', {
+        'featured_projects': Projects.objects.filter(is_featured=True, is_public=True)[:6],
+        'total_projects':    Projects.objects.filter(is_public=True).count(),
+        'kaggle_projects':   Projects.objects.filter(project_type='KAGGLE_COMPETITION', is_public=True).count(),
+        'top_skills':        sorted(skill_count.items(), key=lambda x: x[1], reverse=True)[:10],
+        'skill_choices':     dict(Projects.SKILL_CHOICES),
+    })
 
-    context = {
-        'featured_projects': featured_projects,
-        'total_projects': total_projects,
-        'kaggle_projects': kaggle_projects,
-        'top_skills': top_skills,
-        'skill_choices': dict(Projects.SKILL_CHOICES),
-    }
 
-    return render(
-        request=request,
-        template_name="projects/home.html",
-        context=context
-    )
-
+# ──────────────────────────────────────────────────────────────────────────────
+# Prediction demo page
+# ──────────────────────────────────────────────────────────────────────────────
 
 def prediction_demo(request, project_id):
-    """Prediction demo page for a project"""
     project = get_object_or_404(Projects, id=project_id, is_public=True)
-
     if not project.has_prediction_capability():
         return render(request, 'projects/no_prediction.html', {'project': project})
 
-    context = {
-        'project': project,
-        'input_features': project.input_features,
-    }
-    return render(request, 'projects/prediction_demo.html', context)
+    cfg = project.file_input_config or {}
+    return render(request, 'projects/prediction_demo.html', {
+        'project':          project,
+        'file_input_config': cfg,
+        'accepted_formats': cfg.get('accepted_formats', []),
+        'demo_description': cfg.get('description', ''),
+        'handler_slug':     cfg.get('handler', ''),
+    })
 
+
+# ──────────────────────────────────────────────────────────────────────────────
+# File-based prediction  — single endpoint for ALL projects
+# ──────────────────────────────────────────────────────────────────────────────
+
+@csrf_exempt
+def file_prediction(request, project_id):
+    """
+    Universal file-upload prediction endpoint.
+
+    All project-specific logic lives in the handler registered for
+    project.file_input_config["handler"]. This view only orchestrates:
+      1. Resolve handler
+      2. Call handler.run(file)
+      3. Return JSON
+
+    Error handling is centralised: InferenceError → 400 with user message.
+    Any other exception → 500 with generic message + server log.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+    project = get_object_or_404(Projects, id=project_id, is_public=True)
+
+    if not project.has_prediction_capability():
+        return JsonResponse({
+            'error': 'Demo not enabled for this project yet.'
+        }, status=400)
+
+    uploaded = request.FILES.get('signal_file')
+    if not uploaded:
+        return JsonResponse({
+            'error': 'No file received. Please select a file and try again.'
+        }, status=400)
+
+    # Resolve handler
+    try:
+        from projects.inference import get_handler
+        handler = get_handler(project)
+    except ValueError as e:
+        return JsonResponse({'error': str(e)}, status=400)
+
+    # Run inference
+    try:
+        from projects.inference.base import InferenceError
+        result = handler.run(uploaded)
+        return JsonResponse(result)
+
+    except InferenceError as e:
+        # User-facing validation error — show exactly as-is
+        return JsonResponse({'error': str(e)}, status=400)
+
+    except Exception as e:
+        # Unexpected server error — log full traceback, return generic message
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            'error': f'An unexpected error occurred during inference: {type(e).__name__}: {e}'
+        }, status=500)
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Manual prediction (kept for backward compat / simple projects)
+# ──────────────────────────────────────────────────────────────────────────────
 
 @csrf_exempt
 def make_prediction(request, project_id):
-    """API endpoint for making predictions"""
-    if request.method == 'POST':
-        project = get_object_or_404(Projects, id=project_id, is_public=True)
+    """Manual form-field prediction (prediction_input_type = 'manual')."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
 
-        if not project.has_prediction_capability():
-            return JsonResponse({'error': 'This project does not have prediction capability'}, status=400)
+    project = get_object_or_404(Projects, id=project_id, is_public=True)
+    if not project.has_prediction_capability():
+        return JsonResponse({'error': 'Prediction not enabled'}, status=400)
 
-        try:
-            # Get user input data
-            input_data = {}
-            for feature in project.input_features:
-                value = request.POST.get(feature['name'])
-                if value:
-                    # Convert to appropriate type
-                    if feature.get('type') == 'number':
-                        try:
-                            input_data[feature['name']] = float(value)
-                        except ValueError:
-                            return JsonResponse({'error': f'Invalid number for {feature["name"]}'}, status=400)
-                    else:
-                        input_data[feature['name']] = value
-                else:
-                    # If value is missing, use 0 for numbers or empty string for text
-                    if feature.get('type') == 'number':
-                        input_data[feature['name']] = 0.0
-                    else:
-                        input_data[feature['name']] = ""
-
-            # Make prediction
-            prediction_result = predict_with_model(project, input_data)
-
-            return JsonResponse({
-                'success': True,
-                'prediction': prediction_result,
-                'input_data': input_data
-            })
-
-        except Exception as e:
-            return JsonResponse({'error': str(e)}, status=500)
-
-    return JsonResponse({'error': 'Method not allowed'}, status=405)
-
-
-def predict_with_model(project, input_data):
-    """Helper function to make predictions with the model"""
     try:
-        # Load model
-        model_path = project.get_model_path()
-        if not model_path or not os.path.exists(model_path):
-            raise Exception("Model file not found")
-
-        # Detect file type and load model
-        if model_path.endswith('.pkl') or model_path.endswith('.pickle'):
-            with open(model_path, 'rb') as f:
-                model = pickle.load(f)
-        elif model_path.endswith('.joblib'):
-            import joblib
-            model = joblib.load(model_path)
-        else:
-            raise Exception("Model file format not supported")
-
-        # Prepare input data
-        input_df = prepare_input_data(project, input_data)
-
-        # Make prediction
-        prediction = model.predict(input_df)
-
-        # Format result
-        if hasattr(prediction, '__len__') and len(prediction) == 1:
-            result = float(prediction[0])
-        else:
-            result = float(prediction)
-
-        return result
-
-    except Exception as e:
-        raise Exception(f"Prediction error: {str(e)}")
-
-
-def prepare_input_data(project, input_data):
-    """Prepare input data for model prediction"""
-    # Create DataFrame with correct feature order
-    feature_names = [feature['name'] for feature in project.input_features]
-
-    # Create array with values in correct order
-    input_array = []
-    for feature in project.input_features:
-        value = input_data.get(feature['name'])
-        if value is None:
-            # Default values if not provided
-            if feature.get('type') == 'number':
-                value = 0.0
+        import pickle
+        input_data = {}
+        for feature in project.input_features:
+            value = request.POST.get(feature['name'])
+            if value:
+                input_data[feature['name']] = float(value) if feature.get('type') == 'number' else value
             else:
-                value = ""
-        input_array.append(value)
+                input_data[feature['name']] = 0.0 if feature.get('type') == 'number' else ''
 
-    # Create DataFrame
-    input_df = pd.DataFrame([input_array], columns=feature_names)
-    return input_df
+        path = project.get_model_path()
+        if not path or not os.path.exists(path):
+            return JsonResponse({'error': 'Model file not found'}, status=500)
+
+        with open(path, 'rb') as f:
+            model = pickle.load(f)
+
+        df   = pd.DataFrame([input_data])
+        pred = model.predict(df)
+        return JsonResponse({'success': True, 'prediction': float(pred[0]), 'input_data': input_data})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# RAG interpretation
+# ──────────────────────────────────────────────────────────────────────────────
+
+@csrf_exempt
+def interpret_prediction(request, project_id):
+    """RAG-powered interpretation of a prediction result."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+    project = get_object_or_404(Projects, id=project_id, is_public=True)
+    try:
+        body              = json.loads(request.body)
+        prediction_result = body.get('prediction')
+        prediction_label  = body.get('prediction_label', str(prediction_result))
+        input_data        = body.get('input_data', {})
+
+        if prediction_result is None:
+            return JsonResponse({'error': 'prediction value is required'}, status=400)
+
+        from rag_system.services.rag_service import RAGService
+        result = RAGService().interpret_prediction(
+            project=project,
+            input_data=input_data,
+            prediction_result=float(prediction_result),
+            prediction_label=prediction_label,
+        )
+        return JsonResponse({
+            'success':        result['success'],
+            'interpretation': result['interpretation'],
+            'sources':        result['sources'],
+        })
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON body'}, status=400)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+# ── Error handlers ────────────────────────────────────────────────────────────
+def error_404(request, exception=None):
+    return render(request, '404.html', status=404)
+
+def error_500(request):
+    return render(request, '500.html', status=500)

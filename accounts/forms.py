@@ -41,33 +41,47 @@ class CustomUserCreationForm(UserCreationForm):
         }
 
 
-class CustomUserChangeForm(UserChangeForm):
+# In your forms.py
+
+class CustomUserChangeForm(forms.ModelForm):
     """Form for updating user information"""
 
     class Meta:
-        model = User
+        model = CustomUser
         fields = [
+            'username',
+            'email',
             'first_name',
             'last_name',
-            'email',
-            'phone_number',
             'bio',
+            'profile_picture',  # Add this field
             'location',
+            'phone_number',
             'website',
             'twitter',
             'linkedin',
             'github',
-            'profile_picture',
+            'email_notifications',
         ]
+        widgets = {
+            'bio': forms.Textarea(attrs={'rows': 4}),
+        }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Make email field required
-        self.fields['email'].required = True
-        # Add Bootstrap classes
+        # Add CSS classes
         for field_name, field in self.fields.items():
-            if field_name != 'profile_picture':
+            if field_name != 'email_notifications':
                 field.widget.attrs.update({'class': 'form-control'})
+            else:
+                field.widget.attrs.update({'class': 'form-check-input'})
+
+        # Add accept attribute for profile_picture
+        if 'profile_picture' in self.fields:
+            self.fields['profile_picture'].widget.attrs.update({
+                'accept': 'image/*',
+                'class': 'file-input'
+            })
 
 
 class ProfileUpdateForm(forms.ModelForm):

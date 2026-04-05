@@ -1,6 +1,11 @@
 {% extends 'base.html' %}
 
 {% block title %}{{ story.title }} - HasanPortfolio{% endblock %}
+{% block meta_description %}{{ story.excerpt|default:story.content|truncatewords:30 }}{% endblock %}
+{% block og_title %}{{ story.title }}{% endblock %}
+{% block og_description %}{{ story.excerpt|default:story.content|truncatewords:30 }}{% endblock %}
+{% block twitter_title %}{{ story.title }}{% endblock %}
+{% block twitter_description %}{{ story.excerpt|default:story.content|truncatewords:30 }}{% endblock %}
 
 {% block content %}
     <div class="story-detail-wrapper">
@@ -341,7 +346,7 @@
         .preview-text p {
             color: #92400e;
             margin: 0;
-            font-size: 0.875rem;
+            font-size: 1rem;
         }
 
         .btn-edit-preview {
@@ -373,18 +378,18 @@
 
         /* Story Header */
         .story-header {
-            padding: 3rem 3rem 2rem;
+            padding: 2.5rem 2.5rem 2rem;
             position: relative;
             z-index: 10;
             background: white;
         }
 
         .story-title {
-            font-size: 3rem;
+            font-size: 1.6rem;
             font-weight: 800;
             line-height: 1.2;
             color: #1e293b;
-            margin: 0 0 2rem 0;
+            margin: 0 0 0rem 0;
             letter-spacing: -0.02em;
         }
 
@@ -408,15 +413,15 @@
         }
 
         .story-excerpt {
-            padding: 2rem;
+            padding: 1rem;
             background: linear-gradient(135deg, #f8fafc, #e0e7ff);
             border-left: 4px solid #667eea;
             border-radius: 12px;
-            margin-bottom: 3rem;
+            margin-bottom: 1rem;
         }
 
         .story-excerpt p {
-            font-size: 1.25rem;
+            font-size: 1rem;
             line-height: 1.7;
             color: #475569;
             margin: 0;
@@ -424,7 +429,7 @@
         }
 
         .story-content {
-            font-size: 1.125rem;
+            font-size: 1rem;
             line-height: 1.8;
             color: #334155;
         }
@@ -469,7 +474,7 @@
             color: white;
             border-radius: 20px;
             text-decoration: none;
-            font-size: 0.875rem;
+            font-size: 1rem;
             font-weight: 600;
             transition: all 0.3s;
         }
@@ -521,7 +526,7 @@
         .author-name {
             font-weight: 700;
             color: #1e293b;
-            font-size: 1.125rem;
+            font-size: 1.25rem;
             text-decoration: none;
             transition: color 0.2s;
         }
@@ -533,7 +538,7 @@
         .publish-info {
             display: flex;
             gap: 0.5rem;
-            font-size: 0.875rem;
+            font-size: 1rem;
             color: #64748b;
         }
 
@@ -604,7 +609,7 @@
         }
 
         .action-title {
-            font-size: 1.125rem;
+            font-size: 1.25rem;
             font-weight: 700;
             color: #1e293b;
             margin: 0;
@@ -740,7 +745,7 @@
         }
 
         .related-content h3 {
-            font-size: 1.125rem;
+            font-size: 1.25rem;
             font-weight: 700;
             margin: 0 0 0.75rem 0;
             line-height: 1.4;
@@ -759,7 +764,7 @@
         .related-meta {
             display: flex;
             gap: 0.5rem;
-            font-size: 0.875rem;
+            font-size: 1rem;
             color: #64748b;
         }
 
@@ -977,7 +982,7 @@
         }
 
         .comment-date {
-            font-size: 0.875rem;
+            font-size: 1rem;
             color: #94a3b8;
         }
 
@@ -997,7 +1002,7 @@
             border: none;
             color: #667eea;
             font-weight: 600;
-            font-size: 0.875rem;
+            font-size: 1rem;
             cursor: pointer;
             padding: 0.5rem 1rem;
             border-radius: 8px;
@@ -1022,7 +1027,7 @@
             padding: 0.875rem;
             border: 2px solid #e2e8f0;
             border-radius: 10px;
-            font-size: 0.9375rem;
+            font-size: 1rem;
             font-family: inherit;
             resize: vertical;
             margin-bottom: 0.75rem;
@@ -1045,7 +1050,7 @@
             padding: 0.625rem 1.25rem;
             border-radius: 8px;
             font-weight: 600;
-            font-size: 0.875rem;
+            font-size: 1rem;
             cursor: pointer;
             transition: all 0.3s;
             border: none;

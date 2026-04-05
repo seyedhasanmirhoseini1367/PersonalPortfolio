@@ -24,6 +24,14 @@ class ResumeSetting(models.Model):
     linkedin_url = models.URLField(blank=True)
     kaggle_url = models.URLField(blank=True)
 
+    # Resume PDF — upload your CV here to enable the "Download CV" button
+    cv_pdf = models.FileField(
+        upload_to='resume/',
+        blank=True,
+        null=True,
+        help_text='Upload your CV as PDF to enable the Download CV button on the resume page',
+    )
+
     # Resume Settings
     is_active = models.BooleanField(default=True)
     last_updated = models.DateTimeField(auto_now=True)
