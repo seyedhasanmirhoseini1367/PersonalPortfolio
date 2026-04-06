@@ -59,7 +59,7 @@
         }
 
         .active-filter {
-            background: #2563eb;
+            background: #302b63;
             color: white;
             padding: 0.3rem 0.8rem;
             border-radius: 15px;
@@ -122,7 +122,7 @@
 
         .project-type {
             background: #dbeafe;
-            color: #1e40af;
+            color: #0f0c29;
             padding: 0.3rem 0.8rem;
             border-radius: 15px;
             font-size: 0.8rem;
@@ -173,7 +173,7 @@
             font-weight: 600;
             text-decoration: none;
         }
-        .mlops-badge.docker { background: #dbeafe; color: #1d4ed8; }
+        .mlops-badge.docker { background: #dbeafe; color: #00b8d9; }
         .mlops-badge.api    { background: #d1fae5; color: #065f46; }
         .mlops-badge.demo   { background: #fef3c7; color: #92400e; }
         .mlops-badge.github { background: #f1f5f9; color: #1e293b; border: 1px solid #e2e8f0; }
@@ -194,19 +194,19 @@
 
         .metric-value {
             font-weight: 600;
-            color: #2563eb;
+            color: #302b63;
         }
 
         .project-link {
             display: inline-block;
-            color: #2563eb;
+            color: #302b63;
             text-decoration: none;
             font-weight: 500;
             transition: color 0.3s;
         }
 
         .project-link:hover {
-            color: #1d4ed8;
+            color: #00b8d9;
         }
 
         .no-projects {
@@ -306,7 +306,7 @@
                     <img src="{{ project.featured_image.url }}" alt="{{ project.title }}" class="project-image">
                 {% else %}
                     <div class="project-image"
-                         style="display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; font-size: 3rem;">
+                         style="display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #0f0c29 0%, #302b63 55%, #24243e 100%); color: white; font-size: 3rem;">
                         📊
                     </div>
                 {% endif %}

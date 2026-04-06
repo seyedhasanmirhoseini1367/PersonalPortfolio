@@ -16,7 +16,7 @@
         }
 
         .form-header {
-            background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+            background: linear-gradient(135deg, #302b63 0%, #a78bfa 100%);
             color: white;
             padding: 2rem;
             text-align: center;
@@ -50,7 +50,7 @@
             color: #1e293b;
             margin-bottom: 1.5rem;
             padding-bottom: 0.5rem;
-            border-bottom: 2px solid #2563eb;
+            border-bottom: 2px solid #302b63;
         }
 
         .form-row {
@@ -81,7 +81,7 @@
 
         .form-control:focus {
             outline: none;
-            border-color: #2563eb;
+            border-color: #302b63;
             box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
         }
 
@@ -201,6 +201,72 @@
             }
         }
     </style>
+
+<!-- Quill Snow theme -->
+<link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet">
+<style>
+    #quill-editor {
+        border: 1px solid #d1d5db;
+        border-radius: 0 0 6px 6px;
+        border-top: none;
+    }
+    .ql-toolbar.ql-snow {
+        border: 1px solid #d1d5db;
+        border-radius: 6px 6px 0 0;
+        background: #f8fafc;
+        flex-wrap: wrap;
+    }
+    .ql-container.ql-snow { border: none; }
+    .ql-editor { min-height: 360px; font-size: .95rem; line-height: 1.7; padding: 1rem 1.25rem; }
+    .ql-editor p, .ql-editor li { margin-bottom: .4em; }
+    /* Images show as compact thumbnails while writing — full size on published view */
+    .ql-editor img {
+        max-height: 180px;
+        width: auto;
+        max-width: 60%;
+        border-radius: 4px;
+        border: 1px solid #e2e8f0;
+        cursor: pointer;
+        display: block;
+        margin: 6px 0;
+    }
+    .ql-editor img:hover { border-color: #302b63; outline: 2px solid #dbeafe; }
+    .ql-editor pre.ql-syntax { background: #1e1e2e; color: #e2e8f0; padding: .75em 1em; border-radius: 6px; font-size: .875em; }
+    .ql-editor blockquote { border-left: 4px solid #302b63; padding-left: 1rem; color: #64748b; margin: .75em 0; font-style: italic; }
+    .editor-counter {
+        display: flex; gap: 1rem; justify-content: flex-end;
+        font-size: .78rem; color: #64748b; margin-top: .35rem; padding-right: .25rem;
+    }
+    .editor-counter span.warn  { color: #f59e0b; }
+    .ql-content img { max-width:70%; height:auto; border-radius:6px; margin:.75em auto; display:block; }
+    .ql-content img[data-size="small"]  { max-width:30%; }
+    .ql-content img[data-size="medium"] { max-width:55%; }
+    .ql-content img[data-size="large"]  { max-width:80%; }
+    .ql-content img[data-size="full"]   { max-width:100%; }
+    .ql-content blockquote { border-left: 4px solid #302b63; padding-left: 1rem; color: #64748b; margin: .75em 0; font-style: italic; }
+    .ql-content pre { background: #1e1e2e; color: #e2e8f0; padding: .75em 1em; border-radius: 6px; font-size: .875em; overflow-x: auto; }
+    .ql-content h1 { font-size: 1.6rem; font-weight: 700; margin: 1em 0 .4em; }
+    .ql-content h2 { font-size: 1.3rem; font-weight: 700; margin: .9em 0 .35em; }
+    .ql-content h3 { font-size: 1.1rem; font-weight: 600; margin: .8em 0 .3em; }
+    .ql-content ul, .ql-content ol { padding-left: 1.5rem; margin: .5em 0; }
+    .ql-content li { margin-bottom: .25em; }
+    .ql-content a { color: #302b63; text-decoration: underline; }
+    /* Image resize popover */
+    #img-resize-bar {
+        position: absolute; z-index: 9999;
+        background: #1e293b; border-radius: 6px;
+        padding: 4px 6px; display: flex; gap: 4px;
+        box-shadow: 0 4px 12px rgba(0,0,0,.3);
+        pointer-events: auto;
+    }
+    #img-resize-bar button {
+        background: transparent; border: 1px solid #475569;
+        color: #e2e8f0; border-radius: 4px;
+        padding: 2px 8px; font-size: .7rem; cursor: pointer;
+        white-space: nowrap;
+    }
+    #img-resize-bar button:hover, #img-resize-bar button.active { background: #302b63; border-color: #302b63; }
+</style>
 {% endblock %}
 
 {% block content %}
@@ -246,12 +312,14 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="id_excerpt" class="form-label">Excerpt (Optional)</label>
-                    <textarea name="excerpt" id="id_excerpt" class="form-control" rows="3"
-                              placeholder="Brief summary of your story (optional)"
+                    <label class="form-label">Excerpt (Optional)</label>
+                    <!-- Hidden textarea submitted with the form -->
+                    <textarea name="excerpt" id="id_excerpt" style="display:none;"
                               maxlength="500">{{ form.excerpt.value|default:'' }}</textarea>
-                    <div class="form-text">
-                        A brief summary of your story. This appears in story listings (max 500 characters).
+                    <!-- Quill excerpt editor -->
+                    <div id="quill-excerpt" style="background:white;"></div>
+                    <div class="form-text" style="margin-top:.4rem;">
+                        Brief summary shown in story listings. Bold/italic/links only. Max 500 characters.
                     </div>
                 </div>
             </div>
@@ -260,19 +328,24 @@
                 <h2 class="section-title">Story Content</h2>
 
                 <div class="form-group">
-                    <label for="id_content" class="form-label">Story Content *</label>
-                    <textarea name="content" id="id_content" class="form-control" rows="15"
-                              placeholder="Write your story here..."
+                    <label class="form-label">Story Content *</label>
+
+                    <!-- Hidden textarea submitted with the form -->
+                    <textarea name="content" id="id_content" style="display:none;"
                               required>{{ form.content.value|default:'' }}</textarea>
+
+                    <!-- Quill editor mount point -->
+                    <div id="quill-editor" style="min-height:380px; font-size:.95rem; background:white;"></div>
+
                     {% if form.content.errors %}
-                        <div class="error-list">
+                        <div class="error-list" id="content-errors">
                             {% for error in form.content.errors %}
                                 <span class="error">{{ error }}</span>
                             {% endfor %}
                         </div>
                     {% endif %}
-                    <div class="form-text">
-                        Write your full story here. Minimum 100 characters.
+                    <div class="form-text" style="margin-top:.5rem;">
+                        Use the toolbar above to format text, insert images, add code blocks, and more.
                     </div>
                 </div>
 
@@ -376,101 +449,268 @@
 {% endblock %}
 
 {% block extra_js %}
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            // Get form elements
-            const titleInput = document.getElementById('id_title');
-            const excerptInput = document.getElementById('id_excerpt');
-            const contentInput = document.getElementById('id_content');
+<!-- Quill library -->
+<script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const titleInput   = document.getElementById('id_title');
+    const excerptInput = document.getElementById('id_excerpt');
+    const hiddenContent = document.getElementById('id_content');
+    const form         = document.querySelector('.story-form');
 
-            // Get preview elements
-            const previewTitle = document.getElementById('preview-title');
-            const previewExcerpt = document.getElementById('preview-excerpt');
-            const previewContent = document.getElementById('preview-content');
+    /* ── Quill: content (full toolbar) ───────────────────────────────────── */
+    const quill = new Quill('#quill-editor', {
+        theme: 'snow',
+        placeholder: 'Write your story here — use the toolbar for formatting, images, and more…',
+        modules: {
+            toolbar: {
+                container: [
+                    [{ header: [1, 2, 3, false] }],
+                    ['bold', 'italic', 'underline', 'strike'],
+                    [{ color: [] }, { background: [] }],
+                    [{ align: [] }],
+                    ['blockquote', 'code-block'],
+                    [{ list: 'ordered' }, { list: 'bullet' }],
+                    ['link', 'image'],
+                    ['clean'],
+                ],
+                handlers: { image: imageUploadHandler },
+            },
+        },
+    });
 
-            // Update preview functions
-            function updatePreview() {
-                // Update title
-                previewTitle.textContent = titleInput.value || 'Title will appear here';
+    /* Load existing content (edit mode) */
+    const existing = hiddenContent.value.trim();
+    if (existing) {
+        if (existing.startsWith('<')) {
+            quill.clipboard.dangerouslyPasteHTML(existing);
+        } else {
+            quill.setText(existing);
+        }
+    }
 
-                // Update excerpt
-                if (excerptInput.value) {
-                    previewExcerpt.textContent = excerptInput.value;
-                    previewExcerpt.style.display = 'block';
+    /* ── Quill: excerpt (lightweight toolbar, no images) ─────────────────── */
+    const hiddenExcerpt = document.getElementById('id_excerpt');
+    const quillExcerpt  = new Quill('#quill-excerpt', {
+        theme: 'snow',
+        placeholder: 'Brief summary shown in story listings…',
+        modules: {
+            toolbar: [
+                ['bold', 'italic', 'underline'],
+                ['link'],
+                ['clean'],
+            ],
+        },
+    });
+    /* Limit excerpt editor height via inline style */
+    quillExcerpt.root.style.minHeight = '80px';
+    quillExcerpt.root.style.maxHeight = '160px';
+    quillExcerpt.root.style.overflowY = 'auto';
+
+    const existingExcerpt = hiddenExcerpt.value.trim();
+    if (existingExcerpt) {
+        if (existingExcerpt.startsWith('<')) {
+            quillExcerpt.clipboard.dangerouslyPasteHTML(existingExcerpt);
+        } else {
+            quillExcerpt.setText(existingExcerpt);
+        }
+    }
+    quillExcerpt.on('text-change', () => {
+        hiddenExcerpt.value = quillExcerpt.getSemanticHTML();
+    });
+
+    /* ── Image upload handler ─────────────────────────────────────────────── */
+    function imageUploadHandler() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/jpeg,image/png,image/gif,image/webp';
+        input.click();
+
+        input.onchange = async () => {
+            const file = input.files[0];
+            if (!file) return;
+
+            if (file.size > 5 * 1024 * 1024) {
+                alert('Image must be smaller than 5 MB.'); return;
+            }
+
+            /* Show temporary placeholder while uploading */
+            const range = quill.getSelection(true);
+            quill.insertText(range.index, '⏳ Uploading image…', 'user');
+
+            const fd = new FormData();
+            fd.append('image', file);
+
+            try {
+                const res  = await fetch('{% url "stories:image_upload" %}', {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': getCsrf() },
+                    body: fd,
+                });
+                const data = await res.json();
+                if (data.url) {
+                    /* Remove placeholder, insert real image */
+                    quill.deleteText(range.index, '⏳ Uploading image…'.length);
+                    quill.insertEmbed(range.index, 'image', data.url, 'user');
+                    quill.setSelection(range.index + 1, 0);
                 } else {
-                    previewExcerpt.style.display = 'none';
+                    quill.deleteText(range.index, '⏳ Uploading image…'.length);
+                    alert('Upload failed: ' + (data.error || 'Unknown error'));
                 }
-
-                // Update content
-                previewContent.textContent = contentInput.value || 'Story content will appear here';
+            } catch (e) {
+                quill.deleteText(range.index, '⏳ Uploading image…'.length);
+                alert('Upload error: ' + e.message);
             }
+        };
+    }
 
-            // Add event listeners
-            [titleInput, excerptInput, contentInput].forEach(input => {
-                input.addEventListener('input', updatePreview);
-            });
+    function getCsrf() {
+        for (const c of document.cookie.split(';')) {
+            const [k, v] = c.trim().split('=');
+            if (k === 'csrftoken') return decodeURIComponent(v);
+        }
+        return '';
+    }
 
-            // Initial preview update
-            updatePreview();
+    /* ── Image resize toolbar ────────────────────────────────────────────── */
+    const SIZES = [
+        { label: 'S', value: 'small',  title: 'Small (30%)' },
+        { label: 'M', value: 'medium', title: 'Medium (55%)' },
+        { label: 'L', value: 'large',  title: 'Large (80%)' },
+        { label: '↔', value: 'full',   title: 'Full width' },
+    ];
 
-            // Character counters
-            const titleCounter = document.createElement('div');
-            titleCounter.className = 'char-counter';
-            titleInput.parentNode.appendChild(titleCounter);
+    const resizeBar = document.createElement('div');
+    resizeBar.id = 'img-resize-bar';
+    resizeBar.style.display = 'none';
+    SIZES.forEach(s => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.textContent = s.label;
+        btn.title = s.title;
+        btn.dataset.size = s.value;
+        resizeBar.appendChild(btn);
+    });
+    document.body.appendChild(resizeBar);
 
-            const excerptCounter = document.createElement('div');
-            excerptCounter.className = 'char-counter';
-            excerptInput.parentNode.appendChild(excerptCounter);
+    let _activeImg = null;
 
-            const contentCounter = document.createElement('div');
-            contentCounter.className = 'char-counter';
-            contentInput.parentNode.appendChild(contentCounter);
-
-            function updateCounters() {
-                const titleLength = titleInput.value.length;
-                const excerptLength = excerptInput.value.length;
-                const contentLength = contentInput.value.length;
-
-                titleCounter.textContent = `${titleLength}/200 characters`;
-                titleCounter.style.color = titleLength > 200 ? '#dc2626' :
-                    (titleLength < 10 ? '#f59e0b' : '#6b7280');
-
-                excerptCounter.textContent = `${excerptLength}/500 characters`;
-                excerptCounter.style.color = excerptLength > 500 ? '#dc2626' : '#6b7280';
-
-                contentCounter.textContent = `${contentLength} characters`;
-                contentCounter.style.color = contentLength < 100 ? '#f59e0b' : '#6b7280';
-            }
-
-            [titleInput, excerptInput, contentInput].forEach(input => {
-                input.addEventListener('input', updateCounters);
-            });
-
-            updateCounters();
-
-            // Form validation
-            const form = document.querySelector('.story-form');
-            form.addEventListener('submit', function (e) {
-                let isValid = true;
-                let errorMessages = [];
-
-                // Validate title
-                if (titleInput.value.length < 10) {
-                    isValid = false;
-                    errorMessages.push('Title must be at least 10 characters long.');
-                }
-
-                // Validate content
-                if (contentInput.value.length < 100) {
-                    isValid = false;
-                    errorMessages.push('Story content must be at least 100 characters.');
-                }
-
-                if (!isValid) {
-                    e.preventDefault();
-                    alert('Please fix the following errors:\n\n' + errorMessages.join('\n'));
-                }
-            });
+    function positionBar(img) {
+        const rect = img.getBoundingClientRect();
+        resizeBar.style.top  = (window.scrollY + rect.top - 36) + 'px';
+        resizeBar.style.left = (window.scrollX + rect.left)     + 'px';
+        resizeBar.style.display = 'flex';
+        /* highlight current size */
+        resizeBar.querySelectorAll('button').forEach(b => {
+            b.classList.toggle('active', b.dataset.size === (img.dataset.size || ''));
         });
-    </script>
+    }
+
+    /* Click image inside Quill → show bar */
+    document.getElementById('quill-editor').addEventListener('click', e => {
+        if (e.target.tagName === 'IMG') {
+            _activeImg = e.target;
+            positionBar(_activeImg);
+        } else {
+            resizeBar.style.display = 'none';
+            _activeImg = null;
+        }
+    });
+
+    /* Click a size button */
+    resizeBar.addEventListener('click', e => {
+        const btn = e.target.closest('button');
+        if (!btn || !_activeImg) return;
+        const size = btn.dataset.size;
+        _activeImg.dataset.size = size;
+        /* Keep inline style in sync so Quill serialises it */
+        const pct = { small: '30%', medium: '55%', large: '80%', full: '100%' }[size];
+        _activeImg.style.maxWidth = pct;
+        _activeImg.style.width   = pct;
+        positionBar(_activeImg);
+        /* Trigger Quill sync */
+        hiddenContent.value = quill.getSemanticHTML();
+        updatePreview();
+    });
+
+    /* Hide bar on scroll / click outside */
+    document.addEventListener('scroll', () => { resizeBar.style.display = 'none'; }, true);
+
+    /* ── Sync Quill → hidden textarea ────────────────────────────────────── */
+    quill.on('text-change', () => {
+        hiddenContent.value = quill.getSemanticHTML();
+        updateCounters();
+        updatePreview();
+    });
+
+    /* ── Character / word counter ────────────────────────────────────────── */
+    const counterEl = document.createElement('div');
+    counterEl.className = 'editor-counter';
+    counterEl.innerHTML = '<span id="wordCount">0 words</span><span id="charCount">0 characters</span>';
+    document.getElementById('quill-editor').insertAdjacentElement('afterend', counterEl);
+
+    function updateCounters() {
+        const text  = quill.getText().trim();
+        const words = text ? text.split(/\s+/).length : 0;
+        const chars = text.length;
+
+        const wEl = document.getElementById('wordCount');
+        const cEl = document.getElementById('charCount');
+        wEl.textContent = `${words} word${words !== 1 ? 's' : ''}`;
+        cEl.textContent = `${chars} character${chars !== 1 ? 's' : ''}`;
+        cEl.className = chars < 100 ? 'warn' : '';
+    }
+    updateCounters();
+
+    /* ── Live preview ─────────────────────────────────────────────────────── */
+    const previewTitle   = document.getElementById('preview-title');
+    const previewExcerpt = document.getElementById('preview-excerpt');
+    const previewContent = document.getElementById('preview-content');
+
+    function updatePreview() {
+        previewTitle.textContent = titleInput.value || 'Title will appear here';
+        if (excerptInput.value) {
+            previewExcerpt.textContent = excerptInput.value;
+            previewExcerpt.style.display = 'block';
+        } else {
+            previewExcerpt.style.display = 'none';
+        }
+        previewContent.innerHTML = quill.getSemanticHTML() || 'Story content will appear here';
+    }
+
+    titleInput.addEventListener('input', updatePreview);
+    excerptInput.addEventListener('input', updatePreview);
+    updatePreview();
+
+    /* ── Title counter ────────────────────────────────────────────────────── */
+    const titleCounter = document.createElement('div');
+    titleCounter.style.cssText = 'text-align:right;font-size:.78rem;color:#6b7280;margin-top:.2rem;';
+    titleInput.parentNode.appendChild(titleCounter);
+
+    titleInput.addEventListener('input', () => {
+        const n = titleInput.value.length;
+        titleCounter.textContent = `${n}/200`;
+        titleCounter.style.color = n > 200 ? '#dc2626' : (n < 10 ? '#f59e0b' : '#6b7280');
+    });
+    titleInput.dispatchEvent(new Event('input'));
+
+    /* ── Form submission validation ────────────────────────────────────────── */
+    form.addEventListener('submit', function (e) {
+        /* Flush Quill HTML to hidden textarea */
+        const html = quill.getSemanticHTML();
+        hiddenContent.value = html;
+
+        const errors = [];
+        if (titleInput.value.trim().length < 10)
+            errors.push('Title must be at least 10 characters.');
+        if (quill.getText().trim().length < 100)
+            errors.push('Story content must be at least 100 characters.');
+
+        if (errors.length) {
+            e.preventDefault();
+            alert('Please fix the following:\n\n' + errors.join('\n'));
+        }
+    });
+});
+</script>
 {% endblock %}

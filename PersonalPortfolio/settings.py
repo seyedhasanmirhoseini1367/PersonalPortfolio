@@ -34,6 +34,7 @@ INSTALLED_APPS = [
     'rag_system',
     'stories',
     'accounts',
+    'monitoring',
 ]
 
 AUTH_USER_MODEL = 'accounts.CustomUser'
@@ -100,6 +101,7 @@ USE_TZ        = True
 # ── Static files ──────────────────────────────────────────────────────────────
 STATIC_URL  = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_DIRS = [BASE_DIR / 'static']
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # ── Media files ───────────────────────────────────────────────────────────────
@@ -126,12 +128,13 @@ else:
     # Dev: print emails to console instead of sending
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
-DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='noreply@personalportfolio.com')
+DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='seyedhasan.mirhoseini1367@gmail.com')
 
 # ── AI / LLM API Keys ─────────────────────────────────────────────────────────
-GEMINI_API_KEY    = config('GEMINI_API_KEY',    default='')
-ANTHROPIC_API_KEY = config('ANTHROPIC_API_KEY', default='')
-OPENAI_API_KEY    = config('OPENAI_API_KEY',    default='')
+GEMINI_API_KEY          = config('GEMINI_API_KEY',          default='')
+ANTHROPIC_API_KEY       = config('ANTHROPIC_API_KEY',       default='')
+OPENAI_API_KEY          = config('OPENAI_API_KEY',          default='')
+MONITORING_ALERT_EMAIL  = config('MONITORING_ALERT_EMAIL',  default='')
 
 # ── RAG Configuration ─────────────────────────────────────────────────────────
 RAG_CONFIG = {

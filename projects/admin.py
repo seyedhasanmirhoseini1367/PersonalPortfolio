@@ -1,4 +1,5 @@
 # projects/admin.py
+import os
 import json
 from django.contrib import admin
 from django.utils.html import format_html
@@ -32,6 +33,23 @@ class ProjectsAdminForm(forms.ModelForm):
 @admin.register(Projects)
 class ProjectAdmin(admin.ModelAdmin):
     form = ProjectsAdminForm
+
+    def get_object(self, request, object_id, from_field=None):
+        obj = super().get_object(request, object_id, from_field)
+        if obj:
+            # Clear any FileField/ImageField references whose files no longer exist
+            # so Django's widget doesn't crash calling os.path.getsize() on them.
+            for field in obj._meta.get_fields():
+                if hasattr(field, 'upload_to'):  # FileField / ImageField
+                    file_field = getattr(obj, field.name)
+                    if file_field and file_field.name:
+                        try:
+                            full_path = file_field.path
+                            if not os.path.exists(full_path):
+                                setattr(obj, field.name, None)
+                        except (ValueError, NotImplementedError):
+                            pass
+        return obj
 
     # ── List view ─────────────────────────────────────────────────────────────
 

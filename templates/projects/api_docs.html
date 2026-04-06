@@ -1,0 +1,139 @@
+{% extends 'base.html' %}
+{% block title %}API Documentation | HasanPortfolio{% endblock %}
+
+{% block content %}
+<div style="background:#f8f9fa; min-height:100vh;">
+
+  <div style="background:linear-gradient(135deg,#302b63 0%,#24243e 100%);
+              color:white; padding:2.5rem 0;">
+    <div class="container">
+      <h1 style="font-size:2rem; font-weight:700; margin:0;">
+        <i class="fas fa-code me-2"></i>REST API Documentation
+      </h1>
+      <p style="opacity:.9; margin:.5rem 0 0;">
+        Public endpoints for programmatic access to ML model inference.
+        No authentication required.
+      </p>
+    </div>
+  </div>
+
+  <div class="container" style="padding:2rem 20px 3rem; max-width:900px;">
+
+    <!-- Base URL -->
+    <div style="background:white; border-radius:14px; border:1px solid #e2e8f0;
+                padding:1.25rem 1.5rem; margin-bottom:2rem;
+                display:flex; align-items:center; gap:1rem; flex-wrap:wrap;">
+      <span style="font-size:.82rem; font-weight:700; color:#94a3b8; text-transform:uppercase;">Base URL</span>
+      <code style="background:#f1f5f9; padding:.35rem .85rem; border-radius:8px;
+                   font-size:.95rem; color:#302b63;">{{ request.scheme }}://{{ request.get_host }}</code>
+    </div>
+
+    <!-- Endpoint 1: List models -->
+    {% include 'projects/_api_endpoint.html' with
+        method="GET" path="/api/models/"
+        title="List available models"
+        description="Returns all public models with a live API endpoint enabled."
+        response_example='{"count": 2, "models": [{"id": 1, "title": "EEG Seizure Detection", "model_type": "Classification", "accuracy_score": 0.966, "avg_inference_ms": 120, "input_type": "file", "endpoint": "/api/models/1/predict/"}]}' %}
+
+    <!-- Endpoint 2: Model detail -->
+    {% include 'projects/_api_endpoint.html' with
+        method="GET" path="/api/models/{id}/"
+        title="Get model details + input schema"
+        description="Returns full metadata including input schema required for the predict endpoint."
+        response_example='{"id": 1, "title": "EEG Seizure Detection", "input_type": "file", "input_schema": [], "endpoint": "/api/models/1/predict/"}' %}
+
+    <!-- Endpoint 3: Predict -->
+    <div style="background:white; border-radius:14px; border:1px solid #e2e8f0;
+                box-shadow:0 1px 3px rgba(0,0,0,.05); padding:1.75rem; margin-bottom:1.5rem;">
+      <div style="display:flex; align-items:center; gap:.75rem; margin-bottom:1rem; flex-wrap:wrap;">
+        <span style="background:#fef3c7; color:#92400e; padding:.3rem .85rem;
+                     border-radius:20px; font-size:.8rem; font-weight:700;">POST</span>
+        <code style="background:#f1f5f9; padding:.3rem .85rem; border-radius:8px;
+                     font-size:.95rem; color:#1e293b;">/api/models/{id}/predict/</code>
+        <span style="font-size:.9rem; font-weight:600; color:#1e293b;">Run inference</span>
+      </div>
+      <p style="color:#64748b; font-size:.9rem; margin-bottom:1.25rem;">
+        Run a prediction on the specified model. Returns prediction, confidence, label and latency.
+      </p>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1.25rem;">
+        <!-- File upload example -->
+        <div>
+          <p style="font-size:.8rem; font-weight:700; color:#94a3b8; text-transform:uppercase;
+                     margin-bottom:.5rem;">File upload models</p>
+          <pre style="background:#1e293b; color:#e2e8f0; border-radius:10px; padding:1rem;
+                      font-size:.8rem; overflow-x:auto; margin:0;">curl -X POST \
+  {{ request.scheme }}://{{ request.get_host }}/api/models/1/predict/ \
+  -F "file=@eeg_sample.csv"</pre>
+        </div>
+        <!-- JSON example -->
+        <div>
+          <p style="font-size:.8rem; font-weight:700; color:#94a3b8; text-transform:uppercase;
+                     margin-bottom:.5rem;">Manual input models</p>
+          <pre style="background:#1e293b; color:#e2e8f0; border-radius:10px; padding:1rem;
+                      font-size:.8rem; overflow-x:auto; margin:0;">curl -X POST \
+  {{ request.scheme }}://{{ request.get_host }}/api/models/2/predict/ \
+  -H "Content-Type: application/json" \
+  -d '{"age": 35, "bmi": 24.5}'</pre>
+        </div>
+      </div>
+
+      <p style="font-size:.8rem; font-weight:700; color:#94a3b8; text-transform:uppercase;
+                 margin-bottom:.5rem;">Response</p>
+      <pre style="background:#1e293b; color:#e2e8f0; border-radius:10px; padding:1rem;
+                  font-size:.82rem; overflow-x:auto; margin:0;">{
+  "success": true,
+  "prediction": 0.966,
+  "confidence": 0.966,
+  "label": "Seizure detected",
+  "inference_ms": 118,
+  "model_id": 1,
+  "model_title": "EEG Seizure Detection"
+}</pre>
+    </div>
+
+    <!-- Live models table -->
+    {% if api_projects %}
+    <div style="background:white; border-radius:14px; border:1px solid #e2e8f0;
+                box-shadow:0 1px 3px rgba(0,0,0,.05); padding:1.75rem;">
+      <h2 style="font-size:1.1rem; font-weight:700; color:#1e293b; margin:0 0 1.25rem;">
+        <i class="fas fa-robot me-2" style="color:#302b63;"></i>Live Models
+      </h2>
+      <div style="overflow-x:auto;">
+        <table style="width:100%; border-collapse:collapse; font-size:.88rem;">
+          <thead>
+            <tr style="border-bottom:2px solid #f1f5f9; color:#94a3b8; text-align:left;">
+              <th style="padding:.6rem .75rem;">Model</th>
+              <th style="padding:.6rem .75rem;">Type</th>
+              <th style="padding:.6rem .75rem;">Input</th>
+              <th style="padding:.6rem .75rem;">Metric</th>
+              <th style="padding:.6rem .75rem;">Endpoint</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for p in api_projects %}
+            <tr style="border-bottom:1px solid #f8f9fa;">
+              <td style="padding:.6rem .75rem; font-weight:600; color:#1e293b;">{{ p.title }}</td>
+              <td style="padding:.6rem .75rem; color:#64748b;">{{ p.get_model_type_display|default:"—" }}</td>
+              <td style="padding:.6rem .75rem;">
+                <span style="background:#e0e7ff; color:#302b63; padding:.15rem .5rem;
+                             border-radius:10px; font-size:.78rem;">{{ p.prediction_input_type }}</span>
+              </td>
+              <td style="padding:.6rem .75rem; color:#10b981; font-weight:600;">
+                {% if p.accuracy_score %}{{ p.accuracy_score|floatformat:3 }}{% else %}—{% endif %}
+              </td>
+              <td style="padding:.6rem .75rem;">
+                <code style="font-size:.78rem; color:#302b63; background:#f1f5f9;
+                             padding:.15rem .5rem; border-radius:6px;">/api/models/{{ p.pk }}/predict/</code>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+{% endblock %}

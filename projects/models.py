@@ -256,6 +256,18 @@ class Projects(models.Model):
         help_text="Whether the document has been processed by the RAG system",
     )
 
+    # ── MLflow / Experiment Tracking ─────────────────────────────────────────
+    mlflow_run_id      = models.CharField(max_length=100, blank=True,
+                                          help_text='MLflow run ID for this model version')
+    mlflow_tracking_url = models.URLField(blank=True,
+                                          help_text='Link to MLflow UI for this experiment')
+    experiment_params  = models.JSONField(default=dict, blank=True,
+                                          help_text='Key hyperparameters logged (shown on detail page). '
+                                                    'e.g. {"epochs":50,"lr":0.001,"batch_size":32}')
+    experiment_metrics = models.JSONField(default=dict, blank=True,
+                                          help_text='Final metrics logged. '
+                                                    'e.g. {"val_accuracy":0.966,"f1":0.94,"auc":0.98}')
+
     # ── MLOps / Deployment Info ───────────────────────────────────────────────
 
     is_dockerized = models.BooleanField(

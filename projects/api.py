@@ -31,6 +31,13 @@ def _model_info(project):
     }
 
 
+def api_docs(request):
+    """GET /api/docs/ — human-readable API documentation page."""
+    from django.shortcuts import render
+    api_projects = Projects.objects.filter(is_public=True, has_api=True, prediction_endpoint=True)
+    return render(request, 'projects/api_docs.html', {'api_projects': api_projects})
+
+
 def api_model_list(request):
     """GET /api/models/ — list all public models with API enabled."""
     projects = Projects.objects.filter(is_public=True, has_api=True, prediction_endpoint=True)
@@ -84,6 +91,17 @@ def api_predict(request, project_id):
 
         elapsed_ms = int((time.perf_counter() - t0) * 1000)
 
+        from monitoring.utils import log_prediction
+        log_prediction(
+            project=project, user=request.user,
+            input_type=project.prediction_input_type,
+            prediction=result.get('prediction'), confidence=result.get('confidence'),
+            label=str(result.get('label', '')), inference_ms=elapsed_ms,
+            success=True, source='api', request=request,
+        )
+        from monitoring.notifications import check_milestone
+        check_milestone(project)
+
         return JsonResponse({
             'success':      True,
             'prediction':   result.get('prediction'),
@@ -95,4 +113,7 @@ def api_predict(request, project_id):
         })
 
     except Exception as exc:
+        from monitoring.utils import log_prediction
+        log_prediction(project=project, success=False, error_message=str(exc),
+                       source='api', request=request)
         return JsonResponse({'success': False, 'error': str(exc)}, status=500)

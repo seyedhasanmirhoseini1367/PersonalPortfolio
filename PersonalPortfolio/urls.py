@@ -20,7 +20,8 @@ urlpatterns = [
     path('resume/', include('resume.urls')),
     path('rag/', include('rag_system.urls')),
     path('accounts/', include('accounts.urls')),
-    path('stories/', include('stories.urls')),
+    path('stories/',    include('stories.urls')),
+    path('monitoring/', include('monitoring.urls')),
 
     # SEO
     path('sitemap.xml', sitemap, {'sitemaps': sitemaps}, name='django.contrib.sitemaps.views.sitemap'),

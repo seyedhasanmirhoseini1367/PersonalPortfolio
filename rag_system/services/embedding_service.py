@@ -1,116 +1,112 @@
 # rag_system/services/embedding_service.py
-import numpy as np
-from sentence_transformers import SentenceTransformer
-from typing import List, Tuple, Any, Optional, Dict
+"""
+Embedding service — DB is the single source of truth.
+Pkl cache files are no longer used; embeddings are always loaded fresh from
+the DocumentChunk table. This ensures embeddings are never stale after
+auto-sync signals fire.
+"""
 import pickle
-import os
+import logging
+import numpy as np
+from typing import List, Tuple, Dict, Any, Optional
+from sentence_transformers import SentenceTransformer
 from django.conf import settings
 from ..models import DocumentChunk
 
+logger = logging.getLogger(__name__)
+
 
 class EmbeddingService:
+
     def __init__(self):
         self.model_name = settings.RAG_CONFIG['EMBEDDING_MODEL']
-        try:
-            self.model = SentenceTransformer(self.model_name)
-        except Exception as e:
-            print(f"Error loading model: {e}")
-            # Fallback to a simpler approach
-            self.model = None
-        self.vector_store_path = settings.RAG_CONFIG['VECTOR_STORE_PATH']
+        self._model: Optional[SentenceTransformer] = None   # lazy-loaded
 
-        # Ensure vector store directory exists
-        os.makedirs(self.vector_store_path, exist_ok=True)
+    # ── Model (lazy) ──────────────────────────────────────────────────────────
+
+    @property
+    def model(self) -> Optional[SentenceTransformer]:
+        if self._model is None:
+            try:
+                self._model = SentenceTransformer(self.model_name)
+                logger.debug('EmbeddingService: loaded model "%s"', self.model_name)
+            except Exception as exc:
+                logger.error('EmbeddingService: failed to load model "%s": %s', self.model_name, exc)
+        return self._model
+
+    # ── Encoding ──────────────────────────────────────────────────────────────
 
     def generate_embedding(self, text: str) -> np.ndarray:
-        """Generate embedding for a single text"""
         if self.model is None:
-            # Return a dummy embedding if model fails to load
-            return np.random.rand(384).astype(np.float32)
-        return self.model.encode(text)
+            return np.zeros(384, dtype=np.float32)
+        return self.model.encode(text, show_progress_bar=False)
 
     def generate_embeddings(self, texts: List[str]) -> np.ndarray:
-        """Generate embeddings for multiple texts"""
         if self.model is None:
-            # Return dummy embeddings if model fails to load
-            return np.random.rand(len(texts), 384).astype(np.float32)
-        return self.model.encode(texts)
+            return np.zeros((len(texts), 384), dtype=np.float32)
+        return self.model.encode(texts, show_progress_bar=False, batch_size=32)
 
-    def embed_document_chunks(self, document_chunks: List[DocumentChunk]) -> None:
-        """Generate and store embeddings for document chunks"""
-        if not document_chunks:
-            return
+    # ── Persist to DB ─────────────────────────────────────────────────────────
 
-        texts = [chunk.content for chunk in document_chunks]
-        embeddings = self.generate_embeddings(texts)
-
-        for chunk, embedding in zip(document_chunks, embeddings):
-            # Store embedding as bytes
-            chunk.embedding = pickle.dumps(embedding)
-            chunk.save()
-
-    def load_embeddings(self, document_type: str = None) -> Tuple[List[str], np.ndarray, List[Dict[str, Any]]]:
-        """Load all embeddings from database"""
-        queryset = DocumentChunk.objects.select_related('document')
-        if document_type:
-            queryset = queryset.filter(document__document_type=document_type)
-
-        chunks = list(queryset.filter(embedding__isnull=False))
-
+    def embed_document_chunks(self, chunks: List[DocumentChunk]) -> None:
+        """Generate and store embeddings for a list of DocumentChunk objects."""
         if not chunks:
-            return [], np.array([]), []
+            return
+        texts      = [c.content for c in chunks]
+        embeddings = self.generate_embeddings(texts)
+        for chunk, vec in zip(chunks, embeddings):
+            chunk.embedding = pickle.dumps(vec.astype(np.float32))
+            chunk.save(update_fields=['embedding'])
+        logger.debug('EmbeddingService: stored %d chunk embeddings', len(chunks))
 
-        texts = []
-        embeddings = []
-        metadata = []
+    # ── Load from DB ──────────────────────────────────────────────────────────
 
-        for chunk in chunks:
+    def load_embeddings(
+        self,
+        document_type: Optional[str] = None,
+    ) -> Tuple[List[str], np.ndarray, List[Dict[str, Any]]]:
+        """
+        Load all embeddings from the database.
+        Returns (texts, embeddings_matrix, metadata_list).
+        """
+        qs = DocumentChunk.objects.select_related('document').filter(embedding__isnull=False)
+        if document_type:
+            qs = qs.filter(document__document_type=document_type)
+
+        texts, vecs, meta = [], [], []
+        for chunk in qs:
             try:
-                embedding_data = pickle.loads(chunk.embedding)
+                vec = pickle.loads(chunk.embedding)
                 texts.append(chunk.content)
-                embeddings.append(embedding_data)
-                metadata.append({
-                    'chunk_id': str(chunk.id),
-                    'document_id': str(chunk.document.id),
+                vecs.append(vec)
+                meta.append({
+                    'chunk_id':       str(chunk.id),
+                    'document_id':    str(chunk.document.id),
                     'document_title': chunk.document.title,
-                    'document_type': chunk.document.document_type,
-                    'chunk_index': chunk.chunk_index
+                    'document_type':  chunk.document.document_type,
+                    'chunk_index':    chunk.chunk_index,
+                    'source':         chunk.document.source,
                 })
-            except Exception as e:
-                print(f"Error loading embedding for chunk {chunk.id}: {e}")
-                continue
+            except Exception as exc:
+                logger.debug('EmbeddingService: skipping chunk %s: %s', chunk.id, exc)
 
-        if not embeddings:
+        if not vecs:
             return [], np.array([]), []
 
-        return texts, np.array(embeddings), metadata
+        logger.debug(
+            'EmbeddingService: loaded %d embeddings (type=%s)',
+            len(vecs), document_type or 'all',
+        )
+        return texts, np.array(vecs, dtype=np.float32), meta
+
+    # ── Backward-compat stubs (pkl no longer used) ────────────────────────────
+
+    def load_embeddings_from_file(
+        self, document_type: str
+    ) -> Tuple[List[str], np.ndarray, List[Dict[str, Any]]]:
+        """Deprecated pkl path — now delegates straight to DB."""
+        return self.load_embeddings(document_type)
 
     def save_embeddings_to_file(self, document_type: str) -> None:
-        """Save embeddings to file for faster loading"""
-        texts, embeddings, metadata = self.load_embeddings(document_type)
-
-        if len(embeddings) > 0:
-            file_path = os.path.join(self.vector_store_path, f"{document_type}_embeddings.pkl")
-            with open(file_path, 'wb') as f:
-                pickle.dump({
-                    'texts': texts,
-                    'embeddings': embeddings,
-                    'metadata': metadata
-                }, f)
-            print(f"Saved {len(embeddings)} embeddings for {document_type} to {file_path}")
-
-    def load_embeddings_from_file(self, document_type: str) -> Tuple[List[str], np.ndarray, List[Dict[str, Any]]]:
-        """Load embeddings from file"""
-        file_path = os.path.join(self.vector_store_path, f"{document_type}_embeddings.pkl")
-
-        if os.path.exists(file_path):
-            try:
-                with open(file_path, 'rb') as f:
-                    data = pickle.load(f)
-                print(f"Loaded {len(data['embeddings'])} embeddings for {document_type} from file")
-                return data['texts'], data['embeddings'], data['metadata']
-            except Exception as e:
-                print(f"Error loading embeddings from file {file_path}: {e}")
-
-        print(f"No embeddings file found for {document_type}, loading from database")
-        return self.load_embeddings(document_type)
+        """No-op: pkl cache is removed. DB is the source of truth."""
+        pass

@@ -1,0 +1,955 @@
+{% extends 'base.html' %}
+{% block title %}MLOps Learning Roadmap | HasanPortfolio{% endblock %}
+{% block meta_description %}A structured roadmap from Data Scientist to ML/MLOps Engineer — skills, tools, and milestones.{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ── Layout ─────────────────────────────────────────────────────────────── */
+.roadmap-page {
+    background: var(--bg, #f8f9fa);
+    min-height: 100vh;
+    padding-bottom: 3rem;
+}
+
+.page-hero {
+    background: linear-gradient(135deg, #0f172a 0%, #0f0c29 60%, #a78bfa 100%);
+    color: white;
+    padding: 2.5rem 0;
+    margin-bottom: 2rem;
+    text-align: center;
+}
+.page-hero h1 { font-size: 2rem; font-weight: 700; margin-bottom: .5rem; }
+.page-hero p  { opacity: .85; max-width: 560px; margin: 0 auto; font-size: .95rem; }
+
+/* ── Phase cards ─────────────────────────────────────────────────────────── */
+.roadmap-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+@media (max-width: 760px) { .roadmap-grid { grid-template-columns: 1fr; } }
+
+.phase-card {
+    background: var(--bg-card, white);
+    border-radius: 14px;
+    border: 1px solid var(--border, #dee2e6);
+    box-shadow: 0 2px 8px rgba(0,0,0,.06);
+    overflow: hidden;
+}
+
+.phase-header {
+    padding: 1rem 1.25rem .75rem;
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+}
+
+.phase-icon  { font-size: 1.5rem; flex-shrink: 0; }
+.phase-title { font-size: 1rem; font-weight: 700; color: var(--text, #333); }
+
+.phase-badge {
+    margin-left: auto;
+    font-size: .7rem;
+    font-weight: 700;
+    padding: .2rem .65rem;
+    border-radius: 20px;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.phase-body { padding: 0 1.25rem 1.25rem; }
+
+/* ── Skill rows ──────────────────────────────────────────────────────────── */
+.skill-group { margin-bottom: .85rem; }
+
+.skill-group-label {
+    font-size: .7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    color: #94a3b8;
+    margin-bottom: .35rem;
+}
+
+.skill-pills { display: flex; flex-wrap: wrap; gap: .35rem; }
+
+.pill {
+    font-size: .75rem;
+    padding: .22rem .7rem;
+    border-radius: 20px;
+    font-weight: 500;
+    border: 1px solid transparent;
+    cursor: pointer;
+    user-select: none;
+    transition: transform .12s, box-shadow .12s;
+}
+.pill:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0,0,0,.15);
+}
+.pill:active { transform: scale(.96); }
+
+.pill-done    { background: #d1fae5; color: #065f46; border-color: #a7f3d0; }
+.pill-active  { background: #dbeafe; color: #0f0c29; border-color: #93c5fd; }
+.pill-next    { background: #fef3c7; color: #92400e; border-color: #fcd34d; }
+.pill-future  { background: #f1f5f9; color: #64748b; border-color: #e2e8f0; }
+
+/* ── Phase progress bar ──────────────────────────────────────────────────── */
+.progress-bar-wrap {
+    height: 6px;
+    background: #e2e8f0;
+    border-radius: 3px;
+    margin-top: .75rem;
+    overflow: hidden;
+}
+.progress-bar-fill { height: 100%; border-radius: 3px; transition: width .6s ease; }
+
+/* ── Legend ──────────────────────────────────────────────────────────────── */
+.legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .75rem 1.5rem;
+    margin-bottom: 2rem;
+    padding: 1rem 1.5rem;
+    background: var(--bg-card, white);
+    border-radius: 12px;
+    border: 1px solid var(--border, #dee2e6);
+    justify-content: center;
+    align-items: center;
+}
+.legend-item { display: flex; align-items: center; gap: .4rem; font-size: .8rem; }
+.legend-hint {
+    font-size: .78rem;
+    color: #94a3b8;
+    display: flex;
+    align-items: center;
+    gap: .3rem;
+    margin-left: auto;
+}
+
+/* ── Timeline strip ─────────────────────────────────────────────────────── */
+.timeline-strip {
+    background: var(--bg-card, white);
+    border-radius: 14px;
+    border: 1px solid var(--border, #dee2e6);
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    overflow-x: auto;
+}
+.timeline-strip h2 { font-size: 1.1rem; font-weight: 700; margin-bottom: 1.25rem; color: var(--text, #333); }
+
+.timeline-track { display: flex; align-items: center; gap: 0; min-width: 600px; }
+
+.timeline-node {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    flex: 1;
+}
+
+.timeline-dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 3px solid white;
+    box-shadow: 0 0 0 2px #94a3b8;
+    margin-bottom: .5rem;
+    flex-shrink: 0;
+}
+
+.timeline-line {
+    position: absolute;
+    top: 7px;
+    left: calc(50% + 7px);
+    right: calc(-50% + 7px);
+    height: 3px;
+    background: #e2e8f0;
+    z-index: 0;
+}
+.timeline-node:last-child .timeline-line { display: none; }
+.timeline-label { font-size: .72rem; font-weight: 600; color: var(--text, #333); text-align: center; }
+.timeline-sub   { font-size: .65rem; color: #94a3b8; text-align: center; margin-top: .15rem; }
+
+/* ── Resources ──────────────────────────────────────────────────────────── */
+.resources-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+@media (max-width: 760px) { .resources-grid { grid-template-columns: 1fr; } }
+
+.resource-card { background: var(--bg-card, white); border: 1px solid var(--border, #dee2e6); border-radius: 12px; padding: 1rem 1.1rem; }
+.resource-card h3 { font-size: .9rem; font-weight: 700; margin-bottom: .6rem; color: var(--text, #333); }
+.resource-list { list-style: none; padding: 0; margin: 0; }
+.resource-list li { font-size: .8rem; padding: .3rem 0; border-bottom: 1px solid var(--border, #f1f5f9); color: #475569; }
+.resource-list li:last-child { border: none; }
+.resource-list li::before { content: "▸ "; color: #302b63; }
+
+/* ── Skill Progress Popover ─────────────────────────────────────────────── */
+#skillPopover {
+    position: fixed;
+    z-index: 9999;
+    width: 290px;
+    background: var(--bg-card, white);
+    border: 1px solid var(--border, #dee2e6);
+    border-radius: 14px;
+    box-shadow: 0 12px 32px rgba(0,0,0,.18);
+    padding: 1.1rem 1.2rem 1.2rem;
+    display: none;
+    pointer-events: auto;
+}
+#skillPopover.visible { display: block; animation: popIn .18s ease; }
+
+@keyframes popIn {
+    from { opacity: 0; transform: scale(.92) translateY(6px); }
+    to   { opacity: 1; transform: scale(1)  translateY(0); }
+}
+
+.sp-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: .75rem;
+    gap: .5rem;
+}
+.sp-title { font-size: .92rem; font-weight: 700; color: var(--text, #1e293b); line-height: 1.3; }
+.sp-close {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #94a3b8;
+    font-size: 1rem;
+    line-height: 1;
+    padding: 0;
+    flex-shrink: 0;
+}
+.sp-close:hover { color: #475569; }
+
+.sp-status {
+    display: inline-block;
+    font-size: .7rem;
+    font-weight: 700;
+    padding: .18rem .6rem;
+    border-radius: 20px;
+    margin-bottom: .85rem;
+}
+
+.sp-bar-wrap {
+    background: #e2e8f0;
+    border-radius: 6px;
+    height: 10px;
+    position: relative;
+    margin-bottom: .35rem;
+    overflow: visible;
+}
+.sp-bar-fill {
+    height: 100%;
+    border-radius: 6px;
+    width: 0;
+    transition: width .55s cubic-bezier(.4,0,.2,1);
+    position: relative;
+}
+/* Target marker */
+.sp-target-marker {
+    position: absolute;
+    top: -4px;
+    width: 2px;
+    height: 18px;
+    background: #f59e0b;
+    border-radius: 2px;
+    transition: left .55s cubic-bezier(.4,0,.2,1);
+}
+.sp-target-marker::after {
+    content: attr(data-label);
+    position: absolute;
+    top: -17px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: .65rem;
+    font-weight: 700;
+    color: #f59e0b;
+    white-space: nowrap;
+}
+
+.sp-numbers {
+    display: flex;
+    justify-content: space-between;
+    font-size: .72rem;
+    color: #94a3b8;
+    margin-bottom: .75rem;
+}
+.sp-current-label { font-weight: 700; color: var(--text, #334155); }
+
+.sp-note {
+    font-size: .78rem;
+    color: #64748b;
+    border-top: 1px solid var(--border, #f1f5f9);
+    padding-top: .65rem;
+    line-height: 1.45;
+    margin-bottom: .8rem;
+}
+.sp-note::before { content: "💡 "; }
+
+/* Slider row */
+.sp-slider-row {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    margin-bottom: .6rem;
+}
+.sp-slider {
+    flex: 1;
+    accent-color: #302b63;
+    cursor: pointer;
+    height: 4px;
+}
+.sp-slider-val {
+    font-size: .8rem;
+    font-weight: 700;
+    color: #302b63;
+    min-width: 32px;
+    text-align: right;
+}
+.sp-save {
+    width: 100%;
+    padding: .45rem;
+    background: #302b63;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: .82rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background .15s;
+}
+.sp-save:hover { background: #00b8d9; }
+.sp-save.saved { background: #10b981; }
+.sp-update-label {
+    font-size: .7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    color: #94a3b8;
+    margin-bottom: .3rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="roadmap-page">
+
+  <div class="page-hero">
+    <div class="container">
+      <h1>🗺️ MLOps Learning Roadmap</h1>
+      <p>From Data Scientist to ML/MLOps Engineer — a structured path with current status,
+         next priorities, and long-term targets.</p>
+    </div>
+  </div>
+
+  <div class="container" style="max-width:1100px;">
+
+    <!-- Legend -->
+    <div class="legend">
+      <div class="legend-item"><span class="pill pill-done">✓ Done</span> Already solid</div>
+      <div class="legend-item"><span class="pill pill-active">→ Active</span> Currently learning</div>
+      <div class="legend-item"><span class="pill pill-next">⭑ Next</span> High priority</div>
+      <div class="legend-item"><span class="pill pill-future">○ Future</span> Long-term goal</div>
+      <div class="legend-hint">👆 Click any skill to see progress</div>
+    </div>
+
+    <!-- Timeline strip -->
+    <div class="timeline-strip">
+      <h2>📅 Learning Timeline</h2>
+      <div class="timeline-track">
+        <div class="timeline-node">
+          <div class="timeline-dot" style="background:#10b981; box-shadow:0 0 0 2px #10b981;"></div>
+          <div class="timeline-line" style="background:#10b981;"></div>
+          <div class="timeline-label">Foundation</div>
+          <div class="timeline-sub">Math · Stats · Python</div>
+        </div>
+        <div class="timeline-node">
+          <div class="timeline-dot" style="background:#10b981; box-shadow:0 0 0 2px #10b981;"></div>
+          <div class="timeline-line" style="background:#10b981;"></div>
+          <div class="timeline-label">ML Core</div>
+          <div class="timeline-sub">Sklearn · XGBoost<br>Deep Learning</div>
+        </div>
+        <div class="timeline-node">
+          <div class="timeline-dot" style="background:#3b82f6; box-shadow:0 0 0 2px #3b82f6;"></div>
+          <div class="timeline-line" style="background:linear-gradient(to right,#3b82f6,#f59e0b);"></div>
+          <div class="timeline-label">MLOps Basics</div>
+          <div class="timeline-sub">Docker · CI/CD<br>Monitoring ← you are here</div>
+        </div>
+        <div class="timeline-node">
+          <div class="timeline-dot" style="background:#f59e0b; box-shadow:0 0 0 2px #f59e0b;"></div>
+          <div class="timeline-line" style="background:#e2e8f0;"></div>
+          <div class="timeline-label">Cloud ML</div>
+          <div class="timeline-sub">Azure ML · GCP<br>Model Registry</div>
+        </div>
+        <div class="timeline-node">
+          <div class="timeline-dot" style="background:#8b5cf6; box-shadow:0 0 0 2px #8b5cf6;"></div>
+          <div class="timeline-line" style="background:#e2e8f0;"></div>
+          <div class="timeline-label">Infra &amp; Scale</div>
+          <div class="timeline-sub">Kubernetes · Spark<br>Feature Store</div>
+        </div>
+        <div class="timeline-node">
+          <div class="timeline-dot" style="background:#94a3b8; box-shadow:0 0 0 2px #94a3b8;"></div>
+          <div class="timeline-line"></div>
+          <div class="timeline-label">Production ML</div>
+          <div class="timeline-sub">Senior ML Eng<br>Architect</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Phase cards -->
+    <div class="roadmap-grid">
+
+      <!-- Phase 1 -->
+      <div class="phase-card">
+        <div class="phase-header" style="background:linear-gradient(135deg,#d1fae5,#a7f3d0);">
+          <span class="phase-icon">🧮</span>
+          <span class="phase-title">Phase 1 — Foundation</span>
+          <span class="phase-badge" style="background:#065f46;color:white;">Complete ✓</span>
+        </div>
+        <div class="phase-body">
+          <div class="skill-group">
+            <div class="skill-group-label">Mathematics</div>
+            <div class="skill-pills">
+              <span class="pill pill-done" data-skill="Linear Algebra" data-progress="90" data-target="95" data-note="BSc Mathematics — applied in PCA, SVD, neural network weight ops.">Linear Algebra</span>
+              <span class="pill pill-done" data-skill="Calculus" data-progress="85" data-target="90" data-note="Solid from BSc. Focus: multivariable calculus for backpropagation.">Calculus</span>
+              <span class="pill pill-done" data-skill="Probability" data-progress="88" data-target="93" data-note="Core of Bayesian inference and uncertainty estimation in models.">Probability</span>
+              <span class="pill pill-done" data-skill="Statistics" data-progress="90" data-target="95" data-note="Hypothesis testing, confidence intervals, A/B testing fundamentals.">Statistics</span>
+            </div>
+          </div>
+          <div class="skill-group">
+            <div class="skill-group-label">Programming</div>
+            <div class="skill-pills">
+              <span class="pill pill-done" data-skill="Python" data-progress="95" data-target="98" data-note="Daily use for 3+ years. Next: advanced patterns, async, type hints.">Python</span>
+              <span class="pill pill-done" data-skill="NumPy / Pandas" data-progress="92" data-target="97" data-note="Heavy use across all projects. Next: Polars for large datasets.">NumPy / Pandas</span>
+              <span class="pill pill-done" data-skill="SQL" data-progress="78" data-target="88" data-note="Practice window functions, CTEs, query optimization.">SQL</span>
+              <span class="pill pill-done" data-skill="Git" data-progress="82" data-target="90" data-note="Daily use. Next: advanced branching strategy, rebase workflows.">Git</span>
+            </div>
+          </div>
+          <div class="skill-group">
+            <div class="skill-group-label">Data Science</div>
+            <div class="skill-pills">
+              <span class="pill pill-done" data-skill="EDA" data-progress="90" data-target="95" data-note="Applied extensively on Kaggle & portfolio projects.">EDA</span>
+              <span class="pill pill-done" data-skill="Feature Engineering" data-progress="88" data-target="94" data-note="Strong foundation. Next: time-series & domain-specific features.">Feature Engineering</span>
+              <span class="pill pill-done" data-skill="Data Visualization" data-progress="84" data-target="92" data-note="Matplotlib, Seaborn, Plotly. Next: add interactive dashboards.">Data Visualization</span>
+            </div>
+          </div>
+          <div class="progress-bar-wrap">
+            <div class="progress-bar-fill" style="width:100%;background:#10b981;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Phase 2 -->
+      <div class="phase-card">
+        <div class="phase-header" style="background:linear-gradient(135deg,#d1fae5,#bfdbfe);">
+          <span class="phase-icon">🤖</span>
+          <span class="phase-title">Phase 2 — ML Core</span>
+          <span class="phase-badge" style="background:#0f0c29;color:white;">~90% ✓</span>
+        </div>
+        <div class="phase-body">
+          <div class="skill-group">
+            <div class="skill-group-label">Classical ML</div>
+            <div class="skill-pills">
+              <span class="pill pill-done" data-skill="Scikit-learn" data-progress="88" data-target="95" data-note="Core library for all tabular ML. Next: custom transformers & pipelines.">Scikit-learn</span>
+              <span class="pill pill-done" data-skill="XGBoost / CatBoost" data-progress="85" data-target="92" data-note="Used in Kaggle competitions. Practice DART booster & categorical encoding.">XGBoost / CatBoost</span>
+              <span class="pill pill-done" data-skill="Model Evaluation" data-progress="90" data-target="95" data-note="Cross-validation, leakage prevention, calibration curves.">Model Evaluation</span>
+              <span class="pill pill-done" data-skill="Hyperparameter Tuning" data-progress="78" data-target="88" data-note="Grid/random search done. Next: Optuna Bayesian optimization.">Hyperparameter Tuning</span>
+            </div>
+          </div>
+          <div class="skill-group">
+            <div class="skill-group-label">Deep Learning</div>
+            <div class="skill-pills">
+              <span class="pill pill-done" data-skill="PyTorch" data-progress="72" data-target="85" data-note="Built custom CNNs & training loops. Next: DDP distributed training.">PyTorch</span>
+              <span class="pill pill-done" data-skill="CNNs / RNNs" data-progress="68" data-target="80" data-note="Implemented for EEG seizure detection project. Add attention mechanisms.">CNNs / RNNs</span>
+              <span class="pill pill-active" data-skill="Transformers (basics)" data-progress="45" data-target="72" data-note="Complete the Hugging Face NLP course. Study attention & positional encoding.">Transformers (basics)</span>
+              <span class="pill pill-next" data-skill="Fine-tuning LLMs" data-progress="15" data-target="60" data-note="Learn LoRA / PEFT. Fine-tune a small model (e.g. phi-2) on a custom task.">Fine-tuning LLMs</span>
+            </div>
+          </div>
+          <div class="skill-group">
+            <div class="skill-group-label">NLP / LLM</div>
+            <div class="skill-pills">
+              <span class="pill pill-done" data-skill="RAG Systems" data-progress="65" data-target="85" data-note="Built RAG for this portfolio. Next: add eval metrics (RAGAS), reranking.">RAG Systems</span>
+              <span class="pill pill-active" data-skill="Embeddings" data-progress="50" data-target="75" data-note="Using sentence-transformers. Study dense retrieval & bi-encoder fine-tuning.">Embeddings</span>
+              <span class="pill pill-next" data-skill="LangChain / LlamaIndex" data-progress="20" data-target="65" data-note="Build 2–3 agent projects with LangChain. Study LangGraph for workflows.">LangChain / LlamaIndex</span>
+              <span class="pill pill-future" data-skill="LLM Ops" data-progress="5" data-target="40" data-note="Explore LangSmith tracing, Helicone cost monitoring, Guardrails AI.">LLM Ops</span>
+            </div>
+          </div>
+          <div class="progress-bar-wrap">
+            <div class="progress-bar-fill" style="width:90%;background:linear-gradient(to right,#10b981,#3b82f6);"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Phase 3 -->
+      <div class="phase-card">
+        <div class="phase-header" style="background:linear-gradient(135deg,#bfdbfe,#ddd6fe);">
+          <span class="phase-icon">⚙️</span>
+          <span class="phase-title">Phase 3 — MLOps Basics</span>
+          <span class="phase-badge" style="background:#302b63;color:white;">In Progress →</span>
+        </div>
+        <div class="phase-body">
+          <div class="skill-group">
+            <div class="skill-group-label">Containerisation</div>
+            <div class="skill-pills">
+              <span class="pill pill-active" data-skill="Docker" data-progress="42" data-target="80" data-note="Dockerfile written for this portfolio. Practice: multi-stage builds, layer caching, .dockerignore.">Docker</span>
+              <span class="pill pill-next" data-skill="Docker Compose (multi-service)" data-progress="22" data-target="65" data-note="docker-compose.yml added. Next: run full stack locally (web + db + redis).">Docker Compose (multi-service)</span>
+              <span class="pill pill-future" data-skill="Kubernetes" data-progress="8" data-target="45" data-note="Start with minikube. Complete KodeKloud K8s labs. Deploy a simple service.">Kubernetes</span>
+            </div>
+          </div>
+          <div class="skill-group">
+            <div class="skill-group-label">CI/CD</div>
+            <div class="skill-pills">
+              <span class="pill pill-active" data-skill="GitHub Actions" data-progress="48" data-target="82" data-note="CI pipeline written. Next: matrix builds, caching pip, deploy step to Azure.">GitHub Actions</span>
+              <span class="pill pill-next" data-skill="Automated testing pipelines" data-progress="25" data-target="70" data-note="Add pytest + coverage.py to CI. Set minimum 80% coverage gate.">Automated testing pipelines</span>
+              <span class="pill pill-future" data-skill="ArgoCD" data-progress="2" data-target="30" data-note="GitOps for Kubernetes. Study after K8s basics are solid.">ArgoCD</span>
+            </div>
+          </div>
+          <div class="skill-group">
+            <div class="skill-group-label">Experiment Tracking</div>
+            <div class="skill-pills">
+              <span class="pill pill-active" data-skill="MLflow (model fields)" data-progress="30" data-target="72" data-note="Fields added to DB. Next: instrument actual runs, log params & metrics from training scripts.">MLflow (model fields)</span>
+              <span class="pill pill-next" data-skill="MLflow Tracking Server" data-progress="10" data-target="60" data-note="Deploy MLflow server (free: Railway or Fly.io). Connect training scripts to it.">MLflow Tracking Server</span>
+              <span class="pill pill-future" data-skill="Weights &amp; Biases" data-progress="5" data-target="50" data-note="Complete the free W&B Effective MLOps course. Use sweep for hyperparameter search.">Weights &amp; Biases</span>
+            </div>
+          </div>
+          <div class="skill-group">
+            <div class="skill-group-label">Monitoring</div>
+            <div class="skill-pills">
+              <span class="pill pill-active" data-skill="Prediction logging" data-progress="72" data-target="90" data-note="Custom PredictionLog model built and wired to all inference endpoints.">Prediction logging</span>
+              <span class="pill pill-active" data-skill="Custom dashboard" data-progress="65" data-target="85" data-note="Staff dashboard live with Chart.js. Next: add data drift charts + alert emails.">Custom dashboard</span>
+              <span class="pill pill-next" data-skill="Data drift detection" data-progress="5" data-target="55" data-note="Integrate Evidently AI library. Compare input distributions over rolling windows.">Data drift detection</span>
+              <span class="pill pill-future" data-skill="Prometheus + Grafana" data-progress="3" data-target="45" data-note="Set up locally with Docker Compose. Scrape Django metrics via django-prometheus.">Prometheus + Grafana</span>
+            </div>
+          </div>
+          <div class="progress-bar-wrap">
+            <div class="progress-bar-fill" style="width:40%;background:#3b82f6;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Phase 4 -->
+      <div class="phase-card">
+        <div class="phase-header" style="background:linear-gradient(135deg,#ddd6fe,#fef3c7);">
+          <span class="phase-icon">☁️</span>
+          <span class="phase-title">Phase 4 — Cloud ML</span>
+          <span class="phase-badge" style="background:#92400e;color:white;">Next ⭑</span>
+        </div>
+        <div class="phase-body">
+          <div class="skill-group">
+            <div class="skill-group-label">Azure (priority — AZ-900 → DP-100)</div>
+            <div class="skill-pills">
+              <span class="pill pill-next" data-skill="Azure ML Studio" data-progress="10" data-target="72" data-note="Complete AZ-900 free path on Microsoft Learn, then DP-100 learning path.">Azure ML Studio</span>
+              <span class="pill pill-next" data-skill="Azure Container Instances" data-progress="8" data-target="60" data-note="Deploy a containerized model to ACI. Connects Docker + Azure skills.">Azure Container Instances</span>
+              <span class="pill pill-next" data-skill="Azure App Service" data-progress="15" data-target="80" data-note="Deploy this portfolio via GitHub Actions + GHCR → Azure Web App for Containers.">Azure App Service</span>
+              <span class="pill pill-future" data-skill="Azure Databricks" data-progress="3" data-target="40" data-note="PySpark on managed Spark cluster. Study after AZ-900 completion.">Azure Databricks</span>
+              <span class="pill pill-future" data-skill="Azure Data Factory" data-progress="3" data-target="35" data-note="ETL/ELT pipelines for data engineering workflows in Azure.">Azure Data Factory</span>
+            </div>
+          </div>
+          <div class="skill-group">
+            <div class="skill-group-label">Model Registry &amp; Serving</div>
+            <div class="skill-pills">
+              <span class="pill pill-next" data-skill="MLflow Model Registry" data-progress="15" data-target="65" data-note="Register & version models from portfolio projects. Add stage transitions.">MLflow Model Registry</span>
+              <span class="pill pill-next" data-skill="FastAPI model serving" data-progress="25" data-target="70" data-note="Build a standalone REST API with FastAPI + Docker. Compare to current Django approach.">FastAPI model serving</span>
+              <span class="pill pill-future" data-skill="BentoML / Seldon" data-progress="2" data-target="35" data-note="Model serving frameworks with automatic schema validation. After FastAPI is solid.">BentoML / Seldon</span>
+              <span class="pill pill-future" data-skill="Triton Inference Server" data-progress="1" data-target="25" data-note="NVIDIA's high-throughput GPU inference server. Advanced — long-term goal.">Triton Inference Server</span>
+            </div>
+          </div>
+          <div class="skill-group">
+            <div class="skill-group-label">Data Pipeline</div>
+            <div class="skill-pills">
+              <span class="pill pill-next" data-skill="Apache Airflow (basics)" data-progress="8" data-target="55" data-note="Build a simple ML pipeline DAG (ingest → train → evaluate → register).">Apache Airflow (basics)</span>
+              <span class="pill pill-future" data-skill="Prefect / Dagster" data-progress="3" data-target="40" data-note="Modern Python-native alternatives to Airflow. Try Prefect first.">Prefect / Dagster</span>
+              <span class="pill pill-future" data-skill="Kafka (streaming)" data-progress="2" data-target="30" data-note="Real-time ML inference pipeline. Study after batch pipelines are solid.">Kafka (streaming)</span>
+            </div>
+          </div>
+          <div class="progress-bar-wrap">
+            <div class="progress-bar-fill" style="width:10%;background:#f59e0b;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Phase 5 -->
+      <div class="phase-card">
+        <div class="phase-header" style="background:linear-gradient(135deg,#fef3c7,#fce7f3);">
+          <span class="phase-icon">🚀</span>
+          <span class="phase-title">Phase 5 — Infrastructure at Scale</span>
+          <span class="phase-badge" style="background:#6b21a8;color:white;">Future ○</span>
+        </div>
+        <div class="phase-body">
+          <div class="skill-group">
+            <div class="skill-group-label">Orchestration</div>
+            <div class="skill-pills">
+              <span class="pill pill-future" data-skill="Kubernetes (AKS)" data-progress="5" data-target="60" data-note="K8s fundamentals → deploy models to Azure Kubernetes Service. CKA path.">Kubernetes (AKS)</span>
+              <span class="pill pill-future" data-skill="Helm charts" data-progress="2" data-target="45" data-note="Package K8s deployments as reusable Helm charts.">Helm charts</span>
+              <span class="pill pill-future" data-skill="Service mesh (Istio)" data-progress="1" data-target="25" data-note="Traffic management, canary deployments for ML services.">Service mesh (Istio)</span>
+            </div>
+          </div>
+          <div class="skill-group">
+            <div class="skill-group-label">Big Data</div>
+            <div class="skill-pills">
+              <span class="pill pill-future" data-skill="PySpark" data-progress="8" data-target="50" data-note="Distributed data processing on Azure Databricks. Large-scale feature engineering.">PySpark</span>
+              <span class="pill pill-future" data-skill="Delta Lake" data-progress="3" data-target="40" data-note="Lakehouse architecture: ACID transactions on data lakes.">Delta Lake</span>
+              <span class="pill pill-future" data-skill="Feature Store (Feast)" data-progress="2" data-target="35" data-note="Manage features for both training and real-time serving.">Feature Store (Feast)</span>
+            </div>
+          </div>
+          <div class="skill-group">
+            <div class="skill-group-label">Observability</div>
+            <div class="skill-pills">
+              <span class="pill pill-future" data-skill="Prometheus" data-progress="3" data-target="50" data-note="Metrics collection + alerting rules. Start locally with Docker Compose.">Prometheus</span>
+              <span class="pill pill-future" data-skill="Grafana" data-progress="3" data-target="45" data-note="Build ML monitoring dashboards. Connect to Prometheus + custom metrics.">Grafana</span>
+              <span class="pill pill-future" data-skill="OpenTelemetry" data-progress="1" data-target="30" data-note="Distributed tracing for ML APIs and microservices.">OpenTelemetry</span>
+            </div>
+          </div>
+          <div class="progress-bar-wrap">
+            <div class="progress-bar-fill" style="width:3%;background:#8b5cf6;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Phase 6 -->
+      <div class="phase-card">
+        <div class="phase-header" style="background:linear-gradient(135deg,#fce7f3,#f1f5f9);">
+          <span class="phase-icon">🏆</span>
+          <span class="phase-title">Phase 6 — Production ML Engineering</span>
+          <span class="phase-badge" style="background:#475569;color:white;">Long-term</span>
+        </div>
+        <div class="phase-body">
+          <div class="skill-group">
+            <div class="skill-group-label">System Design</div>
+            <div class="skill-pills">
+              <span class="pill pill-future" data-skill="ML system design" data-progress="10" data-target="60" data-note="Read 'Designing Machine Learning Systems' by Chip Huyen. Practice interview problems.">ML system design</span>
+              <span class="pill pill-future" data-skill="Distributed training" data-progress="5" data-target="45" data-note="PyTorch DDP & FSDP for multi-GPU training. Study gradient accumulation.">Distributed training</span>
+              <span class="pill pill-future" data-skill="A/B testing infrastructure" data-progress="8" data-target="50" data-note="Statistical significance testing + feature flags (e.g. Unleash, LaunchDarkly).">A/B testing infrastructure</span>
+            </div>
+          </div>
+          <div class="skill-group">
+            <div class="skill-group-label">Certifications (target)</div>
+            <div class="skill-pills">
+              <span class="pill pill-next" data-skill="AZ-900 Azure Fundamentals" data-progress="15" data-target="100" data-note="Start the free Microsoft Learn AZ-900 path. 6–8 hours to complete. Take the exam.">AZ-900 Azure Fundamentals</span>
+              <span class="pill pill-future" data-skill="DP-100 Azure ML Engineer" data-progress="2" data-target="100" data-note="Azure ML Engineer certification. Prerequisites: AZ-900 + hands-on Azure ML experience.">DP-100 Azure ML Engineer</span>
+              <span class="pill pill-future" data-skill="CKA (Kubernetes)" data-progress="1" data-target="100" data-note="Certified Kubernetes Administrator. Prerequisites: solid K8s hands-on practice.">CKA (Kubernetes)</span>
+            </div>
+          </div>
+          <div class="skill-group">
+            <div class="skill-group-label">Soft Skills</div>
+            <div class="skill-pills">
+              <span class="pill pill-active" data-skill="Technical writing" data-progress="55" data-target="80" data-note="Stories section on this portfolio. Goal: publish 2 technical articles per month.">Technical writing</span>
+              <span class="pill pill-active" data-skill="Portfolio building" data-progress="62" data-target="90" data-note="This portfolio! Next: deploy to Azure, add 2 more ML projects with live demos.">Portfolio building</span>
+              <span class="pill pill-future" data-skill="Open source contributions" data-progress="5" data-target="50" data-note="Start with 'good first issue' labels on scikit-learn, MLflow, or LangChain.">Open source contributions</span>
+            </div>
+          </div>
+          <div class="progress-bar-wrap">
+            <div class="progress-bar-fill" style="width:8%;background:#94a3b8;"></div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /roadmap-grid -->
+
+    <!-- Recommended resources -->
+    <h2 style="font-size:1.2rem;font-weight:700;margin-bottom:1rem;color:var(--text,#333);">
+      📚 Recommended Resources
+    </h2>
+    <div class="resources-grid">
+      <div class="resource-card">
+        <h3>🐳 Docker / CI/CD</h3>
+        <ul class="resource-list">
+          <li>Docker official "Get Started" docs</li>
+          <li>GitHub Actions docs + marketplace</li>
+          <li>TechWorld with Nana — Docker in 3 hours (YouTube)</li>
+          <li>KodeKloud Docker hands-on labs</li>
+        </ul>
+      </div>
+      <div class="resource-card">
+        <h3>☁️ Azure ML</h3>
+        <ul class="resource-list">
+          <li>Microsoft Learn — AZ-900 free path</li>
+          <li>Microsoft Learn — DP-100 learning path</li>
+          <li>Azure ML Studio quickstarts</li>
+          <li>John Savill's Azure Master Class (YouTube)</li>
+        </ul>
+      </div>
+      <div class="resource-card">
+        <h3>⚙️ MLflow &amp; Experiment Tracking</h3>
+        <ul class="resource-list">
+          <li>MLflow official docs — Tracking + Model Registry</li>
+          <li>"Practical MLOps" — O'Reilly book</li>
+          <li>Weights &amp; Biases courses (free)</li>
+          <li>DVC (Data Version Control) docs</li>
+        </ul>
+      </div>
+      <div class="resource-card">
+        <h3>☸️ Kubernetes</h3>
+        <ul class="resource-list">
+          <li>Kubernetes.io interactive tutorial</li>
+          <li>TechWorld with Nana — K8s full course (YouTube)</li>
+          <li>KodeKloud CKA course</li>
+          <li>Play with Kubernetes (free playground)</li>
+        </ul>
+      </div>
+      <div class="resource-card">
+        <h3>📊 Data Pipelines</h3>
+        <ul class="resource-list">
+          <li>Apache Airflow official tutorial</li>
+          <li>Prefect 2.0 quickstart</li>
+          <li>"Data Pipelines with Apache Airflow" — Manning</li>
+          <li>dbt (data build tool) learn portal</li>
+        </ul>
+      </div>
+      <div class="resource-card">
+        <h3>🔬 LLM &amp; RAG</h3>
+        <ul class="resource-list">
+          <li>LangChain docs + LangSmith tracing</li>
+          <li>LlamaIndex getting started guide</li>
+          <li>DeepLearning.AI short courses (free)</li>
+          <li>Hugging Face NLP course</li>
+        </ul>
+      </div>
+    </div>
+
+  </div><!-- /container -->
+</div><!-- /roadmap-page -->
+
+<!-- Skill Progress Popover -->
+<div id="skillPopover" role="dialog" aria-modal="true">
+  <div class="sp-header">
+    <span class="sp-title" id="spTitle"></span>
+    <button class="sp-close" id="spClose" aria-label="Close">✕</button>
+  </div>
+  <span class="sp-status" id="spStatus"></span>
+  <div class="sp-bar-wrap" id="spBarWrap">
+    <div class="sp-bar-fill" id="spBarFill"></div>
+    <div class="sp-target-marker" id="spTargetMarker"></div>
+  </div>
+  <div class="sp-numbers">
+    <span class="sp-current-label" id="spCurrentLabel"></span>
+    <span id="spTargetLabel" style="color:#f59e0b;font-weight:700;"></span>
+  </div>
+  <div class="sp-note" id="spNote"></div>
+
+  <!-- Update progress -->
+  <div class="sp-update-label">Update my progress</div>
+  <div class="sp-slider-row">
+    <input type="range" class="sp-slider" id="spSlider" min="0" max="100" step="5">
+    <span class="sp-slider-val" id="spSliderVal">0%</span>
+  </div>
+  <button class="sp-save" id="spSave">Save progress</button>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  const STORAGE_KEY = 'roadmap_skill_progress';
+
+  // ── DOM refs ────────────────────────────────────────────────────────────
+  const popover  = document.getElementById('skillPopover');
+  const spTitle  = document.getElementById('spTitle');
+  const spStatus = document.getElementById('spStatus');
+  const spFill   = document.getElementById('spBarFill');
+  const spMarker = document.getElementById('spTargetMarker');
+  const spCurLbl = document.getElementById('spCurrentLabel');
+  const spTgtLbl = document.getElementById('spTargetLabel');
+  const spNote   = document.getElementById('spNote');
+  const spClose  = document.getElementById('spClose');
+  const spSlider = document.getElementById('spSlider');
+  const spSliderVal = document.getElementById('spSliderVal');
+  const spSave   = document.getElementById('spSave');
+
+  let activePill = null;
+
+  const STATUS_MAP = {
+    'pill-done':   { label: '✓ Solid',        bg: '#d1fae5', color: '#065f46', bar: '#10b981' },
+    'pill-active': { label: '→ In progress',   bg: '#dbeafe', color: '#0f0c29', bar: '#3b82f6' },
+    'pill-next':   { label: '⭑ Next priority', bg: '#fef3c7', color: '#92400e', bar: '#f59e0b' },
+    'pill-future': { label: '○ Future goal',   bg: '#f1f5f9', color: '#64748b', bar: '#94a3b8' },
+  };
+
+  // ── localStorage helpers ────────────────────────────────────────────────
+  function loadAll() {
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); }
+    catch { return {}; }
+  }
+
+  function saveSkill(key, value) {
+    const all = loadAll();
+    all[key] = value;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
+  }
+
+  function getSaved(key) {
+    return loadAll()[key];   // undefined if not saved yet
+  }
+
+  // ── Apply saved progress to all pills on load ───────────────────────────
+  function applyStoredProgress() {
+    const all = loadAll();
+    document.querySelectorAll('.pill[data-skill]').forEach(pill => {
+      const key = pill.dataset.skill;
+      if (all[key] !== undefined) {
+        pill.dataset.progress = all[key];
+      }
+    });
+    // rebuild all phase bars after applying stored values
+    document.querySelectorAll('.phase-card').forEach(updatePhaseBar);
+  }
+
+  // ── Recalculate a phase card's progress bar + badge ─────────────────────
+  function updatePhaseBar(card) {
+    const pills = card.querySelectorAll('.pill[data-skill]');
+    if (!pills.length) return;
+    const pillArr = Array.from(pills);
+    const allDone = pillArr.every(p => p.classList.contains('pill-done'));
+    const avg = allDone ? 100 : Math.round(
+      pillArr.reduce((s, p) => s + parseInt(p.dataset.progress || 0, 10), 0) / pillArr.length
+    );
+    const bar   = card.querySelector('.progress-bar-fill');
+    const badge = card.querySelector('.phase-badge');
+    if (bar) bar.style.width = avg + '%';
+    if (badge) {
+      if (avg >= 100) {
+        badge.textContent       = 'Complete ✓';
+        badge.style.background  = '#065f46';
+        badge.style.color       = 'white';
+      } else {
+        badge.textContent = '~' + avg + '%';
+      }
+    }
+  }
+
+  // ── Positioning ─────────────────────────────────────────────────────────
+  function getStatusKey(el) {
+    for (const k of Object.keys(STATUS_MAP)) {
+      if (el.classList.contains(k)) return k;
+    }
+    return 'pill-future';
+  }
+
+  function positionPopover(anchor) {
+    const rect = anchor.getBoundingClientRect();
+    const pw = 290, ph = 310;
+    const vw = window.innerWidth, vh = window.innerHeight;
+
+    let left = rect.left + rect.width / 2 - pw / 2;
+    let top  = rect.bottom + 10;
+
+    if (left + pw > vw - 12) left = vw - pw - 12;
+    if (left < 8) left = 8;
+
+    if (rect.bottom + ph > vh) {
+      top = rect.top - ph - 4;
+      if (top < 8) top = 8;
+    }
+
+    popover.style.left = left + 'px';
+    popover.style.top  = top  + 'px';
+  }
+
+  // ── Open popover ─────────────────────────────────────────────────────────
+  function openPopover(pill) {
+    activePill = pill;
+    const skill    = pill.dataset.skill || pill.textContent.trim();
+    const progress = parseInt(pill.dataset.progress || '0', 10);
+    const target   = parseInt(pill.dataset.target   || '100', 10);
+    const note     = pill.dataset.note || '';
+    const sk       = getStatusKey(pill);
+    const st       = STATUS_MAP[sk];
+
+    spTitle.textContent        = skill;
+    spStatus.textContent       = st.label;
+    spStatus.style.background  = st.bg;
+    spStatus.style.color       = st.color;
+    spNote.textContent         = note;
+    spCurLbl.textContent       = `Now: ${progress}%`;
+    spTgtLbl.textContent       = `Target: ${target}%`;
+
+    spFill.style.width      = '0%';
+    spFill.style.background = st.bar;
+    spMarker.style.left     = target + '%';
+    spMarker.dataset.label  = target + '%';
+
+    // slider starts at current progress
+    spSlider.value          = progress;
+    spSliderVal.textContent = progress + '%';
+    spSave.textContent      = 'Save progress';
+    spSave.classList.remove('saved');
+
+    positionPopover(pill);
+    popover.classList.add('visible');
+
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      spFill.style.width = progress + '%';
+    }));
+  }
+
+  function closePopover() {
+    popover.classList.remove('visible');
+    activePill = null;
+  }
+
+  // ── Slider: live preview ─────────────────────────────────────────────────
+  spSlider.addEventListener('input', () => {
+    const v = parseInt(spSlider.value, 10);
+    spSliderVal.textContent = v + '%';
+    spFill.style.width      = v + '%';
+    spCurLbl.textContent    = `Now: ${v}%`;
+    spSave.textContent      = 'Save progress';
+    spSave.classList.remove('saved');
+  });
+
+  // ── Save button ──────────────────────────────────────────────────────────
+  spSave.addEventListener('click', () => {
+    if (!activePill) return;
+    const newVal = parseInt(spSlider.value, 10);
+    const key    = activePill.dataset.skill;
+
+    // persist
+    saveSkill(key, newVal);
+
+    // update pill data
+    activePill.dataset.progress = newVal;
+
+    // update phase progress bar
+    const card = activePill.closest('.phase-card');
+    if (card) updatePhaseBar(card);
+
+    // visual feedback
+    spSave.textContent = '✓ Saved!';
+    spSave.classList.add('saved');
+    setTimeout(() => {
+      spSave.textContent = 'Save progress';
+      spSave.classList.remove('saved');
+      closePopover();
+    }, 900);
+  });
+
+  // ── Event wiring ─────────────────────────────────────────────────────────
+  document.querySelectorAll('.pill[data-skill]').forEach(pill => {
+    pill.addEventListener('click', e => {
+      e.stopPropagation();
+      if (popover.classList.contains('visible') && activePill === pill) {
+        closePopover();
+      } else {
+        openPopover(pill);
+      }
+    });
+  });
+
+  spClose.addEventListener('click', closePopover);
+
+  document.addEventListener('click', e => {
+    if (popover.classList.contains('visible') && !popover.contains(e.target)) closePopover();
+  });
+
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closePopover(); });
+
+  window.addEventListener('scroll', () => { if (popover.classList.contains('visible')) closePopover(); }, { passive: true });
+  window.addEventListener('resize', () => { if (popover.classList.contains('visible')) closePopover(); }, { passive: true });
+
+  // ── Init: apply saved progress on page load ───────────────────────────────
+  applyStoredProgress();
+})();
+</script>
+{% endblock %}

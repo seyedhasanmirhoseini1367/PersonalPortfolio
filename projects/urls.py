@@ -2,9 +2,9 @@ from django.urls import path
 from .views import (
     projects_list, project_detail, home,
     prediction_demo, file_prediction, make_prediction, interpret_prediction,
-    add_project_comment,
+    add_project_comment, roadmap,
 )
-from .api import api_model_list, api_model_detail, api_predict
+from .api import api_model_list, api_model_detail, api_predict, api_docs
 
 urlpatterns = [
     path('', home, name='home'),
@@ -16,7 +16,10 @@ urlpatterns = [
     path('project/<int:project_id>/interpret/', interpret_prediction, name='interpret_prediction'),
     path('project/<int:project_id>/comment/', add_project_comment, name='add_project_comment'),
 
+    path('roadmap/', roadmap, name='roadmap'),
+
     # Public REST API
+    path('api/docs/',                         api_docs,         name='api_docs'),
     path('api/models/',                       api_model_list,   name='api_model_list'),
     path('api/models/<int:project_id>/',      api_model_detail, name='api_model_detail'),
     path('api/models/<int:project_id>/predict/', api_predict,   name='api_predict'),

@@ -1,0 +1,233 @@
+{% extends 'base.html' %}
+{% block title %}Model Monitoring | HasanPortfolio{% endblock %}
+
+{% block content %}
+<div style="background:#f8f9fa; min-height:100vh; padding-bottom:3rem;">
+
+  <!-- Header -->
+  <div style="background:linear-gradient(135deg,#302b63 0%,#24243e 100%);
+              color:white; padding:2rem 0; margin-bottom:2rem;">
+    <div class="container">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
+        <div>
+          <h1 style="font-size:1.9rem; font-weight:700; margin:0;">
+            <i class="fas fa-chart-line me-2"></i>Model Monitoring
+          </h1>
+          <p style="opacity:.9; margin:.4rem 0 0; font-size:.95rem;">
+            Real-time inference tracking · latency · drift signals
+          </p>
+        </div>
+        <div style="display:flex; gap:.75rem; align-items:center; flex-wrap:wrap;">
+          <!-- Project filter -->
+          <form method="get" style="display:flex; gap:.5rem; align-items:center;">
+            <input type="hidden" name="days" value="{{ days }}">
+            <select name="project" onchange="this.form.submit()"
+                    style="padding:.45rem .9rem; border-radius:8px; border:none;
+                           background:rgba(255,255,255,.2); color:white; font-size:.88rem; cursor:pointer;">
+              <option value="">All Models</option>
+              {% for p in projects %}
+                <option value="{{ p.pk }}" {% if selected_project.pk == p.pk %}selected{% endif %}>{{ p.title }}</option>
+              {% endfor %}
+            </select>
+          </form>
+          <!-- Time range -->
+          <form method="get" style="display:flex; gap:.35rem;">
+            {% if selected_project %}<input type="hidden" name="project" value="{{ selected_project.pk }}">{% endif %}
+            {% for opt,lbl in time_ranges %}
+              <button type="submit" name="days" value="{{ opt }}"
+                      style="padding:.35rem .85rem; border-radius:20px; border:none; cursor:pointer; font-size:.82rem; font-weight:600;
+                             background:{% if days == opt %}white{% else %}rgba(255,255,255,.2){% endif %};
+                             color:{% if days == opt %}#302b63{% else %}white{% endif %};">
+                {{ lbl }}
+              </button>
+            {% endfor %}
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+
+    <!-- ── KPI Cards ────────────────────────────────────────────────────────── -->
+    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:1rem; margin-bottom:2rem;">
+      {% include 'monitoring/_kpi.html' with icon="fas fa-bolt" label="Total Predictions" value=total color="#302b63" %}
+      {% include 'monitoring/_kpi.html' with icon="fas fa-check-circle" label="Success Rate" value=success_rate|stringformat:".1f"|add:"%" color="#10b981" %}
+      {% include 'monitoring/_kpi.html' with icon="fas fa-times-circle" label="Errors" value=failed color="#ef4444" %}
+      {% include 'monitoring/_kpi.html' with icon="fas fa-stopwatch" label="Avg Latency" value=avg_latency|default:"—"|stringformat:"s"|add:"ms" color="#f59e0b" %}
+      {% include 'monitoring/_kpi.html' with icon="fas fa-percentage" label="Avg Confidence" value=avg_conf|default:"—"|stringformat:"s"|add:"%" color="#8b5cf6" %}
+    </div>
+
+    <div style="display:grid; grid-template-columns:1fr 340px; gap:1.5rem; align-items:start;">
+
+      <!-- ── Requests over time chart ──────────────────────────────────────── -->
+      <div style="background:white; border-radius:16px; border:1px solid #e2e8f0;
+                  box-shadow:0 1px 3px rgba(0,0,0,.05); padding:1.5rem;">
+        <h3 style="font-size:1rem; font-weight:700; color:#1e293b; margin:0 0 1.25rem;">
+          <i class="fas fa-chart-bar me-2" style="color:#302b63;"></i>
+          Requests over time
+        </h3>
+        <canvas id="requestsChart" height="90"></canvas>
+      </div>
+
+      <!-- ── Per-model breakdown ───────────────────────────────────────────── -->
+      <div style="background:white; border-radius:16px; border:1px solid #e2e8f0;
+                  box-shadow:0 1px 3px rgba(0,0,0,.05); padding:1.5rem;">
+        <h3 style="font-size:1rem; font-weight:700; color:#1e293b; margin:0 0 1.25rem;">
+          <i class="fas fa-robot me-2" style="color:#302b63;"></i>
+          Per-model stats
+        </h3>
+        {% if model_stats %}
+          {% for m in model_stats %}
+          <div style="margin-bottom:1rem; padding-bottom:1rem;
+                      border-bottom:{% if not forloop.last %}1px solid #f1f5f9{% else %}none{% endif %};">
+            <div style="display:flex; justify-content:space-between; margin-bottom:.3rem;">
+              <span style="font-size:.88rem; font-weight:600; color:#1e293b;">
+                {{ m.project__title|truncatechars:28 }}
+              </span>
+              <span style="font-size:.82rem; color:#64748b;">{{ m.total }} calls</span>
+            </div>
+            <div style="display:flex; gap:.5rem; font-size:.78rem; color:#94a3b8; flex-wrap:wrap;">
+              {% if m.avg_ms %}<span>⏱ {{ m.avg_ms|floatformat:0 }}ms</span>{% endif %}
+              {% if m.avg_conf %}<span>🎯 {{ m.avg_conf|floatformat:2 }}</span>{% endif %}
+              {% if m.errors %}<span style="color:#ef4444;">✗ {{ m.errors }} err</span>{% endif %}
+            </div>
+            <!-- Usage bar -->
+            {% if total %}
+            <div style="margin-top:.4rem; background:#f1f5f9; border-radius:4px; height:6px; overflow:hidden;">
+              <div style="height:100%; border-radius:4px;
+                          background:linear-gradient(90deg,#302b63,#24243e);
+                          width:{% widthratio m.total total 100 %}%"></div>
+            </div>
+            {% endif %}
+          </div>
+          {% endfor %}
+        {% else %}
+          <p style="color:#94a3b8; font-size:.88rem; text-align:center; padding:2rem 0;">
+            No predictions yet.<br>Run a model demo to see data here.
+          </p>
+        {% endif %}
+      </div>
+
+    </div>
+
+    <!-- ── Sources + recent activity ────────────────────────────────────────── -->
+    <div style="display:grid; grid-template-columns:200px 1fr; gap:1.5rem; margin-top:1.5rem; align-items:start;">
+
+      <!-- Source breakdown -->
+      <div style="background:white; border-radius:16px; border:1px solid #e2e8f0;
+                  box-shadow:0 1px 3px rgba(0,0,0,.05); padding:1.5rem;">
+        <h3 style="font-size:.95rem; font-weight:700; color:#1e293b; margin:0 0 1rem;">
+          <i class="fas fa-code me-2" style="color:#302b63;"></i>Sources
+        </h3>
+        {% for s in sources %}
+        <div style="display:flex; justify-content:space-between; margin-bottom:.6rem;
+                    font-size:.85rem; color:#64748b;">
+          <span style="text-transform:capitalize;">{{ s.source }}</span>
+          <span style="font-weight:600; color:#1e293b;">{{ s.count }}</span>
+        </div>
+        {% empty %}
+          <p style="color:#94a3b8; font-size:.85rem;">No data</p>
+        {% endfor %}
+      </div>
+
+      <!-- Recent predictions table -->
+      <div style="background:white; border-radius:16px; border:1px solid #e2e8f0;
+                  box-shadow:0 1px 3px rgba(0,0,0,.05); padding:1.5rem; overflow-x:auto;">
+        <h3 style="font-size:1rem; font-weight:700; color:#1e293b; margin:0 0 1.25rem;">
+          <i class="fas fa-list me-2" style="color:#302b63;"></i>Recent Predictions
+        </h3>
+        {% if recent %}
+        <table style="width:100%; border-collapse:collapse; font-size:.85rem;">
+          <thead>
+            <tr style="border-bottom:2px solid #f1f5f9; color:#94a3b8; text-align:left;">
+              <th style="padding:.5rem .75rem;">Model</th>
+              <th style="padding:.5rem .75rem;">Label</th>
+              <th style="padding:.5rem .75rem;">Conf</th>
+              <th style="padding:.5rem .75rem;">Latency</th>
+              <th style="padding:.5rem .75rem;">Source</th>
+              <th style="padding:.5rem .75rem;">Status</th>
+              <th style="padding:.5rem .75rem;">Time</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for log in recent %}
+            <tr style="border-bottom:1px solid #f8f9fa;">
+              <td style="padding:.5rem .75rem; color:#1e293b; font-weight:500;">
+                {{ log.project.title|truncatechars:20 }}
+              </td>
+              <td style="padding:.5rem .75rem; color:#64748b;">{{ log.label|default:"—" }}</td>
+              <td style="padding:.5rem .75rem; color:#64748b;">
+                {% if log.confidence %}{{ log.confidence|floatformat:2 }}{% else %}—{% endif %}
+              </td>
+              <td style="padding:.5rem .75rem; color:#64748b;">
+                {% if log.inference_ms %}{{ log.inference_ms }}ms{% else %}—{% endif %}
+              </td>
+              <td style="padding:.5rem .75rem;">
+                <span style="background:#f1f5f9; padding:.15rem .5rem; border-radius:10px;
+                             font-size:.78rem; color:#64748b; text-transform:capitalize;">
+                  {{ log.source }}
+                </span>
+              </td>
+              <td style="padding:.5rem .75rem;">
+                {% if log.success %}
+                  <span style="color:#10b981; font-weight:600;">✓</span>
+                {% else %}
+                  <span style="color:#ef4444; font-weight:600;" title="{{ log.error_message }}">✗</span>
+                {% endif %}
+              </td>
+              <td style="padding:.5rem .75rem; color:#94a3b8; white-space:nowrap;">
+                {{ log.created_at|timesince }} ago
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+          <p style="color:#94a3b8; font-size:.88rem; text-align:center; padding:2rem 0;">
+            No prediction logs yet in this period.
+          </p>
+        {% endif %}
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+const labels = {{ chart_labels|safe }};
+const counts = {{ chart_counts|safe }};
+const errors = {{ chart_errors|safe }};
+
+new Chart(document.getElementById('requestsChart'), {
+  type: 'bar',
+  data: {
+    labels,
+    datasets: [
+      {
+        label: 'Successful',
+        data: counts.map((c, i) => c - errors[i]),
+        backgroundColor: 'rgba(102,126,234,0.7)',
+        borderRadius: 4,
+      },
+      {
+        label: 'Errors',
+        data: errors,
+        backgroundColor: 'rgba(239,68,68,0.65)',
+        borderRadius: 4,
+      },
+    ],
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { position: 'top' } },
+    scales: {
+      x: { stacked: true, grid: { display: false } },
+      y: { stacked: true, beginAtZero: true, ticks: { precision: 0 } },
+    },
+  },
+});
+</script>
+{% endblock %}

@@ -1,5 +1,24 @@
 {% extends 'base.html' %}
 
+{% block extra_css %}
+<style>
+.ql-content img { max-width:70%; height:auto; border-radius:6px; margin:.75em auto; display:block; }
+.ql-content img[data-size="small"]  { max-width:30%; }
+.ql-content img[data-size="medium"] { max-width:55%; }
+.ql-content img[data-size="large"]  { max-width:80%; }
+.ql-content img[data-size="full"]   { max-width:100%; }
+.ql-content blockquote { border-left:4px solid #302b63; padding-left:1rem; color:#64748b; margin:.75em 0; font-style:italic; }
+.ql-content pre { background:#1e1e2e; color:#e2e8f0; padding:.75em 1em; border-radius:6px; font-size:.875em; overflow-x:auto; }
+.ql-content h1 { font-size:1.6rem; font-weight:700; margin:1em 0 .4em; }
+.ql-content h2 { font-size:1.3rem; font-weight:700; margin:.9em 0 .35em; }
+.ql-content h3 { font-size:1.1rem; font-weight:600; margin:.8em 0 .3em; }
+.ql-content ul, .ql-content ol { padding-left:1.5rem; margin:.5em 0; }
+.ql-content li { margin-bottom:.25em; }
+.ql-content a { color:#302b63; text-decoration:underline; }
+.ql-content p { margin-bottom:.6em; line-height:1.75; }
+</style>
+{% endblock %}
+
 {% block title %}{{ story.title }} - HasanPortfolio{% endblock %}
 {% block meta_description %}{{ story.excerpt|default:story.content|truncatewords:30 }}{% endblock %}
 {% block og_title %}{{ story.title }}{% endblock %}
@@ -49,8 +68,12 @@
                         </div>
                     {% endif %}
 
-                    <div class="story-content">
-                        {{ story.content|linebreaks }}
+                    <div class="story-content ql-content">
+                        {% if story.content|slice:":1" == "<" %}
+                            {{ story.content|safe }}
+                        {% else %}
+                            {{ story.content|linebreaks }}
+                        {% endif %}
                     </div>
                 </div>
 
@@ -415,7 +438,7 @@
         .story-excerpt {
             padding: 1rem;
             background: linear-gradient(135deg, #f8fafc, #e0e7ff);
-            border-left: 4px solid #667eea;
+            border-left: 4px solid #302b63;
             border-radius: 12px;
             margin-bottom: 1rem;
         }
@@ -470,7 +493,7 @@
 
         .story-tag {
             padding: 0.5rem 1.25rem;
-            background: linear-gradient(135deg, #667eea, #764ba2);
+            background: linear-gradient(135deg, #0f0c29, #302b63 55%, #24243e);
             color: white;
             border-radius: 20px;
             text-decoration: none;
@@ -507,7 +530,7 @@
         .author-avatar {
             width: 56px;
             height: 56px;
-            background: linear-gradient(135deg, #667eea, #764ba2);
+            background: linear-gradient(135deg, #0f0c29, #302b63 55%, #24243e);
             color: white;
             border-radius: 50%;
             display: flex;
@@ -532,7 +555,7 @@
         }
 
         .author-name:hover {
-            color: #667eea;
+            color: #302b63;
         }
 
         .publish-info {
@@ -571,12 +594,12 @@
         }
 
         .stat-btn:hover {
-            border-color: #667eea;
-            color: #667eea;
+            border-color: #302b63;
+            color: #302b63;
         }
 
         .stat-btn:hover svg {
-            stroke: #667eea;
+            stroke: #302b63;
         }
 
         .like-btn.liked {
@@ -662,16 +685,16 @@
         }
 
         .share-btn.copy-link:hover {
-            background: #667eea;
-            border-color: #667eea;
+            background: #302b63;
+            border-color: #302b63;
             color: white;
             transform: translateY(-2px);
         }
 
         .btn-action.edit {
-            background: #667eea;
+            background: #302b63;
             color: white;
-            border-color: #667eea;
+            border-color: #302b63;
         }
 
         .btn-action.edit:hover {
@@ -758,7 +781,7 @@
         }
 
         .related-content h3 a:hover {
-            color: #667eea;
+            color: #302b63;
         }
 
         .related-meta {
@@ -789,7 +812,7 @@
         }
 
         .comment-count {
-            color: #667eea;
+            color: #302b63;
         }
 
         .comments-header p {
@@ -828,14 +851,14 @@
 
         .form-group textarea:focus {
             outline: none;
-            border-color: #667eea;
+            border-color: #302b63;
             box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
         }
 
         .btn-submit-comment {
             margin-top: 1rem;
             padding: 0.875rem 2rem;
-            background: linear-gradient(135deg, #667eea, #764ba2);
+            background: linear-gradient(135deg, #0f0c29, #302b63 55%, #24243e);
             color: white;
             border: none;
             border-radius: 12px;
@@ -864,7 +887,7 @@
 
         .prompt-icon {
             font-size: 3rem;
-            color: #667eea;
+            color: #302b63;
             margin-bottom: 1rem;
         }
 
@@ -880,7 +903,7 @@
         }
 
         .login-prompt a {
-            color: #667eea;
+            color: #302b63;
             text-decoration: none;
             font-weight: 600;
         }
@@ -898,7 +921,7 @@
 
         .prompt-icon {
             font-size: 3rem;
-            color: #667eea;
+            color: #302b63;
             margin-bottom: 1rem;
         }
 
@@ -914,7 +937,7 @@
         }
 
         .login-prompt a {
-            color: #667eea;
+            color: #302b63;
             text-decoration: none;
             font-weight: 600;
         }
@@ -946,7 +969,7 @@
         .comment-avatar {
             width: 48px;
             height: 48px;
-            background: linear-gradient(135deg, #667eea, #764ba2);
+            background: linear-gradient(135deg, #0f0c29, #302b63 55%, #24243e);
             color: white;
             border-radius: 50%;
             display: flex;
@@ -1000,7 +1023,7 @@
         .btn-reply {
             background: none;
             border: none;
-            color: #667eea;
+            color: #302b63;
             font-weight: 600;
             font-size: 1rem;
             cursor: pointer;
@@ -1036,7 +1059,7 @@
 
         .reply-form textarea:focus {
             outline: none;
-            border-color: #667eea;
+            border-color: #302b63;
             box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
         }
 
@@ -1057,7 +1080,7 @@
         }
 
         .btn-reply-submit {
-            background: linear-gradient(135deg, #667eea, #764ba2);
+            background: linear-gradient(135deg, #0f0c29, #302b63 55%, #24243e);
             color: white;
         }
 

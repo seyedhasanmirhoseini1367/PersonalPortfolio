@@ -7,23 +7,24 @@
 <style>
     /* Resume Page Styles */
     .resume-hero {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #302b63, #a78bfa);
         color: white;
-        padding: 2rem 0;
+        padding: 1.25rem 0;
         text-align: center;
-        margin-bottom: 3rem;
+        margin-bottom: 1.5rem;
+        border-radius: 20px;
     }
 
     .resume-title {
-        font-size: 2rem;
+        font-size: 1.6rem;
         font-weight: 700;
-        margin-bottom: 0.2rem;
+        margin-bottom: 0.15rem;
     }
 
     .resume-subtitle {
-        font-size: 1.25rem;
+        font-size: .95rem;
         opacity: 0.9;
-        margin-bottom: 1rem;
+        margin-bottom: .75rem;
     }
 
     .resume-actions {
@@ -45,15 +46,15 @@
     /* Sidebar Styles */
     .resume-sidebar {
         background: #f8fafc;
-        padding: 2.5rem;
-        border-radius: 15px;
+        padding: 1.25rem;
+        border-radius: 12px;
         height: fit-content;
         position: sticky;
         top: 2rem;
     }
 
     .sidebar-section {
-        margin-bottom: 1rem;
+        margin-bottom: .85rem;
     }
 
     .sidebar-section:last-child {
@@ -61,23 +62,26 @@
     }
 
     .sidebar-title {
-        font-size: 1.25rem;
+        font-size: .88rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .04em;
         color: #1e293b;
-        margin-bottom: 1.5rem;
-        padding-bottom: 0.5rem;
-        border-bottom: 2px solid #2563eb;
+        margin-bottom: .75rem;
+        padding-bottom: .4rem;
+        border-bottom: 2px solid #302b63;
     }
 
     /* Main Content Styles */
     .resume-main {
         background: white;
-        padding: 2rem;
-        border-radius: 15px;
-        box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        padding: 1.5rem;
+        border-radius: 12px;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.08);
     }
 
     .main-section {
-        margin-bottom: 3rem;
+        margin-bottom: 2rem;
     }
 
     .main-section:last-child {
@@ -85,25 +89,27 @@
     }
 
     .section-title {
-        font-size: 1.25rem;
+        font-size: .95rem;
+        font-weight: 700;
         color: #1e293b;
-        margin-bottom: 1.5rem;
-        padding-bottom: 0.5rem;
-        border-bottom: 2px solid #2563eb;
+        margin-bottom: .85rem;
+        padding-bottom: .4rem;
+        border-bottom: 2px solid #302b63;
     }
 
     /* Contact Info Styles */
     .contact-item {
         display: flex;
         align-items: center;
-        margin-bottom: 1rem;
+        margin-bottom: .6rem;
         color: #64748b;
+        font-size: .82rem;
     }
 
     .contact-icon {
-        margin-right: 1rem;
-        font-size: 1.2rem;
-        width: 20px;
+        margin-right: .6rem;
+        font-size: .95rem;
+        width: 18px;
         text-align: center;
     }
 
@@ -115,8 +121,8 @@
     .category-title {
         font-weight: 600;
         color: #374151;
-        margin-bottom: 0.8rem;
-        font-size: 1rem;
+        margin-bottom: .5rem;
+        font-size: .83rem;
     }
 
     .skill-item {
@@ -143,14 +149,14 @@
     }
 
     .level-dot.filled {
-        background: #2563eb;
+        background: #302b63;
     }
 
     /* Experience & Education Styles */
     .timeline-item {
-        margin-bottom: 2.5rem;
+        margin-bottom: 1.5rem;
         position: relative;
-        padding-left: 2rem;
+        padding-left: 1.5rem;
     }
 
     .timeline-item:before {
@@ -161,7 +167,7 @@
         width: 12px;
         height: 12px;
         border-radius: 50%;
-        background: #2563eb;
+        background: #302b63;
     }
 
     .timeline-item:after {
@@ -186,25 +192,27 @@
     }
 
     .item-title {
-        font-size: 1.2rem;
+        font-size: .95rem;
         font-weight: 600;
         color: #1e293b;
-        margin-bottom: 0.3rem;
+        margin-bottom: .2rem;
     }
 
     .item-subtitle {
         color: #64748b;
+        font-size: .85rem;
         font-weight: 500;
     }
 
     .item-date {
         color: #6b7280;
-        font-size: 0.9rem;
+        font-size: .78rem;
         white-space: nowrap;
     }
 
     .item-description {
         color: #4b5563;
+        font-size: .85rem;
         line-height: 1.6;
     }
 
@@ -222,17 +230,17 @@
     /* Project Styles */
     .project-item {
         background: #f8fafc;
-        padding: 1.5rem;
+        padding: 1rem 1.1rem;
         border-radius: 10px;
-        margin-bottom: 1.5rem;
-        border-left: 4px solid #2563eb;
+        margin-bottom: 1rem;
+        border-left: 4px solid #302b63;
     }
 
     .project-title {
-        font-size: 1.1rem;
+        font-size: .9rem;
         font-weight: 600;
         color: #1e293b;
-        margin-bottom: 0.5rem;
+        margin-bottom: .35rem;
     }
 
     .project-technologies {
@@ -244,7 +252,7 @@
 
     .tech-tag {
         background: #dbeafe;
-        color: #1e40af;
+        color: #0f0c29;
         padding: 0.3rem 0.8rem;
         border-radius: 15px;
         font-size: 0.8rem;
@@ -266,11 +274,12 @@
 
     .language-name {
         color: #4b5563;
+        font-size: .83rem;
     }
 
     .language-level {
         color: #64748b;
-        font-size: 0.9rem;
+        font-size: .78rem;
     }
 
     /* Empty State Styles */

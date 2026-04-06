@@ -25,4 +25,7 @@ urlpatterns = [
     path('story/<int:story_id>/comment/', views.add_comment, name='add_comment'),
     path('comment/<int:comment_id>/reply/', views.add_reply, name='add_reply'),
     path('story/<int:story_id>/like/', views.like_story, name='like_story'),
+
+    # Rich-text editor image upload
+    path('editor/image-upload/', views.story_image_upload, name='image_upload'),
 ]

@@ -413,6 +413,33 @@ def like_story(request, story_id):
     })
 
 
+@require_POST
+@login_required
+def story_image_upload(request):
+    """
+    Accept an image file upload from the Quill rich-text editor.
+    Returns JSON: { "url": "/media/stories/inline/filename.jpg" }
+    """
+    import os
+    from django.core.files.storage import default_storage
+    from django.core.files.base import ContentFile
+
+    image = request.FILES.get('image')
+    if not image:
+        return JsonResponse({'error': 'No image provided'}, status=400)
+
+    ext = os.path.splitext(image.name)[1].lower()
+    if ext not in ('.jpg', '.jpeg', '.png', '.gif', '.webp'):
+        return JsonResponse({'error': 'Only JPG, PNG, GIF and WEBP images are allowed'}, status=400)
+
+    if image.size > 5 * 1024 * 1024:   # 5 MB limit
+        return JsonResponse({'error': 'Image must be smaller than 5 MB'}, status=400)
+
+    path = default_storage.save(f'stories/inline/{image.name}', ContentFile(image.read()))
+    url  = request.build_absolute_uri(default_storage.url(path))
+    return JsonResponse({'url': url})
+
+
 def story_preview(request, pk):
     """
     Preview a story (for authors and staff)

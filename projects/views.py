@@ -10,6 +10,7 @@ import json
 import pandas as pd
 import os
 from .models import Projects, ProjectComment
+from stories.models import Story
 
 # Auto-import all handlers so @register() decorators run at startup
 import projects.inference.seizure_eeg          # noqa: F401
@@ -105,6 +106,7 @@ def home(request):
         'kaggle_projects':   Projects.objects.filter(project_type='KAGGLE_COMPETITION', is_public=True).count(),
         'top_skills':        sorted(skill_count.items(), key=lambda x: x[1], reverse=True)[:10],
         'skill_choices':     dict(Projects.SKILL_CHOICES),
+        'latest_stories':    Story.objects.filter(status=Story.Status.PUBLISHED).order_by('-published_at')[:4],
     })
 
 
@@ -169,19 +171,34 @@ def file_prediction(request, project_id):
         return JsonResponse({'error': str(e)}, status=400)
 
     # Run inference
+    import time
+    from monitoring.utils import log_prediction
     try:
         from projects.inference.base import InferenceError
+        t0     = time.perf_counter()
         result = handler.run(uploaded)
+        ms     = int((time.perf_counter() - t0) * 1000)
+
+        log_prediction(
+            project=project, user=request.user, input_type='file',
+            prediction=result.get('prediction'), confidence=result.get('confidence'),
+            label=str(result.get('label', '')), inference_ms=ms,
+            success=True, source='web', request=request,
+        )
+        from monitoring.notifications import check_milestone
+        check_milestone(project)
         return JsonResponse(result)
 
     except InferenceError as e:
-        # User-facing validation error — show exactly as-is
+        log_prediction(project=project, user=request.user, input_type='file',
+                       success=False, error_message=str(e), source='web', request=request)
         return JsonResponse({'error': str(e)}, status=400)
 
     except Exception as e:
-        # Unexpected server error — log full traceback, return generic message
         import traceback
         traceback.print_exc()
+        log_prediction(project=project, user=request.user, input_type='file',
+                       success=False, error_message=str(e), source='web', request=request)
         return JsonResponse({
             'error': f'An unexpected error occurred during inference: {type(e).__name__}: {e}'
         }, status=500)
@@ -261,6 +278,11 @@ def interpret_prediction(request, project_id):
         return JsonResponse({'error': 'Invalid JSON body'}, status=400)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
+
+
+def roadmap(request):
+    """MLOps learning roadmap page."""
+    return render(request, 'projects/roadmap.html')
 
 
 # ── Error handlers ────────────────────────────────────────────────────────────

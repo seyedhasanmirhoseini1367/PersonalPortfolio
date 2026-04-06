@@ -23,6 +23,16 @@ class CommentInline(admin.TabularInline):
 
 @admin.register(Story)
 class StoryAdmin(admin.ModelAdmin):
+
+    class Media:
+        css = {
+            'all': ('https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css',)
+        }
+        js = (
+            'https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js',
+            'stories/admin_quill.js',
+        )
+
     list_display = (
     'title', 'author', 'status', 'is_featured', 'view_count', 'likes_count_display', 'published_at', 'created_at')
     list_filter = ('status', 'is_featured', 'created_at', 'published_at', 'author')

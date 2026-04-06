@@ -1,0 +1,16 @@
+<div style="background:white; border-radius:14px; border:1px solid #e2e8f0;
+            box-shadow:0 1px 3px rgba(0,0,0,.05); padding:1.75rem; margin-bottom:1.5rem;">
+  <div style="display:flex; align-items:center; gap:.75rem; margin-bottom:1rem; flex-wrap:wrap;">
+    <span style="background:#d1fae5; color:#065f46; padding:.3rem .85rem;
+                 border-radius:20px; font-size:.8rem; font-weight:700;">{{ method }}</span>
+    <code style="background:#f1f5f9; padding:.3rem .85rem; border-radius:8px;
+                 font-size:.95rem; color:#1e293b;">{{ path }}</code>
+    <span style="font-size:.9rem; font-weight:600; color:#1e293b;">{{ title }}</span>
+  </div>
+  <p style="color:#64748b; font-size:.9rem; margin-bottom:1rem;">{{ description }}</p>
+  {% if response_example %}
+  <p style="font-size:.8rem; font-weight:700; color:#94a3b8; text-transform:uppercase; margin-bottom:.5rem;">Example response</p>
+  <pre style="background:#1e293b; color:#e2e8f0; border-radius:10px; padding:1rem;
+              font-size:.8rem; overflow-x:auto; margin:0;">{{ response_example }}</pre>
+  {% endif %}
+</div>
