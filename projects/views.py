@@ -105,7 +105,7 @@ def home(request):
 
     portfolio_owner = User.objects.filter(is_superuser=True).first()
 
-    return render(request, 'projects/home.html', {
+    return render(request, 'home.html', {
         'featured_projects': Projects.objects.filter(is_featured=True, is_public=True)[:6],
         'total_projects':    Projects.objects.filter(is_public=True).count(),
         'kaggle_projects':   Projects.objects.filter(project_type='KAGGLE_COMPETITION', is_public=True).count(),
