@@ -57,6 +57,11 @@ RUN addgroup --system app && adduser --system --ingroup app app \
 USER app
 
 # Collect static files at build time
+# SECRET_KEY is required by Django settings even for collectstatic — use a dummy value
+ENV SECRET_KEY=build-time-dummy-not-used-in-production \
+    DEBUG=False \
+    ALLOWED_HOSTS=localhost \
+    DATABASE_URL=""
 RUN python manage.py collectstatic --noinput
 
 EXPOSE 8000
