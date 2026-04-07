@@ -3,9 +3,10 @@ FROM python:3.11-slim AS builder
 
 WORKDIR /app
 
-# System deps for Python packages (numpy, Pillow, lxml, etc.)
+# System deps for Python packages (numpy, Pillow, lxml, pycairo, etc.)
 RUN apt-get update && apt-get install -y --no-install-recommends \
         build-essential \
+        pkg-config \
         libpq-dev \
         libffi-dev \
         libssl-dev \
@@ -13,11 +14,18 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         zlib1g-dev \
         libxml2-dev \
         libxslt1-dev \
+        libcairo2-dev \
+        libopenblas-dev \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
+# Install torch CPU-only first (avoids downloading multi-GB CUDA wheels)
 RUN pip install --upgrade pip \
- && pip install --prefix=/install --no-cache-dir -r requirements.txt
+ && pip install --prefix=/install --no-cache-dir \
+        torch==$(grep -i "^torch==" requirements.txt | cut -d= -f3) \
+        --index-url https://download.pytorch.org/whl/cpu \
+ && pip install --prefix=/install --no-cache-dir -r requirements.txt \
+        --extra-index-url https://download.pytorch.org/whl/cpu
 
 
 # ── Stage 2: Runtime image ────────────────────────────────────────────────────
@@ -32,6 +40,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         zlib1g \
         libxml2 \
         libxslt1.1 \
+        libcairo2 \
+        libopenblas0 \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy installed packages from builder
