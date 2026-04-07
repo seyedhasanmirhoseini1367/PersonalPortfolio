@@ -3,39 +3,131 @@
 
 {% block extra_css %}
     <style>
-        /* Hero */
+        /* ── Hero ─────────────────────────────────────────────────────────── */
         .hero {
-            text-align: center;
-            padding: 1.25rem 1.5rem;
             background: linear-gradient(135deg, #0f0c29 0%, #302b63 55%, #24243e 100%);
             color: white;
-            border-radius: 12px;
-            margin-bottom: 1.25rem;
+            /* break out of container to go full-width */
+            margin-left: -20px;
+            margin-right: -20px;
+            margin-top: -2rem;
+            padding: 4rem 20px 3.5rem;
+            margin-bottom: 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* subtle grid pattern overlay */
+        .hero::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(56, 201, 230, 0.04) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0,212,255,.04) 1px, transparent 1px);
+            background-size: 40px 40px;
+            pointer-events: none;
+        }
+
+        .hero-inner {
+            max-width: 1260px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr auto;
+            align-items: center;
+            gap: 3rem;
+            position: relative;
+            z-index: 1;
+            padding-left: 3rem;
+        }
+
+        .hero-availability {
+            font-size: .75rem;
+            letter-spacing: .14em;
+            text-transform: uppercase;
+            color: #00d4ff;
+            margin-bottom: .6rem;
+            font-weight: 600;
         }
 
         .hero h1 {
-            font-size: 2rem;
-            font-weight: 700;
+            font-size: 2.6rem;
+            font-weight: 800;
+            line-height: 1.15;
             margin-bottom: .5rem;
+            letter-spacing: -.01em;
         }
 
-        .hero p {
-            font-size: .95rem;
-            opacity: .9;
+        .hero h1 .accent {
+            background: linear-gradient(90deg, #00d4ff, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero-role {
+            font-size: 1.05rem;
+            color: rgba(255,255,255,.8);
+            font-weight: 500;
+            margin-bottom: .75rem;
+        }
+
+        .hero-desc {
+            font-size: .9rem;
+            color: rgba(255,255,255,.65);
+            line-height: 1.7;
             max-width: 520px;
-            margin: 0 auto .75rem;
+            margin-bottom: 1.5rem;
         }
 
         .hero-buttons {
             display: flex;
             gap: .65rem;
-            justify-content: center;
             flex-wrap: wrap;
         }
 
         .hero .btn {
             font-size: .82rem;
-            padding: .45rem 1.1rem;
+            padding: .5rem 1.2rem;
+        }
+
+        /* Photo on the right */
+        .hero-photo {
+            flex-shrink: 0;
+            transform: translateX(-50px);  /* Moves left smoothly */
+            padding-right: 3rem;
+        }
+
+        .hero-photo img,
+        .hero-photo .hero-avatar {
+            width: 180px;
+            height: 180px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid rgba(0,212,255,.5);
+            box-shadow: 0 0 0 6px rgba(0,212,255,.1), 0 0 40px rgba(0,212,255,.2);
+            display: block;
+        }
+
+        .hero-avatar {
+            background: linear-gradient(135deg, #302b63, #24243e);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            font-weight: 700;
+            color: #00d4ff;
+        }
+
+        @media (max-width: 700px) {
+            .hero { padding: 2.5rem 20px 2rem; }
+            .hero-inner { grid-template-columns: 1fr; text-align: center; gap: 1.5rem; }
+            .hero-inner { flex-direction: column-reverse; }
+            .hero-photo { margin: 0 auto; }
+            .hero-photo img, .hero-photo .hero-avatar { width: 130px; height: 130px; }
+            .hero h1 { font-size: 1.9rem; }
+            .hero-buttons { justify-content: center; }
+            .hero-desc { margin-left: auto; margin-right: auto; }
         }
 
         /* Stats */
@@ -177,7 +269,7 @@
             width: 100%;
             height: 160px;
             overflow: hidden;
-            background: linear-gradient(135deg, #0f0c29, #302b63);
+            background: linear-gradient(135deg, #667eea, #764ba2);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -256,7 +348,7 @@
         }
 
         .project-link:hover {
-            color: #00d4ff;
+            color: #1d4ed8;
         }
 
         .featured-projects {
@@ -311,122 +403,132 @@
             margin-top: .05rem;
         }
 
-        .highlight-item strong { color: #302b63; }
+        .highlight-item strong { color: #2563eb; }
 
-        /* Latest Stories */
-        .stories-section {
+        /* GitHub Activity Widget */
+        .github-section {
             margin-bottom: 2.5rem;
         }
 
-        .stories-grid {
+        .github-layout {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 1rem;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.25rem;
+            align-items: start;
         }
 
-        @media (max-width: 900px) {
-            .stories-grid { grid-template-columns: repeat(2, 1fr); }
+        @media (max-width: 760px) {
+            .github-layout { grid-template-columns: 1fr; }
         }
 
-        @media (max-width: 560px) {
-            .stories-grid { grid-template-columns: 1fr; }
-        }
-
-        .story-card {
-            background: white;
-            border: 1px solid var(--border, #dee2e6);
-            border-radius: 10px;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            transition: box-shadow .2s, transform .2s;
-            text-decoration: none;
-            color: inherit;
-        }
-
-        .story-card:hover {
-            box-shadow: 0 4px 16px rgba(0,0,0,.1);
-            transform: translateY(-3px);
-        }
-
-        .story-card-img {
+        .github-stats-img {
             width: 100%;
-            height: 110px;
-            object-fit: cover;
+            border-radius: 10px;
             display: block;
         }
 
-        .story-card-placeholder {
-            width: 100%;
-            height: 110px;
-            background: linear-gradient(135deg, #0f0c29, #302b63);
+        .github-repos {
+            display: flex;
+            flex-direction: column;
+            gap: .75rem;
+        }
+
+        .repo-card {
+            background: var(--bg-card, white);
+            border: 1px solid var(--border, #dee2e6);
+            border-radius: 10px;
+            padding: .85rem 1rem;
+            text-decoration: none;
+            color: inherit;
+            transition: box-shadow .2s, transform .2s;
+            display: block;
+        }
+
+        .repo-card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,.1);
+            transform: translateY(-2px);
+        }
+
+        .repo-name {
+            font-weight: 600;
+            font-size: .9rem;
+            color: #2563eb;
+            margin-bottom: .25rem;
+        }
+
+        .repo-desc {
+            font-size: .78rem;
+            color: var(--text-muted, #6c757d);
+            margin-bottom: .4rem;
+            line-height: 1.4;
+        }
+
+        .repo-meta {
+            display: flex;
+            gap: .75rem;
+            font-size: .72rem;
+            color: var(--text-muted, #6c757d);
+        }
+
+        .repo-lang {
             display: flex;
             align-items: center;
-            justify-content: center;
-            font-size: 2rem;
+            gap: .3rem;
+        }
+
+        .lang-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #f1e05a;
             flex-shrink: 0;
         }
 
-        .story-card-body {
-            padding: .75rem .85rem;
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-        }
+        .lang-dot[data-lang="Python"] { background: #3572A5; }
+        .lang-dot[data-lang="JavaScript"] { background: #f1e05a; }
+        .lang-dot[data-lang="TypeScript"] { background: #2b7489; }
+        .lang-dot[data-lang="HTML"] { background: #e34c26; }
+        .lang-dot[data-lang="CSS"] { background: #563d7c; }
+        .lang-dot[data-lang="Jupyter Notebook"] { background: #DA5B0B; }
 
-        .story-card-title {
-            font-size: .88rem;
-            font-weight: 600;
-            color: var(--text, #1e293b);
-            line-height: 1.4;
-            margin-bottom: .35rem;
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-        }
-
-        .story-card-excerpt {
-            font-size: .76rem;
-            color: #64748b;
-            line-height: 1.4;
-            flex: 1;
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-            margin-bottom: .5rem;
-        }
-
-        .story-card-meta {
-            font-size: .7rem;
-            color: #94a3b8;
-            display: flex;
-            gap: .5rem;
-            align-items: center;
+        #githubLoading {
+            text-align: center;
+            padding: 1.5rem;
+            color: var(--text-muted, #6c757d);
+            font-size: .85rem;
         }
     </style>
 {% endblock %}
 
 {% block content %}
     <section class="hero">
-        <p style="font-size:.8rem; opacity:.7; letter-spacing:.12em; text-transform:uppercase; margin-bottom:.4rem;">
-            Available for opportunities · Helsinki, Finland
-        </p>
-        <h1>Seyed Hasan Mirhoseini</h1>
-        <p style="font-size:1.05rem; opacity:.95; font-weight:500; margin-bottom:.4rem;">
-            ML Engineer &amp; Data Scientist
-        </p>
-        <p style="font-size:.9rem; opacity:.8; max-width:520px; margin:0 auto .85rem;">
-            Building production-ready ML systems — from model training and experiment tracking
-            to deployment, monitoring, and CI/CD pipelines.
-        </p>
-        <div class="hero-buttons">
-            <a href="{% url 'projects_list' %}" class="btn">View Projects</a>
-            <a href="{% url 'resume:resume_page' %}" class="btn btn-outline"
-               style="border-color:rgba(255,255,255,.6);color:white;">Resume</a>
-            <a href="{% url 'contact:contact_page' %}" class="btn"
-               style="background:rgba(255,255,255,.18);border:1.5px solid rgba(255,255,255,.5);">Contact Me</a>
+        <div class="hero-inner">
+            <!-- Left: text -->
+            <div class="hero-text">
+                <p class="hero-availability">🟢 Available for opportunities · Helsinki, Finland</p>
+                <h1>Seyed Hasan <span class="accent">Mirhoseini</span></h1>
+                <p class="hero-role">ML Engineer &amp; Data Scientist</p>
+                <p class="hero-desc">
+                    Building production-ready ML systems — from model training and experiment
+                    tracking to deployment, monitoring, and CI/CD pipelines.
+                </p>
+                <div class="hero-buttons">
+                    <a href="{% url 'projects_list' %}" class="btn">View My Projects</a>
+                    <a href="{% url 'resume:resume_page' %}" class="btn"
+                       style="background:transparent;border:1.5px solid rgba(255,255,255,.5);color:white;">My Resume</a>
+                    <a href="{% url 'contact:contact_page' %}" class="btn"
+                       style="background:rgba(0,212,255,.12);border:1.5px solid rgba(0,212,255,.4);color:#00d4ff;">Contact Me</a>
+                </div>
+            </div>
+
+            <!-- Right: profile photo -->
+            <div class="hero-photo">
+                {% if portfolio_owner and portfolio_owner.profile_picture %}
+                    <img src="{{ portfolio_owner.profile_picture.url }}" alt="Seyed Hasan Mirhoseini">
+                {% else %}
+                    <div class="hero-avatar">SH</div>
+                {% endif %}
+            </div>
         </div>
     </section>
 
@@ -457,8 +559,8 @@
                     About Me
                 </h2>
                 <p>
-                    I'm a Data Scientist with a Master's degree in Data Science and a Bachelor's in Mathematics,
-                    currently based in Helsinki, Finland. I specialise in building and deploying machine learning
+                    I'm a Data Scientist with a Master's degree in Statistical Data Analytics, a Bachelor's in Mathematics, and an Master of Business Administration (MBA) degree. 
+                    I'm currently based in Tampere, Finland. I specialise in building and deploying machine learning
                     systems end-to-end — from data processing and model training to production monitoring and CI/CD pipelines.
                 </p>
                 <p>
@@ -511,7 +613,7 @@
                 </div>
                 <div class="highlight-item">
                     <span class="highlight-icon">🚀</span>
-                    <span>REST API for all deployed models — <a href="{% url 'api_docs' %}" style="color:#302b63;">see docs</a></span>
+                    <span>REST API for all deployed models — <a href="{% url 'api_docs' %}" style="color:#2563eb;">see docs</a></span>
                 </div>
             </div>
         </div>
@@ -573,44 +675,81 @@
         </div>
     </section>
 
-    <!-- Latest Stories -->
-    <section class="stories-section">
+    <!-- GitHub Activity -->
+    <section class="github-section">
         <div class="section-header">
-            <h2 class="section-title">Latest Stories</h2>
-            <p class="section-subtitle">Recent articles on ML, data science, and engineering</p>
+            <h2 class="section-title"><i class="fab fa-github me-2"></i>GitHub Activity</h2>
+            <p class="section-subtitle">Recent public repositories and stats</p>
         </div>
-        <div class="stories-grid">
-            {% for story in latest_stories %}
-                <a href="{% url 'stories:story_detail' story.slug %}" class="story-card">
-                    {% if story.featured_image %}
-                        <img class="story-card-img" src="{{ story.featured_image.url }}" alt="{{ story.title }}">
-                    {% else %}
-                        <div class="story-card-placeholder">📝</div>
-                    {% endif %}
-                    <div class="story-card-body">
-                        <div class="story-card-title">{{ story.title }}</div>
-                        {% if story.excerpt %}
-                            <div class="story-card-excerpt">{{ story.excerpt }}</div>
-                        {% endif %}
-                        <div class="story-card-meta">
-                            {% if story.read_time_minutes %}
-                                <span>{{ story.read_time_minutes }} min read</span>
-                            {% endif %}
-                            {% if story.published_at %}
-                                <span>{{ story.published_at|date:"M j" }}</span>
-                            {% endif %}
-                        </div>
-                    </div>
-                </a>
-            {% empty %}
-                <div style="grid-column:1/-1;text-align:center;padding:2rem;color:var(--muted);">
-                    No stories published yet.
-                </div>
-            {% endfor %}
+        <div class="github-layout">
+            <!-- Stats card -->
+            <div>
+                <img
+                    class="github-stats-img"
+                    src="https://github-readme-stats.vercel.app/api?username=seyedhasanmirhoseini1367&show_icons=true&theme=default&hide_border=true&count_private=false&include_all_commits=false"
+                    alt="GitHub stats for seyedhasanmirhoseini1367"
+                    loading="lazy"
+                    onerror="this.parentElement.innerHTML='<p style=\'color:#94a3b8;font-size:.85rem;\'>GitHub stats unavailable</p>'"
+                >
+            </div>
+
+            <!-- Recent repos (fetched client-side) -->
+            <div class="github-repos" id="githubRepos">
+                <div id="githubLoading">Loading recent repositories…</div>
+            </div>
         </div>
-        <div class="text-center mt-4">
-            <a href="{% url 'stories:story_list' %}" class="btn btn-outline"
-               style="font-size:.85rem;padding:.45rem 1.2rem;">View All Stories</a>
+
+        <div class="text-center" style="margin-top:1rem;">
+            <a href="https://github.com/seyedhasanmirhoseini1367" target="_blank" rel="noopener"
+               class="btn btn-outline" style="font-size:.85rem;padding:.45rem 1.2rem;">
+                <i class="fab fa-github me-1"></i>View GitHub Profile
+            </a>
         </div>
     </section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    const username = 'seyedhasanmirhoseini1367';
+    const container = document.getElementById('githubRepos');
+    const loading   = document.getElementById('githubLoading');
+
+    const LANG_COLORS = {
+        'Python': '#3572A5', 'JavaScript': '#f1e05a', 'TypeScript': '#2b7489',
+        'HTML': '#e34c26', 'CSS': '#563d7c', 'Jupyter Notebook': '#DA5B0B',
+    };
+
+    fetch(`https://api.github.com/users/${username}/repos?sort=updated&per_page=4&type=public`)
+        .then(r => r.ok ? r.json() : Promise.reject(r.status))
+        .then(repos => {
+            loading.remove();
+            repos.forEach(repo => {
+                const lang  = repo.language || '';
+                const color = LANG_COLORS[lang] || '#8b949e';
+                const desc  = repo.description ? repo.description.slice(0, 80) + (repo.description.length > 80 ? '…' : '') : 'No description';
+                const stars = repo.stargazers_count;
+                const forks = repo.forks_count;
+                const card  = document.createElement('a');
+                card.href   = repo.html_url;
+                card.target = '_blank';
+                card.rel    = 'noopener';
+                card.className = 'repo-card';
+                card.innerHTML = `
+                    <div class="repo-name">${repo.name}</div>
+                    <div class="repo-desc">${desc}</div>
+                    <div class="repo-meta">
+                        ${lang ? `<span class="repo-lang"><span class="lang-dot" style="background:${color}"></span>${lang}</span>` : ''}
+                        ${stars ? `<span>⭐ ${stars}</span>` : ''}
+                        ${forks ? `<span>🍴 ${forks}</span>` : ''}
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        })
+        .catch(() => {
+            if (loading) loading.textContent = 'Could not load repositories.';
+        });
+})();
+</script>
 {% endblock %}

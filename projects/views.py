@@ -95,10 +95,15 @@ def add_project_comment(request, project_id):
 
 
 def home(request):
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+
     skill_count = {}
     for p in Projects.objects.filter(is_public=True):
         for s in p.get_skills_list():
             skill_count[s] = skill_count.get(s, 0) + 1
+
+    portfolio_owner = User.objects.filter(is_superuser=True).first()
 
     return render(request, 'projects/home.html', {
         'featured_projects': Projects.objects.filter(is_featured=True, is_public=True)[:6],
@@ -107,6 +112,7 @@ def home(request):
         'top_skills':        sorted(skill_count.items(), key=lambda x: x[1], reverse=True)[:10],
         'skill_choices':     dict(Projects.SKILL_CHOICES),
         'latest_stories':    Story.objects.filter(status=Story.Status.PUBLISHED).order_by('-published_at')[:4],
+        'portfolio_owner':   portfolio_owner,
     })
 
 

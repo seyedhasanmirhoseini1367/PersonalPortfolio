@@ -424,10 +424,49 @@
 
         /* Footer neural glow */
         footer { border-top: 1px solid rgba(0,212,255,.12); }
+
+        /* Test banner */
+        .test-banner {
+            background: linear-gradient(90deg, #f59e0b, #f97316);
+            color: #1a1a2e;
+            text-align: center;
+            padding: .45rem 1rem;
+            font-size: .82rem;
+            font-weight: 600;
+            letter-spacing: .02em;
+            position: relative;
+            z-index: 1100;
+        }
+        .test-banner a {
+            color: #1a1a2e;
+            text-decoration: underline;
+            margin-left: .4rem;
+        }
+        .test-banner .banner-close {
+            position: absolute;
+            right: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+            color: #1a1a2e;
+            line-height: 1;
+            opacity: .7;
+        }
+        .test-banner .banner-close:hover { opacity: 1; }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
 <body>
+
+<!-- Test / Practice Banner -->
+<div class="test-banner" id="testBanner">
+    🚧 This is a <strong>test &amp; practice website</strong> — content and features are still being developed.
+    <button class="banner-close" onclick="document.getElementById('testBanner').style.display='none'" title="Dismiss">✕</button>
+</div>
+
 <header>
     <div class="container">
         <div class="header-content">
