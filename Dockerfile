@@ -66,10 +66,4 @@ RUN python manage.py collectstatic --noinput
 
 EXPOSE 8000
 
-# Start Gunicorn — 2 workers is fine for Azure Free tier (1 vCPU)
-CMD ["gunicorn", "PersonalPortfolio.wsgi:application", \
-     "--bind", "0.0.0.0:8000", \
-     "--workers", "2", \
-     "--timeout", "120", \
-     "--access-logfile", "-", \
-     "--error-logfile", "-"]
+CMD ["bash", "startup.sh"]
