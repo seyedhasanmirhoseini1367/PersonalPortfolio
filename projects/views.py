@@ -17,6 +17,7 @@ import projects.inference.seizure_eeg          # noqa: F401
 import projects.inference.image_classifier     # noqa: F401
 import projects.inference.tabular_passthrough  # noqa: F401
 import projects.inference.personality_predictor  # noqa: F401
+import projects.inference.irrigation_predictor   # noqa: F401
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -127,11 +128,13 @@ def prediction_demo(request, project_id):
 
     cfg = project.file_input_config or {}
     return render(request, 'projects/prediction_demo.html', {
-        'project':          project,
-        'file_input_config': cfg,
-        'accepted_formats': cfg.get('accepted_formats', []),
-        'demo_description': cfg.get('description', ''),
-        'handler_slug':     cfg.get('handler', ''),
+        'project':              project,
+        'file_input_config':    cfg,
+        'accepted_formats':     cfg.get('accepted_formats', []),
+        'demo_description':     cfg.get('description', ''),
+        'handler_slug':         cfg.get('handler', ''),
+        'input_features':       project.input_features or [],
+        'prediction_input_type': project.prediction_input_type,
     })
 
 
