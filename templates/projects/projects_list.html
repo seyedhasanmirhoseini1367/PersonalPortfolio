@@ -322,10 +322,6 @@
                         <span class="difficulty-level">{{ project.get_difficulty_level_display }}</span>
                     </div>
 
-                    <p class="project-description">
-                        {{ project.short_description|default:project.description|truncatewords:25 }}
-                    </p>
-
                     {% if project.skills_used %}
                         <div class="project-skills">
                             {% for skill in project.skills_used|slice:":3" %}
