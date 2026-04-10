@@ -21,7 +21,6 @@ class CustomUser(AbstractUser):
         upload_to='profile_pics/',
         blank=True,
         null=True,
-        default='profile_pics/default.png'
     )
     location = models.CharField(max_length=100, blank=True)
     website = models.URLField(blank=True)
