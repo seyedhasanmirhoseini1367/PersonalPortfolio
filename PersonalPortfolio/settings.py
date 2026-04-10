@@ -196,10 +196,13 @@ LOGGING = {
 
 
 # ── Azure Blob Storage (Media files) ──────────────────────────────────────────
-AZURE_ACCOUNT_NAME = config('AZURE_ACCOUNT_NAME', default='')
-AZURE_ACCOUNT_KEY = config('AZURE_ACCOUNT_KEY', default='')
-AZURE_CONTAINER = config('AZURE_CONTAINER', default='media')
+AZURE_ACCOUNT_NAME      = config('AZURE_ACCOUNT_NAME', default='')
+AZURE_ACCOUNT_KEY       = config('AZURE_ACCOUNT_KEY', default='')
+AZURE_CONNECTION_STRING = config('AZURE_CONNECTION_STRING', default='')
+AZURE_CONTAINER         = config('AZURE_CONTAINER',
+                            config('AZURE_MEDIA_CONTAINER', default='media'))
 
-if AZURE_ACCOUNT_NAME and AZURE_ACCOUNT_KEY:
+_azure_ready = AZURE_CONNECTION_STRING or (AZURE_ACCOUNT_NAME and AZURE_ACCOUNT_KEY)
+if _azure_ready:
     DEFAULT_FILE_STORAGE = 'storages.backends.azure_storage.AzureStorage'
     MEDIA_URL = f'https://{AZURE_ACCOUNT_NAME}.blob.core.windows.net/{AZURE_CONTAINER}/'
