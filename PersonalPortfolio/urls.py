@@ -34,4 +34,6 @@ handler500 = 'projects.views.error_500'
 
 if settings.DEBUG:
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+# Always serve media files (backed by persistent /home/media on Azure)
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

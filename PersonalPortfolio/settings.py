@@ -108,7 +108,10 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # ── Media files ───────────────────────────────────────────────────────────────
 MEDIA_URL  = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+# On Azure App Service (WEBSITES_ENABLE_APP_SERVICE_STORAGE=true),
+# /home is a persistent Azure Files mount — use it so uploads survive restarts.
+_azure_home = Path('/home/media')
+MEDIA_ROOT = _azure_home if _azure_home.parent.exists() else BASE_DIR / 'media'
 
 # ── Default primary key ────────────────────────────────────────────────────────
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
@@ -202,7 +205,8 @@ AZURE_CONNECTION_STRING = config('AZURE_CONNECTION_STRING', default='')
 AZURE_CONTAINER         = config('AZURE_CONTAINER',
                             config('AZURE_MEDIA_CONTAINER', default='media'))
 
-_azure_ready = AZURE_CONNECTION_STRING or (AZURE_ACCOUNT_NAME and AZURE_ACCOUNT_KEY)
-if _azure_ready:
-    DEFAULT_FILE_STORAGE = 'storages.backends.azure_storage.AzureStorage'
-    MEDIA_URL = f'https://{AZURE_ACCOUNT_NAME}.blob.core.windows.net/{AZURE_CONTAINER}/'
+# Blob Storage kept for future use — disabled while using App Service Storage mount
+# _azure_ready = AZURE_CONNECTION_STRING or (AZURE_ACCOUNT_NAME and AZURE_ACCOUNT_KEY)
+# if _azure_ready:
+#     DEFAULT_FILE_STORAGE = 'storages.backends.azure_storage.AzureStorage'
+#     MEDIA_URL = f'https://{AZURE_ACCOUNT_NAME}.blob.core.windows.net/{AZURE_CONTAINER}/'
