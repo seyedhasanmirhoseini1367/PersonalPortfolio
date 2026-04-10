@@ -35,6 +35,8 @@ INSTALLED_APPS = [
     'stories',
     'accounts',
     'monitoring',
+
+    'storages',
 ]
 
 AUTH_USER_MODEL = 'accounts.CustomUser'
