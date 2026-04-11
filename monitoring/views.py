@@ -105,3 +105,34 @@ def api_stats(request):
         'avg_latency_ms':   logs.aggregate(v=Avg('inference_ms'))['v'],
         'hourly': [{'hour': str(r['hour']), 'count': r['count']} for r in hourly],
     })
+
+
+@staff_member_required
+def storage_debug(request):
+    """Temporary debug view — shows storage config on Azure."""
+    import os
+    from pathlib import Path
+    from django.conf import settings
+    from django.core.files.storage import default_storage
+
+    media_root = Path(settings.MEDIA_ROOT)
+    home_exists = Path('/home').exists()
+    home_media_exists = Path('/home/media').exists()
+
+    files = []
+    if media_root.exists():
+        for f in media_root.rglob('*'):
+            if f.is_file():
+                files.append(str(f))
+
+    return JsonResponse({
+        'MEDIA_ROOT':          str(settings.MEDIA_ROOT),
+        'MEDIA_URL':           settings.MEDIA_URL,
+        'storage_backend':     type(default_storage).__name__,
+        'DEFAULT_FILE_STORAGE': getattr(settings, 'DEFAULT_FILE_STORAGE', 'not set'),
+        '/home exists':        home_exists,
+        '/home/media exists':  home_media_exists,
+        'media_root_exists':   media_root.exists(),
+        'files_in_media_root': files[:20],
+        'WEBSITES_ENABLE_APP_SERVICE_STORAGE': os.environ.get('WEBSITES_ENABLE_APP_SERVICE_STORAGE', 'not set'),
+    })
