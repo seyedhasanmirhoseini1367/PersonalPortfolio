@@ -136,17 +136,3 @@ def storage_debug(request):
         'files_in_media_root': files[:20],
         'WEBSITES_ENABLE_APP_SERVICE_STORAGE': os.environ.get('WEBSITES_ENABLE_APP_SERVICE_STORAGE', 'not set'),
     })
-
-
-from django.http import JsonResponse
-import os
-
-def storage_debug(request):
-    from django.conf import settings
-    return JsonResponse({
-        'AZURE_ACCOUNT_NAME': os.environ.get('AZURE_ACCOUNT_NAME', 'NOT SET'),
-        'AZURE_CONTAINER': os.environ.get('AZURE_CONTAINER', 'NOT SET'),
-        'AZURE_ACCOUNT_KEY_SET': bool(os.environ.get('AZURE_ACCOUNT_KEY')),
-        'DEFAULT_FILE_STORAGE': getattr(settings, 'DEFAULT_FILE_STORAGE', 'NOT SET'),
-        'MEDIA_URL': settings.MEDIA_URL,
-    })
