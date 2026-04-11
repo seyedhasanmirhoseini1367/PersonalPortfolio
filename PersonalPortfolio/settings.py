@@ -199,14 +199,20 @@ LOGGING = {
 
 
 # ── Azure Blob Storage (Media files) ──────────────────────────────────────────
-AZURE_ACCOUNT_NAME      = config('AZURE_ACCOUNT_NAME', default='')
-AZURE_ACCOUNT_KEY       = config('AZURE_ACCOUNT_KEY', default='')
+
+import os
+AZURE_ACCOUNT_NAME = config('AZURE_ACCOUNT_NAME', default='') or os.environ.get('AZURE_ACCOUNT_NAME', '')
+AZURE_ACCOUNT_KEY = config('AZURE_ACCOUNT_KEY', default='') or os.environ.get('AZURE_ACCOUNT_KEY', '')
+AZURE_CONTAINER = config('AZURE_CONTAINER', default='media') or os.environ.get('AZURE_CONTAINER', 'media')
+
 AZURE_CONNECTION_STRING = config('AZURE_CONNECTION_STRING', default='')
-AZURE_CONTAINER         = config('AZURE_CONTAINER',
-                            config('AZURE_MEDIA_CONTAINER', default='media'))
 
 # Blob Storage kept for future use — disabled while using App Service Storage mount
 # _azure_ready = AZURE_CONNECTION_STRING or (AZURE_ACCOUNT_NAME and AZURE_ACCOUNT_KEY)
-# if _azure_ready:
-#     DEFAULT_FILE_STORAGE = 'storages.backends.azure_storage.AzureStorage'
-#     MEDIA_URL = f'https://{AZURE_ACCOUNT_NAME}.blob.core.windows.net/{AZURE_CONTAINER}/'
+
+if AZURE_ACCOUNT_NAME and AZURE_ACCOUNT_KEY:
+    DEFAULT_FILE_STORAGE = 'storages.backends.azure_storage.AzureStorage'
+    MEDIA_URL = f'https://{AZURE_ACCOUNT_NAME}.blob.core.windows.net/{AZURE_CONTAINER}/'
+
+
+    
