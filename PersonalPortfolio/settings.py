@@ -166,11 +166,8 @@ PERSONALITY_DATA_DIR = config(
 
 # ── Production security (only active when DEBUG=False) ────────────────────────
 if not DEBUG:
-    # Azure (and most cloud platforms) terminate SSL at the load balancer and
-    # forward plain HTTP to the container. Trust the X-Forwarded-Proto header
-    # so Django knows the original request was HTTPS.
     SECURE_PROXY_SSL_HEADER        = ('HTTP_X_FORWARDED_PROTO', 'https')
-    SECURE_SSL_REDIRECT            = True
+    SECURE_SSL_REDIRECT            = False  # ← changed
     SECURE_HSTS_SECONDS            = 31536000
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SESSION_COOKIE_SECURE          = True
