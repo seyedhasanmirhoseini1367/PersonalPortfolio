@@ -197,18 +197,10 @@ LOGGING = {
     },
 }
 
-
 # ── Azure Blob Storage (Media files) ──────────────────────────────────────────
-
-import os
 AZURE_ACCOUNT_NAME = config('AZURE_ACCOUNT_NAME', default='') or os.environ.get('AZURE_ACCOUNT_NAME', '')
 AZURE_ACCOUNT_KEY = config('AZURE_ACCOUNT_KEY', default='') or os.environ.get('AZURE_ACCOUNT_KEY', '')
 AZURE_CONTAINER = config('AZURE_CONTAINER', default='media') or os.environ.get('AZURE_CONTAINER', 'media')
-
-AZURE_CONNECTION_STRING = config('AZURE_CONNECTION_STRING', default='')
-
-# Blob Storage kept for future use — disabled while using App Service Storage mount
-# _azure_ready = AZURE_CONNECTION_STRING or (AZURE_ACCOUNT_NAME and AZURE_ACCOUNT_KEY)
 
 if AZURE_ACCOUNT_NAME and AZURE_ACCOUNT_KEY:
     DEFAULT_FILE_STORAGE = 'storages.backends.azure_storage.AzureStorage'
