@@ -201,11 +201,13 @@ class Story(models.Model):
 
     def get_excerpt(self):
         """Get excerpt or generate one from content (HTML stripped)."""
-        if self.excerpt:
-            return self.excerpt
         import re
-        text = re.sub(r'<[^>]+>', '', self.content or '')
-        text = text.strip()
+        def strip_html(html):
+            return re.sub(r'<[^>]+>', '', html or '').strip()
+
+        if self.excerpt:
+            return strip_html(self.excerpt)
+        text = strip_html(self.content)
         return (text[:200] + '...') if len(text) > 200 else text
 
 

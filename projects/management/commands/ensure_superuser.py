@@ -11,8 +11,11 @@ class Command(BaseCommand):
             username='seyed',
             defaults={'email': 'seyed@example.com'},
         )
-        user.set_password('Seyed@2024')
+        if created:
+            user.set_password('Seyed@2024')
+            self.stdout.write('Superuser created.')
+        else:
+            self.stdout.write('Superuser already exists — skipping password update.')
         user.is_staff = True
         user.is_superuser = True
-        user.save()
-        self.stdout.write('Superuser ready.' if created else 'Existing user promoted to superuser.')
+        user.save(update_fields=['is_staff', 'is_superuser'])
