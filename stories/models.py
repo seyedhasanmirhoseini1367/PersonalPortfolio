@@ -200,10 +200,13 @@ class Story(models.Model):
         return False
 
     def get_excerpt(self):
-        """Get excerpt or generate one from content."""
+        """Get excerpt or generate one from content (HTML stripped)."""
         if self.excerpt:
             return self.excerpt
-        return self.content[:200] + '...' if len(self.content) > 200 else self.content
+        import re
+        text = re.sub(r'<[^>]+>', '', self.content or '')
+        text = text.strip()
+        return (text[:200] + '...') if len(text) > 200 else text
 
 
 class Tag(models.Model):

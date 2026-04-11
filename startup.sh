@@ -6,6 +6,9 @@ set -e  # Stop script if any command fails
 echo "Starting deployment..."
 
 # Run database migrations
+echo "Creating persistent media directories..."
+mkdir -p /home/media/profile_pics /home/media/stories /home/media/projects/models
+
 echo "Running migrations..."
 python manage.py migrate --noinput
 
