@@ -195,10 +195,9 @@ LOGGING = {
 }
 
 # ── Azure Blob Storage (Media files) ──────────────────────────────────────────
+# Disabled: media files are served from /home/media (Azure App Service Storage,
+# persistent across deployments) in production, and local media/ in development.
+# AZURE_ACCOUNT_NAME / AZURE_ACCOUNT_KEY are kept for potential future use.
 AZURE_ACCOUNT_NAME = config('AZURE_ACCOUNT_NAME', default='') or os.environ.get('AZURE_ACCOUNT_NAME', '')
 AZURE_ACCOUNT_KEY = config('AZURE_ACCOUNT_KEY', default='') or os.environ.get('AZURE_ACCOUNT_KEY', '')
 AZURE_CONTAINER = config('AZURE_CONTAINER', default='media') or os.environ.get('AZURE_CONTAINER', 'media')
-
-if AZURE_ACCOUNT_NAME and AZURE_ACCOUNT_KEY:
-    DEFAULT_FILE_STORAGE = 'storages.backends.azure_storage.AzureStorage'
-    MEDIA_URL = f'https://{AZURE_ACCOUNT_NAME}.blob.core.windows.net/{AZURE_CONTAINER}/'
