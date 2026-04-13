@@ -449,6 +449,63 @@ class Projects(models.Model):
         ]
 
 
+class ProjectRAGFile(models.Model):
+    """
+    One knowledge file attached to a project for RAG ingestion.
+    A project can have any number of files in any supported format.
+    Supported: .pdf  .docx  .doc  .txt  .md  .py  .ipynb
+    """
+
+    STATUS_PENDING    = 'pending'
+    STATUS_PROCESSED  = 'processed'
+    STATUS_ERROR      = 'error'
+    STATUS_CHOICES = [
+        (STATUS_PENDING,   'Pending'),
+        (STATUS_PROCESSED, 'Processed'),
+        (STATUS_ERROR,     'Error'),
+    ]
+
+    project = models.ForeignKey(
+        Projects,
+        on_delete=models.CASCADE,
+        related_name='rag_files',
+    )
+    file = models.FileField(
+        upload_to='projects/rag_files/',
+        help_text='Supported: PDF, Word, TXT, MD, Python (.py), Notebook (.ipynb)',
+    )
+    label = models.CharField(
+        max_length=200,
+        blank=True,
+        help_text='Optional label, e.g. "Thesis", "Training script", "Analysis notebook"',
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default=STATUS_PENDING,
+    )
+    error_message = models.TextField(blank=True)
+    uploaded_at   = models.DateTimeField(auto_now_add=True)
+    processed_at  = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name        = 'Project RAG File'
+        verbose_name_plural = 'Project RAG Files'
+        ordering            = ['uploaded_at']
+
+    def __str__(self):
+        name = self.label or os.path.basename(self.file.name)
+        return f'{self.project.title} — {name} [{self.status}]'
+
+    @property
+    def filename(self):
+        return os.path.basename(self.file.name) if self.file else ''
+
+    @property
+    def extension(self):
+        return os.path.splitext(self.filename)[1].lower()
+
+
 class ProjectComment(models.Model):
     """A comment left by a user on a project page."""
 

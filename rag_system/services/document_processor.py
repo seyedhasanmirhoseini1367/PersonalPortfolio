@@ -29,11 +29,13 @@ class DocumentProcessor:
 
         ext = os.path.splitext(file_path)[1].lower()
         readers = {
-            '.pdf':  self._read_pdf,
-            '.docx': self._read_docx,
-            '.doc':  self._read_docx,
-            '.txt':  self._read_text,
-            '.md':   self._read_text,
+            '.pdf':    self._read_pdf,
+            '.docx':   self._read_docx,
+            '.doc':    self._read_docx,
+            '.txt':    self._read_text,
+            '.md':     self._read_text,
+            '.py':     self._read_text,
+            '.ipynb':  self._read_notebook,
         }
 
         if ext not in readers:
@@ -105,9 +107,26 @@ class DocumentProcessor:
         return '\n'.join(parts)
 
     def _read_text(self, file_path: str) -> str:
-        """Read plain text / Markdown."""
+        """Read plain text, Markdown, or Python source code."""
         with open(file_path, 'r', encoding='utf-8', errors='replace') as f:
             return f.read()
+
+    def _read_notebook(self, file_path: str) -> str:
+        """Extract code and markdown cells from a Jupyter notebook (.ipynb)."""
+        import json
+        with open(file_path, 'r', encoding='utf-8', errors='replace') as f:
+            nb = json.load(f)
+        parts = []
+        for cell in nb.get('cells', []):
+            cell_type = cell.get('cell_type', '')
+            source    = ''.join(cell.get('source', []))
+            if not source.strip():
+                continue
+            if cell_type == 'markdown':
+                parts.append(source)
+            elif cell_type == 'code':
+                parts.append(f"```python\n{source}\n```")
+        return '\n\n'.join(parts)
 
     # ── Chunking ──────────────────────────────────────────────────────────────
 

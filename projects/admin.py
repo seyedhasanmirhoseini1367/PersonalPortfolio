@@ -4,7 +4,18 @@ import json
 from django.contrib import admin
 from django.utils.html import format_html
 from django import forms
-from .models import Projects, ProjectComment
+from .models import Projects, ProjectComment, ProjectRAGFile
+
+
+class ProjectRAGFileInline(admin.TabularInline):
+    model = ProjectRAGFile
+    extra = 1
+    fields = ('file', 'label', 'status', 'error_message', 'uploaded_at', 'processed_at')
+    readonly_fields = ('status', 'error_message', 'uploaded_at', 'processed_at')
+    show_change_link = False
+
+    def has_delete_permission(self, request, obj=None):
+        return True
 
 
 class ProjectsAdminForm(forms.ModelForm):
@@ -33,6 +44,7 @@ class ProjectsAdminForm(forms.ModelForm):
 @admin.register(Projects)
 class ProjectAdmin(admin.ModelAdmin):
     form = ProjectsAdminForm
+    inlines = [ProjectRAGFileInline]
 
     def get_object(self, request, object_id, from_field=None):
         obj = super().get_object(request, object_id, from_field)
@@ -241,9 +253,14 @@ class ProjectAdmin(admin.ModelAdmin):
             tips=tips,
         )
 
-    @admin.display(description='Has RAG Doc', boolean=True)
+    @admin.display(description='RAG Files')
     def has_rag_document(self, obj):
-        return bool(obj.rag_document)
+        n = obj.rag_files.count()
+        if n:
+            return format_html('<span style="color:#16a34a;">✔ {} file(s)</span>', n)
+        if obj.rag_document:
+            return format_html('<span style="color:#b45309;">legacy doc</span>')
+        return '—'
 
     @admin.display(description='Kaggle percentile')
     def kaggle_percentile_display(self, obj):

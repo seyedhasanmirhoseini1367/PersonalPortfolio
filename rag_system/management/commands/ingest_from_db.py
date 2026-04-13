@@ -102,9 +102,43 @@ class Command(BaseCommand):
             )
             self._embed_doc(doc, emb)
 
-        # ── B: uploaded file (thesis PDF etc.) ────────────────────────────────
-        file_status = '—'
-        if project.rag_document:
+        # ── B: multi-file RAG attachments (ProjectRAGFile) ────────────────────
+        from projects.models import ProjectRAGFile
+        rag_files = project.rag_files.all()
+        processed_files, failed_files = [], []
+
+        for rag_file in rag_files:
+            file_path = rag_file.file.path if rag_file.file else None
+            if not file_path or not os.path.exists(file_path):
+                rag_file.status        = ProjectRAGFile.STATUS_ERROR
+                rag_file.error_message = 'File missing on disk'
+                rag_file.save(update_fields=['status', 'error_message'])
+                failed_files.append(rag_file.filename)
+                continue
+            try:
+                label = rag_file.label or rag_file.filename
+                doc = proc.process_document(
+                    file_path=file_path,
+                    document_type='project_documentation',
+                    title=f'{project.title} — {label}',
+                )
+                self._embed_doc(doc, emb)
+                rag_file.status       = ProjectRAGFile.STATUS_PROCESSED
+                rag_file.error_message = ''
+                rag_file.processed_at  = timezone.now()
+                rag_file.save(update_fields=['status', 'error_message', 'processed_at'])
+                processed_files.append(rag_file.filename)
+            except Exception as e:
+                rag_file.status        = ProjectRAGFile.STATUS_ERROR
+                rag_file.error_message = str(e)
+                rag_file.save(update_fields=['status', 'error_message'])
+                failed_files.append(f'{rag_file.filename} ({e})')
+                self.stdout.write(self.style.WARNING(
+                    f'    Could not process {rag_file.filename}: {e}'
+                ))
+
+        # ── C: legacy single rag_document field ───────────────────────────────
+        if project.rag_document and not rag_files.exists():
             file_path = project.rag_document.path
             if os.path.exists(file_path):
                 try:
@@ -114,25 +148,20 @@ class Command(BaseCommand):
                         title=f'{project.title} — uploaded document',
                     )
                     self._embed_doc(doc, emb)
-                    # Mark as processed and update timestamp
-                    project.rag_document_processed = True
-                    project.rag_document_uploaded_at = timezone.now()
+                    project.rag_document_processed    = True
+                    project.rag_document_uploaded_at  = timezone.now()
                     project.save(update_fields=['rag_document_processed',
                                                 'rag_document_uploaded_at'])
-                    file_status = f'✔ {os.path.basename(file_path)}'
+                    processed_files.append(os.path.basename(file_path))
                 except Exception as e:
-                    file_status = f'✘ {e}'
-                    self.stdout.write(self.style.WARNING(
-                        f'    Could not process {os.path.basename(file_path)}: {e}'
-                    ))
-            else:
-                file_status = '✘ file missing on disk'
-                self.stdout.write(self.style.WARNING(
-                    f'    rag_document path not found: {file_path}'
-                ))
+                    failed_files.append(str(e))
+
+        file_summary = (
+            f'{len(processed_files)} file(s) OK' if processed_files else 'no files'
+        ) + (f', {len(failed_files)} failed' if failed_files else '')
 
         self.stdout.write(self.style.SUCCESS(
-            f'  ✔  {project.title}  (text fields | file: {file_status})'
+            f'  ✔  {project.title}  (text fields | {file_summary})'
         ))
 
     def _project_text(self, project) -> str:
