@@ -59,20 +59,24 @@ class GenerationService:
         """
         system_prompt, messages = self._build_messages(query, context_chunks, history)
 
+        yielded = False
+
+        def _track(gen):
+            nonlocal yielded
+            for token in gen:
+                yielded = True
+                yield token
+
         if self.gemini_api_key:
-            yield from self._stream_gemini(system_prompt, messages)
-            return
+            yield from _track(self._stream_gemini(system_prompt, messages))
+        elif self.anthropic_api_key:
+            yield from _track(self._stream_anthropic(system_prompt, messages))
+        elif self.openai_api_key:
+            yield from _track(self._stream_openai(system_prompt, messages))
 
-        if self.anthropic_api_key:
-            yield from self._stream_anthropic(system_prompt, messages)
-            return
-
-        if self.openai_api_key:
-            yield from self._stream_openai(system_prompt, messages)
-            return
-
-        # No LLM configured — yield fallback as one chunk
-        yield self._fallback_response(query, context_chunks)
+        # If nothing was yielded (no keys, or all LLMs failed) — emit fallback
+        if not yielded:
+            yield self._fallback_response(query, context_chunks)
 
     # ── Prediction interpretation (non-streaming, used by project views) ──────
 
