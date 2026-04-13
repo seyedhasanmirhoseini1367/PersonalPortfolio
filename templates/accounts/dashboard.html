@@ -109,7 +109,7 @@
                                             </a>
                                         </div>
                                     </div>
-                                    <p class="story-item-excerpt">{{ story.excerpt|default:story.content|truncatewords:20 }}</p>
+                                    <p class="story-item-excerpt">{{ story.get_excerpt|truncatewords:20 }}</p>
                                     <div class="story-item-footer">
                                         <div class="story-meta-group">
                                     <span class="meta-badge">

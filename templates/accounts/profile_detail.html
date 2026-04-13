@@ -175,7 +175,7 @@
                                                 </h4>
                                                 <span class="story-date">{{ story.created_at|date:"M d, Y" }}</span>
                                             </div>
-                                            <p class="story-excerpt">{{ story.excerpt|default:story.content|truncatewords:25 }}</p>
+                                            <p class="story-excerpt">{{ story.get_excerpt|truncatewords:25 }}</p>
                                             <div class="story-footer">
                                                 <div class="story-meta">
                                                 <span class="meta-item">

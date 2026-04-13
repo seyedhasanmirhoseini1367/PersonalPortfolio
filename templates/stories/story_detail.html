@@ -20,11 +20,11 @@
 {% endblock %}
 
 {% block title %}{{ story.title }} - HasanPortfolio{% endblock %}
-{% block meta_description %}{{ story.excerpt|default:story.content|truncatewords:30 }}{% endblock %}
+{% block meta_description %}{{ story.get_excerpt|truncatewords:30 }}{% endblock %}
 {% block og_title %}{{ story.title }}{% endblock %}
-{% block og_description %}{{ story.excerpt|default:story.content|truncatewords:30 }}{% endblock %}
+{% block og_description %}{{ story.get_excerpt|truncatewords:30 }}{% endblock %}
 {% block twitter_title %}{{ story.title }}{% endblock %}
-{% block twitter_description %}{{ story.excerpt|default:story.content|truncatewords:30 }}{% endblock %}
+{% block twitter_description %}{{ story.get_excerpt|truncatewords:30 }}{% endblock %}
 
 {% block content %}
     <div class="story-detail-wrapper">
@@ -64,7 +64,7 @@
                 <div class="story-body">
                     {% if story.excerpt %}
                         <div class="story-excerpt">
-                            <p>{{ story.excerpt }}</p>
+                            <p>{{ story.get_excerpt }}</p>
                         </div>
                     {% endif %}
 
