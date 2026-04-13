@@ -977,7 +977,7 @@
     {% if related_projects %}
         <section class="related-projects">
             <div class="container">
-                <h2 class="section-title" style="text-align: center;">Related Projects</h2>
+                <h2 class="section-title" style="text-align: center;">Related ML Models</h2>
                 <div class="related-grid">
                     {% for related_project in related_projects %}
                         <a href="{% url 'project_detail' related_project.id %}" class="related-card">
@@ -996,7 +996,7 @@
     <!-- Back Button -->
     <div class="container">
         <a href="{% url 'projects_list' %}" class="back-button">
-            ← Back to All Projects
+            ← Back to All ML Models
         </a>
     </div>
 {% endblock %}

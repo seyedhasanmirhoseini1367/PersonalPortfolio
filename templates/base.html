@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}HasanPortfolio - Data Science & ML Projects{% endblock %}</title>
+    <title>{% block title %}HasanPortfolio - Data Science & ML Models{% endblock %}</title>
 
     <!-- Favicon -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤖</text></svg>">
@@ -483,7 +483,7 @@
                            {% if request.resolver_match.url_name == 'home' %}class="active"{% endif %}>Home</a></li>
 
                     <li><a href="{% url 'projects_list' %}"
-                           {% if request.resolver_match.url_name == 'projects_list' %}class="active"{% endif %}>Projects</a></li>
+                           {% if request.resolver_match.url_name == 'projects_list' %}class="active"{% endif %}>ML Models</a></li>
 
                     <li><a href="{% url 'stories:story_list' %}"
                            {% if request.resolver_match.url_name == 'story_list' %}class="active"{% endif %}>Stories</a></li>

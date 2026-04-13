@@ -40,7 +40,7 @@ def projects_list(request):
         'skills': Projects.SKILL_CHOICES,
         'active_type': project_type,
         'active_skill': skill_filter,
-        'page_title': 'My Data Science Portfolio',
+        'page_title': 'ML Models',
         'total_projects': projects.count(),
         'featured_count': projects.filter(is_featured=True).count(),
     }

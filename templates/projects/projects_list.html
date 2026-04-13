@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}Projects - HasanPortfolio{% endblock %}
+{% block title %}ML Models - HasanPortfolio{% endblock %}
 
 {% block extra_css %}
     <style>
@@ -235,12 +235,12 @@
 {% block content %}
     <div class="page-header">
         <h1 class="page-title">{{ page_title }}</h1>
-        <p class="page-subtitle">Showcasing {{ total_projects }} data science and machine learning projects</p>
+        <p class="page-subtitle">Showcasing {{ total_projects }} data science and machine learning models</p>
     </div>
 
     <!-- Stats Bar -->
     <div class="stats-bar">
-        <div>Total Projects: <strong>{{ total_projects }}</strong></div>
+        <div>Total ML Models: <strong>{{ total_projects }}</strong></div>
         <div>Featured: <strong>{{ featured_count }}</strong></div>
         <div>Kaggle Competitions: <strong>{{ projects|length }}</strong></div>
     </div>
@@ -396,7 +396,7 @@
         {% empty %}
             <div class="no-projects">
                 <div style="font-size: 4rem; margin-bottom: 1rem;">🔍</div>
-                <h3>No Projects Found</h3>
+                <h3>No ML Models Found</h3>
                 <p>Try adjusting your filters or check back later for new projects.</p>
                 <a href="{% url 'projects_list' %}" class="btn mt-3">Clear Filters</a>
             </div>

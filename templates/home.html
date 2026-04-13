@@ -513,7 +513,7 @@
                     tracking to deployment, monitoring, and CI/CD pipelines.
                 </p>
                 <div class="hero-buttons">
-                    <a href="{% url 'projects_list' %}" class="btn">View My Projects</a>
+                    <a href="{% url 'projects_list' %}" class="btn">View My ML Models</a>
                     <a href="{% url 'resume:resume_page' %}" class="btn"
                        style="background:transparent;border:1.5px solid rgba(255,255,255,.5);color:white;">My Resume</a>
                     <a href="{% url 'contact:contact_page' %}" class="btn"
@@ -535,7 +535,7 @@
     <section class="stats">
         <div class="stat-card">
             <div class="stat-number">{{ total_projects }}+</div>
-            <div class="stat-label">Projects Completed</div>
+            <div class="stat-label">ML Models Built</div>
         </div>
         <div class="stat-card">
             <div class="stat-number">{{ kaggle_projects }}+</div>
@@ -543,7 +543,7 @@
         </div>
         <div class="stat-card">
             <div class="stat-number">{{ featured_projects|length }}</div>
-            <div class="stat-label">Featured Projects</div>
+            <div class="stat-label">Featured Models</div>
         </div>
         <div class="stat-card">
             <div class="stat-number">10+</div>
@@ -635,7 +635,7 @@
 
     <section class="featured-projects">
         <div class="section-header">
-            <h2 class="section-title">Featured Projects</h2>
+            <h2 class="section-title">Featured ML Models</h2>
             <p class="section-subtitle">Highlighted data science and machine learning work</p>
         </div>
 
@@ -671,7 +671,7 @@
         </div>
 
         <div class="text-center mt-4">
-            <a href="{% url 'projects_list' %}" class="btn">View All Projects</a>
+            <a href="{% url 'projects_list' %}" class="btn">View All ML Models</a>
         </div>
     </section>
 
