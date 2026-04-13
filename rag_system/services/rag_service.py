@@ -220,6 +220,80 @@ class RAGService:
                 'sources':        [],
             }
 
+    # ── LangGraph query ───────────────────────────────────────────────────────
+
+    def langgraph_query(
+        self,
+        question: str,
+        session_id: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Run the question through the LangGraph pipeline:
+          router → search node → generate → verify (→ retry if needed) → END
+
+        Returns the same dict format as query() for drop-in compatibility.
+        """
+        session = self._resolve_session(session_id)
+        history = self._get_history(session)
+
+        try:
+            from rag_system.graph.graph import rag_graph
+
+            initial_state = {
+                "question":      question,
+                "route":         "general",
+                "answer":        "",
+                "context_chunks": [],
+                "session_id":    str(session.id),
+                "history":       history,
+                "ml_prediction": None,
+                "needs_retry":   False,
+                "retry_count":   0,
+            }
+
+            final_state = rag_graph.invoke(initial_state)
+
+            answer = final_state.get("answer", "")
+            chunks = final_state.get("context_chunks", [])
+            route  = final_state.get("route", "general")
+
+            log = QueryLog.objects.create(
+                session=session,
+                query=question,
+                response=answer,
+                sources=[c['metadata'] for c in chunks],
+            )
+            self._auto_title(session, question)
+
+            return {
+                'success':       True,
+                'question':      question,
+                'answer':        answer,
+                'sources':       chunks,
+                'route':         route,
+                'query_id':      str(log.id),
+                'session_id':    str(session.id),
+                'session_title': session.title,
+            }
+
+        except Exception as exc:
+            traceback.print_exc()
+            log = QueryLog.objects.create(
+                session=session,
+                query=question,
+                response=f'Error: {exc}',
+                sources=[],
+            )
+            return {
+                'success':    False,
+                'error':      str(exc),
+                'question':   question,
+                'answer':     f'Sorry, I encountered an error: {exc}',
+                'sources':    [],
+                'query_id':   str(log.id),
+                'session_id': str(session.id),
+            }
+
     # ── Legacy ───────────────────────────────────────────────────────────────
 
     def get_chat_history(self, limit: int = 20):

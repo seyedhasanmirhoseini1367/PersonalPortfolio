@@ -89,8 +89,13 @@ def query_api(request):
     document_type  = data.get('document_type', 'all')
     document_types = None if document_type == 'all' else [document_type]
     session_id     = data.get('session_id', '').strip() or None
+    use_langgraph  = data.get('use_langgraph', False)
 
-    result = RAGService().query(question, document_types, session_id=session_id)
+    rag = RAGService()
+    if use_langgraph:
+        result = rag.langgraph_query(question, session_id=session_id)
+    else:
+        result = rag.query(question, document_types, session_id=session_id)
 
     if not result.get('success', True):
         return JsonResponse(result, status=500)

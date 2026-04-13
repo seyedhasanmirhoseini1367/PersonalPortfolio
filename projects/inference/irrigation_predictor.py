@@ -32,6 +32,7 @@ import pandas as pd
 
 from .base import InferenceHandler, InferenceError
 from .registry import register
+from .azure_ml_client import AzureMLClient
 
 warnings.filterwarnings('ignore')
 logger = logging.getLogger(__name__)
@@ -41,6 +42,54 @@ logger = logging.getLogger(__name__)
 class IrrigationPredictorHandler(InferenceHandler):
 
     accepted_extensions = ["csv"]
+
+    # Set to False to always use local model (useful for testing)
+    use_azure_ml = True
+
+    # ── Azure ML override ─────────────────────────────────────────────────────
+
+    def run(self, uploaded_file) -> dict:
+        """Try Azure ML first; fall back to local model pipeline."""
+        if self.use_azure_ml:
+            try:
+                result = self._run_azure_ml(uploaded_file)
+                if result is not None:
+                    logger.info("irrigation_predictor: used Azure ML endpoint.")
+                    return result
+                logger.info("irrigation_predictor: Azure ML unavailable, using local model.")
+            except Exception as exc:
+                logger.warning("irrigation_predictor: Azure ML error (%s), using local model.", exc)
+            # Reset file pointer for local fallback
+            if hasattr(uploaded_file, 'seek'):
+                uploaded_file.seek(0)
+
+        return super().run(uploaded_file)
+
+    def _run_azure_ml(self, uploaded_file) -> dict | None:
+        """Call Azure ML endpoint. Returns result dict or None."""
+        client = AzureMLClient()
+        if not client.is_configured:
+            return None
+
+        # Read CSV and send as JSON to endpoint
+        if hasattr(uploaded_file, 'seek'):
+            uploaded_file.seek(0)
+        df = self.read_csv(uploaded_file)
+        payload = {"data": df.to_dict(orient="records")}
+
+        response = client.predict(payload)
+        if response is None:
+            return None
+
+        # Normalise response to standard handler output format
+        return {
+            "success":          True,
+            "prediction":       response.get("prediction"),
+            "prediction_label": response.get("prediction_label", str(response.get("prediction", ""))),
+            "prediction_proba": response.get("confidence"),
+            "input_summary":    {"format": "CSV", "rows": len(df), "source": "azure_ml"},
+            "input_data":       df.iloc[0].to_dict() if len(df) > 0 else {},
+        }
 
     # ── Base contract ─────────────────────────────────────────────────────────
 
@@ -68,7 +117,9 @@ class IrrigationPredictorHandler(InferenceHandler):
                     f"Your file has: {list(df.columns)}."
                 )
 
-        # Encode categorical columns
+        # Encode categorical columns — only if label encoders exist for them.
+        # CatBoost models handle categoricals natively and expect raw string values,
+        # so skip encoding when label_encoders is empty.
         for col in categorical_features:
             if col not in df.columns:
                 continue
@@ -79,10 +130,6 @@ class IrrigationPredictorHandler(InferenceHandler):
                     lambda v: le.transform([str(v)])[0] if str(v) in known
                     else 0
                 )
-            else:
-                unique_vals = sorted(df[col].dropna().astype(str).unique())
-                mapping = {v: i for i, v in enumerate(unique_vals)}
-                df[col] = df[col].astype(str).map(mapping).fillna(0).astype(int)
 
         # Fill missing values
         df = df.fillna(df.median(numeric_only=True))
