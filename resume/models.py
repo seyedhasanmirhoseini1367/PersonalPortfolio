@@ -61,6 +61,10 @@ class Education(models.Model):
         ('DIPLOMA', "Diploma"),
     ]
 
+    resume = models.ForeignKey(
+        'ResumeSetting', on_delete=models.CASCADE,
+        null=True, blank=True, related_name='education_entries',
+    )
     institution = models.CharField(max_length=200)
     degree = models.CharField(max_length=20, choices=DEGREE_CHOICES)
     field_of_study = models.CharField(max_length=200)
@@ -96,6 +100,10 @@ class Experience(models.Model):
         ('INTERNSHIP', 'Internship'),
     ]
 
+    resume = models.ForeignKey(
+        'ResumeSetting', on_delete=models.CASCADE,
+        null=True, blank=True, related_name='experience_entries',
+    )
     company = models.CharField(max_length=200)
     position = models.CharField(max_length=200)
     employment_type = models.CharField(max_length=15, choices=EMPLOYMENT_CHOICES, default='FULL_TIME')
@@ -137,6 +145,10 @@ class Skill(models.Model):
         ('SOFT_SKILLS', 'Soft Skills'),
     ]
 
+    resume = models.ForeignKey(
+        'ResumeSetting', on_delete=models.CASCADE,
+        null=True, blank=True, related_name='skill_entries',
+    )
     name = models.CharField(max_length=100)
     category = models.CharField(max_length=20, choices=CATEGORY_CHOICES)
     proficiency = models.IntegerField(
@@ -174,6 +186,10 @@ class ProjectHighlight(models.Model):
     """
     Key projects to highlight on resume
     """
+    resume = models.ForeignKey(
+        'ResumeSetting', on_delete=models.CASCADE,
+        null=True, blank=True, related_name='project_highlights',
+    )
     title = models.CharField(max_length=200)
     description = models.TextField()
     technologies_used = models.JSONField(default=list, help_text='List of technologies used ["Python", "Django", "React", "PostgreSQL", "Docker", "Scikit-learn"]')
@@ -200,6 +216,10 @@ class Certification(models.Model):
     """
     Professional certifications
     """
+    resume = models.ForeignKey(
+        'ResumeSetting', on_delete=models.CASCADE,
+        null=True, blank=True, related_name='certifications',
+    )
     name = models.CharField(max_length=200)
     issuing_organization = models.CharField(max_length=200)
     issue_date = models.DateField()
@@ -240,6 +260,10 @@ class Language(models.Model):
         ('BEGINNER', 'Beginner'),
     ]
 
+    resume = models.ForeignKey(
+        'ResumeSetting', on_delete=models.CASCADE,
+        null=True, blank=True, related_name='languages',
+    )
     language = models.CharField(max_length=20, choices=LANGUAGE_CHOICES)
     proficiency = models.CharField(max_length=15, choices=PROFICIENCY_CHOICES)
     display_order = models.IntegerField(default=0)
