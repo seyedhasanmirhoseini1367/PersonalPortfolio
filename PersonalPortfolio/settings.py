@@ -148,7 +148,7 @@ RAG_CONFIG = {
     'DOCUMENTS_PATH':    BASE_DIR / 'rag_system' / 'documents',
     'CHUNK_SIZE':        1000,
     'CHUNK_OVERLAP':     200,
-    'GEMINI_MODEL':      'models/gemini-2.5-flash',
+    'GEMINI_MODEL':      'gemini-2.5-flash',
     'ANTHROPIC_MODEL':   'claude-haiku-4-5-20251001',
     'OPENAI_MODEL':      'gpt-4o-mini',
     'MAX_TOKENS':        1200,

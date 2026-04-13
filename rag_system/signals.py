@@ -69,8 +69,38 @@ def _embed_project(project_id: int) -> None:
             emb.embed_document_chunks(list(doc.chunks.all()))
             logger.info('RAG: embedded project "%s" (%d chunks)', project.title, doc.chunks.count())
 
-        # ── B: uploaded rag_document (thesis PDF, report, etc.) ───────────────
-        if getattr(project, 'rag_document', None) and not project.rag_document_processed:
+        # ── B: multi-file RAG attachments (ProjectRAGFile) ───────────────────
+        from projects.models import ProjectRAGFile
+        from django.utils import timezone as tz
+        for rag_file in project.rag_files.all():
+            file_path = rag_file.file.path if rag_file.file else None
+            if not file_path or not os.path.exists(file_path):
+                rag_file.status = ProjectRAGFile.STATUS_ERROR
+                rag_file.error_message = 'File missing on disk'
+                rag_file.save(update_fields=['status', 'error_message'])
+                continue
+            try:
+                label = rag_file.label or rag_file.filename
+                doc2 = proc.process_document(
+                    file_path=file_path,
+                    document_type='project_documentation',
+                    title=f'{project.title} — {label}',
+                )
+                emb.embed_document_chunks(list(doc2.chunks.all()))
+                rag_file.status = ProjectRAGFile.STATUS_PROCESSED
+                rag_file.error_message = ''
+                rag_file.processed_at = tz.now()
+                rag_file.save(update_fields=['status', 'error_message', 'processed_at'])
+                logger.info('RAG: embedded file "%s" for project "%s"', label, project.title)
+            except Exception as exc:
+                rag_file.status = ProjectRAGFile.STATUS_ERROR
+                rag_file.error_message = str(exc)
+                rag_file.save(update_fields=['status', 'error_message'])
+                logger.warning('RAG: could not process "%s" for "%s": %s', rag_file.filename, project.title, exc)
+
+        # ── C: legacy single rag_document (fallback if no rag_files) ─────────
+        if getattr(project, 'rag_document', None) and not project.rag_document_processed \
+                and not project.rag_files.exists():
             file_path = project.rag_document.path
             if os.path.exists(file_path):
                 try:
@@ -82,9 +112,9 @@ def _embed_project(project_id: int) -> None:
                     emb.embed_document_chunks(list(doc2.chunks.all()))
                     project.rag_document_processed = True
                     project.save(update_fields=['rag_document_processed'])
-                    logger.info('RAG: embedded uploaded doc for "%s"', project.title)
+                    logger.info('RAG: embedded legacy uploaded doc for "%s"', project.title)
                 except Exception as exc:
-                    logger.warning('RAG: could not process uploaded file for "%s": %s', project.title, exc)
+                    logger.warning('RAG: could not process legacy file for "%s": %s', project.title, exc)
 
     except Exception as exc:
         logger.exception('RAG: _embed_project(%s) failed: %s', project_id, exc)
@@ -170,11 +200,16 @@ from django.dispatch import receiver
 
 # Projects
 try:
-    from projects.models import Projects
+    from projects.models import Projects, ProjectRAGFile
 
     @receiver(post_save, sender=Projects, dispatch_uid='rag_auto_sync_project')
     def on_project_saved(sender, instance, **kwargs):
         _bg(_embed_project, instance.pk)
+
+    @receiver(post_save, sender=ProjectRAGFile, dispatch_uid='rag_auto_sync_rag_file')
+    def on_rag_file_saved(sender, instance, **kwargs):
+        """Re-ingest just this file when it's uploaded or re-saved."""
+        _bg(_embed_project, instance.project_id)
 
 except ImportError:
     logger.debug('RAG signals: projects app not available, skipping.')
