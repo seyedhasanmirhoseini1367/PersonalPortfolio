@@ -1,8 +1,8 @@
 # Hasan Mirhoseini — AI Portfolio
 
-A personal portfolio website for a Data Scientist and ML Engineer based in Helsinki, Finland. Built with Django, it goes beyond a static CV: visitors can interact with a live AI assistant, run real ML model predictions, and read technical blog posts — all in one place.
+A personal portfolio website for a Data Scientist and ML Engineer based in Finland. Built with Django, it goes beyond a static CV: visitors can interact with a live AI assistant, run real ML model predictions, and read technical blog posts — all in one place.
 
-**Live site:** [hasanportfolio.azurewebsites.net](https://hasanportfolio.azurewebsites.net)
+**Live site:** [hasanportfolio.azurewebsites.net](hasanai-bwgfgtffcka4arah.westeurope-01.azurewebsites.net)
 
 ---
 
