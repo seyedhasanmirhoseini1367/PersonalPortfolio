@@ -135,13 +135,13 @@ class Skill(models.Model):
     Technical and professional skills
     """
     CATEGORY_CHOICES = [
-        ('PROGRAMMING', 'Programming Languages'),
-        ('ML_FRAMEWORKS', 'ML & AI Frameworks'),
-        ('DATA_ANALYSIS', 'Data Analysis'),
+        ('PROGRAMMING', 'Languages'),
+        ('TOOLS', 'LLM / Agents'),
+        ('CLOUD', 'MLOps / Deploy'),
+        ('ML_FRAMEWORKS', 'ML / DL'),
+        ('DATA_ANALYSIS', 'Data'),
+        ('DATABASES', 'Web / Backend'),
         ('DATA_VISUALIZATION', 'Data Visualization'),
-        ('DATABASES', 'Databases'),
-        ('CLOUD', 'Cloud & DevOps'),
-        ('TOOLS', 'Tools & Platforms'),
         ('SOFT_SKILLS', 'Soft Skills'),
     ]
 

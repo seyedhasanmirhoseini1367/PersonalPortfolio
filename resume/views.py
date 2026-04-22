@@ -19,19 +19,20 @@ def resume_page(request):
     if not resume_settings or not resume_settings.is_active:
         return render(request, 'resume/resume_unavailable.html')
 
-    # Group skills by category
-    skills = Skill.objects.all().order_by('category', 'display_order', 'name')
-    skills_by_category = defaultdict(list)
-
-    for skill in skills:
-        skills_by_category[skill.category].append(skill)
+    # Group skills by category in CV-defined order (technical only)
+    _CATEGORY_ORDER = ['PROGRAMMING', 'TOOLS', 'CLOUD', 'ML_FRAMEWORKS', 'DATA_ANALYSIS', 'DATABASES']
+    raw = defaultdict(list)
+    for skill in Skill.objects.all().order_by('category', 'display_order', 'name'):
+        raw[skill.category].append(skill)
+    skills_by_category = {cat: raw[cat] for cat in _CATEGORY_ORDER if cat in raw}
 
     context = {
         'resume_settings': resume_settings,
         'education': Education.objects.all(),
         'experience': Experience.objects.all(),
-        'skills': skills_by_category,  # Now passing grouped skills
-        'project_highlights': ProjectHighlight.objects.all(),
+        'skills': skills_by_category,
+        'soft_skills': raw.get('SOFT_SKILLS', []),
+        'project_highlights': ProjectHighlight.objects.order_by('display_order'),
         'certifications': Certification.objects.all(),
         'languages': Language.objects.all(),
         'page_title': 'Resume - HasanPortfolio',
