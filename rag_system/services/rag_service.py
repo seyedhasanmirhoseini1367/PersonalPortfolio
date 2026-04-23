@@ -132,8 +132,28 @@ class RAGService:
             return f"data: {json.dumps(payload)}\n\n"
 
         try:
-            chunks = self.retrieval.hybrid_retrieve(question, document_types)
+            # Step 1: classify the query → get the right document types to search.
+            # We run only the router (zero LLM calls, pure keyword matching) so
+            # there is no latency cost before streaming starts.
+            if document_types is None:
+                from rag_system.graph.nodes import router_node
+                route = router_node({"question": question}).get("route", "general")
+                _ROUTE_DOC_TYPES = {
+                    "cv":       ["resume", "skill", "project"],
+                    "thesis":   ["project_documentation", "project"],
+                    "ml_model": ["project", "project_documentation"],
+                    "projects": ["project", "project_documentation", "resume"],
+                    "general":  None,   # None = search everything
+                }
+                resolved_types = _ROUTE_DOC_TYPES.get(route)
+                logger.debug("stream_query: routed to '%s' → types=%s", route, resolved_types)
+            else:
+                resolved_types = document_types
 
+            # Step 2: retrieve the right chunks for the classified route.
+            chunks = self.retrieval.hybrid_retrieve(question, resolved_types)
+
+            # Step 3: stream the answer token by token.
             for token in self.generation.generate_streaming(question, chunks, history=history):
                 full_text += token
                 yield _sse({'type': 'token', 'content': token})

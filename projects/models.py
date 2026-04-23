@@ -76,6 +76,16 @@ class Projects(models.Model):
         ('file', 'File upload'),
     ]
 
+    # ── Ownership ─────────────────────────────────────────────────────────────
+
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='projects',
+        help_text="Null = portfolio item (admin only). Set to enable user-submitted models.",
+    )
+
     # ── Basic Information ─────────────────────────────────────────────────────
 
     title = models.CharField(

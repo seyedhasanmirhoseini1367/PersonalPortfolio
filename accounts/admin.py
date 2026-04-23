@@ -82,6 +82,7 @@ class CustomUserAdmin(UserAdmin):
         'email',
         'first_name',
         'last_name',
+        'is_client',
         'is_staff',
         'is_active',
         'date_joined',
@@ -95,6 +96,7 @@ class CustomUserAdmin(UserAdmin):
     list_filter = (
         IsActiveFilter,
         StaffStatusFilter,
+        'is_client',
         'is_superuser',
         'date_joined',
         'last_login',
@@ -131,6 +133,7 @@ class CustomUserAdmin(UserAdmin):
         (_('Permissions'), {
             'fields': (
                 'is_active',
+                'is_client',
                 'is_staff',
                 'is_superuser',
                 'groups',
@@ -163,12 +166,13 @@ class CustomUserAdmin(UserAdmin):
         }),
         (_('Permissions'), {
             'classes': ('wide',),
-            'fields': ('is_active', 'is_staff', 'is_superuser'),
+            'fields': ('is_active', 'is_client', 'is_staff', 'is_superuser'),
         }),
     )
 
     # Custom actions
-    actions = ['activate_users', 'deactivate_users', 'make_staff', 'remove_staff']
+    actions = ['activate_users', 'deactivate_users', 'make_staff', 'remove_staff',
+               'grant_client_access', 'revoke_client_access']
 
     # Fields per page
     list_per_page = 25
@@ -251,6 +255,18 @@ class CustomUserAdmin(UserAdmin):
         self.message_user(request, f'{updated} users had staff status removed.')
 
     remove_staff.short_description = _('Remove staff status from selected users')
+
+    def grant_client_access(self, request, queryset):
+        updated = queryset.update(is_client=True)
+        self.message_user(request, f'{updated} user(s) granted client access (Content Generator).')
+
+    grant_client_access.short_description = _('Grant client access (Content Generator)')
+
+    def revoke_client_access(self, request, queryset):
+        updated = queryset.update(is_client=False)
+        self.message_user(request, f'{updated} user(s) had client access revoked.')
+
+    revoke_client_access.short_description = _('Revoke client access')
 
     def get_inline_instances(self, request, obj=None):
         """Only show inline when editing an existing object"""

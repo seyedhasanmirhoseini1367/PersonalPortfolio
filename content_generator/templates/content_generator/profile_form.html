@@ -1,0 +1,154 @@
+{% extends 'base.html' %}
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .pf-hero {
+        background: linear-gradient(135deg, #0f172a, #1e40af);
+        color: white; padding: 1.75rem 0; text-align: center;
+        border-radius: 20px; margin-bottom: 2rem;
+    }
+    .pf-hero h1 { font-size: 1.7rem; font-weight: 700; margin-bottom: .3rem; }
+    .pf-hero p  { opacity: .85; font-size: .9rem; margin: 0; }
+
+    .pf-card {
+        background: white; border-radius: 16px;
+        box-shadow: 0 4px 24px rgba(0,0,0,.08);
+        padding: 2rem; max-width: 720px; margin: 0 auto;
+    }
+    .form-section { margin-bottom: 1.5rem; }
+    .form-section h3 {
+        font-size: .8rem; font-weight: 700; text-transform: uppercase;
+        letter-spacing: .06em; color: #1e40af;
+        border-bottom: 2px solid #dbeafe; padding-bottom: .35rem;
+        margin-bottom: 1rem;
+    }
+    .form-group { display: flex; flex-direction: column; gap: .3rem; margin-bottom: .9rem; }
+    .form-group label { font-size: .82rem; font-weight: 600; color: #374151; }
+    .form-group input, .form-group textarea {
+        border: 1px solid #d1d5db; border-radius: 8px;
+        padding: .55rem .8rem; font-size: .88rem;
+        transition: border-color .15s;
+    }
+    .form-group input:focus, .form-group textarea:focus {
+        outline: none; border-color: #1e40af; box-shadow: 0 0 0 3px rgba(30,64,175,.1);
+    }
+    .form-group textarea { resize: vertical; min-height: 130px; }
+    .form-hint { font-size: .74rem; color: #6b7280; margin-top: .2rem; }
+
+    .error-banner {
+        background: #fef2f2; border: 1.5px solid #fca5a5;
+        color: #dc2626; border-radius: 9px;
+        padding: .75rem 1rem; font-size: .85rem;
+        margin-bottom: 1.25rem; display: flex; align-items: center; gap: .5rem;
+    }
+
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+
+    .submit-btn {
+        width: 100%; padding: .85rem;
+        background: linear-gradient(135deg, #0f172a, #1e40af);
+        color: white; border: none; border-radius: 10px;
+        font-size: 1rem; font-weight: 600; cursor: pointer;
+        transition: opacity .15s; margin-top: .5rem;
+    }
+    .submit-btn:hover { opacity: .9; }
+
+    .cancel-link {
+        display: block; text-align: center; margin-top: .9rem;
+        font-size: .85rem; color: #6b7280; text-decoration: none;
+    }
+    .cancel-link:hover { color: #1e40af; }
+
+    @media (max-width: 600px) {
+        .form-row { grid-template-columns: 1fr; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+
+    <div class="pf-hero">
+        <div style="display:flex;justify-content:flex-start;margin-bottom:.75rem;">
+            <a href="{% url 'content_generator:profile_list' %}"
+               style="display:inline-flex;align-items:center;gap:.4rem;background:rgba(255,255,255,.12);
+                      border:1px solid rgba(255,255,255,.25);color:white;border-radius:8px;
+                      padding:.35rem .9rem;font-size:.8rem;font-weight:600;text-decoration:none;">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+                My Profiles
+            </a>
+        </div>
+        <h1>{{ page_title }}</h1>
+        <p>{% if is_edit %}Update the profile details below{% else %}Fill in the company details to power AI-generated content{% endif %}</p>
+    </div>
+
+    <div class="pf-card">
+        {% if error %}
+        <div class="error-banner">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            {{ error }}
+        </div>
+        {% endif %}
+
+        <form method="post">
+            {% csrf_token %}
+
+            <!-- ── Identity ── -->
+            <div class="form-section">
+                <h3>Company Identity</h3>
+                <div class="form-group">
+                    <label>Company Name *</label>
+                    <input type="text" name="name" required maxlength="200"
+                           value="{{ prefill.name }}"
+                           placeholder="Acme Corp">
+                </div>
+                <div class="form-group">
+                    <label>About the Company *</label>
+                    <textarea name="about" required
+                        placeholder="Describe the company: what it does, its mission, values, unique selling points, brand voice, key services… The richer the better — this is the AI's main reference.">{{ prefill.about }}</textarea>
+                    <span class="form-hint">Min ~200 words recommended. This is passed directly to the AI agents.</span>
+                </div>
+            </div>
+
+            <!-- ── Audience & Tone ── -->
+            <div class="form-section">
+                <h3>Audience &amp; Tone</h3>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Target Audience</label>
+                        <input type="text" name="target_audience" maxlength="300"
+                               value="{{ prefill.target_audience }}"
+                               placeholder="e.g. Finnish SMEs, 10–100 employees">
+                        <span class="form-hint">Used to tailor messaging and vocabulary.</span>
+                    </div>
+                    <div class="form-group">
+                        <label>Tone of Voice</label>
+                        <input type="text" name="tone_of_voice" maxlength="200"
+                               value="{{ prefill.tone_of_voice }}"
+                               placeholder="e.g. Professional, warm, concise">
+                        <span class="form-hint">Overridden by the Tone Preset in the generator.</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── Competitors ── -->
+            <div class="form-section">
+                <h3>Competitor Information <span style="font-weight:400;color:#9ca3af;text-transform:none;font-size:.8rem;">(optional)</span></h3>
+                <div class="form-group">
+                    <label>Competitor Notes</label>
+                    <textarea name="competitor_info" style="min-height:100px;"
+                        placeholder="Competitor website copy, product descriptions, positioning statements… Used by the Competitor Gap agent to find differentiation opportunities.">{{ prefill.competitor_info }}</textarea>
+                    <span class="form-hint">Free-text competitors. You can also link structured competitor profiles in the admin panel.</span>
+                </div>
+            </div>
+
+            <button type="submit" class="submit-btn">
+                {% if is_edit %}Save Changes{% else %}Create Profile{% endif %} →
+            </button>
+        </form>
+        <a href="{% url 'content_generator:profile_list' %}" class="cancel-link">Cancel</a>
+    </div>
+
+</div>
+{% endblock %}

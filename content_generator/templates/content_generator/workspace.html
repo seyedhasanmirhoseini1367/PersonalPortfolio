@@ -1,0 +1,483 @@
+{% extends 'base.html' %}
+{% block title %}My Workspace — {{ profile.name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.ws-page { background: #f1f5f9; min-height: 100vh; padding-bottom: 4rem; }
+
+/* ── Hero ── */
+.ws-hero {
+    background: linear-gradient(135deg, #0f172a 0%, #1e40af 100%);
+    color: white; padding: 2.25rem 0 2.5rem;
+    margin-bottom: 2.25rem;
+    border-radius: 0 0 28px 28px;
+}
+.ws-hero-inner {
+    display: flex; justify-content: space-between;
+    align-items: flex-end; flex-wrap: wrap; gap: 1.25rem;
+}
+.ws-hero-left h1 { font-size: 1.65rem; font-weight: 700; margin: 0 0 .3rem; }
+.ws-hero-left p  { font-size: .9rem; opacity: .8; margin: 0; }
+.ws-hero-actions { display: flex; gap: .65rem; flex-wrap: wrap; }
+.ws-btn-light {
+    display: inline-flex; align-items: center; gap: .4rem;
+    padding: .5rem 1.1rem; border-radius: 9px;
+    background: rgba(255,255,255,.15); border: 1px solid rgba(255,255,255,.3);
+    color: white; font-size: .83rem; font-weight: 600;
+    text-decoration: none; transition: background .15s;
+}
+.ws-btn-light:hover { background: rgba(255,255,255,.26); color: white; }
+.ws-btn-primary {
+    display: inline-flex; align-items: center; gap: .4rem;
+    padding: .5rem 1.25rem; border-radius: 9px;
+    background: white; color: #1e40af;
+    font-size: .83rem; font-weight: 700;
+    text-decoration: none; transition: opacity .15s;
+    border: none; cursor: pointer;
+}
+.ws-btn-primary:hover { opacity: .88; color: #1e40af; }
+
+/* ── Body layout ── */
+.ws-body { max-width: 1200px; margin: 0 auto; padding: 0 1rem; }
+
+/* ── Section card ── */
+.ws-card {
+    background: white; border-radius: 14px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 1px 4px rgba(0,0,0,.05);
+    margin-bottom: 1.75rem; overflow: hidden;
+}
+.ws-card-head {
+    padding: 1.1rem 1.4rem;
+    border-bottom: 1px solid #f1f5f9;
+    display: flex; justify-content: space-between; align-items: center;
+    gap: .75rem; flex-wrap: wrap;
+}
+.ws-card-head-left { display: flex; align-items: center; gap: .6rem; }
+.ws-head-icon {
+    width: 32px; height: 32px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: .85rem;
+}
+.icon-blue { background: #eff6ff; color: #1e40af; }
+.icon-purple { background: #faf5ff; color: #7c3aed; }
+.icon-green { background: #f0fdf4; color: #16a34a; }
+.ws-card-head h2 { font-size: .95rem; font-weight: 700; color: #1e293b; margin: 0; }
+.ws-card-body { padding: 1.4rem; }
+
+/* ── Company info ── */
+.company-info-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 1.25rem;
+}
+.info-block {}
+.info-label { font-size: .72rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .05em; color: #94a3b8; margin-bottom: .35rem; }
+.info-value { font-size: .88rem; color: #1e293b; line-height: 1.6; }
+.info-value.empty { color: #cbd5e1; font-style: italic; }
+.info-about { grid-column: 1 / -1; }
+
+.setup-banner {
+    display: flex; align-items: flex-start; gap: 1rem;
+    background: #fffbeb; border: 1.5px solid #fde68a;
+    border-radius: 10px; padding: 1rem 1.25rem; margin-bottom: 1.25rem;
+}
+.setup-banner-icon { font-size: 1.25rem; flex-shrink: 0; line-height: 1; }
+.setup-banner p { font-size: .87rem; color: #92400e; margin: 0; line-height: 1.55; }
+.setup-banner strong { font-weight: 700; }
+
+/* ── Services grid ── */
+.services-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.1rem;
+}
+.service-card {
+    border: 1.5px solid #e5e7eb; border-radius: 12px;
+    padding: 1.25rem; transition: border-color .15s, box-shadow .15s;
+    display: flex; flex-direction: column; gap: .75rem;
+}
+.service-card:hover { border-color: #93c5fd; box-shadow: 0 4px 14px rgba(30,64,175,.08); }
+
+.service-card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: .5rem; }
+.service-name { font-size: .97rem; font-weight: 700; color: #1e293b; margin: 0; }
+.service-type-badge {
+    font-size: .68rem; font-weight: 700; padding: .2rem .6rem;
+    border-radius: 20px; white-space: nowrap; flex-shrink: 0;
+}
+.badge-service { background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; }
+.badge-product { background: #faf5ff; color: #7c3aed; border: 1px solid #ddd6fe; }
+
+.service-description {
+    font-size: .83rem; color: #64748b; line-height: 1.6; margin: 0;
+    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+    overflow: hidden; flex: 1;
+}
+
+.service-card-actions { display: flex; gap: .5rem; flex-wrap: wrap; margin-top: auto; }
+
+.btn-generate {
+    display: inline-flex; align-items: center; gap: .35rem;
+    padding: .48rem 1rem; border-radius: 8px;
+    background: linear-gradient(135deg, #0f172a, #1e40af);
+    color: white; font-size: .8rem; font-weight: 700;
+    text-decoration: none; transition: opacity .15s; flex: 1;
+    justify-content: center;
+}
+.btn-generate:hover { opacity: .88; color: white; }
+.btn-edit-sm {
+    display: inline-flex; align-items: center; gap: .3rem;
+    padding: .45rem .8rem; border-radius: 8px;
+    background: white; color: #374151;
+    border: 1.5px solid #d1d5db;
+    font-size: .78rem; font-weight: 600;
+    text-decoration: none; transition: border-color .15s;
+}
+.btn-edit-sm:hover { border-color: #1e40af; color: #1e40af; }
+.btn-delete-sm {
+    display: inline-flex; align-items: center;
+    padding: .45rem .7rem; border-radius: 8px;
+    background: white; color: #dc2626;
+    border: 1.5px solid #fca5a5;
+    font-size: .78rem; font-weight: 600;
+    cursor: pointer; transition: background .15s;
+}
+.btn-delete-sm:hover { background: #fef2f2; }
+
+.add-service-card {
+    border: 2px dashed #d1d5db; border-radius: 12px;
+    padding: 1.5rem; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: .6rem;
+    text-decoration: none; color: #6b7280; transition: border-color .18s, color .18s;
+    min-height: 160px; text-align: center;
+}
+.add-service-card:hover { border-color: #1e40af; color: #1e40af; }
+.add-service-card span { font-size: .88rem; font-weight: 600; }
+
+/* ── Recent jobs ── */
+.job-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: .8rem 1rem; border: 1px solid #e8edf3; border-radius: 9px;
+    margin-bottom: .6rem; flex-wrap: wrap; gap: .5rem;
+    transition: border-color .15s;
+}
+.job-row:last-child { margin-bottom: 0; }
+.job-row:hover { border-color: #93c5fd; }
+.job-format { font-size: .85rem; font-weight: 600; color: #1e293b; }
+.job-company { font-size: .76rem; color: #6b7280; margin-left: .45rem; }
+.job-right { display: flex; align-items: center; gap: .7rem; }
+.job-score {
+    font-size: .76rem; font-weight: 700; padding: .18rem .55rem;
+    border-radius: 6px; white-space: nowrap;
+}
+.score-hi  { background: #f0fdf4; color: #166534; }
+.score-mid { background: #fefce8; color: #854d0e; }
+.score-lo  { background: #fef2f2; color: #dc2626; }
+.job-time { font-size: .74rem; color: #94a3b8; }
+.job-link { font-size: .78rem; font-weight: 600; color: #1e40af; text-decoration: none; }
+.job-link:hover { text-decoration: underline; }
+
+/* ── Empty state ── */
+.empty-services {
+    text-align: center; padding: 2.5rem 1.5rem;
+    color: #94a3b8;
+}
+.empty-services p { font-size: .9rem; margin: 0 0 1.25rem; }
+
+@media (max-width: 768px) {
+    .ws-hero-inner { flex-direction: column; align-items: flex-start; }
+    .company-info-grid { grid-template-columns: 1fr; }
+    .info-about { grid-column: 1; }
+    .services-grid { grid-template-columns: 1fr; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="ws-page">
+
+    <!-- ── Hero ── -->
+    <div class="ws-hero">
+        <div class="container">
+            <div class="ws-hero-inner">
+                <div class="ws-hero-left">
+                    <h1>{{ profile.name }}</h1>
+                    <p>Your content workspace — manage your company info and generate AI content</p>
+                </div>
+                <div class="ws-hero-actions">
+                    <a href="{% url 'content_generator:workspace_profile_edit' %}" class="ws-btn-light">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                        Edit Company Info
+                    </a>
+                    <a href="{% url 'content_generator:form' %}?profile={{ profile.pk }}" class="ws-btn-primary">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                        Generate for Whole Company
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="ws-body">
+
+        <!-- ── Company Info Card ── -->
+        <div class="ws-card">
+            <div class="ws-card-head">
+                <div class="ws-card-head-left">
+                    <div class="ws-head-icon icon-blue"><i class="fas fa-building"></i></div>
+                    <h2>Company Information</h2>
+                </div>
+                <a href="{% url 'content_generator:workspace_profile_edit' %}" class="btn-edit-sm">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    Edit
+                </a>
+            </div>
+            <div class="ws-card-body">
+
+                {% if not profile.about %}
+                <div class="setup-banner">
+                    <div class="setup-banner-icon">⚠️</div>
+                    <p>
+                        <strong>Complete your company profile</strong> — the AI agents need your mission, values,
+                        and brand voice to generate accurate, on-brand content.
+                        <a href="{% url 'content_generator:workspace_profile_edit' %}" style="color:#1e40af;font-weight:600;">Add company info →</a>
+                    </p>
+                </div>
+                {% endif %}
+
+                <div class="company-info-grid">
+                    <div class="info-block info-about">
+                        <p class="info-label">About / Mission / Values</p>
+                        {% if profile.about %}
+                            <p class="info-value">{{ profile.about|truncatewords:60 }}</p>
+                        {% else %}
+                            <p class="info-value empty">Not filled in yet — click Edit to add your company description.</p>
+                        {% endif %}
+                    </div>
+                    <div class="info-block">
+                        <p class="info-label">Target Audience</p>
+                        <p class="info-value {% if not profile.target_audience %}empty{% endif %}">
+                            {{ profile.target_audience|default:"Not specified" }}
+                        </p>
+                    </div>
+                    <div class="info-block">
+                        <p class="info-label">Tone of Voice</p>
+                        <p class="info-value {% if not profile.tone_of_voice %}empty{% endif %}">
+                            {{ profile.tone_of_voice|default:"Not specified" }}
+                        </p>
+                    </div>
+                    {% if profile.competitor_info %}
+                    <div class="info-block" style="grid-column:1/-1;">
+                        <p class="info-label">Competitor Notes</p>
+                        <p class="info-value">{{ profile.competitor_info|truncatewords:30 }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- ── Company Documents Card ── -->
+        <div class="ws-card">
+            <div class="ws-card-head">
+                <div class="ws-card-head-left">
+                    <div class="ws-head-icon icon-blue"><i class="fas fa-file-alt"></i></div>
+                    <h2>Company Documents</h2>
+                </div>
+                <span style="font-size:.78rem;color:#6b7280;">PDF, DOCX, TXT — used by AI agents for content generation</span>
+            </div>
+            <div class="ws-card-body">
+
+                <!-- Upload form -->
+                <form method="post" action="{% url 'content_generator:document_upload' %}"
+                      enctype="multipart/form-data"
+                      style="display:flex;gap:.75rem;align-items:flex-end;flex-wrap:wrap;margin-bottom:1.25rem;">
+                    {% csrf_token %}
+                    <div style="flex:1;min-width:180px;">
+                        <label style="font-size:.76rem;font-weight:600;color:#374151;display:block;margin-bottom:.3rem;">Document Title (optional)</label>
+                        <input type="text" name="title" maxlength="200"
+                               placeholder="e.g. Company Brochure"
+                               style="width:100%;border:1px solid #d1d5db;border-radius:8px;padding:.5rem .75rem;font-size:.85rem;">
+                    </div>
+                    <div style="flex:2;min-width:220px;">
+                        <label style="font-size:.76rem;font-weight:600;color:#374151;display:block;margin-bottom:.3rem;">File *</label>
+                        <input type="file" name="file" accept=".pdf,.docx,.doc,.txt,.md"
+                               required
+                               style="width:100%;border:1px solid #d1d5db;border-radius:8px;padding:.45rem .75rem;font-size:.83rem;background:white;">
+                    </div>
+                    <button type="submit"
+                            style="padding:.55rem 1.2rem;background:linear-gradient(135deg,#0f172a,#1e40af);
+                                   color:white;border:none;border-radius:8px;font-size:.83rem;font-weight:700;
+                                   cursor:pointer;white-space:nowrap;">
+                        <i class="fas fa-upload" style="margin-right:.35rem;"></i>Upload
+                    </button>
+                </form>
+
+                <!-- Uploaded files list -->
+                {% if documents %}
+                <div style="display:flex;flex-direction:column;gap:.5rem;">
+                    {% for doc in documents %}
+                    <div style="display:flex;justify-content:space-between;align-items:center;
+                                padding:.75rem 1rem;border:1px solid #e5e7eb;border-radius:9px;
+                                background:#fafafa;flex-wrap:wrap;gap:.5rem;">
+                        <div style="display:flex;align-items:center;gap:.65rem;">
+                            <div style="width:30px;height:30px;border-radius:7px;background:#eff6ff;
+                                        display:flex;align-items:center;justify-content:center;color:#1e40af;font-size:.8rem;">
+                                <i class="fas fa-file-alt"></i>
+                            </div>
+                            <div>
+                                <p style="font-size:.85rem;font-weight:600;color:#1e293b;margin:0;">{{ doc.title|default:doc.filename }}</p>
+                                <p style="font-size:.72rem;color:#94a3b8;margin:0;">{{ doc.uploaded_at|date:"M d, Y" }}</p>
+                            </div>
+                        </div>
+                        <div style="display:flex;gap:.5rem;align-items:center;">
+                            <a href="{{ doc.file.url }}" target="_blank"
+                               style="font-size:.78rem;font-weight:600;color:#1e40af;text-decoration:none;">
+                                <i class="fas fa-download"></i> Download
+                            </a>
+                            <form method="post" action="{% url 'content_generator:document_delete' doc.pk %}"
+                                  onsubmit="return confirm('Delete this document?')" style="display:inline;">
+                                {% csrf_token %}
+                                <button type="submit"
+                                        style="background:none;border:none;color:#dc2626;font-size:.78rem;
+                                               font-weight:600;cursor:pointer;padding:0;">
+                                    <i class="fas fa-trash-alt"></i> Remove
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div style="text-align:center;padding:1.5rem;background:#f8fafc;border-radius:9px;
+                            border:2px dashed #e2e8f0;color:#94a3b8;font-size:.87rem;">
+                    No documents uploaded yet. Upload your company brochure, pitch deck, or brand guide so the AI agents can use your actual content.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- ── Services / Products Card ── -->
+        <div class="ws-card">
+            <div class="ws-card-head">
+                <div class="ws-card-head-left">
+                    <div class="ws-head-icon icon-purple"><i class="fas fa-boxes"></i></div>
+                    <h2>Services &amp; Products</h2>
+                </div>
+                <a href="{% url 'content_generator:service_create' %}" class="ws-btn-primary" style="font-size:.8rem;padding:.45rem 1rem;">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    Add Service / Product
+                </a>
+            </div>
+            <div class="ws-card-body">
+                {% if services %}
+                <div class="services-grid">
+                    {% for svc in services %}
+                    <div class="service-card">
+                        {% if svc.image %}
+                        <img src="{{ svc.image.url }}" alt="{{ svc.name }}"
+                             style="width:100%;height:140px;object-fit:cover;border-radius:8px;margin-bottom:.1rem;">
+                        {% endif %}
+                        <div class="service-card-top">
+                            <h3 class="service-name">{{ svc.name }}</h3>
+                            <span class="service-type-badge {% if svc.item_type == 'service' %}badge-service{% else %}badge-product{% endif %}">
+                                {{ svc.get_item_type_display }}
+                            </span>
+                        </div>
+                        <p class="service-description">{{ svc.description }}</p>
+                        {% if svc.document or svc.video_url %}
+                        <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
+                            {% if svc.document %}
+                            <a href="{{ svc.document.url }}" target="_blank"
+                               style="display:inline-flex;align-items:center;gap:.3rem;font-size:.73rem;
+                                      font-weight:600;color:#1e40af;background:#eff6ff;
+                                      padding:.2rem .6rem;border-radius:6px;text-decoration:none;">
+                                <i class="fas fa-file-alt"></i> Document
+                            </a>
+                            {% endif %}
+                            {% if svc.video_url %}
+                            <a href="{{ svc.video_url }}" target="_blank"
+                               style="display:inline-flex;align-items:center;gap:.3rem;font-size:.73rem;
+                                      font-weight:600;color:#dc2626;background:#fef2f2;
+                                      padding:.2rem .6rem;border-radius:6px;text-decoration:none;">
+                                <i class="fab fa-youtube"></i> Video
+                            </a>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                        <div class="service-card-actions">
+                            <a href="{% url 'content_generator:form' %}?profile={{ profile.pk }}&service={{ svc.pk }}"
+                               class="btn-generate">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                                Generate Content
+                            </a>
+                            <a href="{% url 'content_generator:service_edit' svc.pk %}" class="btn-edit-sm">
+                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                Edit
+                            </a>
+                            <form method="post" action="{% url 'content_generator:service_delete' svc.pk %}"
+                                  style="display:inline;"
+                                  onsubmit="return confirm('Delete {{ svc.name|escapejs }}?')">
+                                {% csrf_token %}
+                                <button type="submit" class="btn-delete-sm" title="Delete">
+                                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M9 6V4h6v2"/></svg>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                    {% endfor %}
+
+                    <a href="{% url 'content_generator:service_create' %}" class="add-service-card">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+                        <span>Add Another</span>
+                    </a>
+                </div>
+                {% else %}
+                <div class="empty-services">
+                    <p>No services or products yet. Add one to start generating targeted content.</p>
+                    <a href="{% url 'content_generator:service_create' %}" class="btn-generate" style="display:inline-flex;width:auto;">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        Add Your First Service / Product
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- ── Recent Jobs Card ── -->
+        {% if recent_jobs %}
+        <div class="ws-card">
+            <div class="ws-card-head">
+                <div class="ws-card-head-left">
+                    <div class="ws-head-icon icon-green"><i class="fas fa-history"></i></div>
+                    <h2>Recent Generated Content</h2>
+                </div>
+                <a href="{% url 'content_generator:history' %}" style="font-size:.8rem;font-weight:600;color:#1e40af;text-decoration:none;">
+                    View all history →
+                </a>
+            </div>
+            <div class="ws-card-body">
+                {% for job in recent_jobs %}
+                <div class="job-row">
+                    <div>
+                        <span class="job-format">{{ job.get_content_format_display }}</span>
+                        <span class="job-company">
+                            {% if job.service %}{{ job.service.name }}{% else %}{{ job.company_name }}{% endif %}
+                        </span>
+                    </div>
+                    <div class="job-right">
+                        {% if job.overall_score %}
+                        <span class="job-score {% if job.overall_score >= 75 %}score-hi{% elif job.overall_score >= 50 %}score-mid{% else %}score-lo{% endif %}">
+                            {{ job.overall_score }}/100
+                        </span>
+                        {% endif %}
+                        <span class="job-time">{{ job.created_at|timesince }} ago</span>
+                        <a href="{% url 'content_generator:group_result' job.job_group_id %}" class="job-link">View →</a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+    </div><!-- /ws-body -->
+</div><!-- /ws-page -->
+{% endblock %}

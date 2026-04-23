@@ -43,6 +43,12 @@ catboost_info/
 *.pth
 *.pkl
 *.joblib
+
+# Runtime data (ChromaDB, datasets) — generated at runtime, not source
+data/
+
+# Archives
+personalportfolio.zip
 profile_pics/
 projects/images/
 projects/rag_documents/
@@ -51,3 +57,6 @@ rag_system/documents/
 
 # Jupyter
 .ipynb_checkpoints/
+
+# Local test credentials — never commit
+DUMMY_USERS.md

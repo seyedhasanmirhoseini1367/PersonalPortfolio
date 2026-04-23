@@ -14,12 +14,23 @@ User = get_user_model()
 
 
 class CustomUserCreationForm(UserCreationForm):
+    ACCOUNT_TYPE_CHOICES = [
+        ('user',   'Regular User — read stories, join discussions'),
+        ('client', 'Client Account — access AI Content Generator'),
+    ]
+
     email = forms.EmailField(
         required=True,
         widget=forms.EmailInput(attrs={
             'class': 'form-control',
-            'placeholder': 'Enter your email address'
+            'placeholder': 'Enter your email address',
         })
+    )
+    account_type = forms.ChoiceField(
+        choices=ACCOUNT_TYPE_CHOICES,
+        initial='user',
+        widget=forms.RadioSelect(attrs={'class': 'account-type-radio'}),
+        label='Account Type',
     )
 
     class Meta:
@@ -28,17 +39,25 @@ class CustomUserCreationForm(UserCreationForm):
         widgets = {
             'username': forms.TextInput(attrs={
                 'class': 'form-control',
-                'placeholder': 'Choose a username'
+                'placeholder': 'Choose a username',
             }),
             'first_name': forms.TextInput(attrs={
                 'class': 'form-control',
-                'placeholder': 'Enter your first name'
+                'placeholder': 'Enter your first name',
             }),
             'last_name': forms.TextInput(attrs={
                 'class': 'form-control',
-                'placeholder': 'Enter your last name'
+                'placeholder': 'Enter your last name',
             }),
         }
+
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        if self.cleaned_data.get('account_type') == 'client':
+            user.is_client = True
+        if commit:
+            user.save()
+        return user
 
 
 # In your forms.py

@@ -17,18 +17,24 @@ logger = logging.getLogger(__name__)
 _CV_KEYWORDS = {
     "who is hasan", "about you", "about hasan", "tell me about",
     "experience", "background", "education", "worked at", "career",
-    "skills", "what do you do", "resume", "cv",
+    "skills", "what do you do", "resume", "cv", "certification",
+    "language", "degree", "university", "master", "bachelor",
+    # Portfolio / project highlights are stored in the resume document
+    "rag", "langchain", "langgraph", "chromadb", "groq", "gemini",
+    "healthcompass", "casvuai", "hasanai", "multi-agent", "multiagent",
+    "what has he", "what projects", "which projects", "portfolio",
 }
 _THESIS_KEYWORDS = {
     "thesis", "seizure", "eeg", "epilepsy", "epileptic", "brain signal",
-    "neural", "edf", "detection", "classification",
+    "edf", "detection", "classification", "cnn", "lstm", "transformer",
+    "stft", "signal processing",
 }
 _ML_KEYWORDS = {
     "irrigation", "predict", "model demo", "prediction", "forecast",
-    "machine learning", "ml model", "run model",
+    "ml model", "run model", "introvert", "extrovert", "personality",
 }
 _PROJECT_KEYWORDS = {
-    "project", "portfolio", "work", "built", "created", "developed",
+    "built", "created", "developed", "implemented",
     "kaggle", "competition", "github",
 }
 
@@ -70,11 +76,11 @@ def _retrieval_service():
 
 
 def cv_node(state: AgentState) -> Dict[str, Any]:
-    """Retrieve from resume and skill document types."""
+    """Retrieve from resume, skill, and project text (highlights are in resume)."""
     retrieval = _retrieval_service()
     chunks = retrieval.hybrid_retrieve(
         query=state["question"],
-        document_types=["resume", "skill"],
+        document_types=["resume", "skill", "project"],
     )
     logger.debug("cv_node: retrieved %d chunks", len(chunks))
     return {"context_chunks": chunks}
@@ -121,11 +127,11 @@ def ml_model_node(state: AgentState) -> Dict[str, Any]:
 
 
 def projects_node(state: AgentState) -> Dict[str, Any]:
-    """Retrieve project and portfolio content."""
+    """Retrieve project and portfolio content, including resume highlights."""
     retrieval = _retrieval_service()
     chunks = retrieval.hybrid_retrieve(
         query=state["question"],
-        document_types=["project", "project_documentation"],
+        document_types=["project", "project_documentation", "resume"],
     )
     logger.debug("projects_node: retrieved %d chunks", len(chunks))
     return {"context_chunks": chunks}

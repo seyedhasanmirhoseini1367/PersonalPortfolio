@@ -1,0 +1,200 @@
+{% extends 'base.html' %}
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.sf-hero {
+    background: linear-gradient(135deg, #0f172a, #1e40af);
+    color: white; padding: 2rem 0; border-radius: 0 0 24px 24px;
+    margin-bottom: 2rem;
+}
+.sf-hero-inner {
+    display: flex; justify-content: space-between;
+    align-items: center; flex-wrap: wrap; gap: 1rem;
+}
+.sf-hero h1 { font-size: 1.5rem; font-weight: 700; margin: 0 0 .2rem; }
+.sf-hero p  { font-size: .88rem; opacity: .8; margin: 0; }
+.back-btn {
+    display: inline-flex; align-items: center; gap: .4rem;
+    padding: .45rem 1rem; border-radius: 8px;
+    background: rgba(255,255,255,.15); border: 1px solid rgba(255,255,255,.3);
+    color: white; font-size: .82rem; font-weight: 600;
+    text-decoration: none; transition: background .15s;
+}
+.back-btn:hover { background: rgba(255,255,255,.25); color: white; }
+
+.sf-card {
+    background: white; border-radius: 14px;
+    box-shadow: 0 4px 20px rgba(0,0,0,.07);
+    padding: 2rem; max-width: 680px; margin: 0 auto;
+}
+.form-section { margin-bottom: 1.5rem; }
+.form-section h3 {
+    font-size: .75rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .07em; color: #1e40af;
+    border-bottom: 2px solid #dbeafe; padding-bottom: .3rem;
+    margin-bottom: 1rem;
+}
+.form-group { display: flex; flex-direction: column; gap: .3rem; margin-bottom: 1rem; }
+.form-group:last-child { margin-bottom: 0; }
+.form-group label { font-size: .82rem; font-weight: 600; color: #374151; }
+.form-group input, .form-group select, .form-group textarea {
+    border: 1px solid #d1d5db; border-radius: 8px;
+    padding: .6rem .85rem; font-size: .88rem; transition: border-color .15s;
+}
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+    outline: none; border-color: #1e40af; box-shadow: 0 0 0 3px rgba(30,64,175,.1);
+}
+.form-group textarea { resize: vertical; }
+.form-hint { font-size: .74rem; color: #6b7280; margin-top: .2rem; line-height: 1.5; }
+
+.type-selector { display: flex; gap: .75rem; }
+.type-option {
+    flex: 1; display: flex; align-items: center; gap: .6rem;
+    border: 1.5px solid #e5e7eb; border-radius: 9px;
+    padding: .75rem 1rem; cursor: pointer; transition: border-color .15s, background .15s;
+    font-size: .87rem; font-weight: 600; color: #374151;
+    user-select: none;
+}
+.type-option:has(input:checked) { border-color: #1e40af; background: #eff6ff; color: #1e40af; }
+.type-option input { accent-color: #1e40af; width: 15px; height: 15px; }
+
+.error-banner {
+    background: #fef2f2; border: 1.5px solid #fca5a5; color: #dc2626;
+    border-radius: 9px; padding: .75rem 1rem; font-size: .85rem;
+    margin-bottom: 1.25rem; display: flex; align-items: center; gap: .5rem;
+}
+
+.save-btn {
+    width: 100%; padding: .9rem;
+    background: linear-gradient(135deg, #0f172a, #1e40af);
+    color: white; border: none; border-radius: 10px;
+    font-size: 1rem; font-weight: 700; cursor: pointer;
+    transition: opacity .15s; margin-top: .25rem;
+}
+.save-btn:hover { opacity: .9; }
+.cancel-link {
+    display: block; text-align: center; margin-top: .9rem;
+    font-size: .84rem; color: #6b7280; text-decoration: none;
+}
+.cancel-link:hover { color: #1e40af; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="sf-hero">
+    <div class="container">
+        <div class="sf-hero-inner">
+            <div>
+                <h1>{{ page_title }}</h1>
+                <p>{% if is_edit %}Update the details below{% else %}Describe what you offer so the AI can generate targeted content{% endif %}</p>
+            </div>
+            <a href="{% url 'content_generator:workspace' %}" class="back-btn">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+                Back to Workspace
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+<div class="sf-card">
+
+    {% if error %}
+    <div class="error-banner">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        {{ error }}
+    </div>
+    {% endif %}
+
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+
+        <div class="form-section">
+            <h3>Type</h3>
+            <div class="form-group">
+                <div class="type-selector">
+                    <label class="type-option">
+                        <input type="radio" name="item_type" value="service"
+                               {% if prefill.item_type != 'product' %}checked{% endif %}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                        Service
+                    </label>
+                    <label class="type-option">
+                        <input type="radio" name="item_type" value="product"
+                               {% if prefill.item_type == 'product' %}checked{% endif %}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+                        Product
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h3>Details</h3>
+            <div class="form-group">
+                <label>Name *</label>
+                <input type="text" name="name" required maxlength="200"
+                       value="{{ prefill.name }}"
+                       placeholder="e.g. AI-Powered HR Onboarding">
+                <span class="form-hint">This name will be pre-filled as a keyword when you generate content.</span>
+            </div>
+            <div class="form-group">
+                <label>Description *</label>
+                <textarea name="description" rows="7" required
+                    placeholder="Describe this service or product in detail — what it does, who it's for, key benefits, pricing if relevant, differentiators vs competitors… The more detail you add here, the more targeted the generated content will be.">{{ prefill.description }}</textarea>
+                <span class="form-hint">Used directly by the Content Writer agent to generate targeted copy for this specific offering.</span>
+            </div>
+        </div>
+
+        <!-- ── Media ── -->
+        <div class="form-section">
+            <h3>Media &amp; Files <span style="font-weight:400;text-transform:none;font-size:.8rem;color:#9ca3af;">(optional)</span></h3>
+
+            <div class="form-group">
+                <label>Featured Image</label>
+                {% if service.image %}
+                <div style="margin-bottom:.6rem;">
+                    <img src="{{ service.image.url }}" alt="Current image"
+                         style="max-height:120px;border-radius:8px;object-fit:cover;border:1px solid #e5e7eb;">
+                    <p style="font-size:.72rem;color:#6b7280;margin:.35rem 0 0;">Current image — upload a new one to replace it.</p>
+                </div>
+                {% endif %}
+                <input type="file" name="image" accept="image/*">
+                <span class="form-hint">JPG, PNG, or WebP. Displayed on your service card in the workspace.</span>
+            </div>
+
+            <div class="form-group">
+                <label>Document</label>
+                {% if service.document %}
+                <div style="margin-bottom:.6rem;display:flex;align-items:center;gap:.6rem;
+                            background:#eff6ff;border-radius:8px;padding:.5rem .75rem;">
+                    <i class="fas fa-file-alt" style="color:#1e40af;"></i>
+                    <a href="{{ service.document.url }}" target="_blank"
+                       style="font-size:.82rem;font-weight:600;color:#1e40af;text-decoration:none;">
+                        Current document — click to view
+                    </a>
+                    <span style="font-size:.72rem;color:#6b7280;margin-left:.25rem;">Upload a new file to replace it.</span>
+                </div>
+                {% endif %}
+                <input type="file" name="document" accept=".pdf,.docx,.doc,.txt,.md">
+                <span class="form-hint">PDF, DOCX, or TXT — spec sheet, brochure, or product details. Used by the AI agents.</span>
+            </div>
+
+            <div class="form-group">
+                <label>Video URL</label>
+                <input type="url" name="video_url"
+                       value="{{ prefill.video_url|default:'' }}"
+                       placeholder="https://www.youtube.com/watch?v=...">
+                <span class="form-hint">YouTube or Vimeo link for a demo or explainer video.</span>
+            </div>
+        </div>
+
+        <button type="submit" class="save-btn">
+            {% if is_edit %}Save Changes{% else %}Add to Workspace{% endif %} →
+        </button>
+    </form>
+    <a href="{% url 'content_generator:workspace' %}" class="cancel-link">Cancel</a>
+</div>
+</div>
+{% endblock %}

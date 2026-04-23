@@ -4,6 +4,43 @@ Copy-paste the JSON below into the project's `file_input_config` field in Django
 
 ---
 
+## Customer Churn Prediction
+
+```json
+{
+  "handler": "customer_churn_predictor",
+  "accepted_formats": ["csv"],
+  "description": "Upload a CSV with one row of customer data to predict churn. Required columns: gender, SeniorCitizen, Partner, Dependents, tenure, PhoneService, MultipleLines, InternetService, OnlineSecurity, OnlineBackup, DeviceProtection, TechSupport, StreamingTV, StreamingMovies, Contract, PaperlessBilling, PaymentMethod, MonthlyCharges, TotalCharges."
+}
+```
+
+**Artifacts required alongside the model file** (same directory, same base name):
+- `<base>_encoders.pkl` — dict of LabelEncoders per categorical column
+- `<base>_target_encoder.pkl` — LabelEncoder for target (No / Yes)
+- `<base>_feature_names.pkl` — ordered list of feature column names
+
+---
+
+## Predicting Irrigation Need (CatBoost — Kaggle)
+
+```json
+{
+  "handler": "irrigation_predictor",
+  "accepted_formats": ["csv"],
+  "description": "Upload a CSV with one row of field and weather measurements. Required columns: Soil_Type, Soil_pH, Soil_Moisture, Organic_Carbon, Electrical_Conductivity, Temperature_C, Humidity, Rainfall_mm, Sunlight_Hours, Wind_Speed_kmh, Crop_Type, Crop_Growth_Stage, Season, Irrigation_Type, Water_Source, Field_Area_hectare, Mulching_Used, Previous_Irrigation_mm, Region."
+}
+```
+
+**Artifacts required alongside the model file** (same directory, same base name):
+- `<base>_target_encoder.pkl` — LabelEncoder for the target (High / Low / Medium)
+- `<base>_label_encoders.pkl` — empty dict `{}` (CatBoost handles categoricals natively)
+- `<base>_feature_names.pkl` — ordered list of 19 feature column names
+- `<base>_categorical_features.pkl` — list of categorical column names
+
+All five files are in `d:/ml_project/irrigation_artifacts/` — upload them as a group.
+
+---
+
 ## Seizure EEG Detection (thesis)
 
 ```json

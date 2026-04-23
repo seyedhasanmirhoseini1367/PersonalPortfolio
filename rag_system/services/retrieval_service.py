@@ -4,79 +4,75 @@ from sklearn.metrics.pairwise import cosine_similarity
 from typing import List, Dict, Any, Optional
 from .embedding_service import EmbeddingService
 
+# Minimum cosine similarity to include a chunk in results.
+_SIMILARITY_THRESHOLD = 0.10
+
 
 class RetrievalService:
     def __init__(self):
         self.embedding_service = EmbeddingService()
-        self.top_k = 5  # Number of chunks to retrieve
+        self.top_k = 5
 
     def retrieve(self, query: str, document_type: Optional[str] = None) -> List[Dict[str, Any]]:
-        """Retrieve most relevant chunks for a query"""
+        """Return the top-k most relevant chunks for a query, deduplicated by document."""
         try:
-            # Generate query embedding
             query_embedding = self.embedding_service.generate_embedding(query).reshape(1, -1)
 
-            # Load embeddings
             if document_type:
                 texts, embeddings, metadata = self.embedding_service.load_embeddings_from_file(document_type)
-                # If file loading fails or returns empty, try database
                 if len(embeddings) == 0:
                     texts, embeddings, metadata = self.embedding_service.load_embeddings(document_type)
             else:
                 texts, embeddings, metadata = self.embedding_service.load_embeddings()
 
-            print(f"Retrieval: Found {len(embeddings)} embeddings for query: {query}")
-
             if len(embeddings) == 0:
                 return []
 
-            # Calculate similarities
             similarities = cosine_similarity(query_embedding, embeddings)[0]
-
-            # Get top k results
             top_indices = np.argsort(similarities)[-self.top_k:][::-1]
 
+            # Keep one chunk per document (highest score wins) to prevent a
+            # large PDF from monopolising all top-k slots.
+            seen_docs: set = set()
             results = []
             for idx in top_indices:
-                if similarities[idx] > 0.1:  # Similarity threshold
-                    results.append({
-                        'content': texts[idx],
-                        'similarity': float(similarities[idx]),
-                        'metadata': metadata[idx]
-                    })
+                if similarities[idx] < _SIMILARITY_THRESHOLD:
+                    continue
+                doc_id = metadata[idx].get('document_id', '')
+                if doc_id in seen_docs:
+                    continue
+                seen_docs.add(doc_id)
+                results.append({
+                    'content':    texts[idx],
+                    'similarity': float(similarities[idx]),
+                    'metadata':   metadata[idx],
+                })
 
-            print(f"Retrieval: Returning {len(results)} results")
             return results
 
-        except Exception as e:
-            print(f"Error in retrieval: {e}")
+        except Exception as exc:
+            print(f"Retrieval error: {exc}")
             return []
 
     def hybrid_retrieve(self, query: str, document_types: Optional[List[str]] = None) -> List[Dict[str, Any]]:
-        """Retrieve from multiple document types and merge results"""
-        all_results = []
-
+        """Search across all document types, merge, and return the top-k unique documents."""
         if document_types is None:
             document_types = ['project', 'resume', 'blog', 'skill', 'project_documentation']
 
-        print(f"Hybrid retrieval for query: {query}, types: {document_types}")
-
+        all_results = []
         for doc_type in document_types:
-            results = self.retrieve(query, doc_type)
-            all_results.extend(results)
+            all_results.extend(self.retrieve(query, doc_type))
 
-        # Sort by similarity and remove duplicates
+        # Sort by score descending
         all_results.sort(key=lambda x: x['similarity'], reverse=True)
 
-        # Remove duplicates based on content
-        seen_content = set()
+        # Final dedup: one chunk per document across all types
+        seen_docs: set = set()
         unique_results = []
         for result in all_results:
-            content_hash = hash(result['content'][:100])  # Hash first 100 chars
-            if content_hash not in seen_content:
-                seen_content.add(content_hash)
+            doc_id = result['metadata'].get('document_id', '')
+            if doc_id not in seen_docs:
+                seen_docs.add(doc_id)
                 unique_results.append(result)
 
-        final_results = unique_results[:self.top_k]
-        print(f"Hybrid retrieval: Returning {len(final_results)} final results")
-        return final_results
+        return unique_results[:self.top_k]

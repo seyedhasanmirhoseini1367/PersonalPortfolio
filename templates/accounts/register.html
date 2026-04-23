@@ -36,6 +36,25 @@
                                 <span>Build your portfolio</span>
                             </div>
                         </div>
+
+                        <div style="margin-top:2rem;padding-top:1.5rem;border-top:1px solid rgba(255,255,255,.15);">
+                            <p style="font-size:.8rem;font-weight:700;text-transform:uppercase;
+                                      letter-spacing:.08em;opacity:.7;margin-bottom:.75rem;">
+                                Client accounts also get
+                            </p>
+                            <div class="feature-item" style="margin-bottom:.6rem;">
+                                <i class="fas fa-robot" style="color:#a78bfa;"></i>
+                                <span>AI Content Generator</span>
+                            </div>
+                            <div class="feature-item" style="margin-bottom:.6rem;">
+                                <i class="fas fa-chart-line" style="color:#a78bfa;"></i>
+                                <span>4-Judge evaluation scores</span>
+                            </div>
+                            <div class="feature-item">
+                                <i class="fas fa-language" style="color:#a78bfa;"></i>
+                                <span>EN + FI multilingual output</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -150,6 +169,41 @@
                                         </div>
                                     {% endif %}
                                 </div>
+                            </div>
+
+                            <!-- Account type -->
+                            <div class="account-type-section">
+                                <p class="account-type-label">
+                                    <i class="fas fa-id-badge me-2"></i>Account Type
+                                </p>
+                                <div class="account-type-options">
+                                    <label class="account-type-card" id="card-user">
+                                        <input type="radio" name="account_type" value="user" checked
+                                               onchange="onTypeChange(this)">
+                                        <div class="account-type-body">
+                                            <span class="account-type-icon">👤</span>
+                                            <div>
+                                                <div class="account-type-title">Regular User</div>
+                                                <div class="account-type-desc">Read stories, join discussions, build your profile</div>
+                                            </div>
+                                        </div>
+                                    </label>
+                                    <label class="account-type-card" id="card-client">
+                                        <input type="radio" name="account_type" value="client"
+                                               onchange="onTypeChange(this)">
+                                        <div class="account-type-body">
+                                            <span class="account-type-icon">✦</span>
+                                            <div>
+                                                <div class="account-type-title">Client Account</div>
+                                                <div class="account-type-desc">Full access to the AI Content Generator platform</div>
+                                            </div>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="client-notice" id="clientNotice">
+                                ✦ You'll have immediate access to the <strong>AI Content Generator</strong> — brand-aligned content powered by 9 specialized AI agents.
                             </div>
 
                             <div class="form-checkbox">
@@ -551,5 +605,103 @@
                 font-size: 1.5rem;
             }
         }
+
+        /* ── Account Type Selector ── */
+        .account-type-section {
+            display: flex;
+            flex-direction: column;
+            gap: .6rem;
+        }
+        .account-type-label {
+            font-size: .875rem;
+            font-weight: 600;
+            color: #1e293b;
+            margin: 0;
+            display: flex;
+            align-items: center;
+        }
+        .account-type-options {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: .75rem;
+        }
+        .account-type-card {
+            cursor: pointer;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            padding: .9rem 1rem;
+            transition: border-color .2s, background .2s;
+            background: #f8fafc;
+        }
+        .account-type-card:hover {
+            border-color: #302b63;
+            background: #f1f0ff;
+        }
+        .account-type-card.selected {
+            border-color: #302b63;
+            background: #f0eeff;
+        }
+        .account-type-card input[type="radio"] {
+            display: none;
+        }
+        .account-type-body {
+            display: flex;
+            align-items: flex-start;
+            gap: .65rem;
+        }
+        .account-type-icon {
+            font-size: 1.4rem;
+            flex-shrink: 0;
+            margin-top: .05rem;
+        }
+        .account-type-title {
+            font-size: .88rem;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: .2rem;
+        }
+        .account-type-desc {
+            font-size: .76rem;
+            color: #64748b;
+            line-height: 1.4;
+        }
+        .account-type-card.selected .account-type-title { color: #302b63; }
+        .account-type-card.selected .account-type-desc  { color: #6d5aab; }
+
+        /* Client badge shown after selecting Client type */
+        .client-notice {
+            background: #eff6ff;
+            border: 1.5px solid #bfdbfe;
+            border-radius: 8px;
+            padding: .6rem 1rem;
+            font-size: .8rem;
+            color: #1e40af;
+            display: none;
+        }
+        .client-notice.show { display: block; }
+
+        @media (max-width: 480px) {
+            .account-type-options { grid-template-columns: 1fr; }
+        }
     </style>
+
+    <script>
+    function onTypeChange(radio) {
+        document.querySelectorAll('.account-type-card').forEach(function(c) {
+            c.classList.remove('selected');
+        });
+        if (radio.value === 'user') {
+            document.getElementById('card-user').classList.add('selected');
+        } else {
+            document.getElementById('card-client').classList.add('selected');
+        }
+        var notice = document.getElementById('clientNotice');
+        if (notice) notice.classList.toggle('show', radio.value === 'client');
+    }
+    // Mark default on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        var checked = document.querySelector('input[name="account_type"]:checked');
+        if (checked) onTypeChange(checked);
+    });
+    </script>
 {% endblock %}

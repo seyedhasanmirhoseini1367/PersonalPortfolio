@@ -161,7 +161,7 @@ class Command(BaseCommand):
         ) + (f', {len(failed_files)} failed' if failed_files else '')
 
         self.stdout.write(self.style.SUCCESS(
-            f'  ✔  {project.title}  (text fields | {file_summary})'
+            f'  [OK]  {project.title}  (text fields | {file_summary})'
         ))
 
     def _project_text(self, project) -> str:
@@ -203,7 +203,7 @@ class Command(BaseCommand):
         )
         self._embed_doc(doc, emb)
         emb.save_embeddings_to_file('resume')
-        self.stdout.write(self.style.SUCCESS('  ✔  Resume'))
+        self.stdout.write(self.style.SUCCESS('  [OK]  Resume'))
 
     def _build_resume_text(self) -> str:
         parts = []
@@ -228,9 +228,13 @@ class Command(BaseCommand):
                 )
             for e in Experience.objects.all():
                 yr = f"{e.start_date.year}–{e.end_date.year if e.end_date else 'present'}"
+                achievements = getattr(e, 'achievements', None) or []
+                bullet_text = ('\n' + '\n'.join(f'  - {a}' for a in achievements)) if achievements else ''
                 parts.append(
                     f"Experience: {e.position} at {e.company} ({yr})"
-                    + (f"\n{e.description}" if e.description else '')
+                    + (f" [{e.employment_type}]" if getattr(e, 'employment_type', None) else '')
+                    + (f" — {e.location}" if getattr(e, 'location', None) else '')
+                    + bullet_text
                 )
             by_cat = {}
             for sk in Skill.objects.all():
@@ -246,6 +250,18 @@ class Command(BaseCommand):
                 parts.append('Languages: ' + ', '.join(
                     f"{l.language} ({l.proficiency})" for l in langs
                 ))
+            from resume.models import ProjectHighlight
+            highlights = ProjectHighlight.objects.all()
+            if highlights.exists():
+                proj_lines = ['Selected Projects:']
+                for ph in highlights:
+                    tech = ', '.join(ph.technologies_used) if ph.technologies_used else ''
+                    proj_lines.append(
+                        f"  Project: {ph.title}"
+                        + (f"\n    Technologies: {tech}" if tech else '')
+                        + (f"\n    Description: {ph.description}" if ph.description else '')
+                    )
+                parts.append('\n'.join(proj_lines))
         except Exception as e:
             self.stdout.write(self.style.WARNING(f'  Resume models error: {e}'))
         return '\n\n'.join(parts)

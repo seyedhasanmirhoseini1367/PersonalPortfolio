@@ -491,6 +491,11 @@
                     <li><a href="{% url 'rag_system:chat' %}"
                            {% if request.resolver_match.url_name == 'chat' %}class="active"{% endif %}>AI Assistant</a></li>
 
+                    {% if user.is_staff or user.is_client %}
+                    <li><a href="{% url 'content_generator:form' %}"
+                           {% if request.resolver_match.app_name == 'content_generator' %}class="active"{% endif %}>Content Generator</a></li>
+                    {% endif %}
+
                     <li><a href="{% url 'resume:resume_page' %}"
                            {% if request.resolver_match.url_name == 'resume_page' %}class="active"{% endif %}>Resume</a></li>
 

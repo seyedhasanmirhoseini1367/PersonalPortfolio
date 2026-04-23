@@ -77,6 +77,97 @@
                 </div>
             </div>
 
+            <!-- Content Generator Section (clients only) -->
+            {% if cg_job_count is not None %}
+            <div class="content-section" style="margin-bottom:2rem;">
+                <div class="section-header">
+                    <div>
+                        <h2 class="section-title">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:.4rem;color:#1e40af;"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                            AI Content Generator
+                        </h2>
+                        <p class="section-description">Your content generation activity</p>
+                    </div>
+                    <a href="{% url 'content_generator:form' %}" class="view-all-link">
+                        Generate Content <i class="fas fa-arrow-right ms-1"></i>
+                    </a>
+                </div>
+
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1rem;margin-bottom:1.5rem;">
+                    <div style="background:#eff6ff;border-radius:12px;padding:1.1rem 1.25rem;border:1.5px solid #bfdbfe;">
+                        <div style="font-size:1.6rem;font-weight:700;color:#1e40af;">{{ cg_job_count }}</div>
+                        <div style="font-size:.8rem;color:#3b82f6;font-weight:600;margin-top:.2rem;">Total Jobs</div>
+                    </div>
+                    <div style="background:#f0fdf4;border-radius:12px;padding:1.1rem 1.25rem;border:1.5px solid #bbf7d0;">
+                        <div style="font-size:1.6rem;font-weight:700;color:#166534;">{{ cg_done_count }}</div>
+                        <div style="font-size:.8rem;color:#16a34a;font-weight:600;margin-top:.2rem;">Completed</div>
+                    </div>
+                    <div style="background:#fefce8;border-radius:12px;padding:1.1rem 1.25rem;border:1.5px solid #fde68a;">
+                        <div style="font-size:1.6rem;font-weight:700;color:#854d0e;">
+                            {% if cg_avg_score %}{{ cg_avg_score|floatformat:0 }}{% else %}—{% endif %}
+                        </div>
+                        <div style="font-size:.8rem;color:#ca8a04;font-weight:600;margin-top:.2rem;">Avg Score</div>
+                    </div>
+                    <div style="background:#fdf4ff;border-radius:12px;padding:1.1rem 1.25rem;border:1.5px solid #e9d5ff;">
+                        <div style="font-size:1.6rem;font-weight:700;color:#6b21a8;">{{ cg_profile_count }}</div>
+                        <div style="font-size:.8rem;color:#9333ea;font-weight:600;margin-top:.2rem;">Company Profiles</div>
+                    </div>
+                </div>
+
+                {% if cg_recent_jobs %}
+                <div style="display:flex;flex-direction:column;gap:.6rem;">
+                    {% for job in cg_recent_jobs %}
+                    <div style="display:flex;justify-content:space-between;align-items:center;padding:.85rem 1rem;
+                                border:1px solid #e5e7eb;border-radius:10px;flex-wrap:wrap;gap:.5rem;">
+                        <div>
+                            <span style="font-size:.85rem;font-weight:600;color:#1e293b;">
+                                {{ job.get_content_format_display }}
+                            </span>
+                            <span style="font-size:.78rem;color:#6b7280;margin-left:.5rem;">
+                                {{ job.company_name }}
+                            </span>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:.75rem;">
+                            {% if job.overall_score %}
+                            <span style="font-size:.78rem;font-weight:700;
+                                         color:{% if job.overall_score >= 75 %}#166534{% elif job.overall_score >= 50 %}#854d0e{% else %}#dc2626{% endif %};">
+                                {{ job.overall_score }}/100
+                            </span>
+                            {% endif %}
+                            <span style="font-size:.75rem;color:#9ca3af;">{{ job.created_at|timesince }} ago</span>
+                            <a href="{% url 'content_generator:group_result' job.job_group_id %}"
+                               style="font-size:.78rem;font-weight:600;color:#1e40af;text-decoration:none;">
+                                View →
+                            </a>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                <div style="margin-top:1rem;display:flex;gap:.75rem;flex-wrap:wrap;">
+                    <a href="{% url 'content_generator:history' %}"
+                       style="font-size:.83rem;font-weight:600;color:#1e40af;text-decoration:none;">
+                        View all history →
+                    </a>
+                    <a href="{% url 'content_generator:profile_list' %}"
+                       style="font-size:.83rem;font-weight:600;color:#6b21a8;text-decoration:none;">
+                        Manage profiles →
+                    </a>
+                </div>
+                {% else %}
+                <div style="text-align:center;padding:2rem;background:#f8fafc;border-radius:10px;border:2px dashed #e2e8f0;">
+                    <p style="color:#6b7280;font-size:.9rem;margin:0 0 1rem;">No content generated yet.</p>
+                    <a href="{% url 'content_generator:form' %}"
+                       style="display:inline-flex;align-items:center;gap:.4rem;
+                              background:linear-gradient(135deg,#0f172a,#1e40af);
+                              color:white;padding:.6rem 1.2rem;border-radius:9px;
+                              font-size:.85rem;font-weight:600;text-decoration:none;">
+                        Generate Your First Content →
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+
             <!-- Main Content Grid -->
             <div class="content-grid">
                 <!-- Recent Stories -->
@@ -164,17 +255,38 @@
                                 </div>
                                 <span>Write Story</span>
                             </a>
-                            <a href="{% url 'accounts:profile_update' %}" class="quick-action-item">
-                                <div class="action-icon action-icon-info">
-                                    <i class="fas fa-user-edit"></i>
-                                </div>
-                                <span>Edit Profile</span>
-                            </a>
                             <a href="{% url 'accounts:profile' profile_user.username %}" class="quick-action-item">
                                 <div class="action-icon action-icon-success">
                                     <i class="fas fa-user-circle"></i>
                                 </div>
                                 <span>View Profile</span>
+                            </a>
+                            {% if cg_job_count is not None %}
+                            <a href="{% url 'content_generator:workspace' %}" class="quick-action-item">
+                                <div class="action-icon" style="background:linear-gradient(135deg,#1e40af,#3b82f6);">
+                                    <i class="fas fa-building"></i>
+                                </div>
+                                <span>Company Profile</span>
+                            </a>
+                            <a href="{% url 'content_generator:service_create' %}" class="quick-action-item">
+                                <div class="action-icon action-icon-info">
+                                    <i class="fas fa-plus-circle"></i>
+                                </div>
+                                <span>Add Service</span>
+                            </a>
+                            <a href="{% url 'content_generator:form' %}" class="quick-action-item"
+                               style="grid-column:1/-1;background:linear-gradient(135deg,#0f172a,#1e40af);color:white;border-radius:10px;">
+                                <div class="action-icon" style="background:rgba(255,255,255,.2);">
+                                    <i class="fas fa-bolt"></i>
+                                </div>
+                                <span style="color:white;font-weight:700;">Generate Content</span>
+                            </a>
+                            {% else %}
+                            <a href="{% url 'accounts:profile_update' %}" class="quick-action-item">
+                                <div class="action-icon action-icon-info">
+                                    <i class="fas fa-user-edit"></i>
+                                </div>
+                                <span>Edit Profile</span>
                             </a>
                             <a href="{% url 'stories:story_list' %}" class="quick-action-item">
                                 <div class="action-icon action-icon-warning">
@@ -182,6 +294,7 @@
                                 </div>
                                 <span>Explore</span>
                             </a>
+                            {% endif %}
                         </div>
                     </div>
 

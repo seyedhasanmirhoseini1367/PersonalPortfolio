@@ -1,0 +1,791 @@
+{% extends 'base.html' %}
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .result-header {
+        background: linear-gradient(135deg, #0f172a, #1e40af);
+        color: white; padding: 1.5rem 2rem; border-radius: 16px;
+        margin-bottom: 1.5rem; display: flex; justify-content: space-between;
+        align-items: center; flex-wrap: wrap; gap: 1rem;
+    }
+    .result-header h1 { font-size: 1.3rem; font-weight: 700; margin: 0; }
+    .result-header p  { opacity: .8; font-size: .85rem; margin: .2rem 0 0; }
+
+    .tab-bar { display: flex; gap: .4rem; flex-wrap: wrap; margin-bottom: 1.25rem; }
+    .tab-btn {
+        padding: .45rem 1.1rem; border-radius: 8px; font-size: .82rem; font-weight: 600;
+        border: 1.5px solid #e5e7eb; background: white; color: #6b7280;
+        cursor: pointer; transition: all .15s;
+    }
+    .tab-btn:hover { border-color: #1e40af; color: #1e40af; }
+    .tab-btn.active { background: #1e40af; border-color: #1e40af; color: white; }
+    .tab-btn.failed { border-color: #fca5a5; color: #dc2626; }
+    .tab-btn.failed.active { background: #dc2626; border-color: #dc2626; color: white; }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    .result-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 1.25rem; }
+
+    .card {
+        background: white; border-radius: 12px;
+        box-shadow: 0 2px 12px rgba(0,0,0,.07); padding: 1.5rem;
+        margin-bottom: 1.25rem;
+    }
+    .card-title {
+        font-size: .75rem; font-weight: 700; text-transform: uppercase;
+        letter-spacing: .06em; color: #1e40af;
+        border-bottom: 2px solid #dbeafe; padding-bottom: .35rem; margin-bottom: 1rem;
+    }
+
+    .content-title    { font-size: 1.25rem; font-weight: 700; color: #1e293b; margin-bottom: .5rem; }
+    .content-headline { font-size: 1rem; font-weight: 600; color: #374151; margin-bottom: 1rem; }
+    .content-section  { margin-bottom: 1.1rem; }
+    .content-section h4 { font-size: .9rem; font-weight: 700; color: #1e293b; margin-bottom: .35rem; }
+    .content-section p  { font-size: .88rem; color: #4b5563; line-height: 1.7; }
+    .content-cta {
+        margin-top: 1.2rem; padding: .75rem 1rem;
+        background: #eff6ff; border-left: 3px solid #1e40af;
+        border-radius: 0 8px 8px 0; font-size: .88rem;
+        font-weight: 600; color: #1e40af;
+    }
+
+    .score-ring {
+        width: 64px; height: 64px; border-radius: 50%;
+        border: 4px solid #dbeafe;
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center; flex-shrink: 0;
+        margin: 0 auto 1rem;
+    }
+    .score-ring .score-num   { font-size: 1.3rem; font-weight: 800; line-height: 1; color: #1e40af; }
+    .score-ring .score-label { font-size: .58rem; color: #94a3b8; text-transform: uppercase; letter-spacing: .05em; }
+
+    .judge-item { margin-bottom: 1rem; }
+    .judge-name { font-size: .78rem; font-weight: 600; color: #374151; margin-bottom: .3rem; display: flex; justify-content: space-between; }
+    .judge-bar-bg { background: #e5e7eb; border-radius: 4px; height: 7px; }
+    .judge-bar    { background: #1e40af; border-radius: 4px; height: 7px; transition: width .5s; }
+    .judge-feedback { font-size: .72rem; color: #6b7280; margin-top: .3rem; line-height: 1.45; }
+
+    /* GEO checklist */
+    .geo-check-item {
+        display: flex; align-items: flex-start; gap: .5rem;
+        padding: .4rem 0; border-bottom: 1px solid #f1f5f9; font-size: .8rem;
+    }
+    .geo-check-item:last-child { border-bottom: none; }
+    .geo-icon { font-size: 1rem; flex-shrink: 0; margin-top: .05rem; }
+    .geo-label { font-weight: 600; color: #374151; }
+    .geo-tip   { color: #9ca3af; font-size: .72rem; margin-top: .1rem; }
+
+    /* SEO section */
+    .seo-field { margin-bottom: .75rem; }
+    .seo-field-label { font-size: .72rem; font-weight: 700; text-transform: uppercase;
+                       letter-spacing: .05em; color: #9ca3af; margin-bottom: .2rem; }
+    .seo-field-val   { font-size: .82rem; color: #374151; line-height: 1.5; }
+
+    /* Feedback */
+    .feedback-btns { display: flex; gap: .5rem; }
+    .fb-btn {
+        flex: 1; padding: .5rem; border-radius: 8px; border: 1.5px solid #e5e7eb;
+        background: white; font-size: .88rem; font-weight: 600; cursor: pointer;
+        transition: all .15s; text-align: center;
+    }
+    .fb-btn:hover { border-color: #1e40af; }
+    .fb-btn.approved { background: #dcfce7; border-color: #86efac; color: #166534; }
+    .fb-btn.rejected { background: #fee2e2; border-color: #fca5a5; color: #dc2626; }
+
+    .feedback-form { margin-top: .75rem; }
+    .feedback-form textarea {
+        width: 100%; border: 1px solid #d1d5db; border-radius: 6px;
+        padding: .5rem .7rem; font-size: .82rem; resize: vertical; min-height: 70px;
+        box-sizing: border-box;
+    }
+    .feedback-form textarea:focus { outline: none; border-color: #1e40af; }
+
+    .meta-row { display: flex; justify-content: space-between; font-size: .8rem;
+                color: #6b7280; padding: .35rem 0; border-bottom: 1px solid #f1f5f9; }
+    .meta-row:last-child { border-bottom: none; }
+    .meta-val { font-weight: 600; color: #374151; }
+
+    .failed-card { text-align: center; padding: 3rem; }
+    .failed-card h2 { margin-bottom: .5rem; color: #dc2626; }
+    .failed-card p  { color: #6b7280; }
+
+    .try-again-btn {
+        display: inline-block; padding: .7rem 1.8rem; background: #1e40af; color: white;
+        border-radius: 8px; font-weight: 600; text-decoration: none; font-size: .9rem;
+    }
+
+    .media-section { margin-top: 1.5rem; }
+    .media-item {
+        border: 1.5px solid #e5e7eb; border-radius: 10px; padding: .9rem 1rem;
+        margin-bottom: .6rem; font-size: .82rem;
+    }
+    .media-item-type {
+        font-size: .68rem; font-weight: 700; text-transform: uppercase;
+        letter-spacing: .08em; color: #9ca3af; margin-bottom: .3rem;
+    }
+    .media-prompt { color: #374151; line-height: 1.55; }
+    .media-alt    { color: #9ca3af; font-style: italic; margin-top: .25rem; font-size: .76rem; }
+
+    .edit-bar {
+        display: flex; gap: .5rem; justify-content: flex-end;
+        margin-bottom: .75rem; padding-bottom: .75rem;
+        border-bottom: 1px solid #f1f5f9; flex-wrap: wrap;
+    }
+    .edit-btn {
+        padding: .3rem .85rem; border-radius: 6px; font-size: .78rem; font-weight: 600;
+        border: 1.5px solid #e5e7eb; background: white; color: #374151; cursor: pointer;
+        transition: all .15s;
+    }
+    .edit-btn:hover { border-color: #1e40af; color: #1e40af; }
+    .edit-btn.save  { background: #1e40af; border-color: #1e40af; color: white; }
+    .edit-btn.save:hover { opacity: .88; }
+    .edit-btn.cancel { color: #6b7280; }
+
+    [contenteditable="true"] {
+        border: 1.5px solid #bfdbfe; border-radius: 6px;
+        padding: .3rem .5rem; outline: none; background: #f8faff; min-height: 1.5em;
+    }
+    [contenteditable="true"]:focus { border-color: #1e40af; box-shadow: 0 0 0 3px rgba(30,64,175,.08); }
+
+    .edit-saved-msg {
+        font-size: .78rem; color: #166534; background: #dcfce7;
+        border-radius: 6px; padding: .25rem .75rem; display: none;
+    }
+    .media-future-badge {
+        display: inline-flex; align-items: center; gap: .3rem;
+        background: #fef3c7; border: 1px solid #fde68a; color: #92400e;
+        border-radius: 20px; padding: .15rem .6rem; font-size: .68rem; font-weight: 600;
+        margin-bottom: .6rem;
+    }
+
+    /* CMS publish */
+    .cms-form { margin-top: .6rem; }
+    .cms-form select, .cms-form input {
+        width: 100%; border: 1px solid #d1d5db; border-radius: 6px;
+        padding: .45rem .7rem; font-size: .82rem; margin-bottom: .5rem;
+        box-sizing: border-box;
+    }
+    .cms-form select:focus, .cms-form input:focus { outline: none; border-color: #1e40af; }
+    .cms-publish-btn {
+        width: 100%; padding: .5rem; background: #1e40af; color: white;
+        border: none; border-radius: 6px; font-size: .82rem; font-weight: 600;
+        cursor: pointer; transition: opacity .15s;
+    }
+    .cms-publish-btn:hover { opacity: .88; }
+
+    /* Language tab inside a panel */
+    .lang-tab-bar { display: flex; gap: .35rem; margin-bottom: .85rem; }
+    .lang-tab {
+        padding: .3rem .75rem; border-radius: 6px; font-size: .78rem; font-weight: 600;
+        border: 1.5px solid #e5e7eb; background: white; color: #6b7280;
+        cursor: pointer; transition: all .15s;
+    }
+    .lang-tab.active { background: #eff6ff; border-color: #bfdbfe; color: #1e40af; }
+    .lang-content { display: none; }
+    .lang-content.active { display: block; }
+
+    /* Approval status badge */
+    .approval-badge {
+        display: inline-flex; align-items: center; gap: .3rem;
+        border-radius: 20px; padding: .2rem .65rem; font-size: .72rem; font-weight: 600;
+    }
+    .approval-badge.approved { background: #dcfce7; color: #166534; }
+    .approval-badge.rejected { background: #fee2e2; color: #dc2626; }
+
+    @media (max-width: 768px) { .result-grid { grid-template-columns: 1fr; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+
+    {% with jobs.0 as first_job %}
+    <div class="result-header">
+        <div>
+            <h1>{{ first_job.company_name }}</h1>
+            <p>{{ jobs|length }} format{{ jobs|length|pluralize }} · {{ first_job.get_tone_preset_display }} tone · {{ first_job.created_at|date:"M j, Y" }}</p>
+        </div>
+        <a href="{% url 'content_generator:form' %}" class="try-again-btn"
+           style="background:rgba(255,255,255,.15);border:1.5px solid rgba(255,255,255,.3);">
+            Generate Another →
+        </a>
+    </div>
+    {% endwith %}
+
+    <!-- Tab bar — one tab per job -->
+    {% if jobs|length > 1 %}
+    <div class="tab-bar">
+        {% for job in jobs %}
+        <button class="tab-btn {% if job.status == 'failed' %}failed{% endif %} {% if forloop.first %}active{% endif %}"
+                onclick="showTab({{ forloop.counter0 }}, this)">
+            {{ job.get_content_format_display }}
+            {% if job.variant_index > 0 %}
+                <span style="opacity:.75;font-size:.7rem;"> v{{ job.variant_index|add:"1" }}</span>
+            {% endif %}
+            {% if job.overall_score is not None %}
+            <span style="opacity:.7;font-weight:400;margin-left:.25rem;">({{ job.overall_score }})</span>
+            {% endif %}
+        </button>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- One panel per job -->
+    {% for job in jobs %}
+    <div class="tab-panel {% if forloop.first %}active{% endif %}" id="panel-{{ forloop.counter0 }}">
+
+        {% if job.status == 'failed' %}
+        <div class="card failed-card">
+            <h2>Generation Failed</h2>
+            <p>{{ job.error_message|default:"An unexpected error occurred." }}</p>
+        </div>
+
+        {% elif job.status == 'done' and job.content_en %}
+        <div class="result-grid">
+
+            <!-- Left: generated content -->
+            <div>
+            <div class="card">
+                <div class="card-title">{{ job.get_content_format_display }}
+                    {% if job.variant_index > 0 %}— Version {{ job.variant_index|add:"1" }}{% endif %}
+                    {% if job.user_approved is not None %}
+                    <span class="approval-badge {% if job.user_approved %}approved{% else %}rejected{% endif %}"
+                          style="float:right;margin-top:-2px;">
+                        {% if job.user_approved %}✓ Approved{% else %}✗ Rejected{% endif %}
+                    </span>
+                    {% endif %}
+                </div>
+
+                {% if job.content_fi %}
+                <div class="lang-tab-bar">
+                    <button class="lang-tab active" onclick="switchLang('{{ job.id }}','en',this)">English</button>
+                    <button class="lang-tab"        onclick="switchLang('{{ job.id }}','fi',this)">Finnish</button>
+                </div>
+                {% endif %}
+
+                <!-- English content -->
+                <div id="lang-en-{{ job.id }}" class="lang-content active">
+                {% if job.content_format == 'motto' %}
+                <div style="text-align:center;padding:2rem 1rem;">
+                    <div style="font-size:1.8rem;font-weight:800;color:#1e293b;line-height:1.3;margin-bottom:.75rem;">
+                        "{{ job.content_en.headline|default:job.content_en.title }}"
+                    </div>
+                    <div style="font-size:.8rem;color:#94a3b8;text-transform:uppercase;letter-spacing:.1em;">Tagline / Motto</div>
+                </div>
+
+                {% elif job.content_format == 'social_post' %}
+                {% for section in job.content_en.sections %}
+                <div style="font-size:.95rem;color:#374151;line-height:1.8;white-space:pre-line;margin-bottom:1rem;">{{ section.body }}</div>
+                {% endfor %}
+                {% if job.content_en.cta %}
+                <div style="margin-top:.75rem;font-size:.88rem;color:#1e40af;font-weight:600;">{{ job.content_en.cta }}</div>
+                {% endif %}
+
+                {% else %}
+                <div class="edit-bar">
+                    <span class="edit-saved-msg" id="saved-{{ job.id }}">Saved</span>
+                    <button class="edit-btn" onclick="copyContent('{{ job.id }}', this)">Copy</button>
+                    <button class="edit-btn" onclick="exportMd('{{ job.id }}')">↓ MD</button>
+                    <button class="edit-btn" onclick="toggleEdit('{{ job.id }}', this)">Edit</button>
+                    <button class="edit-btn save"   style="display:none;" onclick="saveEdit('{{ job.id }}', this)">Save</button>
+                    <button class="edit-btn cancel" style="display:none;" onclick="cancelEdit('{{ job.id }}', this)">Cancel</button>
+                </div>
+                <div class="content-title"    id="title-{{ job.id }}">{{ job.content_en.title }}</div>
+                {% if job.content_en.headline %}
+                <div class="content-headline" id="headline-{{ job.id }}">{{ job.content_en.headline }}</div>
+                {% endif %}
+                {% for section in job.content_en.sections %}
+                <div class="content-section" data-job="{{ job.id }}" data-idx="{{ forloop.counter0 }}">
+                    <h4 class="sec-heading">{{ section.heading }}</h4>
+                    <p class="sec-body">{{ section.body }}</p>
+                </div>
+                {% endfor %}
+                {% if job.content_en.cta %}
+                <div class="content-cta" id="cta-{{ job.id }}">{{ job.content_en.cta }}</div>
+                {% endif %}
+                {% endif %}
+                </div><!-- /lang-en -->
+
+                <!-- Finnish content -->
+                {% if job.content_fi %}
+                <div id="lang-fi-{{ job.id }}" class="lang-content">
+                    {% if job.content_fi.headline %}
+                    <div class="content-headline">{{ job.content_fi.headline }}</div>
+                    {% endif %}
+                    {% for section in job.content_fi.sections %}
+                    <div class="content-section">
+                        <h4>{{ section.heading }}</h4>
+                        <p>{{ section.body }}</p>
+                    </div>
+                    {% endfor %}
+                    {% if job.content_fi.cta %}
+                    <div class="content-cta">{{ job.content_fi.cta }}</div>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                <!-- SEO meta fields -->
+                {% if job.content_en.seo_title or job.content_en.seo_description %}
+                <div style="margin-top:1.25rem;padding-top:1rem;border-top:1px solid #f1f5f9;">
+                    <div class="card-title" style="margin-bottom:.75rem;">SEO Meta</div>
+                    {% if job.content_en.seo_title %}
+                    <div class="seo-field">
+                        <div class="seo-field-label">Meta Title</div>
+                        <div class="seo-field-val">{{ job.content_en.seo_title }}</div>
+                    </div>
+                    {% endif %}
+                    {% if job.content_en.seo_description %}
+                    <div class="seo-field">
+                        <div class="seo-field-label">Meta Description</div>
+                        <div class="seo-field-val">{{ job.content_en.seo_description }}</div>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                <!-- Visual assets -->
+                {% if job.content_en.image_prompts or job.content_en.video_prompts %}
+                <div class="media-section">
+                    <div class="card-title" style="margin-top:1.25rem;">Visual Assets</div>
+                    <span class="media-future-badge">⚡ Ready for DALL-E / Runway</span>
+                    {% for img in job.content_en.image_prompts %}
+                    <div class="media-item">
+                        <div class="media-item-type">🖼 Image {{ forloop.counter }}</div>
+                        <div class="media-prompt">{{ img.prompt }}</div>
+                        {% if img.alt_text %}<div class="media-alt">{{ img.alt_text }}</div>{% endif %}
+                    </div>
+                    {% endfor %}
+                    {% for vid in job.content_en.video_prompts %}
+                    <div class="media-item">
+                        <div class="media-item-type">🎬 Video{% if vid.duration_seconds %} · {{ vid.duration_seconds }}s{% endif %}</div>
+                        <div class="media-prompt">{{ vid.prompt }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div><!-- /card -->
+            </div><!-- /left col -->
+
+            <!-- Right: scores + meta + actions -->
+            <div>
+                {% if job.overall_score is not None %}
+                <div class="card" style="text-align:center;">
+                    <div class="card-title">Overall Score</div>
+                    <div class="score-ring">
+                        <span class="score-num">{{ job.overall_score }}</span>
+                        <span class="score-label">/ 100</span>
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if job.evaluation %}
+                <div class="card">
+                    <div class="card-title">Evaluation</div>
+                    {% with job.evaluation as ev %}
+
+                    {% if ev.customer %}
+                    <div class="judge-item">
+                        <div class="judge-name"><span>Customer Fit</span><span>{{ ev.customer.score }}/100</span></div>
+                        <div class="judge-bar-bg"><div class="judge-bar" style="width:{{ ev.customer.score }}%"></div></div>
+                        <div class="judge-feedback">{{ ev.customer.feedback }}</div>
+                    </div>
+                    {% endif %}
+
+                    {% if ev.geo %}
+                    <div class="judge-item">
+                        <div class="judge-name">
+                            <span>GEO Compliance</span>
+                            <span>{{ ev.geo.score }}/100</span>
+                        </div>
+                        <div class="judge-bar-bg"><div class="judge-bar" style="width:{{ ev.geo.score }}%"></div></div>
+                        <!-- GEO actionable checklist -->
+                        {% if ev.geo.details.checks %}
+                        <div style="margin-top:.6rem;">
+                            {% with ev.geo.details.checks as chk %}
+                            <div class="geo-check-item">
+                                <span class="geo-icon">{% if chk.has_statistics %}✅{% else %}❌{% endif %}</span>
+                                <div>
+                                    <div class="geo-label">Statistics</div>
+                                    {% if not chk.has_statistics %}<div class="geo-tip">Add percentages, multipliers, or comparative figures.</div>{% endif %}
+                                </div>
+                            </div>
+                            <div class="geo-check-item">
+                                <span class="geo-icon">{% if chk.has_citations %}✅{% else %}❌{% endif %}</span>
+                                <div>
+                                    <div class="geo-label">Citations</div>
+                                    {% if not chk.has_citations %}<div class="geo-tip">Reference a study, report, or use "according to …".</div>{% endif %}
+                                </div>
+                            </div>
+                            <div class="geo-check-item">
+                                <span class="geo-icon">{% if chk.has_expert_quote %}✅{% else %}❌{% endif %}</span>
+                                <div>
+                                    <div class="geo-label">Expert Quote</div>
+                                    {% if not chk.has_expert_quote %}<div class="geo-tip">Add an attributed quote from a named person or role.</div>{% endif %}
+                                </div>
+                            </div>
+                            <div class="geo-check-item">
+                                <span class="geo-icon">{% if chk.has_definition_block %}✅{% else %}❌{% endif %}</span>
+                                <div>
+                                    <div class="geo-label">Definition Block</div>
+                                    {% if not chk.has_definition_block %}<div class="geo-tip">Add a "What is X?" sentence to help AI engines extract definitions.</div>{% endif %}
+                                </div>
+                            </div>
+                            <div class="geo-check-item">
+                                <span class="geo-icon">{% if chk.has_unique_data %}✅{% else %}❌{% endif %}</span>
+                                <div>
+                                    <div class="geo-label">Unique Data</div>
+                                    {% if not chk.has_unique_data %}<div class="geo-tip">Add specific numbers tied to real entities (e.g. "over 200 clients").</div>{% endif %}
+                                </div>
+                            </div>
+                            {% endwith %}
+                        </div>
+                        {% else %}
+                        <div class="judge-feedback">{{ ev.geo.feedback }}</div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+
+                    {% if ev.competitor %}
+                    <div class="judge-item">
+                        <div class="judge-name"><span>Competitor Edge</span><span>{{ ev.competitor.score }}/100</span></div>
+                        <div class="judge-bar-bg"><div class="judge-bar" style="width:{{ ev.competitor.score }}%"></div></div>
+                        <div class="judge-feedback">{{ ev.competitor.feedback }}</div>
+                    </div>
+                    {% endif %}
+
+                    {% if ev.naturalness %}
+                    <div class="judge-item">
+                        <div class="judge-name"><span>Naturalness</span><span>{{ ev.naturalness.score }}/100</span></div>
+                        <div class="judge-bar-bg"><div class="judge-bar" style="width:{{ ev.naturalness.score }}%"></div></div>
+                        <div class="judge-feedback">{{ ev.naturalness.feedback }}</div>
+                    </div>
+                    {% endif %}
+
+                    {% endwith %}
+                </div>
+                {% endif %}
+
+                <!-- Human feedback -->
+                <div class="card">
+                    <div class="card-title">Feedback</div>
+                    <div class="feedback-btns" id="fbBtns-{{ job.id }}">
+                        <button class="fb-btn {% if job.user_approved == True %}approved{% endif %}"
+                                id="fbApprove-{{ job.id }}"
+                                onclick="setApproval('{{ job.id }}', true, this)">
+                            👍 Approve
+                        </button>
+                        <button class="fb-btn {% if job.user_approved == False %}rejected{% endif %}"
+                                id="fbReject-{{ job.id }}"
+                                onclick="setApproval('{{ job.id }}', false, this)">
+                            👎 Reject
+                        </button>
+                    </div>
+                    <div class="feedback-form" id="fbForm-{{ job.id }}" style="{% if not job.user_approved == False %}display:none;{% endif %}">
+                        <textarea id="fbText-{{ job.id }}" placeholder="What should be improved? (optional)"
+                                  rows="3">{{ job.user_feedback }}</textarea>
+                        <button onclick="submitFeedback('{{ job.id }}')"
+                                style="width:100%;margin-top:.4rem;padding:.45rem;background:#374151;color:white;border:none;border-radius:6px;font-size:.8rem;font-weight:600;cursor:pointer;">
+                            Save Feedback
+                        </button>
+                    </div>
+                    <div style="margin-top:.75rem;padding-top:.75rem;border-top:1px solid #f1f5f9;">
+                        <div style="font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#1e40af;margin-bottom:.5rem;">Re-run with Feedback</div>
+                        <textarea id="rerunText-{{ job.id }}" rows="2"
+                                  style="width:100%;border:1px solid #d1d5db;border-radius:6px;padding:.45rem .65rem;font-size:.8rem;box-sizing:border-box;resize:vertical;"
+                                  placeholder="Specific instructions for the re-run…">{{ job.user_feedback }}</textarea>
+                        <button onclick="rerunJob('{{ job.id }}')"
+                                style="width:100%;margin-top:.4rem;padding:.45rem;background:#1e40af;color:white;border:none;border-radius:6px;font-size:.8rem;font-weight:600;cursor:pointer;">
+                            🔄 Re-run
+                        </button>
+                        <div id="rerunStatus-{{ job.id }}" style="display:none;font-size:.75rem;margin-top:.4rem;color:#166534;"></div>
+                    </div>
+                </div>
+
+                <!-- Job details -->
+                <div class="card">
+                    <div class="card-title">Job Details</div>
+                    <div class="meta-row"><span>Format</span><span class="meta-val">{{ job.get_content_format_display }}</span></div>
+                    <div class="meta-row"><span>Company</span><span class="meta-val">{{ job.company_name }}</span></div>
+                    <div class="meta-row"><span>Tone</span><span class="meta-val">{{ job.get_tone_preset_display }}</span></div>
+                    {% if job.keywords %}
+                    <div class="meta-row"><span>Keywords</span><span class="meta-val">{{ job.keywords }}</span></div>
+                    {% endif %}
+                    {% if job.variant_index > 0 %}
+                    <div class="meta-row"><span>Variant</span><span class="meta-val">Version {{ job.variant_index|add:"1" }}</span></div>
+                    {% endif %}
+                    <div class="meta-row"><span>Generated</span><span class="meta-val">{{ job.created_at|date:"M j, Y H:i" }}</span></div>
+                </div>
+
+                <!-- CMS Publish -->
+                {% if job.content_format != 'motto' and job.content_format != 'social_post' %}
+                <div class="card">
+                    <div class="card-title">Publish to CMS</div>
+                    {% if cms_connections %}
+                    <div class="cms-form" id="cmsForm-{{ job.id }}">
+                        <select id="cmsConn-{{ job.id }}" onchange="toggleCmsManual('{{ job.id }}', this)">
+                            <option value="">— Manual entry —</option>
+                            {% for conn in cms_connections %}
+                            <option value="{{ conn.pk }}">{{ conn.name }} ({{ conn.get_cms_type_display }})</option>
+                            {% endfor %}
+                        </select>
+                        <div id="cmsManual-{{ job.id }}">
+                            <select id="cmsType-{{ job.id }}">
+                                <option value="wordpress">WordPress</option>
+                                <option value="notion">Notion</option>
+                            </select>
+                            <input type="text" id="cmsUrl-{{ job.id }}"  placeholder="https://yoursite.com">
+                            <input type="text" id="cmsToken-{{ job.id }}" placeholder="API key / App Password">
+                        </div>
+                        <button class="cms-publish-btn" onclick="publishCms('{{ job.id }}')">
+                            Publish as Draft
+                        </button>
+                        <div id="cmsStatus-{{ job.id }}" style="display:none;font-size:.75rem;margin-top:.4rem;"></div>
+                    </div>
+                    {% else %}
+                    <div class="cms-form" id="cmsForm-{{ job.id }}">
+                        <select id="cmsType-{{ job.id }}">
+                            <option value="wordpress">WordPress</option>
+                            <option value="notion">Notion</option>
+                        </select>
+                        <input type="text" id="cmsUrl-{{ job.id }}"   placeholder="https://yoursite.com">
+                        <input type="text" id="cmsToken-{{ job.id }}" placeholder="API key / App Password">
+                        <button class="cms-publish-btn" onclick="publishCms('{{ job.id }}')">
+                            Publish as Draft
+                        </button>
+                        <div id="cmsStatus-{{ job.id }}" style="display:none;font-size:.75rem;margin-top:.4rem;"></div>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+            </div><!-- /right col -->
+
+        </div><!-- /result-grid -->
+
+        {% else %}
+        <div class="card failed-card">
+            <h2>Still Processing…</h2>
+            <p>This job hasn't finished yet. <a href="">Refresh</a> the page.</p>
+        </div>
+        {% endif %}
+
+    </div>
+    {% endfor %}
+
+    <div style="text-align:center;margin-top:1.5rem;display:flex;gap:.75rem;justify-content:center;">
+        <a href="{% url 'content_generator:form' %}"    class="try-again-btn">Generate Another →</a>
+        <a href="{% url 'content_generator:history' %}" class="try-again-btn" style="background:#374151;">View History</a>
+    </div>
+
+</div>
+
+<script>
+// ── Tab switching ──────────────────────────────────────────────────
+function showTab(index, btn) {
+    document.querySelectorAll('.tab-panel').forEach(function (p) { p.classList.remove('active'); });
+    document.querySelectorAll('.tab-btn').forEach(function (b) { b.classList.remove('active'); });
+    document.getElementById('panel-' + index).classList.add('active');
+    btn.classList.add('active');
+}
+
+function switchLang(jobId, lang, btn) {
+    btn.closest('.lang-tab-bar').querySelectorAll('.lang-tab').forEach(function (b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+    ['en', 'fi'].forEach(function (l) {
+        var el = document.getElementById('lang-' + l + '-' + jobId);
+        if (el) el.classList.toggle('active', l === lang);
+    });
+}
+
+// ── Copy & Export ──────────────────────────────────────────────────
+function _collectText(jobId) {
+    var title    = document.getElementById('title-'    + jobId);
+    var headline = document.getElementById('headline-' + jobId);
+    var cta      = document.getElementById('cta-'      + jobId);
+    var lines = [];
+    if (title)    lines.push('# ' + title.innerText.trim());
+    if (headline) lines.push('\n## ' + headline.innerText.trim());
+    document.querySelectorAll('.content-section[data-job="' + jobId + '"]').forEach(function (sec) {
+        lines.push('\n### ' + sec.querySelector('.sec-heading').innerText.trim());
+        lines.push(sec.querySelector('.sec-body').innerText.trim());
+    });
+    if (cta) lines.push('\n**CTA:** ' + cta.innerText.trim());
+    return lines.join('\n');
+}
+
+function copyContent(jobId, btn) {
+    var text = _collectText(jobId).replace(/^#+ /gm, '').replace(/\*\*/g, '');
+    navigator.clipboard.writeText(text).then(function () {
+        var orig = btn.textContent;
+        btn.textContent = 'Copied!'; btn.style.color = '#166534';
+        setTimeout(function () { btn.textContent = orig; btn.style.color = ''; }, 1800);
+    });
+}
+
+function exportMd(jobId) {
+    var blob = new Blob([_collectText(jobId)], { type: 'text/markdown' });
+    var a    = document.createElement('a');
+    a.href   = URL.createObjectURL(blob);
+    a.download = 'content-' + jobId.slice(0, 8) + '.md';
+    a.click(); URL.revokeObjectURL(a.href);
+}
+
+// ── Inline editing ─────────────────────────────────────────────────
+function toggleEdit(jobId, btn) {
+    ['title-' + jobId, 'headline-' + jobId, 'cta-' + jobId].forEach(function (id) {
+        var el = document.getElementById(id);
+        if (el) el.contentEditable = 'true';
+    });
+    document.querySelectorAll('.content-section[data-job="' + jobId + '"]').forEach(function (sec) {
+        sec.querySelector('.sec-heading').contentEditable = 'true';
+        sec.querySelector('.sec-body').contentEditable = 'true';
+    });
+    btn.style.display = 'none';
+    btn.nextElementSibling.style.display = '';
+    btn.nextElementSibling.nextElementSibling.style.display = '';
+}
+
+function cancelEdit(jobId) { location.reload(); }
+
+function saveEdit(jobId, btn) {
+    var titleEl    = document.getElementById('title-' + jobId);
+    var headlineEl = document.getElementById('headline-' + jobId);
+    var ctaEl      = document.getElementById('cta-'      + jobId);
+    var sections   = [];
+    document.querySelectorAll('.content-section[data-job="' + jobId + '"]').forEach(function (sec) {
+        sections.push({
+            heading: sec.querySelector('.sec-heading').innerText.trim(),
+            body:    sec.querySelector('.sec-body').innerText.trim(),
+        });
+    });
+    fetch('/ai-content-generator/job/' + jobId + '/edit/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+        body: JSON.stringify({
+            title:    titleEl    ? titleEl.innerText.trim()    : '',
+            headline: headlineEl ? headlineEl.innerText.trim() : '',
+            cta:      ctaEl      ? ctaEl.innerText.trim()      : '',
+            sections: sections,
+        }),
+    }).then(function () {
+        ['title-' + jobId, 'headline-' + jobId, 'cta-' + jobId].forEach(function (id) {
+            var el = document.getElementById(id);
+            if (el) el.contentEditable = 'false';
+        });
+        document.querySelectorAll('.content-section[data-job="' + jobId + '"]').forEach(function (sec) {
+            sec.querySelector('.sec-heading').contentEditable = 'false';
+            sec.querySelector('.sec-body').contentEditable = 'false';
+        });
+        btn.style.display = 'none';
+        btn.nextElementSibling.style.display = 'none';
+        btn.previousElementSibling.previousElementSibling.style.display = '';
+        var msg = document.getElementById('saved-' + jobId);
+        if (msg) { msg.style.display = 'inline-block'; setTimeout(function () { msg.style.display = 'none'; }, 2500); }
+    });
+}
+
+// ── Feedback & approval ────────────────────────────────────────────
+function setApproval(jobId, approved, btn) {
+    var approveBtn = document.getElementById('fbApprove-' + jobId);
+    var rejectBtn  = document.getElementById('fbReject-'  + jobId);
+    approveBtn.classList.toggle('approved', approved);
+    approveBtn.classList.toggle('rejected', false);
+    rejectBtn.classList.toggle('rejected', !approved);
+    rejectBtn.classList.toggle('approved', false);
+    var feedbackForm = document.getElementById('fbForm-' + jobId);
+    feedbackForm.style.display = approved ? 'none' : 'block';
+    fetch('/ai-content-generator/job/' + jobId + '/approve/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+        body: JSON.stringify({ approved: approved }),
+    });
+}
+
+function submitFeedback(jobId) {
+    var text = document.getElementById('fbText-' + jobId).value;
+    fetch('/ai-content-generator/job/' + jobId + '/approve/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+        body: JSON.stringify({ approved: false, feedback: text }),
+    }).then(function () {
+        var btn = document.querySelector('#fbForm-' + jobId + ' button');
+        if (btn) { var orig = btn.textContent; btn.textContent = 'Saved!'; setTimeout(function () { btn.textContent = orig; }, 1500); }
+    });
+}
+
+// ── Re-run ─────────────────────────────────────────────────────────
+function rerunJob(jobId) {
+    var feedback   = document.getElementById('rerunText-' + jobId).value;
+    var statusEl   = document.getElementById('rerunStatus-' + jobId);
+    fetch('/ai-content-generator/job/' + jobId + '/rerun/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+        body: JSON.stringify({ feedback: feedback }),
+    })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+        statusEl.style.display = 'block';
+        statusEl.textContent = 'Started! ';
+        if (data.result_url) {
+            var a = document.createElement('a');
+            a.href = data.result_url;
+            a.textContent = 'View result →';
+            a.style.color = '#1e40af';
+            statusEl.appendChild(a);
+        }
+    });
+}
+
+// ── CMS Publish ────────────────────────────────────────────────────
+function toggleCmsManual(jobId, sel) {
+    var manual = document.getElementById('cmsManual-' + jobId);
+    if (manual) manual.style.display = sel.value ? 'none' : 'block';
+}
+
+function publishCms(jobId) {
+    var connSel = document.getElementById('cmsConn-'  + jobId);
+    var payload = {};
+    if (connSel && connSel.value) {
+        payload.cms_connection_id = connSel.value;
+    } else {
+        var typeSel  = document.getElementById('cmsType-'  + jobId);
+        var urlInput = document.getElementById('cmsUrl-'   + jobId);
+        var tokInput = document.getElementById('cmsToken-' + jobId);
+        payload.cms_type  = typeSel  ? typeSel.value  : 'wordpress';
+        payload.api_url   = urlInput ? urlInput.value : '';
+        payload.api_token = tokInput ? tokInput.value : '';
+    }
+    var statusEl = document.getElementById('cmsStatus-' + jobId);
+    statusEl.style.display = 'block';
+    statusEl.style.color   = '#6b7280';
+    statusEl.textContent   = 'Publishing…';
+    fetch('/ai-content-generator/job/' + jobId + '/publish/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+        body: JSON.stringify(payload),
+    })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+        if (data.error) {
+            statusEl.style.color = '#dc2626';
+            statusEl.textContent = 'Error: ' + data.error;
+        } else {
+            statusEl.style.color = '#166534';
+            statusEl.textContent = 'Published as draft! ';
+            if (data.url) {
+                var a = document.createElement('a');
+                a.href = data.url; a.target = '_blank';
+                a.textContent = 'View →'; a.style.color = '#1e40af';
+                statusEl.appendChild(a);
+            }
+        }
+    });
+}
+
+function getCookie(name) {
+    var v = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+    return v ? v.pop() : '';
+}
+</script>
+{% endblock %}

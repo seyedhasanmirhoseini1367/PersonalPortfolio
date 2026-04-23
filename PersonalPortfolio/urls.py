@@ -22,6 +22,7 @@ urlpatterns = [
     path('accounts/', include('accounts.urls')),
     path('stories/', include('stories.urls')),
     path('monitoring/', include('monitoring.urls')),
+    path('ai-content-generator/', include('content_generator.urls')),
     path('sitemap.xml', sitemap, {'sitemaps': sitemaps}, name='django.contrib.sitemaps.views.sitemap'),
     path('robots.txt', include('projects.robots_urls')),
     re_path(r'^media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),

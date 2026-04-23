@@ -26,9 +26,11 @@ class GenerationService:
         self.gemini_api_key    = getattr(settings, 'GEMINI_API_KEY', None)
         self.openai_api_key    = getattr(settings, 'OPENAI_API_KEY', None)
         self.anthropic_api_key = getattr(settings, 'ANTHROPIC_API_KEY', None)
+        self.groq_api_key      = getattr(settings, 'GROQ_API_KEY', None)
         self.openai_model      = cfg.get('OPENAI_MODEL', 'gpt-4o-mini')
         self.anthropic_model   = cfg.get('ANTHROPIC_MODEL', 'claude-haiku-4-5-20251001')
         self.gemini_model      = cfg.get('GEMINI_MODEL', 'gemini-2.5-flash')
+        self.groq_model        = cfg.get('GROQ_MODEL', 'llama-3.1-8b-instant')
         self.max_tokens        = cfg.get('MAX_TOKENS', 800)
 
     # ── Public: non-streaming ─────────────────────────────────────────────────
@@ -67,7 +69,9 @@ class GenerationService:
                 yielded = True
                 yield token
 
-        if self.gemini_api_key:
+        if self.groq_api_key:
+            yield from _track(self._stream_groq(system_prompt, messages))
+        elif self.gemini_api_key:
             yield from _track(self._stream_gemini(system_prompt, messages))
         elif self.anthropic_api_key:
             yield from _track(self._stream_anthropic(system_prompt, messages))
@@ -194,7 +198,7 @@ class GenerationService:
     # ── Non-streaming LLM calls ───────────────────────────────────────────────
 
     def _call_llm(self, system_prompt: str, messages: List[HistoryItem]) -> Optional[str]:
-        for caller in (self._call_gemini, self._call_anthropic, self._call_openai):
+        for caller in (self._call_groq, self._call_gemini, self._call_anthropic, self._call_openai):
             try:
                 result = caller(system_prompt, messages)
                 if result:
@@ -202,6 +206,26 @@ class GenerationService:
             except Exception as exc:
                 logger.warning('LLM call failed (%s): %s', caller.__name__, exc)
         return None
+
+    def _call_groq(self, system_prompt: str, messages: List[HistoryItem]) -> Optional[str]:
+        if not self.groq_api_key:
+            return None
+        try:
+            from groq import Groq
+            client = Groq(api_key=self.groq_api_key)
+            response = client.chat.completions.create(
+                model=self.groq_model,
+                messages=[{'role': 'system', 'content': system_prompt}] + messages,
+                max_tokens=self.max_tokens,
+                temperature=0.7,
+            )
+            return response.choices[0].message.content
+        except ImportError:
+            logger.warning('groq package not installed. Run: pip install groq')
+            return None
+        except Exception as exc:
+            logger.warning('Groq error: %s', exc)
+            return None
 
     def _call_gemini(self, system_prompt: str, messages: List[HistoryItem]) -> Optional[str]:
         if not self.gemini_api_key:
@@ -272,6 +296,32 @@ class GenerationService:
             return None
 
     # ── Streaming LLM calls ───────────────────────────────────────────────────
+
+    def _stream_groq(
+        self, system_prompt: str, messages: List[HistoryItem]
+    ) -> Generator[str, None, None]:
+        if not self.groq_api_key:
+            return
+        try:
+            from groq import Groq
+            client = Groq(api_key=self.groq_api_key)
+            stream = client.chat.completions.create(
+                model=self.groq_model,
+                messages=[{'role': 'system', 'content': system_prompt}] + messages,
+                max_tokens=self.max_tokens,
+                temperature=0.7,
+                stream=True,
+            )
+            for chunk in stream:
+                text = chunk.choices[0].delta.content or ''
+                if text:
+                    yield text
+        except ImportError:
+            logger.warning('groq not installed, falling back.')
+            yield from self._stream_gemini(system_prompt, messages)
+        except Exception as exc:
+            logger.warning('Groq stream error: %s', exc)
+            yield from self._stream_gemini(system_prompt, messages)
 
     def _stream_gemini(
         self, system_prompt: str, messages: List[HistoryItem]

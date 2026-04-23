@@ -150,9 +150,13 @@ def _embed_resume() -> None:
 
         for e in Experience.objects.all():
             yr = f"{e.start_date.year}–{e.end_date.year if e.end_date else 'present'}"
+            achievements = getattr(e, 'achievements', None) or []
+            bullet_text = ('\n' + '\n'.join(f'  - {a}' for a in achievements)) if achievements else ''
             parts.append(
                 f"Experience: {e.position} at {e.company} ({yr})"
-                + (f"\n{e.description}" if getattr(e, 'description', None) else '')
+                + (f" [{e.employment_type}]" if getattr(e, 'employment_type', None) else '')
+                + (f" — {e.location}" if getattr(e, 'location', None) else '')
+                + bullet_text
             )
 
         by_cat: dict = {}
@@ -171,6 +175,19 @@ def _embed_resume() -> None:
             parts.append('Languages: ' + ', '.join(
                 f"{lng.language} ({lng.proficiency})" for lng in langs
             ))
+
+        from resume.models import ProjectHighlight
+        highlights = ProjectHighlight.objects.all()
+        if highlights.exists():
+            proj_lines = ['Selected Projects:']
+            for ph in highlights:
+                tech = ', '.join(ph.technologies_used) if ph.technologies_used else ''
+                proj_lines.append(
+                    f"  Project: {ph.title}"
+                    + (f"\n    Technologies: {tech}" if tech else '')
+                    + (f"\n    Description: {ph.description}" if ph.description else '')
+                )
+            parts.append('\n'.join(proj_lines))
 
         content = '\n\n'.join(parts)
         if not content.strip():
@@ -216,11 +233,11 @@ except ImportError:
 
 # Resume models — each triggers a full resume re-embed (fast, single document)
 try:
-    from resume.models import ResumeSetting, Education, Experience, Skill, Certification, Language
+    from resume.models import ResumeSetting, Education, Experience, Skill, Certification, Language, ProjectHighlight
 
-    for _model in (ResumeSetting, Education, Experience, Skill, Certification, Language):
+    for _model in (ResumeSetting, Education, Experience, Skill, Certification, Language, ProjectHighlight):
         @receiver(post_save, sender=_model, dispatch_uid=f'rag_auto_sync_resume_{_model.__name__}')
-        def on_resume_model_saved(sender, instance, **kwargs):
+        def on_resume_model_saved(sender, instance, **kwargs):  # noqa: ARG001
             _bg(_embed_resume)
 
 except ImportError:

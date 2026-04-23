@@ -1,0 +1,130 @@
+{% extends 'base.html' %}
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .waiting-card {
+        max-width: 640px; margin: 4rem auto; text-align: center;
+        background: white; border-radius: 20px;
+        box-shadow: 0 4px 24px rgba(0,0,0,.08); padding: 3rem 2rem;
+    }
+    .spinner {
+        width: 56px; height: 56px; border: 4px solid #dbeafe;
+        border-top-color: #1e40af; border-radius: 50%;
+        animation: spin 1s linear infinite; margin: 0 auto 1.5rem;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .waiting-title { font-size: 1.4rem; font-weight: 700; color: #1e293b; margin-bottom: .5rem; }
+    .waiting-sub   { color: #64748b; font-size: .9rem; margin-bottom: 2rem; }
+
+    .job-list { text-align: left; margin: 0 auto 1.5rem; max-width: 420px; }
+    .job-row {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: .5rem 0; border-bottom: 1px solid #f1f5f9; font-size: .84rem;
+    }
+    .job-row:last-child { border-bottom: none; }
+    .job-fmt { color: #374151; font-weight: 500; }
+    .job-status-badge {
+        padding: .2rem .6rem; border-radius: 20px; font-size: .72rem; font-weight: 600;
+    }
+    .status-pending  { background: #f1f5f9; color: #64748b; }
+    .status-running  { background: #dbeafe; color: #1e40af; }
+    .status-done     { background: #dcfce7; color: #166534; }
+    .status-failed   { background: #fee2e2; color: #dc2626; }
+
+    .progress-bar-bg { background: #e5e7eb; border-radius: 4px; height: 6px; margin: 1.2rem 0 .5rem; }
+    .progress-bar    { background: #1e40af; border-radius: 4px; height: 6px; transition: width .5s; }
+    .progress-text   { font-size: .78rem; color: #94a3b8; }
+
+    .pipeline-steps { text-align: left; margin: 1.5rem auto 0; max-width: 420px; }
+    .step {
+        display: flex; align-items: center; gap: .75rem;
+        padding: .4rem 0; font-size: .82rem; color: #6b7280;
+        border-bottom: 1px solid #f1f5f9;
+    }
+    .step:last-child { border-bottom: none; }
+    .step-dot {
+        width: 7px; height: 7px; border-radius: 50%;
+        background: #cbd5e1; flex-shrink: 0;
+        animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse { 0%,100%{opacity:.4} 50%{opacity:1} }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="waiting-card">
+        <div class="spinner"></div>
+        <h2 class="waiting-title">Generating your content…</h2>
+        <p class="waiting-sub">
+            {{ jobs|length }} format{{ jobs|length|pluralize }} queued.
+            The AI pipeline usually takes 2–4 minutes per format.
+        </p>
+
+        <div class="job-list" id="jobList">
+            {% for job in jobs %}
+            <div class="job-row" id="job-row-{{ forloop.counter0 }}">
+                <span class="job-fmt">{{ job.get_content_format_display }}</span>
+                <span class="job-status-badge status-{{ job.status }}" id="job-badge-{{ forloop.counter0 }}">
+                    {{ job.get_status_display }}
+                </span>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="progress-bar-bg">
+            <div class="progress-bar" id="progressBar" style="width:0%"></div>
+        </div>
+        <p class="progress-text" id="progressText">0 / {{ jobs|length }} complete</p>
+
+        <div class="pipeline-steps">
+            <div class="step"><span class="step-dot"></span> Ingesting company documents into vector store</div>
+            <div class="step"><span class="step-dot"></span> Analyzing brand profile via RAG</div>
+            <div class="step"><span class="step-dot"></span> Detecting competitor gaps</div>
+            <div class="step"><span class="step-dot"></span> Writing brand-aligned content</div>
+            <div class="step"><span class="step-dot"></span> GEO optimization pass</div>
+            <div class="step"><span class="step-dot"></span> 4-judge evaluation (auto-retry if score &lt; 70)</div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    const statusUrl = "{% url 'content_generator:group_status' group_id %}";
+    const resultUrl = "{% url 'content_generator:group_result' group_id %}";
+    const total     = {{ jobs|length }};
+
+    const statusLabels = { pending: 'Pending', running: 'Running…', done: 'Done', failed: 'Failed' };
+
+    function poll() {
+        fetch(statusUrl)
+            .then(r => r.json())
+            .then(data => {
+                const statuses = data.statuses;
+                statuses.forEach(function (s, i) {
+                    const badge = document.getElementById('job-badge-' + i);
+                    if (badge) {
+                        badge.className = 'job-status-badge status-' + s;
+                        badge.textContent = statusLabels[s] || s;
+                    }
+                });
+
+                const pct = total > 0 ? Math.round((data.done_count / total) * 100) : 0;
+                document.getElementById('progressBar').style.width = pct + '%';
+                document.getElementById('progressText').textContent =
+                    data.done_count + ' / ' + total + ' complete';
+
+                if (data.all_done) {
+                    window.location.href = resultUrl;
+                } else {
+                    setTimeout(poll, 5000);
+                }
+            })
+            .catch(function () { setTimeout(poll, 8000); });
+    }
+
+    setTimeout(poll, 5000);
+})();
+</script>
+{% endblock %}

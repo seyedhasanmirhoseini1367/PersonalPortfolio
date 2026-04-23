@@ -147,6 +147,20 @@ class ProfileDetailView(LoginRequiredMixin, DetailView):
         context['total_views'] = user_stories.aggregate(Sum('view_count'))['view_count__sum'] or 0
         context['recent_comments'] = user_comments[:5]
 
+        is_own = self.request.user == user
+        is_client = getattr(user, 'is_client', False) or user.is_staff
+        if is_own and is_client:
+            from content_generator.models import GenerationJob, CompanyProfile
+            from django.db.models import Avg
+            jobs_qs = GenerationJob.objects.filter(owner=user)
+            context['cg_job_count']     = jobs_qs.count()
+            context['cg_done_count']    = jobs_qs.filter(status=GenerationJob.STATUS_DONE).count()
+            context['cg_avg_score']     = jobs_qs.filter(overall_score__isnull=False).aggregate(
+                                              avg=Avg('overall_score'))['avg']
+            context['cg_profile_count'] = CompanyProfile.objects.filter(owner=user).count()
+            context['cg_recent_jobs']   = (jobs_qs.filter(status=GenerationJob.STATUS_DONE)
+                                               .select_related('company_profile')[:4])
+
         return context
 
 
@@ -290,26 +304,34 @@ def password_reset_confirm_view(request):
 @login_required
 def dashboard_view(request):
     """User dashboard"""
-    profile_user = request.user  # Change this line
+    profile_user = request.user
 
-    # Get user's stories and comments
     user_stories = Story.objects.filter(author=profile_user).order_by('-published_at')
     user_comments = Comment.objects.filter(author=profile_user).order_by('-created_at')
-
-    # Calculate days since joining
     days_since_join = (timezone.now() - profile_user.date_joined).days
-
-    # Calculate total views
     total_views = user_stories.aggregate(Sum('view_count'))['view_count__sum'] or 0
 
     context = {
-        'profile_user': profile_user,  # Use profile_user consistently
+        'profile_user': profile_user,
         'user_stories': user_stories,
         'user_comments': user_comments,
         'recent_stories': user_stories[:5],
         'recent_comments': user_comments[:5],
         'days_since_join': days_since_join,
         'total_views': total_views,
-        'title': 'Dashboard'
+        'title': 'Dashboard',
     }
+
+    if getattr(profile_user, 'is_client', False) or profile_user.is_staff:
+        from content_generator.models import GenerationJob, CompanyProfile
+        from django.db.models import Avg
+        jobs_qs = GenerationJob.objects.filter(owner=profile_user)
+        context['cg_job_count']     = jobs_qs.count()
+        context['cg_done_count']    = jobs_qs.filter(status=GenerationJob.STATUS_DONE).count()
+        context['cg_avg_score']     = jobs_qs.filter(overall_score__isnull=False).aggregate(
+                                          avg=Avg('overall_score'))['avg']
+        context['cg_profile_count'] = CompanyProfile.objects.filter(owner=profile_user).count()
+        context['cg_recent_jobs']   = jobs_qs.filter(status=GenerationJob.STATUS_DONE).select_related(
+                                          'company_profile')[:5]
+
     return render(request, 'accounts/dashboard.html', context)

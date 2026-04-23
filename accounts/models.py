@@ -30,6 +30,12 @@ class CustomUser(AbstractUser):
     linkedin = models.URLField(blank=True)
     github = models.URLField(blank=True)
 
+    # Role
+    is_client = models.BooleanField(
+        default=False,
+        help_text="Clients have access to the AI Content Generator.",
+    )
+
     # Preferences
     email_notifications = models.BooleanField(default=True)
 

@@ -35,6 +35,7 @@ INSTALLED_APPS = [
     'stories',
     'accounts',
     'monitoring',
+    'content_generator',
 
     'storages',
 ]
@@ -139,7 +140,9 @@ DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='seyedhasan.mirhoseini
 GEMINI_API_KEY          = config('GEMINI_API_KEY',          default='')
 ANTHROPIC_API_KEY       = config('ANTHROPIC_API_KEY',       default='')
 OPENAI_API_KEY          = config('OPENAI_API_KEY',          default='')
+GROQ_API_KEY            = config('GROQ_API_KEY',            default='')
 MONITORING_ALERT_EMAIL  = config('MONITORING_ALERT_EMAIL',  default='')
+SLACK_WEBHOOK_URL       = config('SLACK_WEBHOOK_URL',       default='')
 
 # ── RAG Configuration ─────────────────────────────────────────────────────────
 RAG_CONFIG = {
@@ -151,6 +154,7 @@ RAG_CONFIG = {
     'GEMINI_MODEL':      'gemini-2.5-flash',
     'ANTHROPIC_MODEL':   'claude-haiku-4-5-20251001',
     'OPENAI_MODEL':      'gpt-4o-mini',
+    'GROQ_MODEL':        'llama-3.1-8b-instant',
     'MAX_TOKENS':        1200,
 }
 
