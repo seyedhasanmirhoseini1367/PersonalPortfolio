@@ -78,6 +78,12 @@ def login_view(request):
         if form.is_valid():
             username = form.cleaned_data.get('username')
             password = form.cleaned_data.get('password')
+            # Allow login with email address
+            if '@' in username:
+                try:
+                    username = CustomUser.objects.get(email__iexact=username).username
+                except CustomUser.DoesNotExist:
+                    pass
             user = authenticate(request, username=username, password=password)
 
             if user is not None:
