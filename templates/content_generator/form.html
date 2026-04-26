@@ -271,74 +271,6 @@
                         </div>
                     </div>
 
-                    <!-- ── Content Structure ── -->
-                    <div class="form-section structure">
-                        <h3>Content Structure</h3>
-
-                        <!-- Word count -->
-                        <div class="form-group">
-                            <label>Word Count Range</label>
-                            <div class="num-row">
-                                <input type="number" name="word_count_min" value="600" min="100" max="5000" placeholder="Min (600)">
-                                <input type="number" name="word_count_max" value="1200" min="200" max="10000" placeholder="Max (1200)">
-                            </div>
-                            <span class="form-hint">Min / Max words across all sections.</span>
-                        </div>
-
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>Reading Level</label>
-                                <select name="reading_level">
-                                    <option value="Simple">Simple</option>
-                                    <option value="Professional" selected>Professional</option>
-                                    <option value="Technical">Technical</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label>Content Angle</label>
-                                <select name="content_angle">
-                                    <option value="">— Auto (AI decides) —</option>
-                                    <option value="how-to guide">How-to Guide</option>
-                                    <option value="opinion piece">Opinion Piece</option>
-                                    <option value="case study">Case Study</option>
-                                    <option value="listicle">Listicle</option>
-                                    <option value="problem-solution article">Problem-Solution</option>
-                                    <option value="data-driven report">Data-Driven Report</option>
-                                    <option value="news article">News Article</option>
-                                    <option value="tutorial">Tutorial</option>
-                                    <option value="thought leadership piece">Thought Leadership</option>
-                                    <option value="comparison article">Comparison</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>H2 Sections</label>
-                                <input type="number" name="h2_count" value="3" min="1" max="10" placeholder="3">
-                                <span class="form-hint">Number of main headings.</span>
-                            </div>
-                            <div class="form-group">
-                                <label>Stats Required</label>
-                                <input type="number" name="stats_required" value="2" min="0" max="10" placeholder="2">
-                                <span class="form-hint">Min data points to include.</span>
-                            </div>
-                        </div>
-
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>FAQ Pairs <span style="font-weight:400;color:#9ca3af">(0 = off)</span></label>
-                                <input type="number" name="faq_count" value="0" min="0" max="10" placeholder="0">
-                                <span class="form-hint">Adds a FAQ section if &gt; 0.</span>
-                            </div>
-                            <div class="form-group">
-                                <label>CTA Text <span style="font-weight:400;color:#9ca3af">(optional)</span></label>
-                                <input type="text" name="cta_override" placeholder="Book a free demo">
-                                <span class="form-hint">Overrides AI-generated CTA.</span>
-                            </div>
-                        </div>
-                    </div>
-
                     <!-- ── Output Formats ── -->
                     <div class="form-section">
                         <h3>Output Formats</h3>
@@ -364,6 +296,73 @@
                         </div>
                     </div>
 
+                    <!-- ── Content Structure (shown/hidden based on selected formats) ── -->
+                    <div class="form-section structure" id="structureSection">
+                        <h3>Content Structure</h3>
+
+                        <div class="form-group" data-struct="word_count">
+                            <label>Word Count Range</label>
+                            <div class="num-row">
+                                <input type="number" name="word_count_min" value="600" min="100" max="5000" placeholder="Min (600)">
+                                <input type="number" name="word_count_max" value="1200" min="200" max="10000" placeholder="Max (1200)">
+                            </div>
+                            <span class="form-hint">Min / Max words across all sections.</span>
+                        </div>
+
+                        <div class="form-row" data-struct="level_angle">
+                            <div class="form-group">
+                                <label>Reading Level</label>
+                                <select name="reading_level">
+                                    <option value="Simple">Simple</option>
+                                    <option value="Professional" selected>Professional</option>
+                                    <option value="Technical">Technical</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Content Angle</label>
+                                <select name="content_angle">
+                                    <option value="">— Auto —</option>
+                                    <option value="how-to guide">How-to Guide</option>
+                                    <option value="opinion piece">Opinion Piece</option>
+                                    <option value="case study">Case Study</option>
+                                    <option value="listicle">Listicle</option>
+                                    <option value="problem-solution article">Problem-Solution</option>
+                                    <option value="data-driven report">Data-Driven Report</option>
+                                    <option value="news article">News Article</option>
+                                    <option value="tutorial">Tutorial</option>
+                                    <option value="thought leadership piece">Thought Leadership</option>
+                                    <option value="comparison article">Comparison</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-row" data-struct="h2_stats">
+                            <div class="form-group">
+                                <label>H2 Sections</label>
+                                <input type="number" name="h2_count" value="3" min="1" max="10" placeholder="3">
+                                <span class="form-hint">Number of main headings.</span>
+                            </div>
+                            <div class="form-group">
+                                <label>Stats Required</label>
+                                <input type="number" name="stats_required" value="2" min="0" max="10" placeholder="2">
+                                <span class="form-hint">Min data points to include.</span>
+                            </div>
+                        </div>
+
+                        <div class="form-row" data-struct="faq">
+                            <div class="form-group">
+                                <label>FAQ Pairs <span style="font-weight:400;color:#9ca3af">(0 = off)</span></label>
+                                <input type="number" name="faq_count" value="0" min="0" max="10" placeholder="0">
+                                <span class="form-hint">Adds a FAQ section if &gt; 0.</span>
+                            </div>
+                            <div class="form-group" data-struct="cta">
+                                <label>CTA Text <span style="font-weight:400;color:#9ca3af">(optional)</span></label>
+                                <input type="text" name="cta_override" placeholder="Book a free demo">
+                                <span class="form-hint">Overrides AI-generated CTA.</span>
+                            </div>
+                        </div>
+                    </div>
+
                 </div><!-- /col-right -->
             </div><!-- /two-col -->
 
@@ -375,7 +374,7 @@
 
 <script>
 (function () {
-    const profileSelect    = document.getElementById('profileSelect');
+    /* ── Profile loader ────────────────────────────────────────────────── */
     const manualSection    = document.getElementById('manualSection');
     const profileLoadedMsg = document.getElementById('profileLoadedMsg');
     const profileLoadedText = document.getElementById('profileLoadedText');
@@ -390,20 +389,57 @@
             profileLoadedMsg.style.display = 'none';
         }
     }
-
     window.onProfileChange = function (sel) {
         const opt = sel.options[sel.selectedIndex];
         applyProfile(sel.value, opt.dataset.name || '');
     };
-
     {% if prefill.profile %}
     applyProfile('{{ prefill.profile.pk }}', '{{ prefill.profile.name|escapejs }}');
     {% endif %}
-
     {% if prefill.service %}
     document.getElementById('goalInput').placeholder =
         'e.g. {{ prefill.service.description|truncatechars:120|escapejs }}';
     {% endif %}
+
+    /* ── Smart Content Structure visibility ────────────────────────────── */
+    // Which data-struct rows each format needs
+    const FORMAT_NEEDS = {
+        motto:        [],
+        social_post:  ['word_count'],
+        email:        ['word_count', 'level_angle', 'cta'],
+        ad_copy:      ['cta'],
+        landing_page: ['word_count', 'level_angle', 'h2_stats', 'cta'],
+        blog_post:    ['word_count', 'level_angle', 'h2_stats', 'faq', 'cta'],
+    };
+
+    const structureSection = document.getElementById('structureSection');
+    const allStructRows    = structureSection.querySelectorAll('[data-struct]');
+
+    function updateStructure() {
+        const checked = [...document.querySelectorAll('input[name="content_formats"]:checked')]
+                          .map(cb => cb.value);
+
+        // Union of all needed fields across selected formats
+        const needed = new Set(checked.flatMap(f => FORMAT_NEEDS[f] || Object.keys(FORMAT_NEEDS).flatMap(k => FORMAT_NEEDS[k])));
+
+        // If nothing checked fall back to showing everything
+        const showAll = checked.length === 0;
+
+        // Show/hide individual rows
+        allStructRows.forEach(el => {
+            const key = el.dataset.struct;
+            el.style.display = (showAll || needed.has(key)) ? '' : 'none';
+        });
+
+        // Hide entire section only when all selected formats need nothing
+        const anyNeeded = showAll || needed.size > 0;
+        structureSection.style.display = anyNeeded ? '' : 'none';
+    }
+
+    document.querySelectorAll('input[name="content_formats"]')
+            .forEach(cb => cb.addEventListener('change', updateStructure));
+
+    updateStructure(); // run on load
 })();
 </script>
 {% endblock %}

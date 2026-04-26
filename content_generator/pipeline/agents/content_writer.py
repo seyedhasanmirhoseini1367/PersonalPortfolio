@@ -184,6 +184,8 @@ Return JSON with these exact keys:
 Return ONLY valid JSON."""
 
     data = json.loads(generate(prompt))
+    if isinstance(data, list):   # LLM sometimes wraps response in [...]
+        data = data[0] if data else {}
     piece = ContentPiece(**data)
     if cta_override:
         piece.cta = cta_override
@@ -200,6 +202,8 @@ RETRY INSTRUCTION: The previous output was REJECTED because these keywords were 
 
 You MUST include every missing keyword verbatim in the output. Rewrite and return ONLY valid JSON."""
             data = json.loads(generate(retry_prompt))
+            if isinstance(data, list):
+                data = data[0] if data else {}
             piece = ContentPiece(**data)
 
     # Generate image/video prompts for formats that benefit from visuals
