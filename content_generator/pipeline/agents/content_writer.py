@@ -123,18 +123,20 @@ def write_content(
 
     # ── SEO/GEO structural constraints block ──────────────────────────────────
     sc = seo_controls or {}
-    word_min  = sc.get('word_count_min', 600)
-    word_max  = sc.get('word_count_max', 1200)
-    h2_count  = sc.get('h2_count', 3)
-    stats_req = sc.get('stats_required', 2)
-    faq_count = sc.get('faq_count', 0)
-    level     = sc.get('reading_level', 'Professional')
-    angle     = sc.get('content_angle', '')
+    word_min     = sc.get('word_count_min', 600)
+    word_max     = sc.get('word_count_max', 1200)
+    h2_count     = sc.get('h2_count', 3)
+    stats_req    = sc.get('stats_required', 2)
+    faq_count    = sc.get('faq_count', 0)
+    level        = sc.get('reading_level', 'Professional')
+    angle        = sc.get('content_angle', '')
+    cta_override = sc.get('cta_override', '')
 
     level_desc  = _READING_LEVEL_DESCS.get(level, _READING_LEVEL_DESCS["Professional"])
     faq_line    = (f"- FAQ section: add a section with heading='FAQ' containing exactly "
                    f"{faq_count} Q&A pairs in the body\n") if faq_count > 0 else ""
     angle_line  = f"- Content angle: frame the entire piece as a {angle}\n" if angle else ""
+    cta_line    = f"- CTA text: use exactly this CTA string: \"{cta_override}\"\n" if cta_override else ""
 
     seo_block = (
         f"\n⚠ HARD STRUCTURAL CONSTRAINTS — FOLLOW EXACTLY:\n"
@@ -144,6 +146,7 @@ def write_content(
         f"(percentages, counts, benchmarks, or year-over-year figures)\n"
         f"{faq_line}"
         f"{angle_line}"
+        f"{cta_line}"
         f"- Reading level: {level} — {level_desc}"
     )
 
@@ -182,6 +185,8 @@ Return ONLY valid JSON."""
 
     data = json.loads(generate(prompt))
     piece = ContentPiece(**data)
+    if cta_override:
+        piece.cta = cta_override
 
     # Verify all keywords are present; retry once with stricter instruction if any missing
     if keywords:

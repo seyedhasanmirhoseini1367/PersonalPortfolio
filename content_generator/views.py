@@ -133,6 +133,7 @@ def submit_job(request):
         'faq_count':      _int('faq_count', 0),
         'reading_level':  request.POST.get('reading_level', 'Professional') or 'Professional',
         'content_angle':  request.POST.get('content_angle', '') or '',
+        'cta_override':   request.POST.get('cta_override', '').strip(),
     }
     # Ensure min <= max
     if seo_params['word_count_min'] > seo_params['word_count_max']:

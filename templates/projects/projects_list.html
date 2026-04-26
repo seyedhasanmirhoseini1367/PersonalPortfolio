@@ -3,403 +3,421 @@
 {% block title %}ML Models - HasanPortfolio{% endblock %}
 
 {% block extra_css %}
-    <style>
-        .page-header {
-            text-align: center;
-            margin-bottom: 3rem;
-        }
+<style>
+/* ── Hero header ──────────────────────────────────────────────────────────── */
+.ml-hero {
+    background: linear-gradient(135deg, #0f0c29 0%, #302b63 55%, #24243e 100%);
+    color: white;
+    margin-left: -20px; margin-right: -20px;
+    margin-top: -1.4rem;
+    padding: 2.2rem 20px 2rem;
+    margin-bottom: 2rem;
+    position: relative;
+    overflow: hidden;
+    border-radius: 16px;
+    text-align: center;
+}
+.ml-hero::before {
+    content: '';
+    position: absolute; inset: 0;
+    background-image:
+        linear-gradient(rgba(56,201,230,.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,212,255,.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+}
+.ml-hero-neural {
+    position: absolute; inset: 0;
+    pointer-events: none; opacity: .1;
+}
+.ml-hero-neural svg { width: 100%; height: 100%; }
+.nn-conn { stroke: #00d4ff; stroke-width: 1; stroke-dasharray: 5 5; }
+.nn-conn.d0 { animation: nn-flow 3.0s linear infinite; }
+.nn-conn.d1 { animation: nn-flow 3.0s linear infinite -.75s; }
+.nn-conn.d2 { animation: nn-flow 3.0s linear infinite -1.5s; }
+.nn-conn.d3 { animation: nn-flow 3.0s linear infinite -2.25s; }
+@keyframes nn-flow { to { stroke-dashoffset: -20; } }
+.nn-node {
+    fill: #00d4ff;
+    animation: nn-pulse 2.5s ease-in-out infinite;
+    transform-box: fill-box; transform-origin: center;
+}
+.nn-node.p1 { animation-delay:0s } .nn-node.p2 { animation-delay:-.4s }
+.nn-node.p3 { animation-delay:-.8s } .nn-node.p4 { animation-delay:-1.2s }
+.nn-node.p5 { animation-delay:-1.6s } .nn-node.p6 { animation-delay:-2s }
+@keyframes nn-pulse {
+    0%,100% { opacity:.4; transform:scale(1); }
+    50%      { opacity:1;  transform:scale(1.6); }
+}
+.ml-hero-content {
+    position: relative; z-index: 1;
+    display: flex; justify-content: space-between; align-items: center;
+    max-width: 1260px; margin: 0 auto; padding: 0 2rem; gap: 2rem;
+}
+.ml-hero-left { text-align: left; }
+.ml-hero h1 {
+    font-size: 2.2rem; font-weight: 800; margin-bottom: .4rem;
+    background: linear-gradient(90deg, #fff 40%, #a78bfa);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+.ml-hero p { color: rgba(255,255,255,.7); font-size: .95rem; }
 
-        .page-title {
-            font-size: 1.9rem;
-            color: #1e293b;
-            margin-bottom: 0.5rem;
-        }
+.ml-hero-stats {
+    display: flex; gap: 1.5rem; flex-shrink: 0;
+}
+.hero-stat {
+    text-align: center;
+    background: rgba(255,255,255,.08);
+    border: 1px solid rgba(255,255,255,.15);
+    border-radius: 12px; padding: .7rem 1.2rem;
+    min-width: 90px;
+}
+.hero-stat-value {
+    font-size: 1.6rem; font-weight: 800;
+    background: linear-gradient(90deg, #00d4ff, #a78bfa);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text; line-height: 1.1;
+}
+.hero-stat-label {
+    font-size: .68rem; color: rgba(255,255,255,.6);
+    text-transform: uppercase; letter-spacing: .08em; margin-top: .2rem;
+}
 
-        .page-subtitle {
-            color: #64748b;
-            font-size: 1.0rem;
-        }
+@media (max-width: 700px) {
+    .ml-hero-content { flex-direction: column; text-align: center; }
+    .ml-hero-left { text-align: center; }
+    .ml-hero-stats { justify-content: center; }
+}
 
-        /* Filters */
-        .filters {
-            background: white;
-            padding: 1.5rem;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            margin-bottom: 2rem;
-            display: flex;
-            gap: 1rem;
-            flex-wrap: wrap;
-            align-items: center;
-        }
 
-        .filter-group {
-            display: flex;
-            gap: 0.5rem;
-            align-items: center;
-        }
+/* ── Filters ─────────────────────────────────────────────────────────────── */
+.filters {
+    background: white; padding: 1rem 1.5rem; border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,.08); margin-bottom: 2rem;
+    display: flex; gap: 1rem; flex-wrap: wrap; align-items: center;
+}
+.filter-label { font-weight: 500; color: #475569; font-size: .88rem; }
+.filter-select {
+    padding: .4rem .6rem; border: 1px solid #d1d5db;
+    border-radius: 6px; background: white; font-size: .88rem;
+}
+.active-filters { display: flex; gap: .5rem; flex-wrap: wrap; margin-bottom: 1rem; }
+.active-filter {
+    background: #302b63; color: white;
+    padding: .25rem .75rem; border-radius: 15px;
+    font-size: .78rem; display: flex; align-items: center; gap: .5rem;
+}
+.active-filter a { color: white; text-decoration: none; }
 
-        .filter-label {
-            font-weight: 500;
-            color: #475569;
-        }
+/* ── Grid ────────────────────────────────────────────────────────────────── */
+.projects-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 1rem;
+}
 
-        .filter-select {
-            padding: 0.5rem;
-            border: 1px solid #d1d5db;
-            border-radius: 5px;
-            background: white;
-        }
+/* ── Card ────────────────────────────────────────────────────────────────── */
+.project-card {
+    background: white; border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.08);
+    overflow: hidden; transition: transform .2s, box-shadow .2s;
+    display: flex; flex-direction: column;
+    border-top: 4px solid #ef4444; /* default: no demo = red */
+}
+.project-card.has-demo { border-top-color: #10b981; }
+.project-card:hover { transform: translateY(-3px); box-shadow: 0 6px 16px rgba(0,0,0,.12); }
 
-        .active-filters {
-            display: flex;
-            gap: 0.5rem;
-            flex-wrap: wrap;
-            margin-bottom: 1rem;
-        }
+.project-image {
+    width: 100%; height: 130px; object-fit: cover; background: #f8f9fa;
+}
 
-        .active-filter {
-            background: #302b63;
-            color: white;
-            padding: 0.3rem 0.8rem;
-            border-radius: 15px;
-            font-size: 0.8rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
+.project-content { padding: .9rem; flex: 1; display: flex; flex-direction: column; }
 
-        .active-filter a {
-            color: white;
-            text-decoration: none;
-        }
+.card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: .35rem; }
 
-        /* Projects Grid */
-        .projects-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-            gap: 1rem;
-        }
+.project-title {
+    font-size: .93rem; font-weight: 700; color: #1e293b; line-height: 1.3; flex: 1;
+}
 
-        .project-card {
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,.08);
-            overflow: hidden;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
+.demo-badge {
+    flex-shrink: 0; margin-left: .5rem;
+    font-size: .65rem; font-weight: 700; padding: .15rem .45rem;
+    border-radius: 8px; letter-spacing: .03em;
+}
+.demo-badge.live  { background: #dcfce7; color: #15803d; }
+.demo-badge.no-demo { background: #fee2e2; color: #b91c1c; }
 
-        .project-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 6px 16px rgba(0,0,0,.12);
-        }
+.project-meta {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: .45rem; font-size: .78rem;
+}
+.project-type {
+    background: #dbeafe; color: #0f0c29;
+    padding: .15rem .5rem; border-radius: 10px; font-size: .68rem; font-weight: 500;
+}
+.difficulty-level { color: #f59e0b; font-weight: 500; font-size: .73rem; }
 
-        .project-image {
-            width: 100%;
-            height: 130px;
-            object-fit: cover;
-            background: #f8f9fa;
-        }
+.project-description {
+    color: #475569; line-height: 1.45; margin-bottom: .55rem; font-size: .81rem;
+}
 
-        .project-content {
-            padding: 0.9rem;
-        }
+.project-skills {
+    display: flex; flex-wrap: wrap; gap: .3rem; margin-bottom: .55rem;
+}
+.skill-badge {
+    background: #f1f5f9; color: #475569;
+    padding: .1rem .4rem; border-radius: 8px; font-size: .64rem; font-weight: 500;
+}
 
-        .project-title {
-            font-size: .95rem;
-            font-weight: 600;
-            color: #1e293b;
-            margin-bottom: 0.3rem;
-            line-height: 1.3;
-        }
+/* ── Accuracy row — always visible ───────────────────────────────────────── */
+.accuracy-row {
+    display: flex; justify-content: space-between; align-items: center;
+    background: #f8fafc; border-radius: 6px;
+    padding: .45rem .65rem; margin-bottom: .6rem;
+    font-size: .8rem; color: #475569;
+}
+.accuracy-label { font-weight: 500; }
+.accuracy-value { font-weight: 700; color: #302b63; }
+.accuracy-value.empty { color: #cbd5e1; font-style: italic; font-weight: 400; }
 
-        .project-meta {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 0.5rem;
-            font-size: 0.78rem;
-        }
+/* ── MLOps badges ────────────────────────────────────────────────────────── */
+.mlops-badges {
+    display: flex; flex-wrap: wrap; gap: .35rem; margin-bottom: .7rem; align-items: center;
+}
+.mlops-badge {
+    display: inline-flex; align-items: center; gap: .22rem;
+    padding: .18rem .55rem; border-radius: 20px;
+    font-size: .7rem; font-weight: 600; text-decoration: none;
+}
+.mlops-badge.docker { background: #dbeafe; color: #00b8d9; }
+.mlops-badge.api    { background: #d1fae5; color: #065f46; }
+.mlops-badge.demo   { background: #d1fae5; color: #065f46; }
+.mlops-badge.no-demo-badge { background: #fee2e2; color: #b91c1c; }
+.mlops-badge.github { background: #f1f5f9; color: #1e293b; border: 1px solid #e2e8f0; }
+.mlops-badge.github:hover { background: #1e293b; color: white; }
 
-        .project-type {
-            background: #dbeafe;
-            color: #0f0c29;
-            padding: 0.15rem 0.55rem;
-            border-radius: 10px;
-            font-size: 0.7rem;
-            font-weight: 500;
-        }
+.project-link {
+    display: inline-block; color: #302b63; text-decoration: none;
+    font-weight: 600; font-size: .82rem; transition: color .2s; margin-top: auto;
+}
+.project-link:hover { color: #a78bfa; }
 
-        .difficulty-level {
-            color: #f59e0b;
-            font-weight: 500;
-            font-size: .75rem;
-        }
-
-        .project-description {
-            color: #475569;
-            line-height: 1.45;
-            margin-bottom: 0.6rem;
-            font-size: .82rem;
-        }
-
-        .project-skills {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.3rem;
-            margin-bottom: 0.6rem;
-        }
-
-        .skill-badge {
-            background: #f1f5f9;
-            color: #475569;
-            padding: 0.1rem 0.45rem;
-            border-radius: 8px;
-            font-size: 0.65rem;
-            font-weight: 500;
-        }
-
-        .mlops-badges {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.4rem;
-            margin: 0.6rem 0 0.8rem;
-            align-items: center;
-        }
-        .mlops-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.25rem;
-            padding: 0.2rem 0.6rem;
-            border-radius: 20px;
-            font-size: 0.72rem;
-            font-weight: 600;
-            text-decoration: none;
-        }
-        .mlops-badge.docker { background: #dbeafe; color: #00b8d9; }
-        .mlops-badge.api    { background: #d1fae5; color: #065f46; }
-        .mlops-badge.demo   { background: #fef3c7; color: #92400e; }
-        .mlops-badge.github { background: #f1f5f9; color: #1e293b; border: 1px solid #e2e8f0; }
-        .mlops-badge.github:hover { background: #1e293b; color: white; }
-
-        .project-metrics {
-            background: #f8fafc;
-            padding: 0.8rem;
-            border-radius: 5px;
-            margin-bottom: 1rem;
-        }
-
-        .metric {
-            display: flex;
-            justify-content: space-between;
-            font-size: 0.9rem;
-        }
-
-        .metric-value {
-            font-weight: 600;
-            color: #302b63;
-        }
-
-        .project-link {
-            display: inline-block;
-            color: #302b63;
-            text-decoration: none;
-            font-weight: 500;
-            transition: color 0.3s;
-        }
-
-        .project-link:hover {
-            color: #00b8d9;
-        }
-
-        .no-projects {
-            text-align: center;
-            padding: 3rem;
-            color: #64748b;
-            grid-column: 1 / -1;
-        }
-
-        .stats-bar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1rem;
-            padding: 1rem;
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-        }
-    </style>
+.no-projects {
+    text-align: center; padding: 3rem; color: #64748b; grid-column: 1 / -1;
+}
+</style>
 {% endblock %}
 
 {% block content %}
-    <div class="page-header">
-        <h1 class="page-title">{{ page_title }}</h1>
-        <p class="page-subtitle">Showcasing {{ total_projects }} data science and machine learning models</p>
-    </div>
 
-    <!-- Stats Bar -->
-    <div class="stats-bar">
-        <div>Total ML Models: <strong>{{ total_projects }}</strong></div>
-        <div>Featured: <strong>{{ featured_count }}</strong></div>
-        <div>Kaggle Competitions: <strong>{{ projects|length }}</strong></div>
+<!-- ── Hero ──────────────────────────────────────────────────────────────── -->
+<div class="ml-hero">
+    <div class="ml-hero-neural" aria-hidden="true">
+        <svg viewBox="0 0 900 200" preserveAspectRatio="xMidYMid meet" fill="none">
+            <line class="nn-conn d0" x1="60"  y1="50"  x2="200" y2="35"/>
+            <line class="nn-conn d1" x1="60"  y1="50"  x2="200" y2="90"/>
+            <line class="nn-conn d2" x1="60"  y1="100" x2="200" y2="35"/>
+            <line class="nn-conn d3" x1="60"  y1="100" x2="200" y2="90"/>
+            <line class="nn-conn d0" x1="60"  y1="100" x2="200" y2="145"/>
+            <line class="nn-conn d1" x1="60"  y1="155" x2="200" y2="90"/>
+            <line class="nn-conn d2" x1="60"  y1="155" x2="200" y2="145"/>
+            <line class="nn-conn d0" x1="200" y1="35"  x2="370" y2="60"/>
+            <line class="nn-conn d1" x1="200" y1="35"  x2="370" y2="110"/>
+            <line class="nn-conn d2" x1="200" y1="90"  x2="370" y2="60"/>
+            <line class="nn-conn d3" x1="200" y1="90"  x2="370" y2="110"/>
+            <line class="nn-conn d0" x1="200" y1="90"  x2="370" y2="160"/>
+            <line class="nn-conn d1" x1="200" y1="145" x2="370" y2="110"/>
+            <line class="nn-conn d2" x1="200" y1="145" x2="370" y2="160"/>
+            <line class="nn-conn d0" x1="370" y1="60"  x2="530" y2="90"/>
+            <line class="nn-conn d1" x1="370" y1="110" x2="530" y2="90"/>
+            <line class="nn-conn d2" x1="370" y1="160" x2="530" y2="90"/>
+            <!-- right side mirror -->
+            <line class="nn-conn d1" x1="840" y1="50"  x2="700" y2="35"/>
+            <line class="nn-conn d2" x1="840" y1="50"  x2="700" y2="90"/>
+            <line class="nn-conn d3" x1="840" y1="100" x2="700" y2="90"/>
+            <line class="nn-conn d0" x1="840" y1="100" x2="700" y2="145"/>
+            <line class="nn-conn d1" x1="840" y1="155" x2="700" y2="90"/>
+            <line class="nn-conn d2" x1="840" y1="155" x2="700" y2="145"/>
+            <line class="nn-conn d0" x1="700" y1="35"  x2="530" y2="90"/>
+            <line class="nn-conn d1" x1="700" y1="90"  x2="530" y2="90"/>
+            <line class="nn-conn d2" x1="700" y1="145" x2="530" y2="90"/>
+            <!-- nodes -->
+            <circle class="nn-node p1" cx="60"  cy="50"  r="5"/>
+            <circle class="nn-node p2" cx="60"  cy="100" r="5"/>
+            <circle class="nn-node p3" cx="60"  cy="155" r="5"/>
+            <circle class="nn-node p2" cx="200" cy="35"  r="5"/>
+            <circle class="nn-node p3" cx="200" cy="90"  r="5"/>
+            <circle class="nn-node p4" cx="200" cy="145" r="5"/>
+            <circle class="nn-node p3" cx="370" cy="60"  r="5"/>
+            <circle class="nn-node p4" cx="370" cy="110" r="5"/>
+            <circle class="nn-node p5" cx="370" cy="160" r="5"/>
+            <circle class="nn-node p6" cx="530" cy="90"  r="8"/>
+            <circle class="nn-node p3" cx="700" cy="35"  r="5"/>
+            <circle class="nn-node p4" cx="700" cy="90"  r="5"/>
+            <circle class="nn-node p5" cx="700" cy="145" r="5"/>
+            <circle class="nn-node p2" cx="840" cy="50"  r="5"/>
+            <circle class="nn-node p3" cx="840" cy="100" r="5"/>
+            <circle class="nn-node p4" cx="840" cy="155" r="5"/>
+        </svg>
     </div>
+    <div class="ml-hero-content">
+        <div class="ml-hero-left">
+            <h1>{{ page_title|default:"ML Models" }}</h1>
+            <p>Data science &amp; machine learning — built, trained, and deployed</p>
+        </div>
+        <div class="ml-hero-stats">
+            <div class="hero-stat">
+                <div class="hero-stat-value">{{ total_projects }}</div>
+                <div class="hero-stat-label">Total Models</div>
+            </div>
+            <div class="hero-stat">
+                <div class="hero-stat-value">{{ featured_count }}</div>
+                <div class="hero-stat-label">Featured</div>
+            </div>
+            <div class="hero-stat">
+                <div class="hero-stat-value">{{ projects|length }}</div>
+                <div class="hero-stat-label">Kaggle</div>
+            </div>
+        </div>
+    </div>
+</div>
 
-    <!-- Active Filters -->
-    {% if active_type or active_skill %}
-        <div class="active-filters">
-            {% if active_type %}
-                <span class="active-filter">
+<!-- Active Filters -->
+{% if active_type or active_skill %}
+<div class="active-filters">
+    {% if active_type %}
+    <span class="active-filter">
         Type: {{ active_type }}
         <a href="?{% if active_skill %}skill={{ active_skill }}{% endif %}">×</a>
     </span>
-            {% endif %}
-            {% if active_skill %}
-                <span class="active-filter">
+    {% endif %}
+    {% if active_skill %}
+    <span class="active-filter">
         Skill: {{ active_skill }}
         <a href="?{% if active_type %}type={{ active_type }}{% endif %}">×</a>
     </span>
-            {% endif %}
-        </div>
     {% endif %}
+</div>
+{% endif %}
 
-    <!-- Filters -->
-    <div class="filters">
-        <div class="filter-group">
-            <span class="filter-label">Filter by:</span>
-            <select class="filter-select" onchange="window.location.href=this.value">
-                <option value="?">All Project Types</option>
-                {% for type_value, type_label in project_types %}
-                    <option value="?type={{ type_value }}" {% if active_type == type_value %}selected{% endif %}>
-                        {{ type_label }}
-                    </option>
-                {% endfor %}
-            </select>
-        </div>
-
-        <div class="filter-group">
-            <select class="filter-select" onchange="window.location.href=this.value">
-                <option value="?{% if active_type %}type={{ active_type }}{% endif %}">All Skills</option>
-                {% for skill_value, skill_label in skills %}
-                    <option value="?{% if active_type %}type={{ active_type }}&{% endif %}skill={{ skill_value }}"
-                            {% if active_skill == skill_value %}selected{% endif %}>
-                        {{ skill_label }}
-                    </option>
-                {% endfor %}
-            </select>
-        </div>
-
-        <div class="filter-group">
-            <a href="?featured=1{% if active_type %}&type={{ active_type }}{% endif %}{% if active_skill %}&skill={{ active_skill }}{% endif %}"
-               class="btn {% if request.GET.featured %}btn-outline{% endif %}">
-                ⭐ Featured Only
-            </a>
-        </div>
-
-        <div class="filter-group" style="margin-left: auto;">
-            <a href="{% url 'projects_list' %}" class="btn btn-outline">Clear Filters</a>
-        </div>
-    </div>
-
-    <!-- Projects Grid -->
-    <div class="projects-grid">
-        {% for project in projects %}
-            <div class="project-card">
-                {% if project.featured_image %}
-                    <img src="{{ project.featured_image.url }}" alt="{{ project.title }}" class="project-image">
-                {% else %}
-                    <div class="project-image"
-                         style="display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #0f0c29 0%, #302b63 55%, #24243e 100%); color: white; font-size: 3rem;">
-                        📊
-                    </div>
-                {% endif %}
-
-                <div class="project-content">
-                    <h3 class="project-title">{{ project.title }}</h3>
-
-                    <div class="project-meta">
-                        <span class="project-type">{{ project.get_project_type_display }}</span>
-                        <span class="difficulty-level">{{ project.get_difficulty_level_display }}</span>
-                    </div>
-
-                    {% if project.skills_used %}
-                        <div class="project-skills">
-                            {% for skill in project.skills_used|slice:":3" %}
-                                {% for skill_value, skill_label in skills %}
-                                    {% if skill_value == skill %}
-                                        <span class="skill-badge">{{ skill_label }}</span>
-                                    {% endif %}
-                                {% endfor %}
-                            {% endfor %}
-                            {% if project.skills_used|length > 3 %}
-                                <span class="skill-badge">+{{ project.skills_used|length|add:"-3" }} more</span>
-                            {% endif %}
-                        </div>
-                    {% endif %}
-
-                    {% if project.accuracy_score or project.kaggle_rank or project.avg_inference_ms %}
-                        <div class="project-metrics">
-                            {% if project.accuracy_score %}
-                                <div class="metric">
-                                    <span>{{ project.evaluation_metric|default:"Score" }}:</span>
-                                    <span class="metric-value">{{ project.accuracy_score|floatformat:3 }}</span>
-                                </div>
-                            {% endif %}
-                            {% if project.kaggle_rank %}
-                                <div class="metric">
-                                    <span>Kaggle Rank:</span>
-                                    <span class="metric-value">#{{ project.kaggle_rank }}</span>
-                                </div>
-                            {% endif %}
-                            {% if project.avg_inference_ms %}
-                                <div class="metric">
-                                    <span>Latency:</span>
-                                    <span class="metric-value">~{{ project.avg_inference_ms }}ms</span>
-                                </div>
-                            {% endif %}
-                        </div>
-                    {% endif %}
-
-                    <!-- MLOps deployment badges -->
-                    <div class="mlops-badges">
-                        {% if project.is_dockerized %}
-                            <span class="mlops-badge docker" title="Containerised with Docker">
-                                🐳 Docker
-                            </span>
-                        {% endif %}
-                        {% if project.has_api %}
-                            <span class="mlops-badge api" title="REST API available">
-                                ⚡ API
-                            </span>
-                        {% endif %}
-                        {% if project.prediction_endpoint %}
-                            <span class="mlops-badge demo" title="Live demo available">
-                                🚀 Live Demo
-                            </span>
-                        {% endif %}
-                        {% if project.github_url %}
-                            <a href="{{ project.github_url }}" target="_blank" rel="noopener"
-                               class="mlops-badge github" title="View on GitHub">
-                                <i class="fab fa-github"></i> GitHub
-                            </a>
-                        {% endif %}
-                        {% if project.ci_cd_badge_url %}
-                            <img src="{{ project.ci_cd_badge_url }}" alt="CI/CD" style="height:20px; border-radius:4px;">
-                        {% endif %}
-                    </div>
-
-                    <a href="{% url 'project_detail' project.id %}" class="project-link">
-                        View Project Details →
-                    </a>
-                </div>
-            </div>
-        {% empty %}
-            <div class="no-projects">
-                <div style="font-size: 4rem; margin-bottom: 1rem;">🔍</div>
-                <h3>No ML Models Found</h3>
-                <p>Try adjusting your filters or check back later for new projects.</p>
-                <a href="{% url 'projects_list' %}" class="btn mt-3">Clear Filters</a>
-            </div>
+<!-- Filters -->
+<div class="filters">
+    <span class="filter-label">Filter by:</span>
+    <select class="filter-select" onchange="window.location.href=this.value">
+        <option value="?">All Project Types</option>
+        {% for type_value, type_label in project_types %}
+        <option value="?type={{ type_value }}" {% if active_type == type_value %}selected{% endif %}>
+            {{ type_label }}
+        </option>
         {% endfor %}
+    </select>
+
+    <select class="filter-select" onchange="window.location.href=this.value">
+        <option value="?{% if active_type %}type={{ active_type }}{% endif %}">All Skills</option>
+        {% for skill_value, skill_label in skills %}
+        <option value="?{% if active_type %}type={{ active_type }}&{% endif %}skill={{ skill_value }}"
+                {% if active_skill == skill_value %}selected{% endif %}>{{ skill_label }}</option>
+        {% endfor %}
+    </select>
+
+    <a href="?featured=1{% if active_type %}&type={{ active_type }}{% endif %}{% if active_skill %}&skill={{ active_skill }}{% endif %}"
+       class="btn {% if request.GET.featured %}btn-outline{% endif %}" style="font-size:.82rem;padding:.4rem 1rem;">
+        ⭐ Featured Only
+    </a>
+
+    <a href="{% url 'projects_list' %}" class="btn btn-outline" style="margin-left:auto;font-size:.82rem;padding:.4rem 1rem;">
+        Clear Filters
+    </a>
+</div>
+
+<!-- Projects Grid -->
+<div class="projects-grid">
+    {% for project in projects %}
+    <div class="project-card {% if project.prediction_endpoint %}has-demo{% endif %}">
+
+        {% if project.featured_image %}
+            <img src="{{ project.featured_image.url }}" alt="{{ project.title }}" class="project-image">
+        {% else %}
+            <div class="project-image"
+                 style="display:flex;align-items:center;justify-content:center;
+                        background:linear-gradient(135deg,#0f0c29 0%,#302b63 55%,#24243e 100%);
+                        color:white;font-size:3rem;">📊</div>
+        {% endif %}
+
+        <div class="project-content">
+
+            <div class="card-top">
+                <h3 class="project-title">{{ project.title }}</h3>
+                {% if project.prediction_endpoint %}
+                    <span class="demo-badge live">🟢 Live</span>
+                {% else %}
+                    <span class="demo-badge no-demo">🔴 No Demo</span>
+                {% endif %}
+            </div>
+
+            <div class="project-meta">
+                <span class="project-type">{{ project.get_project_type_display }}</span>
+                <span class="difficulty-level">{{ project.get_difficulty_level_display }}</span>
+            </div>
+
+            {% if project.skills_used %}
+            <div class="project-skills">
+                {% for skill in project.skills_used|slice:":3" %}
+                    {% for skill_value, skill_label in skills %}
+                        {% if skill_value == skill %}
+                            <span class="skill-badge">{{ skill_label }}</span>
+                        {% endif %}
+                    {% endfor %}
+                {% endfor %}
+                {% if project.skills_used|length > 3 %}
+                    <span class="skill-badge">+{{ project.skills_used|length|add:"-3" }} more</span>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <!-- Accuracy — always shown -->
+            <div class="accuracy-row">
+                <span class="accuracy-label">{{ project.evaluation_metric|default:"Accuracy" }}</span>
+                {% if project.accuracy_score %}
+                    <span class="accuracy-value">{{ project.accuracy_score|floatformat:3 }}</span>
+                {% else %}
+                    <span class="accuracy-value empty">—</span>
+                {% endif %}
+            </div>
+
+            <!-- MLOps badges -->
+            <div class="mlops-badges">
+                {% if project.is_dockerized %}
+                    <span class="mlops-badge docker">🐳 Docker</span>
+                {% endif %}
+                {% if project.has_api %}
+                    <span class="mlops-badge api">⚡ API</span>
+                {% endif %}
+                {% if project.prediction_endpoint %}
+                    <span class="mlops-badge demo">🚀 Live Demo</span>
+                {% endif %}
+                {% if project.kaggle_rank %}
+                    <span class="mlops-badge docker">🏆 #{{ project.kaggle_rank }}</span>
+                {% endif %}
+                {% if project.github_url %}
+                    <a href="{{ project.github_url }}" target="_blank" rel="noopener" class="mlops-badge github">
+                        <i class="fab fa-github"></i> GitHub
+                    </a>
+                {% endif %}
+            </div>
+
+            <a href="{% url 'project_detail' project.id %}" class="project-link">View Details →</a>
+        </div>
     </div>
+    {% empty %}
+    <div class="no-projects">
+        <div style="font-size:4rem;margin-bottom:1rem;">🔍</div>
+        <h3>No ML Models Found</h3>
+        <p>Try adjusting your filters or check back later.</p>
+        <a href="{% url 'projects_list' %}" class="btn mt-3">Clear Filters</a>
+    </div>
+    {% endfor %}
+</div>
+
 {% endblock %}

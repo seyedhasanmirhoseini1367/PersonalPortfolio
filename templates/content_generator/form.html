@@ -5,88 +5,127 @@
 <style>
     .cg-hero {
         background: linear-gradient(135deg, #0f172a, #1e40af);
-        color: white; padding: 2rem 0; text-align: center;
-        border-radius: 20px; margin-bottom: 2rem;
+        color: white; padding: 1.2rem 2rem;
+        border-radius: 16px; margin-bottom: 1.5rem; margin-top: -1.4rem;
+        display: flex; justify-content: space-between; align-items: center;
+        gap: 2rem; flex-wrap: wrap;
     }
-    .cg-hero h1 { font-size: 2rem; font-weight: 700; margin-bottom: .4rem; }
-    .cg-hero p  { opacity: .85; font-size: 1rem; }
+    .cg-hero-left { flex: 1; min-width: 0; }
+    .cg-hero h1 { font-size: 1.5rem; font-weight: 700; margin: .2rem 0 .25rem; }
+    .cg-hero p  { opacity: .8; font-size: .85rem; margin: 0; }
 
     .cg-badge {
         display: inline-flex; align-items: center; gap: .4rem;
         background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.2);
-        padding: .3rem .9rem; border-radius: 20px; font-size: .8rem;
-        margin-bottom: 1rem;
+        padding: .2rem .7rem; border-radius: 20px; font-size: .72rem;
+        margin-bottom: .4rem;
     }
+
+    .cg-hero-actions {
+        display: flex; flex-direction: column; gap: .5rem; flex-shrink: 0;
+    }
+    .cg-hero-btn {
+        display: inline-flex; align-items: center; gap: .4rem;
+        background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.25);
+        color: white; border-radius: 8px; padding: .4rem 1rem;
+        font-size: .8rem; font-weight: 600; text-decoration: none;
+        transition: background .15s; white-space: nowrap;
+    }
+    .cg-hero-btn:hover { background: rgba(255,255,255,.22); color: white; }
 
     .cg-form-card {
         background: white; border-radius: 16px;
         box-shadow: 0 4px 24px rgba(0,0,0,.08);
-        padding: 2rem; max-width: 860px; margin: 0 auto;
+        padding: 1.75rem; max-width: 1040px; margin: 0 auto;
     }
-    .form-section { margin-bottom: 1.5rem; }
+
+    /* Two-column layout */
+    .two-col { display: grid; grid-template-columns: 57% 1fr; gap: 1.5rem; align-items: start; }
+    .col-left  { display: flex; flex-direction: column; gap: 0; }
+    .col-right { display: flex; flex-direction: column; gap: 0; }
+
+    .form-section { margin-bottom: 1.4rem; }
     .form-section h3 {
-        font-size: .8rem; font-weight: 700; text-transform: uppercase;
+        font-size: .78rem; font-weight: 700; text-transform: uppercase;
         letter-spacing: .06em; color: #1e40af;
-        border-bottom: 2px solid #dbeafe; padding-bottom: .35rem;
-        margin-bottom: 1rem;
+        border-bottom: 2px solid #dbeafe; padding-bottom: .3rem;
+        margin-bottom: .85rem;
     }
-    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-    .form-group { display: flex; flex-direction: column; gap: .3rem; margin-bottom: .9rem; }
-    .form-group label { font-size: .82rem; font-weight: 600; color: #374151; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
+    .form-group { display: flex; flex-direction: column; gap: .25rem; margin-bottom: .75rem; }
+    .form-group label { font-size: .81rem; font-weight: 600; color: #374151; }
     .form-group input, .form-group select, .form-group textarea {
         border: 1px solid #d1d5db; border-radius: 8px;
-        padding: .55rem .8rem; font-size: .88rem;
+        padding: .5rem .75rem; font-size: .86rem;
         transition: border-color .15s;
     }
     .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
         outline: none; border-color: #1e40af; box-shadow: 0 0 0 3px rgba(30,64,175,.1);
     }
-    .form-group textarea { resize: vertical; min-height: 130px; }
-    .form-hint { font-size: .74rem; color: #6b7280; margin-top: .2rem; }
+    .form-group textarea { resize: vertical; min-height: 110px; }
+    .form-hint { font-size: .73rem; color: #6b7280; margin-top: .15rem; }
 
     .profile-loaded {
         display: flex; align-items: center; gap: .6rem;
         background: #f0fdf4; border: 1.5px solid #bbf7d0; border-radius: 8px;
-        padding: .6rem 1rem; font-size: .84rem; color: #166534; margin-bottom: 1rem;
+        padding: .5rem .9rem; font-size: .82rem; color: #166534; margin-bottom: .75rem;
     }
 
     .service-banner {
         display: flex; align-items: center; gap: .5rem;
         background: #eff6ff; border: 1.5px solid #bfdbfe; border-radius: 8px;
-        padding: .55rem 1rem; font-size: .84rem; color: #1e40af; margin-bottom: 1rem;
+        padding: .5rem .9rem; font-size: .82rem; color: #1e40af; margin-bottom: .75rem;
     }
 
-    .format-grid {
-        display: grid; grid-template-columns: repeat(3, 1fr); gap: .5rem; margin-top: .4rem;
-    }
+    /* Language checkboxes */
+    .lang-checks { display: flex; gap: .5rem; padding-top: .2rem; flex-wrap: wrap; }
     .format-check {
-        display: flex; align-items: center; gap: .5rem;
+        display: flex; align-items: center; gap: .45rem;
         border: 1.5px solid #e5e7eb; border-radius: 8px;
-        padding: .5rem .75rem; cursor: pointer;
+        padding: .45rem .7rem; cursor: pointer;
         transition: border-color .15s, background .15s;
-        font-size: .85rem; font-weight: 500; color: #374151; user-select: none;
+        font-size: .84rem; font-weight: 500; color: #374151; user-select: none;
     }
     .format-check:has(input:checked) {
         border-color: #1e40af; background: #eff6ff; color: #1e40af;
     }
-    .format-check input { accent-color: #1e40af; width: 15px; height: 15px; flex-shrink: 0; }
+    .format-check input { accent-color: #1e40af; width: 14px; height: 14px; flex-shrink: 0; }
 
-    .agent-badges { display: flex; flex-wrap: wrap; gap: .4rem; margin: 1.2rem 0; justify-content: center; }
+    /* Format grid */
+    .format-grid {
+        display: grid; grid-template-columns: repeat(2, 1fr); gap: .4rem; margin-top: .35rem;
+    }
+
+    /* Number row (word count min/max side by side) */
+    .num-row { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; }
+
+    /* Content structure section accent */
+    .form-section.structure h3 { color: #7c3aed; border-bottom-color: #ede9fe; }
+
+    .agent-badges { display: flex; flex-wrap: wrap; gap: .3rem; margin-top: .45rem; }
     .agent-badge {
-        background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.2);
-        padding: .25rem .7rem; border-radius: 20px; font-size: .72rem; font-weight: 500;
+        background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.18);
+        padding: .15rem .55rem; border-radius: 20px; font-size: .68rem; font-weight: 500;
     }
 
     .submit-btn {
-        width: 100%; padding: .85rem; background: linear-gradient(135deg, #0f172a, #1e40af);
+        width: 100%; padding: .8rem; background: linear-gradient(135deg, #0f172a, #1e40af);
         color: white; border: none; border-radius: 10px; font-size: 1rem;
-        font-weight: 600; cursor: pointer; transition: opacity .15s;
+        font-weight: 600; cursor: pointer; transition: opacity .15s; margin-top: .5rem;
     }
     .submit-btn:hover { opacity: .9; }
 
-    @media (max-width: 640px) {
-        .form-row { grid-template-columns: 1fr; }
+    /* Small number inputs */
+    input[type="number"] { -moz-appearance: textfield; }
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button { opacity: 1; }
+
+    @media (max-width: 760px) {
+        .two-col { grid-template-columns: 1fr; }
         .format-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 480px) {
+        .form-row, .num-row { grid-template-columns: 1fr; }
     }
 </style>
 {% endblock %}
@@ -95,33 +134,29 @@
 <div class="container">
 
     <div class="cg-hero">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;flex-wrap:wrap;gap:.5rem;">
-            <a href="{% url 'content_generator:workspace' %}"
-               style="display:inline-flex;align-items:center;gap:.4rem;background:rgba(255,255,255,.12);
-                      border:1px solid rgba(255,255,255,.25);color:white;border-radius:8px;
-                      padding:.35rem .9rem;font-size:.8rem;font-weight:600;text-decoration:none;">
+        <div class="cg-hero-left">
+            <span class="cg-badge">✦ 9 Specialized AI Agents</span>
+            <h1>AI Content Generator</h1>
+            <p>Brand-aligned · RAG-powered · Multi-agent evaluation · GEO-optimised</p>
+            <div class="agent-badges">
+                <span class="agent-badge">Brand Analyzer</span>
+                <span class="agent-badge">Competitor Gap</span>
+                <span class="agent-badge">Content Writer</span>
+                <span class="agent-badge">GEO Optimizer</span>
+                <span class="agent-badge">4-Judge Evaluator</span>
+                <span class="agent-badge">Auto Retry Loop</span>
+                <span class="agent-badge">Localizer</span>
+            </div>
+        </div>
+        <div class="cg-hero-actions">
+            <a href="{% url 'content_generator:workspace' %}" class="cg-hero-btn">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
                 My Workspace
             </a>
-            <a href="{% url 'content_generator:history' %}"
-               style="display:inline-flex;align-items:center;gap:.4rem;background:rgba(255,255,255,.12);
-                      border:1px solid rgba(255,255,255,.25);color:white;border-radius:8px;
-                      padding:.35rem .9rem;font-size:.8rem;font-weight:600;text-decoration:none;">
+            <a href="{% url 'content_generator:history' %}" class="cg-hero-btn">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                 Content History
             </a>
-        </div>
-        <span class="cg-badge">✦ 9 Specialized AI Agents</span>
-        <h1>AI Content Generator</h1>
-        <p>Brand-aligned content powered by RAG · Multi-agent evaluation · GEO-optimised</p>
-        <div class="agent-badges">
-            <span class="agent-badge">Brand Analyzer</span>
-            <span class="agent-badge">Competitor Gap</span>
-            <span class="agent-badge">Content Writer</span>
-            <span class="agent-badge">GEO Optimizer</span>
-            <span class="agent-badge">4-Judge Evaluator</span>
-            <span class="agent-badge">Auto Retry Loop</span>
-            <span class="agent-badge">Localizer</span>
         </div>
     </div>
 
@@ -129,132 +164,208 @@
         <form method="post" action="{% url 'content_generator:submit' %}">
             {% csrf_token %}
 
-            <!-- ── Company Profile ── -->
-            <div class="form-section">
-                <h3>Company Profile</h3>
+            <div class="two-col">
 
-                {% if prefill.service %}
-                <div class="service-banner">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 7H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
-                    <span>{{ prefill.service.get_item_type_display }}: <strong>{{ prefill.service.name }}</strong></span>
-                </div>
-                <input type="hidden" name="service_id" value="{{ prefill.service.pk }}">
-                {% endif %}
+                <!-- ══ LEFT COLUMN ══════════════════════════════════════════ -->
+                <div class="col-left">
 
-                <div class="form-group">
-                    <label>Company *</label>
-                    <select name="profile_id" id="profileSelect" onchange="onProfileChange(this)">
-                        <option value="">— Enter details manually —</option>
-                        {% for p in profiles %}
-                        <option value="{{ p.pk }}" data-name="{{ p.name }}"
-                            {% if prefill.profile and prefill.profile.pk == p.pk %}selected{% endif %}>
-                            {{ p.name }}
-                        </option>
-                        {% endfor %}
-                    </select>
-                    <span class="form-hint">Select a saved profile or enter details below manually.</span>
-                </div>
+                    <!-- ── Company Profile ── -->
+                    <div class="form-section">
+                        <h3>Company Profile</h3>
 
-                <div id="profileLoadedMsg" class="profile-loaded" style="display:none;">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-                    <span id="profileLoadedText">Company profile loaded from database</span>
-                </div>
-
-                <!-- Manual entry fields — hidden when a profile is selected -->
-                <div id="manualSection">
-                    <div class="form-group">
-                        <label>Company Name *</label>
-                        <input type="text" name="company_name" id="companyNameInput"
-                               placeholder="Acme Corp">
-                    </div>
-                    <div class="form-group">
-                        <label>Company Information *</label>
-                        <textarea name="company_docs"
-                            placeholder="About page, services, brand values, tone of voice, product details…"></textarea>
-                        <span class="form-hint">The more context, the more brand-aligned the output. Min ~200 words recommended.</span>
-                    </div>
-                    <div class="form-group">
-                        <label>Competitor Information <span style="font-weight:400;color:#9ca3af">(optional)</span></label>
-                        <textarea name="competitor_docs"
-                            placeholder="Competitor website text, product descriptions for gap analysis…"></textarea>
-                        <span class="form-hint">Used by the Competitor Gap agent to find differentiation angles.</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- ── Content Goal ── -->
-            <div class="form-section">
-                <h3>Content Goal</h3>
-                <div class="form-group">
-                    <label>Generation Goal *</label>
-                    <input type="text" name="goal" id="goalInput" required
-                           value="{{ prefill.goal|default:'' }}"
-                           placeholder="e.g. Promote our new AI-powered HR onboarding service to Finnish SMEs">
-                    <span class="form-hint">Be specific — the agents use this to drive every decision.</span>
-                </div>
-                <div class="form-group">
-                    <label>Keywords to Include</label>
-                    <input type="text" name="keywords" id="keywordsInput"
-                           value="{{ prefill.keywords|default:'' }}"
-                           placeholder="AI onboarding, HR automation, compliance">
-                    <span class="form-hint">Comma-separated. The writer will weave these in naturally.</span>
-                </div>
-            </div>
-
-            <!-- ── Tone & Language ── -->
-            <div class="form-section">
-                <h3>Tone &amp; Language</h3>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Tone Preset</label>
-                        <select name="tone_preset">
-                            {% for value, label in tone_choices %}
-                            <option value="{{ value }}" {% if value == 'professional' %}selected{% endif %}>{{ label }}</option>
-                            {% endfor %}
-                        </select>
-                        <span class="form-hint">Overrides the brand voice with a specific writing style.</span>
-                    </div>
-                    <div class="form-group">
-                        <label>Output Languages</label>
-                        <div style="display:flex;flex-direction:column;gap:.45rem;padding-top:.2rem;">
-                            <label class="format-check" style="border-radius:6px;">
-                                <input type="checkbox" name="target_languages" value="English" checked> English
-                            </label>
-                            <label class="format-check" style="border-radius:6px;">
-                                <input type="checkbox" name="target_languages" value="Finnish"> Finnish
-                            </label>
+                        {% if prefill.service %}
+                        <div class="service-banner">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 7H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+                            <span>{{ prefill.service.get_item_type_display }}: <strong>{{ prefill.service.name }}</strong></span>
                         </div>
-                        <span class="form-hint">Finnish content is generated by the Localizer agent.</span>
-                    </div>
-                </div>
-            </div>
+                        <input type="hidden" name="service_id" value="{{ prefill.service.pk }}">
+                        {% endif %}
 
-            <!-- ── Output Formats ── -->
-            <div class="form-section">
-                <h3>Output Formats</h3>
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;flex-wrap:wrap;gap:.5rem;">
-                    <p style="font-size:.84rem;color:#6b7280;margin:0;">
-                        Select one or more formats — each runs its own pipeline.
-                    </p>
-                    <div class="form-group" style="margin:0;flex-direction:row;align-items:center;gap:.5rem;">
-                        <label style="font-size:.82rem;font-weight:600;color:#374151;white-space:nowrap;">A/B variants:</label>
-                        <select name="ab_variants" style="border:1px solid #d1d5db;border-radius:6px;padding:.3rem .6rem;font-size:.82rem;">
-                            <option value="1" selected>1 (off)</option>
-                            <option value="2">2 versions</option>
-                            <option value="3">3 versions</option>
-                        </select>
+                        <div class="form-group">
+                            <label>Company *</label>
+                            <select name="profile_id" id="profileSelect" onchange="onProfileChange(this)">
+                                <option value="">— Enter details manually —</option>
+                                {% for p in profiles %}
+                                <option value="{{ p.pk }}" data-name="{{ p.name }}"
+                                    {% if prefill.profile and prefill.profile.pk == p.pk %}selected{% endif %}>
+                                    {{ p.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <span class="form-hint">Select a saved profile or enter details below manually.</span>
+                        </div>
+
+                        <div id="profileLoadedMsg" class="profile-loaded" style="display:none;">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                            <span id="profileLoadedText">Company profile loaded from database</span>
+                        </div>
+
+                        <div id="manualSection">
+                            <div class="form-group">
+                                <label>Company Name *</label>
+                                <input type="text" name="company_name" id="companyNameInput"
+                                       placeholder="Acme Corp">
+                            </div>
+                            <div class="form-group">
+                                <label>Company Information *</label>
+                                <textarea name="company_docs"
+                                    placeholder="About page, services, brand values, tone of voice…"></textarea>
+                                <span class="form-hint">Min ~200 words recommended for brand-aligned output.</span>
+                            </div>
+                            <div class="form-group">
+                                <label>Competitor Information <span style="font-weight:400;color:#9ca3af">(optional)</span></label>
+                                <textarea name="competitor_docs" style="min-height:80px;"
+                                    placeholder="Competitor website text, product descriptions…"></textarea>
+                            </div>
+                        </div>
                     </div>
-                </div>
-                <div class="format-grid">
-                    {% for value, label in format_choices %}
-                    <label class="format-check">
-                        <input type="checkbox" name="content_formats" value="{{ value }}"
-                               {% if value == 'blog_post' %}checked{% endif %}>
-                        {{ label }}
-                    </label>
-                    {% endfor %}
-                </div>
-            </div>
+
+                    <!-- ── Content Goal ── -->
+                    <div class="form-section">
+                        <h3>Content Goal</h3>
+                        <div class="form-group">
+                            <label>Generation Goal *</label>
+                            <input type="text" name="goal" id="goalInput" required
+                                   value="{{ prefill.goal|default:'' }}"
+                                   placeholder="e.g. Promote our new AI-powered HR onboarding service to Finnish SMEs">
+                            <span class="form-hint">Be specific — agents use this to drive every decision.</span>
+                        </div>
+                        <div class="form-group">
+                            <label>Keywords to Include</label>
+                            <input type="text" name="keywords" id="keywordsInput"
+                                   value="{{ prefill.keywords|default:'' }}"
+                                   placeholder="AI onboarding, HR automation, compliance">
+                            <span class="form-hint">Comma-separated. Woven in naturally by the writer.</span>
+                        </div>
+                    </div>
+
+                </div><!-- /col-left -->
+
+                <!-- ══ RIGHT COLUMN ════════════════════════════════════════ -->
+                <div class="col-right">
+
+                    <!-- ── Tone & Language ── -->
+                    <div class="form-section">
+                        <h3>Tone &amp; Language</h3>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Tone Preset</label>
+                                <select name="tone_preset">
+                                    {% for value, label in tone_choices %}
+                                    <option value="{{ value }}" {% if value == 'professional' %}selected{% endif %}>{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Output Languages</label>
+                                <div class="lang-checks">
+                                    <label class="format-check">
+                                        <input type="checkbox" name="target_languages" value="English" checked> English
+                                    </label>
+                                    <label class="format-check">
+                                        <input type="checkbox" name="target_languages" value="Finnish"> Finnish
+                                    </label>
+                                </div>
+                                <span class="form-hint">Finnish via Localizer agent.</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ── Content Structure ── -->
+                    <div class="form-section structure">
+                        <h3>Content Structure</h3>
+
+                        <!-- Word count -->
+                        <div class="form-group">
+                            <label>Word Count Range</label>
+                            <div class="num-row">
+                                <input type="number" name="word_count_min" value="600" min="100" max="5000" placeholder="Min (600)">
+                                <input type="number" name="word_count_max" value="1200" min="200" max="10000" placeholder="Max (1200)">
+                            </div>
+                            <span class="form-hint">Min / Max words across all sections.</span>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Reading Level</label>
+                                <select name="reading_level">
+                                    <option value="Simple">Simple</option>
+                                    <option value="Professional" selected>Professional</option>
+                                    <option value="Technical">Technical</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Content Angle</label>
+                                <select name="content_angle">
+                                    <option value="">— Auto (AI decides) —</option>
+                                    <option value="how-to guide">How-to Guide</option>
+                                    <option value="opinion piece">Opinion Piece</option>
+                                    <option value="case study">Case Study</option>
+                                    <option value="listicle">Listicle</option>
+                                    <option value="problem-solution article">Problem-Solution</option>
+                                    <option value="data-driven report">Data-Driven Report</option>
+                                    <option value="news article">News Article</option>
+                                    <option value="tutorial">Tutorial</option>
+                                    <option value="thought leadership piece">Thought Leadership</option>
+                                    <option value="comparison article">Comparison</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>H2 Sections</label>
+                                <input type="number" name="h2_count" value="3" min="1" max="10" placeholder="3">
+                                <span class="form-hint">Number of main headings.</span>
+                            </div>
+                            <div class="form-group">
+                                <label>Stats Required</label>
+                                <input type="number" name="stats_required" value="2" min="0" max="10" placeholder="2">
+                                <span class="form-hint">Min data points to include.</span>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>FAQ Pairs <span style="font-weight:400;color:#9ca3af">(0 = off)</span></label>
+                                <input type="number" name="faq_count" value="0" min="0" max="10" placeholder="0">
+                                <span class="form-hint">Adds a FAQ section if &gt; 0.</span>
+                            </div>
+                            <div class="form-group">
+                                <label>CTA Text <span style="font-weight:400;color:#9ca3af">(optional)</span></label>
+                                <input type="text" name="cta_override" placeholder="Book a free demo">
+                                <span class="form-hint">Overrides AI-generated CTA.</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ── Output Formats ── -->
+                    <div class="form-section">
+                        <h3>Output Formats</h3>
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.6rem;gap:.5rem;flex-wrap:wrap;">
+                            <p style="font-size:.82rem;color:#6b7280;margin:0;">Select one or more formats.</p>
+                            <div style="display:flex;align-items:center;gap:.4rem;">
+                                <label style="font-size:.8rem;font-weight:600;color:#374151;white-space:nowrap;">A/B:</label>
+                                <select name="ab_variants" style="border:1px solid #d1d5db;border-radius:6px;padding:.28rem .55rem;font-size:.8rem;">
+                                    <option value="1" selected>1 (off)</option>
+                                    <option value="2">2 versions</option>
+                                    <option value="3">3 versions</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="format-grid">
+                            {% for value, label in format_choices %}
+                            <label class="format-check">
+                                <input type="checkbox" name="content_formats" value="{{ value }}"
+                                       {% if value == 'blog_post' %}checked{% endif %}>
+                                {{ label }}
+                            </label>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                </div><!-- /col-right -->
+            </div><!-- /two-col -->
 
             <button type="submit" class="submit-btn">Generate Content →</button>
         </form>
@@ -264,8 +375,8 @@
 
 <script>
 (function () {
-    const profileSelect   = document.getElementById('profileSelect');
-    const manualSection   = document.getElementById('manualSection');
+    const profileSelect    = document.getElementById('profileSelect');
+    const manualSection    = document.getElementById('manualSection');
     const profileLoadedMsg = document.getElementById('profileLoadedMsg');
     const profileLoadedText = document.getElementById('profileLoadedText');
 
@@ -285,12 +396,10 @@
         applyProfile(sel.value, opt.dataset.name || '');
     };
 
-    // Apply pre-fill state on page load
     {% if prefill.profile %}
     applyProfile('{{ prefill.profile.pk }}', '{{ prefill.profile.name|escapejs }}');
     {% endif %}
 
-    // Pre-populate goal placeholder from service description
     {% if prefill.service %}
     document.getElementById('goalInput').placeholder =
         'e.g. {{ prefill.service.description|truncatechars:120|escapejs }}';
