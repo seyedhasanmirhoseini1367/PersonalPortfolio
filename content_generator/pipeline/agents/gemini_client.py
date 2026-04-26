@@ -38,8 +38,8 @@ def truncate_prompt(prompt: str, limit: int = MAX_PROMPT_CHARS) -> str:
     return head + tail[:keep] + "\n...[content truncated for length]\n" + tail[-200:]
 
 
-def generate(prompt: str, retries: int = 5) -> str:
+def generate(prompt: str, retries: int = 5, model: str = None) -> str:
     """Generate via LangChain ChatGroq and extract JSON from the response."""
     prompt = truncate_prompt(prompt)
-    raw = lc_generate(prompt)
+    raw = lc_generate(prompt, model=model)
     return extract_json(raw)

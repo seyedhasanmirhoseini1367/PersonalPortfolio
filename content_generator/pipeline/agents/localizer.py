@@ -48,7 +48,7 @@ Return a single JSON object with these exact keys:
 
 Return ONLY valid JSON. No explanation. No extra keys."""
 
-    data = json.loads(generate(prompt))
+    data = json.loads(generate(prompt, model="llama-3.3-70b-versatile"))
     if isinstance(data, list):
         data = data[0] if data else {}
     # unwrap if LLM nested the response
