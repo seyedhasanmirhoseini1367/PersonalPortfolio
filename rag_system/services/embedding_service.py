@@ -36,15 +36,28 @@ class EmbeddingService:
 
     # ── Encoding ──────────────────────────────────────────────────────────────
 
+    # BGE models are trained with this prefix on the query side (not document side).
+    # Omitting it on documents is intentional — matches the training setup.
+    _BGE_QUERY_PREFIX = 'Represent this sentence for searching relevant passages: '
+
+    def _is_bge(self) -> bool:
+        return 'bge' in self.model_name.lower()
+
     def generate_embedding(self, text: str) -> np.ndarray:
+        """Encode a single query string."""
         if self.model is None:
             return np.zeros(384, dtype=np.float32)
-        return self.model.encode(text, show_progress_bar=False)
+        if self._is_bge():
+            text = self._BGE_QUERY_PREFIX + text
+        return self.model.encode(text, show_progress_bar=False, normalize_embeddings=True)
 
     def generate_embeddings(self, texts: List[str]) -> np.ndarray:
+        """Encode document chunks (no query prefix)."""
         if self.model is None:
             return np.zeros((len(texts), 384), dtype=np.float32)
-        return self.model.encode(texts, show_progress_bar=False, batch_size=32)
+        return self.model.encode(
+            texts, show_progress_bar=False, batch_size=32, normalize_embeddings=True
+        )
 
     # ── Persist to DB ─────────────────────────────────────────────────────────
 

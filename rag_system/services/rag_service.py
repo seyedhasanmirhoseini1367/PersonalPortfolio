@@ -144,17 +144,26 @@ class RAGService:
                     "ml_model": ["project", "project_documentation"],
                     "projects": ["project", "project_documentation", "resume"],
                     "general":  None,   # None = search everything
+                    "job_fit":  ["resume", "skill", "project", "project_documentation"],
                 }
                 resolved_types = _ROUTE_DOC_TYPES.get(route)
                 logger.debug("stream_query: routed to '%s' → types=%s", route, resolved_types)
             else:
+                route = "general"
                 resolved_types = document_types
 
             # Step 2: retrieve the right chunks for the classified route.
-            chunks = self.retrieval.hybrid_retrieve(question, resolved_types)
+            top_k = 8 if route == "job_fit" else 5
+            chunks = self.retrieval.hybrid_retrieve(question, resolved_types, top_k=top_k)
 
-            # Step 3: stream the answer token by token.
-            for token in self.generation.generate_streaming(question, chunks, history=history):
+            # Step 3: grade relevance — skip for comprehensive listing routes.
+            _SKIP_GRADING = {'cv', 'projects', 'job_fit'}
+            if document_types is None and route not in _SKIP_GRADING:
+                from rag_system.graph.nodes import grade_relevance
+                chunks = grade_relevance(question, chunks)
+
+            # Step 4: stream the answer token by token.
+            for token in self.generation.generate_streaming(question, chunks, history=history, route=route):
                 full_text += token
                 yield _sse({'type': 'token', 'content': token})
 

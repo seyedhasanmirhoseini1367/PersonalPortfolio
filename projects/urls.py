@@ -1,8 +1,8 @@
 from django.urls import path
 from .views import (
     projects_list, project_detail, home,
-    prediction_demo, file_prediction, make_prediction, interpret_prediction,
-    add_project_comment, roadmap,
+    prediction_demo, file_prediction, sample_prediction, make_prediction,
+    interpret_prediction, add_project_comment, roadmap,
 )
 from .api import api_model_list, api_model_detail, api_predict, api_docs
 
@@ -12,6 +12,7 @@ urlpatterns = [
     path('project/<int:project_id>/', project_detail, name='project_detail'),
     path('project/<int:project_id>/predict/', prediction_demo, name='prediction_demo'),
     path('project/<int:project_id>/file-prediction/', file_prediction, name='file_prediction'),
+    path('project/<int:project_id>/sample-prediction/', sample_prediction, name='sample_prediction'),
     path('project/<int:project_id>/make-prediction/', make_prediction, name='make_prediction'),
     path('project/<int:project_id>/interpret/', interpret_prediction, name='interpret_prediction'),
     path('project/<int:project_id>/comment/', add_project_comment, name='add_project_comment'),

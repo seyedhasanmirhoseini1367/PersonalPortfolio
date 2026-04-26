@@ -41,8 +41,10 @@ Thumbs.db
 # ML artefacts
 catboost_info/
 *.pth
+*.pt
 *.pkl
 *.joblib
+ml_training/FoundationModel/homedir/
 
 # Runtime data (ChromaDB, datasets) — generated at runtime, not source
 data/

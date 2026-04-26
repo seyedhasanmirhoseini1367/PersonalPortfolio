@@ -28,6 +28,8 @@ from .nodes import (
     ml_model_node,
     projects_node,
     general_node,
+    job_fit_node,
+    relevance_grader_node,
     generate_node,
     verify_node,
 )
@@ -41,6 +43,7 @@ ROUTE_TO_NODE = {
     "ml_model": "ml_model_node",
     "projects": "projects_node",
     "general":  "general_node",
+    "job_fit":  "job_fit_node",
 }
 
 
@@ -50,7 +53,7 @@ def _route_from_router(state: AgentState) -> str:
 
 
 def _route_from_verify(state: AgentState) -> str:
-    """Conditional edge: verify_node → retry search node or END."""
+    """Conditional edge: verify_node → retry (back through grader) or END."""
     if state.get("needs_retry", False):
         node = ROUTE_TO_NODE.get(state.get("route", "general"), "general_node")
         logger.debug("verify → retry via %s", node)
@@ -62,14 +65,16 @@ def build_graph() -> StateGraph:
     graph = StateGraph(AgentState)
 
     # Add all nodes
-    graph.add_node("router_node",   router_node)
-    graph.add_node("cv_node",       cv_node)
-    graph.add_node("thesis_node",   thesis_node)
-    graph.add_node("ml_model_node", ml_model_node)
-    graph.add_node("projects_node", projects_node)
-    graph.add_node("general_node",  general_node)
-    graph.add_node("generate_node", generate_node)
-    graph.add_node("verify_node",   verify_node)
+    graph.add_node("router_node",            router_node)
+    graph.add_node("cv_node",                cv_node)
+    graph.add_node("thesis_node",            thesis_node)
+    graph.add_node("ml_model_node",          ml_model_node)
+    graph.add_node("projects_node",          projects_node)
+    graph.add_node("general_node",           general_node)
+    graph.add_node("job_fit_node",           job_fit_node)
+    graph.add_node("relevance_grader_node",  relevance_grader_node)
+    graph.add_node("generate_node",          generate_node)
+    graph.add_node("verify_node",            verify_node)
 
     # Entry point
     graph.set_entry_point("router_node")
@@ -84,17 +89,19 @@ def build_graph() -> StateGraph:
             "ml_model_node": "ml_model_node",
             "projects_node": "projects_node",
             "general_node":  "general_node",
+            "job_fit_node":  "job_fit_node",
         },
     )
 
-    # All search nodes → generate
-    for node in ["cv_node", "thesis_node", "ml_model_node", "projects_node", "general_node"]:
-        graph.add_edge(node, "generate_node")
+    # All search nodes → relevance grader → generate
+    for node in ["cv_node", "thesis_node", "ml_model_node", "projects_node", "general_node", "job_fit_node"]:
+        graph.add_edge(node, "relevance_grader_node")
+    graph.add_edge("relevance_grader_node", "generate_node")
 
     # generate → verify
     graph.add_edge("generate_node", "verify_node")
 
-    # verify → retry or END
+    # verify → retry (back to search node → grader) or END
     graph.add_conditional_edges(
         "verify_node",
         _route_from_verify,
@@ -104,6 +111,7 @@ def build_graph() -> StateGraph:
             "ml_model_node": "ml_model_node",
             "projects_node": "projects_node",
             "general_node":  "general_node",
+            "job_fit_node":  "job_fit_node",
             END:             END,
         },
     )

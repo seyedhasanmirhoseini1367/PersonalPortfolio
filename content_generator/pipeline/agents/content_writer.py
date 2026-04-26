@@ -4,7 +4,12 @@ from .ingestion import query_collection
 from .gemini_client import generate
 
 
-def build_content_brief(goal: str, brand: BrandProfile, gap_map: CompetitorGapMap) -> ContentBrief:
+def build_content_brief(
+    goal: str,
+    brand: BrandProfile,
+    gap_map: CompetitorGapMap,
+    seo_params: dict = None,
+) -> ContentBrief:
     prompt = f"""You are a content strategist.
 
 GOAL: {goal}
@@ -25,6 +30,9 @@ Return ONLY valid JSON."""
     data = json.loads(generate(prompt))
     if "content_brief" in data:
         data = data["content_brief"]
+    # Merge in user-specified SEO/GEO controls (not LLM-generated)
+    if seo_params:
+        data.update({k: v for k, v in seo_params.items() if v is not None})
     return ContentBrief(**data)
 
 
@@ -71,6 +79,13 @@ TONE_INSTRUCTIONS = {
 }
 
 
+_READING_LEVEL_DESCS = {
+    "Simple":       "use simple everyday language, short sentences (8-12 words), avoid all jargon",
+    "Professional": "clear polished professional tone — accessible but not simplistic, no buzzwords",
+    "Technical":    "expert vocabulary, technical depth, precise terminology welcome",
+}
+
+
 def write_content(
     client_id: str,
     brief: ContentBrief,
@@ -83,6 +98,7 @@ def write_content(
     keywords: list[str] = None,
     previous_outputs: list[dict] = None,
     tone_preset: str = "professional",
+    seo_controls: dict = None,
 ) -> ContentPiece:
     rag_chunks = query_collection(client_id, brief.goal, n_results=4, scope_ids=scope_ids)
     rag_context = "\n\n".join(rag_chunks)
@@ -105,6 +121,32 @@ def write_content(
     else:
         history_block = ""
 
+    # ── SEO/GEO structural constraints block ──────────────────────────────────
+    sc = seo_controls or {}
+    word_min  = sc.get('word_count_min', 600)
+    word_max  = sc.get('word_count_max', 1200)
+    h2_count  = sc.get('h2_count', 3)
+    stats_req = sc.get('stats_required', 2)
+    faq_count = sc.get('faq_count', 0)
+    level     = sc.get('reading_level', 'Professional')
+    angle     = sc.get('content_angle', '')
+
+    level_desc  = _READING_LEVEL_DESCS.get(level, _READING_LEVEL_DESCS["Professional"])
+    faq_line    = (f"- FAQ section: add a section with heading='FAQ' containing exactly "
+                   f"{faq_count} Q&A pairs in the body\n") if faq_count > 0 else ""
+    angle_line  = f"- Content angle: frame the entire piece as a {angle}\n" if angle else ""
+
+    seo_block = (
+        f"\n⚠ HARD STRUCTURAL CONSTRAINTS — FOLLOW EXACTLY:\n"
+        f"- Word count: write {word_min}–{word_max} words total across all sections combined\n"
+        f"- H2 sections: create exactly {h2_count} items in the sections array\n"
+        f"- Statistics: include at least {stats_req} specific data points "
+        f"(percentages, counts, benchmarks, or year-over-year figures)\n"
+        f"{faq_line}"
+        f"{angle_line}"
+        f"- Reading level: {level} — {level_desc}"
+    )
+
     fmt = FORMAT_PROMPTS.get(content_format, FORMAT_PROMPTS["landing_page"])
     structure = " → ".join(content_type["structure"])
 
@@ -112,6 +154,7 @@ def write_content(
 
 FORMAT RULES: {fmt['rules']}
 {tone_block}
+{seo_block}
 {keywords_block}
 {history_block}
 BRAND VOICE: {brand.tone}

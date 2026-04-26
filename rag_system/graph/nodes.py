@@ -14,6 +14,17 @@ logger = logging.getLogger(__name__)
 
 # ── Router ────────────────────────────────────────────────────────────────────
 
+_JOB_FIT_KEYWORDS = {
+    "job description", "job posting", "job fit", "job opening",
+    "good fit", "fit for this", "fit for the", "match for this",
+    "we are looking for", "we're looking for",
+    "requirements:", "qualifications:", "responsibilities:",
+    "years of experience", "must have", "nice to have",
+    "evaluate fit", "assess fit", "check fit",
+    "am i a good fit", "is he a good fit", "would hasan fit",
+    "hiring for", "open position", "apply for",
+}
+
 _CV_KEYWORDS = {
     "who is hasan", "about you", "about hasan", "tell me about",
     "experience", "background", "education", "worked at", "career",
@@ -28,20 +39,37 @@ _THESIS_KEYWORDS = {
     "thesis", "seizure", "eeg", "epilepsy", "epileptic", "brain signal",
     "edf", "detection", "classification", "cnn", "lstm", "transformer",
     "stft", "signal processing",
+    "eeg foundation", "brain", "neural signal",
 }
 _ML_KEYWORDS = {
     "irrigation", "predict", "model demo", "prediction", "forecast",
     "ml model", "run model", "introvert", "extrovert", "personality",
+    "foundation model", "pretrain", "pretraining", "self-supervised",
+    "vicreg", "fine-tun", "neurips", "nips", "time-series model",
 }
 _PROJECT_KEYWORDS = {
     "built", "created", "developed", "implemented",
     "kaggle", "competition", "github",
+    # domain / modality questions → list projects
+    "computer vision", "image classification", "object detection", "image recognition",
+    "nlp", "natural language", "sentiment", "text classification", "language model",
+    "fraud", "churn", "customer", "credit card",
+    "house price", "stock", "time series", "forecasting",
+    "regression", "clustering", "reinforcement",
+    "what project", "which project", "any project", "has he", "does he have",
+    "show me", "list", "ml project", "deep learning project",
+    "x-ray", "medical", "pneumonia", "chest",
 }
 
 
 def router_node(state: AgentState) -> Dict[str, Any]:
     """Keyword-based router — assigns state['route'] without an LLM call."""
     question_lower = state["question"].lower()
+
+    for keyword in _JOB_FIT_KEYWORDS:
+        if keyword in question_lower:
+            logger.debug("router → job_fit")
+            return {"route": "job_fit"}
 
     for keyword in _THESIS_KEYWORDS:
         if keyword in question_lower:
@@ -146,6 +174,92 @@ def general_node(state: AgentState) -> Dict[str, Any]:
     )
     logger.debug("general_node: retrieved %d chunks", len(chunks))
     return {"context_chunks": chunks}
+
+
+def job_fit_node(state: AgentState) -> Dict[str, Any]:
+    """Retrieve resume + skills + projects for job-fit analysis."""
+    retrieval = _retrieval_service()
+    chunks = retrieval.hybrid_retrieve(
+        query=state["question"],
+        document_types=["resume", "skill", "project", "project_documentation"],
+        top_k=8,   # more context for a comprehensive fit analysis
+    )
+    logger.debug("job_fit_node: retrieved %d chunks", len(chunks))
+    return {"context_chunks": chunks}
+
+
+# ── Relevance grader (LangChain) ─────────────────────────────────────────────
+
+def grade_relevance(question: str, chunks: list, groq_api_key: str = '') -> list:
+    """
+    Use a LangChain chain (prompt | ChatGroq | JsonOutputParser) to grade each
+    retrieved chunk and return only the relevant ones.
+
+    Falls back to returning all chunks if Groq is unavailable or fails.
+    """
+    if not chunks:
+        return chunks
+    try:
+        from langchain_groq import ChatGroq
+        from langchain_core.prompts import ChatPromptTemplate
+        from langchain_core.output_parsers import JsonOutputParser
+        from django.conf import settings as django_settings
+
+        key = groq_api_key or getattr(django_settings, 'GROQ_API_KEY', '')
+        if not key:
+            return chunks
+
+        llm = ChatGroq(
+            api_key=key,
+            model='llama-3.1-8b-instant',
+            temperature=0,
+            max_tokens=10,   # only need {"relevant": true/false}
+        )
+
+        prompt = ChatPromptTemplate.from_messages([
+            ('system',
+             'You are a relevance grader. Given a question and a document excerpt, '
+             'respond ONLY with JSON: {{"relevant": true}} or {{"relevant": false}}. '
+             'Be generous — mark relevant if the document contains ANY useful info '
+             'about the question topic.'),
+            ('human', 'Question: {question}\n\nDocument:\n{document}'),
+        ])
+
+        chain = prompt | llm | JsonOutputParser()
+
+        relevant = []
+        for chunk in chunks:
+            try:
+                result = chain.invoke({
+                    'question': question,
+                    'document': chunk['content'][:600],   # cap to save tokens
+                })
+                if result.get('relevant', True):
+                    relevant.append(chunk)
+            except Exception:
+                relevant.append(chunk)   # on error keep the chunk
+
+        # Always return at least one chunk so generation doesn't get empty context
+        return relevant if relevant else chunks[:1]
+
+    except ImportError:
+        logger.warning('langchain-groq not installed — skipping relevance grading')
+        return chunks
+    except Exception as exc:
+        logger.warning('relevance grader failed (%s) — returning all chunks', exc)
+        return chunks
+
+
+def relevance_grader_node(state: AgentState) -> Dict[str, Any]:
+    """LangGraph node: filter context_chunks to only relevant ones."""
+    question = state.get('question', '')
+    chunks   = state.get('context_chunks', [])
+    filtered = grade_relevance(question, chunks)
+    logger.debug(
+        'relevance_grader_node: %d → %d chunks after grading',
+        len(chunks), len(filtered),
+    )
+    return {'context_chunks': filtered}
 
 
 # ── Generation ────────────────────────────────────────────────────────────────

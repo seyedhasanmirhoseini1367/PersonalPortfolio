@@ -208,6 +208,16 @@
       Run prediction
     </button>
 
+    {% if has_sample_demo %}
+    <button class="btn-predict" id="sample-btn" onclick="runSamplePrediction()"
+            style="background:#0ea5e9; margin-top:.5rem;">
+      &#9654; Try with sample EEG data
+    </button>
+    <p style="font-size:.75rem; color:#64748b; margin-top:.4rem; text-align:center;">
+      No file? Click above to run the model on a real anonymised EEG window from the HBN dataset.
+    </p>
+    {% endif %}
+
     {% else %}
     {# ═══════════════ MANUAL FORM MODE ═══════════════ #}
 
@@ -299,6 +309,7 @@
 const FILE_URL   = "{% url 'file_prediction'    project.id %}";
 const MANUAL_URL = "{% url 'make_prediction'    project.id %}";
 const INTERP_URL = "{% url 'interpret_prediction' project.id %}";
+const SAMPLE_URL = "{% url 'sample_prediction'  project.id %}";
 const CSRF       = "{{ csrf_token }}";
 
 /* ── Drop zone setup ────────────────────────────────────────────── */
@@ -473,6 +484,36 @@ async function runFilePrediction() {
     showSpinner(false);
     predictBtn.disabled = false;
     showError('Could not reach the server. Check your connection and try again.');
+    console.error(err);
+  }
+}
+
+/* ── SAMPLE prediction ───────────────────────────────────────────── */
+async function runSamplePrediction() {
+  resetUI();
+  showSpinner(true);
+  const btn = document.getElementById('sample-btn');
+  if (btn) btn.disabled = true;
+
+  try {
+    const res  = await fetch(SAMPLE_URL, {
+      method:  'POST',
+      headers: { 'X-CSRFToken': CSRF },
+    });
+    const data = await res.json();
+    showSpinner(false);
+    if (btn) btn.disabled = false;
+
+    if (!data.success) {
+      showError(data.error || 'Sample prediction failed.');
+      return;
+    }
+    showResult(data);
+    fetchInterpretation(data.prediction, data.prediction_label, data.input_data);
+  } catch (err) {
+    showSpinner(false);
+    if (btn) btn.disabled = false;
+    showError('Could not reach the server.');
     console.error(err);
   }
 }

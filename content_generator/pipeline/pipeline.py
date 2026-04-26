@@ -28,6 +28,7 @@ class PipelineState(TypedDict):
     competitor_documents: list
     target_languages: list
     tone_preset: str
+    seo_params: dict
     # Intermediate
     content_type: Optional[dict]
     brand: Optional[Any]
@@ -99,7 +100,10 @@ def node_competitors(state: PipelineState) -> dict:
 
 def node_brief(state: PipelineState) -> dict:
     print("[Node 5] Building content brief...")
-    brief = build_content_brief(state["goal"], state["brand"], state["gap_map"])
+    brief = build_content_brief(
+        state["goal"], state["brand"], state["gap_map"],
+        seo_params=state.get("seo_params") or {},
+    )
     print(f"  Angle: {brief.angle}")
     return {"brief": brief}
 
@@ -119,6 +123,7 @@ def node_write(state: PipelineState) -> dict:
         keywords=state.get("keywords"),
         previous_outputs=state.get("previous_outputs"),
         tone_preset=state.get("tone_preset", "professional"),
+        seo_controls=state.get("seo_params") or {},
     )
     return {"content_en": content_en, "attempt": attempt}
 
@@ -130,22 +135,27 @@ def node_geo(state: PipelineState) -> dict:
 
 
 def node_evaluate(state: PipelineState) -> dict:
-    print("[Node 8] Evaluating content (judges 1, 2, 4)...")
+    print("[Node 8] Evaluating content (judges 1, 2, 4, 5)...")
     content_text = content_to_text(state["content_en"])
     loop_result = evaluate_loop(
         content_text=content_text,
         audience=state["brand"].audience,
         goal=state["goal"],
+        content_piece=state["content_en"],
+        seo_params=state.get("seo_params") or {},
     )
     print(f"  Customer: {loop_result['customer']['score']} | GEO: {loop_result['geo']['score']} | Naturalness: {loop_result['naturalness']['score']} | Overall: {loop_result['overall_score']} | Passed: {loop_result['passed']}")
 
     feedback = None
     if not loop_result["passed"]:
-        feedback = (
-            f"Customer feedback: {loop_result['customer']['feedback']}\n"
-            f"GEO missing: {', '.join(loop_result['geo']['missing'])}\n"
-            f"Naturalness feedback: {loop_result['naturalness']['feedback']}"
-        )
+        parts = [
+            f"Customer feedback: {loop_result['customer']['feedback']}",
+            f"GEO missing: {', '.join(loop_result['geo']['missing'])}",
+            f"Naturalness feedback: {loop_result['naturalness']['feedback']}",
+        ]
+        if loop_result.get("structure_issues"):
+            parts.append(f"Structure issues: {loop_result['structure_feedback']}")
+        feedback = "\n".join(parts)
     return {"loop_result": loop_result, "feedback": feedback}
 
 
@@ -294,6 +304,7 @@ def run_pipeline(
     previous_outputs: list[dict] = None,
     tone_preset: str = "professional",
     initial_feedback: str = None,
+    seo_params: dict = None,
 ) -> PipelineOutput:
     if target_languages is None:
         target_languages = ["English"]
@@ -314,6 +325,7 @@ def run_pipeline(
         "competitor_documents": competitor_documents,
         "target_languages": target_languages,
         "tone_preset": tone_preset,
+        "seo_params": seo_params or {},
         "content_type": None,
         "brand": None,
         "gap_map": None,

@@ -18,6 +18,7 @@ import projects.inference.image_classifier     # noqa: F401
 import projects.inference.tabular_passthrough  # noqa: F401
 import projects.inference.personality_predictor  # noqa: F401
 import projects.inference.irrigation_predictor   # noqa: F401
+import projects.inference.eeg_foundation         # noqa: F401
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -127,14 +128,25 @@ def prediction_demo(request, project_id):
         return render(request, 'projects/no_prediction.html', {'project': project})
 
     cfg = project.file_input_config or {}
+
+    # Check if the handler supports sample-data demo
+    has_sample_demo = False
+    try:
+        from projects.inference import get_handler
+        handler = get_handler(project)
+        has_sample_demo = hasattr(handler, 'run_sample')
+    except Exception:
+        pass
+
     return render(request, 'projects/prediction_demo.html', {
-        'project':              project,
-        'file_input_config':    cfg,
-        'accepted_formats':     cfg.get('accepted_formats', []),
-        'demo_description':     cfg.get('description', ''),
-        'handler_slug':         cfg.get('handler', ''),
-        'input_features':       project.input_features or [],
+        'project':               project,
+        'file_input_config':     cfg,
+        'accepted_formats':      cfg.get('accepted_formats', []),
+        'demo_description':      cfg.get('description', ''),
+        'handler_slug':          cfg.get('handler', ''),
+        'input_features':        project.input_features or [],
         'prediction_input_type': project.prediction_input_type,
+        'has_sample_demo':       has_sample_demo,
     })
 
 
@@ -211,6 +223,55 @@ def file_prediction(request, project_id):
         return JsonResponse({
             'error': f'An unexpected error occurred during inference: {type(e).__name__}: {e}'
         }, status=500)
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Sample-data prediction — runs handler.run_sample() (no file upload needed)
+# ──────────────────────────────────────────────────────────────────────────────
+
+@csrf_exempt
+def sample_prediction(request, project_id):
+    """
+    POST /project/<id>/sample-prediction/
+    Runs inference on the pre-saved sample EEG window.
+    The handler must implement run_sample(); raises InferenceError otherwise.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+    project = get_object_or_404(Projects, id=project_id, is_public=True)
+    if not project.has_prediction_capability():
+        return JsonResponse({'error': 'Demo not enabled for this project.'}, status=400)
+
+    try:
+        from projects.inference import get_handler
+        handler = get_handler(project)
+    except ValueError as e:
+        return JsonResponse({'error': str(e)}, status=400)
+
+    if not hasattr(handler, 'run_sample'):
+        return JsonResponse({'error': 'This project does not support sample-data demo.'}, status=400)
+
+    import time
+    from monitoring.utils import log_prediction
+    try:
+        from projects.inference.base import InferenceError
+        t0     = time.perf_counter()
+        result = handler.run_sample()
+        ms     = int((time.perf_counter() - t0) * 1000)
+        log_prediction(
+            project=project, user=request.user, input_type='file',
+            prediction=result.get('prediction'), confidence=result.get('confidence'),
+            label=str(result.get('prediction_label', '')), inference_ms=ms,
+            success=True, source='web_sample', request=request,
+        )
+        return JsonResponse(result)
+    except InferenceError as e:
+        return JsonResponse({'error': str(e)}, status=400)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'error': f'{type(e).__name__}: {e}'}, status=500)
 
 
 # ──────────────────────────────────────────────────────────────────────────────

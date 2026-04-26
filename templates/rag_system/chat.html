@@ -1,15 +1,20 @@
 {% extends 'base.html' %}
 {% block title %}AI Assistant — HasanPortfolio{% endblock %}
 
+{# ── Hide footer, remove container padding on this page ── #}
+{% block footer %}{% endblock %}
+
 {% block extra_css %}
 <style>
+/* Zero out all main padding on this page */
+main { padding: 0 !important; margin: 0 !important; min-height: unset !important; }
+
 /* ── Layout wrapper ──────────────────────────────────────────────────────── */
 .ai-wrapper {
     display: flex;
-    height: 82vh;
+    height: calc(100vh - 50px);
     max-width: 1500px;
     margin: 0 auto;
-    border-radius: 16px;
     overflow: hidden;
     box-shadow: 0 10px 40px rgba(0,0,0,0.12);
     background: #fff;
@@ -24,6 +29,8 @@
     border-right: 1px solid #e2e8f0;
     transition: width 0.3s;
 }
+
+
 .sidebar-top {
     padding: 1rem;
     border-bottom: 1px solid #e2e8f0;
@@ -109,10 +116,13 @@
     border-bottom: 1px solid rgba(255,255,255,.1);
 }
 .chat-header-info { flex: 1; min-width: 0; }
-.chat-header h1 { font-size: 1.15rem; font-weight: 700; margin: 0; }
-.chat-header-title {
-    font-size: .82rem; opacity: .8; margin: .1rem 0 0;
+.chat-header h1 {
+    font-size: 1.05rem; font-weight: 700; margin: 0;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    display: flex; align-items: baseline; gap: .5rem; flex-wrap: nowrap;
+}
+.chat-header-title {
+    font-size: .82rem; font-weight: 400; opacity: .75;
 }
 .chat-controls { display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; }
 
@@ -177,27 +187,50 @@
 @keyframes blink { 50% { opacity: 0; } }
 
 /* Sources panel */
-.sources {
-    margin-top: .6rem; padding: .65rem;
-    background: #f1f5f9; border-radius: 8px; border-left: 3px solid #302b63;
+.sources-wrap {
+    position: relative;
+    display: inline-block;
+    margin-top: .4rem;
 }
-.sources-title { font-weight: 600; color: #374151; margin-bottom: .35rem; font-size: .75rem; }
-.source-item {
-    display: flex; align-items: center; gap: .5rem;
-    padding: .35rem .5rem; background: white;
-    border-radius: 6px; margin-bottom: .35rem; font-size: .75rem;
+.sources-pill {
+    display: inline-flex; align-items: center; gap: .3rem;
+    font-size: .68rem; color: #64748b;
+    background: #f1f5f9; border: 1px solid #e2e8f0;
+    border-radius: 10px; padding: .15rem .55rem;
+    cursor: default; user-select: none;
+    transition: background .15s, color .15s, border-color .15s;
 }
-.source-item:last-child { margin-bottom: 0; }
-.source-type {
-    padding: .12rem .4rem; border-radius: 10px;
-    font-size: .6rem; font-weight: 700; text-transform: uppercase;
+.sources-wrap:hover .sources-pill {
+    background: #e2e8f0; color: #334155; border-color: #cbd5e1;
 }
-.source-type.project              { background:#dbeafe; color:#0f0c29; }
-.source-type.project_documentation{ background:#e0e7ff; color:#3730a3; }
-.source-type.resume               { background:#dcfce7; color:#166534; }
-.source-type.blog                 { background:#fef3c7; color:#92400e; }
-.source-type.skill                { background:#e9d5ff; color:#7e22ce; }
-.source-similarity { margin-left: auto; font-size: .65rem; opacity: .65; }
+.sources-popup {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: .5rem .75rem;
+    box-shadow: 0 6px 20px rgba(0,0,0,.1);
+    font-size: .75rem; color: #334155;
+    white-space: nowrap;
+    z-index: 200;
+    opacity: 0; visibility: hidden;
+    transform: translateY(-4px);
+    transition: opacity .18s, transform .18s, visibility .18s;
+    pointer-events: none;
+    min-width: 220px;
+}
+.sources-popup .src-row {
+    display: flex; align-items: baseline; gap: .4rem;
+    padding: .18rem 0;
+}
+.sources-popup .src-row + .src-row { border-top: 1px solid #f1f5f9; }
+.sources-popup .src-title { color: #334155; flex: 1; }
+.sources-popup .src-pct   { color: #94a3b8; font-size: .7rem; flex-shrink: 0; }
+.sources-wrap:hover .sources-popup {
+    opacity: 1; visibility: visible; transform: translateY(0);
+}
 
 /* Typing indicator */
 .typing-indicator {
@@ -299,10 +332,11 @@
 
 /* Responsive */
 @media (max-width: 768px) {
-    .ai-wrapper { flex-direction: column; height: auto; border-radius: 0; }
-    .chat-sidebar { width:100%; min-width:0; max-height:220px; border-right:none; border-bottom:1px solid #e2e8f0; }
-    .sessions-list { max-height:140px; }
-    .chat-main { height:65vh; }
+    .ai-wrapper { flex-direction: column; height: 100vh; border-radius: 0; }
+    .chat-sidebar { width:100%; min-width:0; max-height:260px; border-right:none; border-bottom:1px solid #e2e8f0; }
+    .sidebar-brand-nav { gap: .2rem .4rem; }
+    .sessions-list { max-height:110px; }
+    .chat-main { flex: 1; }
 }
 </style>
 {% endblock %}
@@ -323,24 +357,6 @@
 
     <!-- ═══ MAIN CHAT ══════════════════════════════════════════════════════════ -->
     <div class="chat-main">
-        <div class="chat-header">
-            <div class="chat-header-info">
-                <h1>🤖 AI Assistant</h1>
-                <p class="chat-header-title" id="currentSessionTitle">
-                    Ask me anything about Hasan's projects, skills, or experience
-                </p>
-            </div>
-            <div class="chat-controls">
-                <select id="documentType" class="document-selector">
-                    {% for doc_type in document_types %}
-                        <option value="{{ doc_type.value }}" {% if doc_type.selected %}selected{% endif %}>
-                            {{ doc_type.label }}
-                        </option>
-                    {% endfor %}
-                </select>
-                <div class="chat-status" id="chatStatus">Ready</div>
-            </div>
-        </div>
 
         <div class="chat-messages" id="chatMessages">
             <div class="empty-state" id="emptyState">
@@ -534,7 +550,7 @@ class PortfolioChat {
             const data = await res.json();
             if (!data.success) return;
             this.currentSessionId = id; this._setActive(id);
-            this.sessionTitle.textContent = data.session.title;
+            this._setTitle(data.session.title);
             this._clearMessages();
             if (!data.messages.length) { this.emptyStateEl.style.display = 'flex'; return; }
             data.messages.forEach(m => {
@@ -557,7 +573,7 @@ class PortfolioChat {
             const d = document.createElement('div');
             d.className = 'session-title'; d.textContent = data.title;
             if (input) input.replaceWith(d);
-            if (id === this.currentSessionId) this.sessionTitle.textContent = data.title;
+            if (id === this.currentSessionId) this._setTitle(data.title);
         } catch {
             const input = itemEl.querySelector('.session-rename-input');
             if (input) {
@@ -582,7 +598,7 @@ class PortfolioChat {
         this.currentSessionId = null;
         this._setActive(null);
         this._clearMessages();
-        this.sessionTitle.textContent = "Ask me anything about Hasan's projects, skills, or experience";
+        this._setTitle("Ask me anything about Hasan's projects, skills, or experience");
         this.inputEl.focus();
     }
 
@@ -628,18 +644,28 @@ class PortfolioChat {
 
     _renderSources(sources) {
         if (!sources || !sources.length) return '';
-        const items = sources.map(s => {
-            const meta    = s.metadata || s;
-            const docType = meta.document_type || '';
-            const title   = meta.document_title || '';
-            const pct     = s.similarity !== undefined ? Math.round(s.similarity * 100) + '% match' : '';
-            return `<div class="source-item">
-                <span class="source-type ${docType}">${docType.replace('_', ' ')}</span>
-                <span>${this._esc(title)}</span>
-                ${pct ? `<span class="source-similarity">${pct}</span>` : ''}
-            </div>`;
+
+        // Build pill label: first title (truncated) + "+N more"
+        const first      = (sources[0].metadata || sources[0]).document_title || 'Source';
+        const shortFirst = first.length > 22 ? first.slice(0, 22) + '…' : first;
+        const extra      = sources.length > 1 ? ` +${sources.length - 1} more` : '';
+        const pillLabel  = `📎 ${this._esc(shortFirst)}${extra}`;
+
+        // Build popup rows
+        const rows = sources.map(s => {
+            const meta  = s.metadata || s;
+            const title = meta.document_title || '—';
+            const pct   = s.similarity !== undefined ? `${Math.round(s.similarity * 100)}%` : '';
+            return `<div class="src-row">
+                        <span class="src-title">${this._esc(title)}</span>
+                        <span class="src-pct">${pct}</span>
+                    </div>`;
         }).join('');
-        return `<div class="sources"><div class="sources-title">Sources</div>${items}</div>`;
+
+        return `<div class="sources-wrap">
+                    <span class="sources-pill">${pillLabel}</span>
+                    <div class="sources-popup">${rows}</div>
+                </div>`;
     }
 
     /* ── Streaming send ──────────────────────────────────────────────────── */
@@ -673,7 +699,7 @@ class PortfolioChat {
         try {
             const body = {
                 question,
-                document_type: this.docTypeEl.value,
+                document_type: this.docTypeEl ? this.docTypeEl.value : 'all',
                 ...(this.currentSessionId ? { session_id: this.currentSessionId } : {}),
             };
 
@@ -722,7 +748,7 @@ class PortfolioChat {
                                 this.currentSessionId = evt.session_id;
                             }
                             if (evt.session_title) {
-                                this.sessionTitle.textContent = evt.session_title;
+                                this._setTitle(evt.session_title);
                             }
                         }
 
@@ -784,7 +810,8 @@ class PortfolioChat {
 
     _scroll() { setTimeout(() => { this.messagesEl.scrollTop = this.messagesEl.scrollHeight; }, 60); }
 
-    _setStatus(text) { this.statusEl.textContent = text; }
+    _setStatus(text) { if (this.statusEl) this.statusEl.textContent = text; }
+    _setTitle(text)  { if (this.sessionTitle) this.sessionTitle.textContent = text; }
 
     _relTime(iso) {
         const m = Math.floor((Date.now() - new Date(iso)) / 60000);

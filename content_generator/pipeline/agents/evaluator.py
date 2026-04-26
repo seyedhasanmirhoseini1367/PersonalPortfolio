@@ -216,9 +216,58 @@ Return ONLY valid JSON."""
     }
 
 
+# ── JUDGE 5: STRUCTURAL VALIDATION ───────────────────────────────────────────
+
+def judge_structure(content_text: str, content_piece, seo_params: dict) -> dict:
+    """Verify word count, section count, and FAQ presence against user-specified controls."""
+    words        = len(content_text.split())
+    word_min     = seo_params.get('word_count_min', 600)
+    word_max     = seo_params.get('word_count_max', 1200)
+    h2_expected  = seo_params.get('h2_count', 3)
+    faq_expected = seo_params.get('faq_count', 0)
+
+    sections      = getattr(content_piece, 'sections', []) or []
+    section_count = len(sections)
+
+    issues = []
+    if words < word_min:
+        issues.append(f"Too short: ~{words} words (minimum {word_min})")
+    elif words > word_max * 1.25:  # allow 25% overrun before flagging
+        issues.append(f"Too long: ~{words} words (maximum {word_max})")
+
+    if section_count < h2_expected:
+        issues.append(f"Needs {h2_expected} H2 sections, has {section_count}")
+
+    if faq_expected > 0:
+        has_faq = any(
+            'faq' in str(s.get('heading', '')).lower()
+            or 'frequently' in str(s.get('heading', '')).lower()
+            or 'question' in str(s.get('heading', '')).lower()
+            for s in sections
+        )
+        if not has_faq:
+            issues.append(f"Missing FAQ section ({faq_expected} Q&A pairs required)")
+
+    score = max(0, 100 - len(issues) * 30)
+    return {
+        'score':         score,
+        'word_count':    words,
+        'section_count': section_count,
+        'issues':        issues,
+        'feedback':      ('; '.join(issues) if issues
+                          else f"Structure OK: ~{words} words, {section_count} sections"),
+    }
+
+
 # ── LOOP EVALUATOR (judges 1, 2, 4 — runs each retry) ────────────────────────
 
-def evaluate_loop(content_text: str, audience: str, goal: str) -> dict:
+def evaluate_loop(
+    content_text: str,
+    audience: str,
+    goal: str,
+    content_piece=None,
+    seo_params: dict = None,
+) -> dict:
     """Runs inside the retry loop. Judges content quality, GEO signals, and naturalness."""
     print("    [Judge 1] Customer fit...")
     customer = judge_customer(content_text, audience, goal)
@@ -229,15 +278,25 @@ def evaluate_loop(content_text: str, audience: str, goal: str) -> dict:
     print("    [Judge 4] Human naturalness...")
     naturalness = judge_naturalness(content_text)
 
+    structure_issues   = []
+    structure_feedback = ""
+    if content_piece is not None and seo_params:
+        print("    [Judge 5] Structure validation...")
+        structure        = judge_structure(content_text, content_piece, seo_params)
+        structure_issues = structure["issues"]
+        structure_feedback = structure["feedback"] if structure_issues else ""
+
     overall = round((customer["score"] + geo["score"] + naturalness["score"]) / 3)
-    passed = overall >= 70
+    passed  = overall >= 70 and not structure_issues
 
     return {
-        "customer": customer,
-        "geo": geo,
-        "naturalness": naturalness,
-        "overall_score": overall,
-        "passed": passed,
+        "customer":          customer,
+        "geo":               geo,
+        "naturalness":       naturalness,
+        "overall_score":     overall,
+        "passed":            passed,
+        "structure_issues":  structure_issues,
+        "structure_feedback": structure_feedback,
     }
 
 

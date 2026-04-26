@@ -5,7 +5,9 @@ from typing import List, Dict, Any, Optional
 from .embedding_service import EmbeddingService
 
 # Minimum cosine similarity to include a chunk in results.
-_SIMILARITY_THRESHOLD = 0.10
+# BGE-small scores are higher than MiniLM (0.5+ range), so 0.45 filters
+# truly unrelated documents without cutting off legitimate matches.
+_SIMILARITY_THRESHOLD = 0.45
 
 
 class RetrievalService:
@@ -29,6 +31,7 @@ class RetrievalService:
                 return []
 
             similarities = cosine_similarity(query_embedding, embeddings)[0]
+            similarities = self._apply_boost(query, similarities, metadata)
             top_indices = np.argsort(similarities)[-self.top_k:][::-1]
 
             # Keep one chunk per document (highest score wins) to prevent a
@@ -54,7 +57,35 @@ class RetrievalService:
             print(f"Retrieval error: {exc}")
             return []
 
-    def hybrid_retrieve(self, query: str, document_types: Optional[List[str]] = None) -> List[Dict[str, Any]]:
+    _BOOST_STOP = frozenset({
+        'any', 'a', 'an', 'the', 'is', 'are', 'was', 'what', 'which',
+        'how', 'can', 'do', 'tell', 'about', 'for', 'me', 'you', 'i',
+        'have', 'has', 'did', 'on', 'in', 'at', 'of', 'to', 'and', 'or',
+        'his', 'her', 'their', 'your', 'my', 'explain', 'describe', 'show',
+    })
+
+    def _query_keywords(self, query: str) -> set:
+        return {w for w in query.lower().split()
+                if w not in self._BOOST_STOP and len(w) > 2}
+
+    def _apply_boost(self, query: str, similarities: np.ndarray, metadata: list) -> np.ndarray:
+        """
+        Boost raw similarity scores for chunks whose document title contains
+        query keywords — applied BEFORE top-k selection so the right documents
+        actually enter the candidate set.
+        """
+        words = self._query_keywords(query)
+        if not words:
+            return similarities
+        boosted = similarities.copy()
+        for i, meta in enumerate(metadata):
+            title = meta.get('document_title', '').lower()
+            matched = sum(1 for w in words if w in title)
+            if matched:
+                boosted[i] += matched * 0.08   # +8% per matched query keyword in title
+        return boosted
+
+    def hybrid_retrieve(self, query: str, document_types: Optional[List[str]] = None, top_k: Optional[int] = None) -> List[Dict[str, Any]]:
         """Search across all document types, merge, and return the top-k unique documents."""
         if document_types is None:
             document_types = ['project', 'resume', 'blog', 'skill', 'project_documentation']
@@ -75,4 +106,5 @@ class RetrievalService:
                 seen_docs.add(doc_id)
                 unique_results.append(result)
 
-        return unique_results[:self.top_k]
+        limit = top_k if top_k is not None else self.top_k
+        return unique_results[:limit]

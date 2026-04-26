@@ -146,12 +146,12 @@ SLACK_WEBHOOK_URL       = config('SLACK_WEBHOOK_URL',       default='')
 
 # ── RAG Configuration ─────────────────────────────────────────────────────────
 RAG_CONFIG = {
-    'EMBEDDING_MODEL':  'sentence-transformers/all-MiniLM-L6-v2',
+    'EMBEDDING_MODEL':  'BAAI/bge-small-en-v1.5',
     'VECTOR_STORE_PATH': BASE_DIR / 'rag_system' / 'vector_store',
     'DOCUMENTS_PATH':    BASE_DIR / 'rag_system' / 'documents',
     'CHUNK_SIZE':        1000,
     'CHUNK_OVERLAP':     200,
-    'GEMINI_MODEL':      'gemini-2.5-flash',
+    'GEMINI_MODEL':      'gemini-2.0-flash',
     'ANTHROPIC_MODEL':   'claude-haiku-4-5-20251001',
     'OPENAI_MODEL':      'gpt-4o-mini',
     'GROQ_MODEL':        'llama-3.1-8b-instant',

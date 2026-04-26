@@ -118,6 +118,28 @@ def submit_job(request):
     company_docs    = company_profile.about if company_profile else request.POST.get('company_docs', '').strip()
     competitor_docs = company_profile.competitor_info if company_profile else request.POST.get('competitor_docs', '').strip()
 
+    # ── SEO/GEO controls ──────────────────────────────────────────────────────
+    def _int(key, default):
+        try:
+            return max(0, int(request.POST.get(key, default) or default))
+        except (TypeError, ValueError):
+            return default
+
+    seo_params = {
+        'word_count_min': _int('word_count_min', 600),
+        'word_count_max': _int('word_count_max', 1200),
+        'h2_count':       _int('h2_count', 3),
+        'stats_required': _int('stats_required', 2),
+        'faq_count':      _int('faq_count', 0),
+        'reading_level':  request.POST.get('reading_level', 'Professional') or 'Professional',
+        'content_angle':  request.POST.get('content_angle', '') or '',
+    }
+    # Ensure min <= max
+    if seo_params['word_count_min'] > seo_params['word_count_max']:
+        seo_params['word_count_min'], seo_params['word_count_max'] = (
+            seo_params['word_count_max'], seo_params['word_count_min']
+        )
+
     group_id = uuid.uuid4()
     jobs = []
 
@@ -145,6 +167,7 @@ def submit_job(request):
             threading.Thread(
                 target=_run_pipeline,
                 args=(str(job.id),),
+                kwargs={'seo_params': seo_params},
                 daemon=True,
             ).start()
 
@@ -386,7 +409,7 @@ def _publish_notion(api_url: str, token: str, title: str, content: dict):
     return {'url': result.get('url', '')}
 
 
-def _run_pipeline(job_id: str):
+def _run_pipeline(job_id: str, seo_params: dict = None):
     from .models import GenerationJob
 
     job = GenerationJob.objects.get(pk=job_id)
@@ -430,6 +453,7 @@ def _run_pipeline(job_id: str):
             keywords             = keywords,
             tone_preset          = job.tone_preset or 'professional',
             initial_feedback     = feedback_with_hint or None,
+            seo_params           = seo_params or {},
         )
 
         job.content_en    = output.content_en.model_dump() if output.content_en else None

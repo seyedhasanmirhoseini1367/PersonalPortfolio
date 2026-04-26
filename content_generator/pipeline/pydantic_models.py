@@ -59,8 +59,16 @@ class ContentBrief(BaseModel):
     target_audience: str
     key_messages: list[str]
     gap_opportunities: list[str]
+    # SEO/GEO structural controls
+    word_count_min: int = 600
+    word_count_max: int = 1200
+    h2_count: int = 3
+    stats_required: int = 2
+    faq_count: int = 0
+    reading_level: str = "Professional"
+    content_angle: str = ""
 
-    @field_validator("target_audience", "goal", "angle", mode="before")
+    @field_validator("target_audience", "goal", "angle", "reading_level", "content_angle", mode="before")
     @classmethod
     def str_fields(cls, v: Any) -> str:
         return _to_str(v)

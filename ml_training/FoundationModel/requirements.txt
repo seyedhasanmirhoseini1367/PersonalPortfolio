@@ -1,0 +1,39 @@
+# Core Deep Learning
+torch
+torchvision
+torchaudio
+
+# EEG Processing
+mne
+
+# Scientific Computing
+numpy
+scipy
+pandas
+
+# Machine Learning
+scikit-learn
+
+# Visualization
+matplotlib
+seaborn
+
+# Progress Bars
+tqdm
+
+# For Jupyter/Interactive Development (optional)
+jupyter
+ipykernel
+ipython
+
+# Note: The following are built-in Python modules (no installation needed):
+# - os
+# - glob
+# - warnings
+# - time
+# - datetime
+# - json
+# - copy
+# - random
+# - typing
+# - math

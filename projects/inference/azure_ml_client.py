@@ -17,6 +17,32 @@ Caller is responsible for falling back to local model when None is returned.
 Required Django settings (set via env vars):
     AZURE_ML_ENDPOINT_URL  — e.g. https://<endpoint>.inference.ml.azure.com/score
     AZURE_ML_ENDPOINT_KEY  — primary or secondary key from Azure ML endpoint
+
+Per-model endpoint settings (for multi-model setups):
+    EEG_RT_ENDPOINT_URL     / EEG_RT_ENDPOINT_KEY
+    EEG_EXT_ENDPOINT_URL    / EEG_EXT_ENDPOINT_KEY
+
+ARCHITECTURE LESSON — why a managed endpoint?
+──────────────────────────────────────────────
+Your Django app runs on a small server (no GPU, limited RAM). The EEG model
+is 3.2M params — fine for CPU but slow. Azure ML gives you:
+
+  1. Separate compute: the model runs on its own container, not inside Django.
+  2. Auto-scaling: Azure adds more instances under load.
+  3. Health checks + restart: if the container crashes, Azure restarts it.
+  4. Versioned deployments: push model v2 with 10% traffic, verify, then 100%.
+  5. Monitoring: latency, error rate, throughput in Azure Monitor dashboard.
+
+Django calls the endpoint with a plain requests.post() — the Azure SDK is only
+needed at deployment time, not at runtime.
+
+FALLBACK PATTERN (used in eeg_foundation.py):
+──────────────────────────────────────────────
+  client = AzureMLClient.for_task("rt")
+  result = client.predict({"data": arr.tolist()})
+  if result is None:
+      # Azure not configured or unreachable — run locally
+      result = local_inference(arr)
 """
 
 import json
@@ -93,3 +119,24 @@ class AzureMLClient:
         except Exception as exc:
             logger.warning("Azure ML endpoint unexpected error: %s", exc)
             return None
+
+    @classmethod
+    def for_task(cls, task: str) -> "AzureMLClient":
+        """
+        Return a client configured for a specific EEG task.
+        Uses per-task env vars if set, falls back to the generic endpoint.
+
+        Usage:
+            client = AzureMLClient.for_task("rt")         # Challenge 1
+            client = AzureMLClient.for_task("externalizing")  # Challenge 2
+        """
+        task_map = {
+            "rt":            ("EEG_RT_ENDPOINT_URL",  "EEG_RT_ENDPOINT_KEY"),
+            "externalizing": ("EEG_EXT_ENDPOINT_URL", "EEG_EXT_ENDPOINT_KEY"),
+        }
+        url_key, api_key = task_map.get(task, ("AZURE_ML_ENDPOINT_URL", "AZURE_ML_ENDPOINT_KEY"))
+
+        instance = cls()
+        instance.endpoint_url = getattr(settings, url_key, '') or instance.endpoint_url
+        instance.endpoint_key = getattr(settings, api_key, '') or instance.endpoint_key
+        return instance

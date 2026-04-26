@@ -54,12 +54,13 @@ class GenerationService:
         query: str,
         context_chunks: List[Dict[str, Any]],
         history: Optional[List[HistoryItem]] = None,
+        route: str = "general",
     ) -> Generator[str, None, None]:
         """
         Yields text tokens one by one.
         Falls back to yielding the full response at once if streaming is unavailable.
         """
-        system_prompt, messages = self._build_messages(query, context_chunks, history)
+        system_prompt, messages = self._build_messages(query, context_chunks, history, route=route)
 
         yielded = False
 
@@ -112,18 +113,38 @@ class GenerationService:
         query: str,
         context_chunks: List[Dict[str, Any]],
         history: Optional[List[HistoryItem]],
+        route: str = "general",
     ):
         """
         Returns (system_prompt, messages_list) where messages_list is in
         OpenAI/Anthropic format: [{"role": ..., "content": ...}, ...]
         """
-        system_prompt = (
-            "You are Hasan's portfolio assistant — an expert AI that answers questions "
-            "about Hasan Mirhoseini, a Data Scientist and ML Engineer based in Helsinki, Finland. "
-            "Use only the provided context to answer. If context is insufficient, say so honestly. "
-            "Be concise, professional, and friendly. Format your answers with Markdown when helpful "
-            "(lists, bold, code blocks)."
-        )
+        if route == "job_fit":
+            system_prompt = (
+                "You are an expert technical recruiter specialising in ML engineering and data science. "
+                "Your task is to evaluate how well Hasan Mirhoseini fits the provided job description, "
+                "based strictly on the portfolio context given.\n\n"
+                "Structure your response exactly like this:\n"
+                "**Overall Fit: X%**\n\n"
+                "**Strong Matches**\n"
+                "- list skills/experience from the JD that Hasan clearly has\n\n"
+                "**Partial Matches**\n"
+                "- list requirements he partially meets or has transferable skills for\n\n"
+                "**Gaps**\n"
+                "- list requirements not evidenced in the portfolio\n\n"
+                "**Recommendation**\n"
+                "One or two honest sentences for the hiring manager.\n\n"
+                "Be evidence-based, honest, and professional. "
+                "Do not invent information not present in the context."
+            )
+        else:
+            system_prompt = (
+                "You are Hasan's portfolio assistant — an expert AI that answers questions "
+                "about Hasan Mirhoseini, a Data Scientist and ML Engineer based in Helsinki, Finland. "
+                "Use only the provided context to answer. If context is insufficient, say so honestly. "
+                "Be concise, professional, and friendly. Format your answers with Markdown when helpful "
+                "(lists, bold, code blocks)."
+            )
 
         context_text = self._format_context(context_chunks)
         context_block = f"Context from Hasan's portfolio:\n{context_text}\n\n" if context_text else ""
@@ -423,13 +444,12 @@ class GenerationService:
             top = context_chunks[0]['metadata'].get('document_title', 'the portfolio')
             return (
                 f"I found relevant information in **{top}** related to your question. "
-                "For full AI responses, please configure GEMINI_API_KEY, ANTHROPIC_API_KEY, "
-                "or OPENAI_API_KEY in your environment."
+                "The AI provider is temporarily unavailable — please try again in a moment. "
+                "(Configure GROQ_API_KEY, GEMINI_API_KEY, or ANTHROPIC_API_KEY to enable responses.)"
             )
         return (
-            "I'm happy to answer questions about Hasan's portfolio. "
-            "Please configure an LLM API key (GEMINI_API_KEY, ANTHROPIC_API_KEY, or OPENAI_API_KEY) "
-            "to enable AI responses."
+            "I'm happy to answer questions about Hasan's portfolio, but the AI provider is "
+            "temporarily unavailable. Please try again in a moment."
         )
 
     def _fallback_interpretation(self, project_title: str, target: str, label: str) -> str:
