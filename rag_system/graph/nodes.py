@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 # ── Router ────────────────────────────────────────────────────────────────────
 
 _JOB_FIT_KEYWORDS = {
+    # Job description / posting matching
     "job description", "job posting", "job fit", "job opening",
     "good fit", "fit for this", "fit for the", "match for this",
     "we are looking for", "we're looking for",
@@ -23,6 +24,16 @@ _JOB_FIT_KEYWORDS = {
     "evaluate fit", "assess fit", "check fit",
     "am i a good fit", "is he a good fit", "would hasan fit",
     "hiring for", "open position", "apply for",
+    # Competency / seniority evaluation
+    "competency", "competencies", "seniority",
+    "senior ml", "senior data", "senior engineer",
+    "qualified for", "ready to be", "ready for a",
+    "fit as a", "fit for a",
+    "is he qualified", "is he ready", "does he have the",
+    "what level", "which level", "level of engineer",
+    "can he work as", "could he work as",
+    "is hasan", "does hasan have",
+    "junior or senior", "mid-level", "lead engineer",
 }
 
 _CV_KEYWORDS = {
