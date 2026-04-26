@@ -109,6 +109,7 @@ def cv_node(state: AgentState) -> Dict[str, Any]:
     chunks = retrieval.hybrid_retrieve(
         query=state["question"],
         document_types=["resume", "skill", "project"],
+        intent="cv",
     )
     logger.debug("cv_node: retrieved %d chunks", len(chunks))
     return {"context_chunks": chunks}
@@ -120,8 +121,8 @@ def thesis_node(state: AgentState) -> Dict[str, Any]:
     chunks = retrieval.hybrid_retrieve(
         query=state["question"],
         document_types=["project_documentation", "project"],
+        intent="thesis",
     )
-    # Boost relevance by filtering on thesis-related terms if we got too many results
     thesis_terms = {"seizure", "eeg", "epilepsy", "thesis", "neural"}
     filtered = [
         c for c in chunks
@@ -138,6 +139,7 @@ def ml_model_node(state: AgentState) -> Dict[str, Any]:
     chunks = retrieval.hybrid_retrieve(
         query=state["question"],
         document_types=["project", "project_documentation"],
+        intent="ml_model",
     )
 
     ml_info: Dict[str, Any] = {}
@@ -160,6 +162,7 @@ def projects_node(state: AgentState) -> Dict[str, Any]:
     chunks = retrieval.hybrid_retrieve(
         query=state["question"],
         document_types=["project", "project_documentation", "resume"],
+        intent="projects",
     )
     logger.debug("projects_node: retrieved %d chunks", len(chunks))
     return {"context_chunks": chunks}
@@ -170,7 +173,8 @@ def general_node(state: AgentState) -> Dict[str, Any]:
     retrieval = _retrieval_service()
     chunks = retrieval.hybrid_retrieve(
         query=state["question"],
-        document_types=None,   # searches everything
+        document_types=None,
+        intent="general",
     )
     logger.debug("general_node: retrieved %d chunks", len(chunks))
     return {"context_chunks": chunks}
@@ -179,36 +183,20 @@ def general_node(state: AgentState) -> Dict[str, Any]:
 def job_fit_node(state: AgentState) -> Dict[str, Any]:
     """Retrieve resume + skills + projects for job-fit analysis.
 
-    Two-stage retrieval: the resume is guaranteed to appear first regardless of
-    its similarity score, because the job description often contains domain
-    keywords that boost project documents above the resume unfairly.
+    The intent='job_fit' boost (+0.20 on resume, +0.08 on skill) ensures the
+    resume always outranks project documents in similarity scoring, bridging the
+    vocabulary gap where job postings share more domain keywords with project
+    docs than with the candidate's CV.
     """
     retrieval = _retrieval_service()
-
-    # Stage 1 — always fetch the resume (primary evaluation source)
-    resume_chunks = retrieval.retrieve(query=state["question"], document_type="resume")
-
-    # Stage 2 — supporting context from skills and projects (ranked by similarity)
-    support_chunks = retrieval.hybrid_retrieve(
+    chunks = retrieval.hybrid_retrieve(
         query=state["question"],
-        document_types=["skill", "project", "project_documentation"],
-        top_k=6,
+        document_types=["resume", "skill", "project", "project_documentation"],
+        top_k=8,
+        intent="job_fit",
     )
-
-    # Combine: resume first, then deduped support chunks
-    seen_docs = {c["metadata"].get("document_id", "") for c in resume_chunks}
-    combined = list(resume_chunks)
-    for chunk in support_chunks:
-        doc_id = chunk["metadata"].get("document_id", "")
-        if doc_id not in seen_docs:
-            seen_docs.add(doc_id)
-            combined.append(chunk)
-
-    logger.debug(
-        "job_fit_node: %d resume + %d support = %d total chunks",
-        len(resume_chunks), len(support_chunks), len(combined),
-    )
-    return {"context_chunks": combined}
+    logger.debug("job_fit_node: retrieved %d chunks", len(chunks))
+    return {"context_chunks": chunks}
 
 
 # ── Relevance grader (LangChain) ─────────────────────────────────────────────

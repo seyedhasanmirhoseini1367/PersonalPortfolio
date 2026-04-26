@@ -9,13 +9,30 @@ from .embedding_service import EmbeddingService
 # truly unrelated documents without cutting off legitimate matches.
 _SIMILARITY_THRESHOLD = 0.45
 
+# Per-intent document-type boosts applied BEFORE ranking so the right
+# documents win without any hard-coded ordering workarounds.
+# Values are added to the raw cosine similarity score.
+_INTENT_BOOSTS: Dict[str, Dict[str, float]] = {
+    "job_fit":  {"resume": 0.20, "skill": 0.08},
+    "cv":       {"resume": 0.15, "skill": 0.05},
+    "thesis":   {"project_documentation": 0.12},
+    "ml_model": {"project_documentation": 0.10},
+    "projects": {"project": 0.08},
+    "general":  {},
+}
+
 
 class RetrievalService:
     def __init__(self):
         self.embedding_service = EmbeddingService()
         self.top_k = 5
 
-    def retrieve(self, query: str, document_type: Optional[str] = None) -> List[Dict[str, Any]]:
+    def retrieve(
+        self,
+        query: str,
+        document_type: Optional[str] = None,
+        intent: str = "",
+    ) -> List[Dict[str, Any]]:
         """Return the top-k most relevant chunks for a query, deduplicated by document."""
         try:
             query_embedding = self.embedding_service.generate_embedding(query).reshape(1, -1)
@@ -31,7 +48,10 @@ class RetrievalService:
                 return []
 
             similarities = cosine_similarity(query_embedding, embeddings)[0]
-            similarities = self._apply_boost(query, similarities, metadata)
+            similarities = self._apply_boost(
+                query, similarities, metadata,
+                intent=intent, doc_type=document_type or "",
+            )
             top_indices = np.argsort(similarities)[-self.top_k:][::-1]
 
             # Keep one chunk per document (highest score wins) to prevent a
@@ -68,33 +88,62 @@ class RetrievalService:
         return {w for w in query.lower().split()
                 if w not in self._BOOST_STOP and len(w) > 2}
 
-    def _apply_boost(self, query: str, similarities: np.ndarray, metadata: list) -> np.ndarray:
+    def _apply_boost(
+        self,
+        query: str,
+        similarities: np.ndarray,
+        metadata: list,
+        intent: str = "",
+        doc_type: str = "",
+    ) -> np.ndarray:
         """
-        Boost raw similarity scores for chunks whose document title contains
-        query keywords — applied BEFORE top-k selection so the right documents
-        actually enter the candidate set.
+        Two-layer boost applied BEFORE top-k selection:
+
+        1. Title-keyword boost (+8% per query keyword found in the document title)
+           — helps surface the most directly named document.
+
+        2. Intent-aware doc-type boost (from _INTENT_BOOSTS)
+           — shifts the entire score distribution for a document type based on
+           what the user's query is actually *about*, bridging the vocabulary
+           gap between query language and document language.
+           e.g. job_fit → resume +0.20 so the CV always outranks project docs
+           even when the job posting happens to share more vocabulary with them.
         """
-        words = self._query_keywords(query)
-        if not words:
-            return similarities
         boosted = similarities.copy()
-        for i, meta in enumerate(metadata):
-            title = meta.get('document_title', '').lower()
-            matched = sum(1 for w in words if w in title)
-            if matched:
-                boosted[i] += matched * 0.08   # +8% per matched query keyword in title
+
+        # Layer 1: title keyword boost
+        words = self._query_keywords(query)
+        if words:
+            for i, meta in enumerate(metadata):
+                title = meta.get('document_title', '').lower()
+                matched = sum(1 for w in words if w in title)
+                if matched:
+                    boosted[i] += matched * 0.08
+
+        # Layer 2: intent-aware doc-type boost (uniform across all chunks of this type)
+        if intent and doc_type:
+            type_boost = _INTENT_BOOSTS.get(intent, {}).get(doc_type, 0.0)
+            if type_boost:
+                boosted += type_boost
+
         return boosted
 
-    def hybrid_retrieve(self, query: str, document_types: Optional[List[str]] = None, top_k: Optional[int] = None) -> List[Dict[str, Any]]:
+    def hybrid_retrieve(
+        self,
+        query: str,
+        document_types: Optional[List[str]] = None,
+        top_k: Optional[int] = None,
+        intent: str = "",
+    ) -> List[Dict[str, Any]]:
         """Search across all document types, merge, and return the top-k unique documents."""
         if document_types is None:
             document_types = ['project', 'resume', 'blog', 'skill', 'project_documentation']
 
         all_results = []
         for doc_type in document_types:
-            all_results.extend(self.retrieve(query, doc_type))
+            all_results.extend(self.retrieve(query, doc_type, intent=intent))
 
-        # Sort by score descending
+        # Sort by boosted score descending
         all_results.sort(key=lambda x: x['similarity'], reverse=True)
 
         # Final dedup: one chunk per document across all types
