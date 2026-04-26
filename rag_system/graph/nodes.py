@@ -177,15 +177,38 @@ def general_node(state: AgentState) -> Dict[str, Any]:
 
 
 def job_fit_node(state: AgentState) -> Dict[str, Any]:
-    """Retrieve resume + skills + projects for job-fit analysis."""
+    """Retrieve resume + skills + projects for job-fit analysis.
+
+    Two-stage retrieval: the resume is guaranteed to appear first regardless of
+    its similarity score, because the job description often contains domain
+    keywords that boost project documents above the resume unfairly.
+    """
     retrieval = _retrieval_service()
-    chunks = retrieval.hybrid_retrieve(
+
+    # Stage 1 — always fetch the resume (primary evaluation source)
+    resume_chunks = retrieval.retrieve(query=state["question"], document_type="resume")
+
+    # Stage 2 — supporting context from skills and projects (ranked by similarity)
+    support_chunks = retrieval.hybrid_retrieve(
         query=state["question"],
-        document_types=["resume", "skill", "project", "project_documentation"],
-        top_k=8,   # more context for a comprehensive fit analysis
+        document_types=["skill", "project", "project_documentation"],
+        top_k=6,
     )
-    logger.debug("job_fit_node: retrieved %d chunks", len(chunks))
-    return {"context_chunks": chunks}
+
+    # Combine: resume first, then deduped support chunks
+    seen_docs = {c["metadata"].get("document_id", "") for c in resume_chunks}
+    combined = list(resume_chunks)
+    for chunk in support_chunks:
+        doc_id = chunk["metadata"].get("document_id", "")
+        if doc_id not in seen_docs:
+            seen_docs.add(doc_id)
+            combined.append(chunk)
+
+    logger.debug(
+        "job_fit_node: %d resume + %d support = %d total chunks",
+        len(resume_chunks), len(support_chunks), len(combined),
+    )
+    return {"context_chunks": combined}
 
 
 # ── Relevance grader (LangChain) ─────────────────────────────────────────────
