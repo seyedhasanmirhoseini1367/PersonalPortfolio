@@ -22,39 +22,35 @@ def localize_content(
     cultural_note = LANGUAGE_CONTEXT.get(target_language, "")
     sections_text = json.dumps(content.sections)
 
-    prompt = f"""You are a professional content localizer specializing in brand-aligned translation.
+    prompt = f"""You are a professional translator and content localizer.
+
+⚠ YOUR ONLY TASK: Translate and culturally adapt the EXACT content provided below into {target_language}.
+DO NOT generate new content. DO NOT add new sections. DO NOT change the structure.
+If sections is an empty list, return an empty list for sections.
 
 TARGET LANGUAGE: {target_language}
 CULTURAL CONTEXT: {cultural_note}
 
 BRAND VOICE: {brand.tone}
-BRAND VALUES: {', '.join(brand.values)}
 
-EXISTING CLIENT CONTENT IN {target_language} (match this voice):
-{existing_local_content}
-
-CONTENT TO LOCALIZE:
+CONTENT TO TRANSLATE (translate every field, keep structure identical):
 Title: {content.title}
 Headline: {content.headline}
 Sections: {sections_text}
 CTA: {content.cta}
 
-Rules:
-- This is LOCALIZATION not just translation — adapt culturally
-- Preserve all GEO signals (statistics, citations, expert quotes)
-- Preserve brand voice in the target language
-- Preserve meaning and key messages
+Return a single JSON object with these exact keys:
+- "title": translated title string
+- "headline": translated headline string
+- "sections": translated list (same length and structure as input — if input is [], return [])
+- "cta": translated CTA string
+- "language": "{target_language}"
 
-Return JSON:
-- title: localized
-- headline: localized
-- sections: list of {{"heading": str, "body": str}} — fully localized
-- cta: localized
-- language: "{target_language}"
-
-Return ONLY valid JSON."""
+Return ONLY valid JSON. No explanation. No extra keys."""
 
     data = json.loads(generate(prompt))
+    if isinstance(data, list):
+        data = data[0] if data else {}
     # unwrap if LLM nested the response
     for key in ("content", "localized", "result", "translation"):
         if key in data and isinstance(data[key], dict):

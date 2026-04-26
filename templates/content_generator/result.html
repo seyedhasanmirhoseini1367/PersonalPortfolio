@@ -307,21 +307,39 @@
                 {% endif %}
                 </div><!-- /lang-en -->
 
-                <!-- Finnish content -->
+                <!-- Finnish content — mirrors English format-specific rendering -->
                 {% if job.content_fi %}
                 <div id="lang-fi-{{ job.id }}" class="lang-content">
-                    {% if job.content_fi.headline %}
-                    <div class="content-headline">{{ job.content_fi.headline }}</div>
-                    {% endif %}
-                    {% for section in job.content_fi.sections %}
-                    <div class="content-section">
-                        <h4>{{ section.heading }}</h4>
-                        <p>{{ section.body }}</p>
+                {% if job.content_format == 'motto' %}
+                <div style="text-align:center;padding:2rem 1rem;">
+                    <div style="font-size:1.8rem;font-weight:800;color:#1e293b;line-height:1.3;margin-bottom:.75rem;">
+                        "{{ job.content_fi.headline|default:job.content_fi.title }}"
                     </div>
-                    {% endfor %}
-                    {% if job.content_fi.cta %}
-                    <div class="content-cta">{{ job.content_fi.cta }}</div>
-                    {% endif %}
+                    <div style="font-size:.8rem;color:#94a3b8;text-transform:uppercase;letter-spacing:.1em;">Tagline / Motto</div>
+                </div>
+
+                {% elif job.content_format == 'social_post' %}
+                {% for section in job.content_fi.sections %}
+                <div style="font-size:.95rem;color:#374151;line-height:1.8;white-space:pre-line;margin-bottom:1rem;">{{ section.body }}</div>
+                {% endfor %}
+                {% if job.content_fi.cta %}
+                <div style="margin-top:.75rem;font-size:.88rem;color:#1e40af;font-weight:600;">{{ job.content_fi.cta }}</div>
+                {% endif %}
+
+                {% else %}
+                {% if job.content_fi.headline %}
+                <div class="content-headline">{{ job.content_fi.headline }}</div>
+                {% endif %}
+                {% for section in job.content_fi.sections %}
+                <div class="content-section">
+                    <h4>{{ section.heading }}</h4>
+                    <p>{{ section.body }}</p>
+                </div>
+                {% endfor %}
+                {% if job.content_fi.cta %}
+                <div class="content-cta">{{ job.content_fi.cta }}</div>
+                {% endif %}
+                {% endif %}
                 </div>
                 {% endif %}
 
