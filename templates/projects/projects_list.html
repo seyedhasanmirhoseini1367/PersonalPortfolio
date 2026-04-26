@@ -183,7 +183,7 @@
 .accuracy-value.empty { color: #cbd5e1; font-style: italic; font-weight: 400; }
 
 .project-link {
-    display: inline-block; color: #302b63; text-decoration: none;
+    display: block; text-align: center; color: #302b63; text-decoration: none;
     font-weight: 600; font-size: .82rem; transition: color .2s; margin-top: auto;
 }
 .project-link:hover { color: #a78bfa; }
@@ -319,7 +319,7 @@
 <!-- Projects Grid -->
 <div class="projects-grid">
     {% for project in projects %}
-    <div class="project-card {% if project.prediction_endpoint %}has-demo{% endif %}">
+    <div class="project-card {% if project.live_demo_url or project.prediction_endpoint %}has-demo{% endif %}">
 
         {% if project.featured_image %}
             <img src="{{ project.featured_image.url }}" alt="{{ project.title }}" class="project-image">
@@ -365,8 +365,11 @@
             </div>
 
             <!-- Live Demo button -->
-            {% if project.prediction_endpoint %}
-                <a href="{{ project.prediction_endpoint }}" target="_blank" rel="noopener"
+            {% if project.live_demo_url %}
+                <a href="{{ project.live_demo_url }}" target="_blank" rel="noopener"
+                   class="btn-demo live">🚀 Live Demo</a>
+            {% elif project.prediction_endpoint %}
+                <a href="{% url 'prediction_demo' project.id %}"
                    class="btn-demo live">🚀 Live Demo</a>
             {% else %}
                 <span class="btn-demo no-demo">🔴 No Demo</span>
