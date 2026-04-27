@@ -6,6 +6,7 @@ from django.http import JsonResponse
 from django.utils import timezone
 from datetime import timedelta
 import json
+import statistics
 
 from .models import PredictionLog, MonitorRun
 from projects.models import Projects
@@ -63,8 +64,13 @@ def dashboard(request):
     p50_latency = lat_values[len(lat_values) // 2] if lat_values else None
     p95_latency = lat_values[min(int(len(lat_values) * 0.95), len(lat_values) - 1)] \
                   if lat_values else None
+    p99_latency = lat_values[min(int(len(lat_values) * 0.99), len(lat_values) - 1)] \
+                  if lat_values else None
 
     avg_conf_all = period_qs.filter(success=True).aggregate(v=Avg('confidence'))['v']
+
+    # ── Throughput ────────────────────────────────────────────────────────────
+    throughput_per_hour = round(all_total / (days * 24), 1) if (days and all_total) else 0
 
     # ── Volume by day (combined — used for bar chart) ─────────────────────────
     daily = (
@@ -116,6 +122,76 @@ def dashboard(request):
     else:
         model_status = 'unknown'
 
+    # ── Confusion matrix (all-time synthetic comparable) ─────────────────────
+    conf_logs = PredictionLog.objects.filter(source='synthetic', input_data__comparable=True)
+    if project_id:
+        conf_logs = conf_logs.filter(project_id=project_id)
+
+    tp = conf_logs.filter(label__iexact='Seizure',         input_data__expected_label='Seizure').count()
+    fp = conf_logs.filter(label__iexact='Seizure',         input_data__expected_label='LPD').count()
+    fn = conf_logs.exclude(label__iexact='Seizure').filter(input_data__expected_label='Seizure').count()
+    tn = conf_logs.exclude(label__iexact='Seizure').filter(input_data__expected_label='LPD').count()
+
+    precision_seizure = round(tp / (tp + fp) * 100, 1) if (tp + fp) else None
+    recall_seizure    = round(tp / (tp + fn) * 100, 1) if (tp + fn) else None
+    f1_seizure = round(
+        2 * precision_seizure * recall_seizure / (precision_seizure + recall_seizure), 1
+    ) if (precision_seizure and recall_seizure) else None
+    fnr_seizure = round(fn / (fn + tp) * 100, 1) if (fn + tp) else None
+
+    precision_lpd = round(tn / (tn + fn) * 100, 1) if (tn + fn) else None
+    recall_lpd    = round(tn / (tn + fp) * 100, 1) if (tn + fp) else None
+    f1_lpd = round(
+        2 * precision_lpd * recall_lpd / (precision_lpd + recall_lpd), 1
+    ) if (precision_lpd and recall_lpd) else None
+
+    # ── Accuracy volatility across all comparable runs ────────────────────────
+    run_acc_list = [r.accuracy for r in run_qs.filter(n_comparable__gt=0) if r.accuracy is not None]
+    acc_std = round(statistics.stdev(run_acc_list), 1) if len(run_acc_list) >= 2 else None
+
+    # ── Confidence calibration (10 bins, 0–10%, 10–20%, … 90–100%) ───────────
+    calibration_data = []
+    for i in range(10):
+        low  = i / 10.0
+        high = (i + 1) / 10.0 if i < 9 else 1.001
+        bin_qs  = conf_logs.filter(confidence__gte=low, confidence__lt=high)
+        n       = bin_qs.count()
+        correct = bin_qs.filter(input_data__is_correct=True).count()
+        calibration_data.append({
+            'label':    f'{int(low*100)}-{int((i+1)*10)}',
+            'expected': int((low + (i + 1) / 10) / 2 * 100),
+            'actual':   round(correct / n * 100, 1) if n else None,
+            'count':    n,
+        })
+    cal_labels   = json.dumps([b['label']    for b in calibration_data])
+    cal_expected = json.dumps([b['expected'] for b in calibration_data])
+    cal_actual   = json.dumps([b['actual']   for b in calibration_data])
+
+    ece_num = ece_den = 0
+    for b in calibration_data:
+        if b['actual'] is not None and b['count']:
+            ece_num += b['count'] * abs(b['expected'] - b['actual'])
+            ece_den += b['count']
+    ece = round(ece_num / ece_den, 1) if ece_den else None
+
+    # ── Alerts ────────────────────────────────────────────────────────────────
+    alerts = []
+    if recall_seizure is not None and recall_seizure < 70:
+        alerts.append({'level': 'critical',
+                       'msg': f'Seizure Recall {recall_seizure}% — below 70% clinical threshold. Consider retraining.'})
+    if fnr_seizure is not None and fnr_seizure > 10:
+        alerts.append({'level': 'critical',
+                       'msg': f'False Negative Rate {fnr_seizure}% — seizures are being missed.'})
+    if acc_std is not None and acc_std > 15:
+        alerts.append({'level': 'warning',
+                       'msg': f'Accuracy volatility ±{acc_std}% std dev — model output is unstable across runs.'})
+    if p95_latency and p95_latency > 200:
+        alerts.append({'level': 'warning',
+                       'msg': f'P95 latency {p95_latency}ms exceeds 200ms SLA threshold.'})
+    if ece is not None and ece > 10:
+        alerts.append({'level': 'warning',
+                       'msg': f'Calibration Error ECE={ece}% — confidence scores are not well-calibrated.'})
+
     # ── Merged recent predictions table (real + synthetic, latest 200) ────────
     combined_recent = (
         period_qs.select_related('project', 'user').order_by('-created_at')[:200]
@@ -153,9 +229,11 @@ def dashboard(request):
         'all_total':        all_total,
         'all_failed':       all_failed,
         'all_error_rt':     all_error_rt,
-        'p50_latency':      p50_latency,
-        'p95_latency':      p95_latency,
-        'avg_conf_all':     round(avg_conf_all * 100, 1) if avg_conf_all else None,
+        'p50_latency':           p50_latency,
+        'p95_latency':           p95_latency,
+        'p99_latency':           p99_latency,
+        'throughput_per_hour':   throughput_per_hour,
+        'avg_conf_all':          round(avg_conf_all * 100, 1) if avg_conf_all else None,
         'syn_accuracy':     syn_accuracy,
         'all_comparable':   all_comparable,
         # Charts
@@ -171,6 +249,24 @@ def dashboard(request):
         'combined_recent':  combined_recent,
         'model_stats':      model_stats,
         'run_history':      run_history,
+        # Confusion matrix & class metrics
+        'tp': tp, 'fp': fp, 'fn': fn, 'tn': tn,
+        'precision_seizure': precision_seizure,
+        'recall_seizure':    recall_seizure,
+        'f1_seizure':        f1_seizure,
+        'fnr_seizure':       fnr_seizure,
+        'precision_lpd':     precision_lpd,
+        'recall_lpd':        recall_lpd,
+        'f1_lpd':            f1_lpd,
+        # Stability
+        'acc_std':           acc_std,
+        # Calibration
+        'cal_labels':        cal_labels,
+        'cal_expected':      cal_expected,
+        'cal_actual':        cal_actual,
+        'ece':               ece,
+        # Alerts
+        'alerts':            alerts,
         # Synthetic summary
         'syn_total':        syn_total,
         'syn_avg_ms':       round(syn_avg_ms, 1) if syn_avg_ms else None,

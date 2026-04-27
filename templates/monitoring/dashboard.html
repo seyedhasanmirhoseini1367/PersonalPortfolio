@@ -64,9 +64,10 @@
 /* ── KPI grid ──────────────────────────────────────────────────────────────── */
 .kpi-grid {
   display:grid;
-  grid-template-columns:repeat(6,1fr);
-  gap:.9rem; margin-bottom:1.4rem;
+  grid-template-columns:repeat(9,1fr);
+  gap:.75rem; margin-bottom:1.4rem;
 }
+@media (max-width:1400px) { .kpi-grid { grid-template-columns:repeat(5,1fr); } }
 .kpi {
   background:white; border-radius:12px;
   border:1px solid #e2e8f0; box-shadow:0 1px 3px rgba(0,0,0,.05);
@@ -141,6 +142,7 @@ table.mon-tbl tr:hover td { background:#fafbff; }
 .empty { text-align:center; padding:2.5rem 1rem; color:#94a3b8; font-size:.85rem; }
 
 @media (max-width:1100px) { .kpi-grid { grid-template-columns:repeat(3,1fr); } }
+@media (max-width:900px)  { .kpi-grid { grid-template-columns:repeat(3,1fr); } }
 @media (max-width:768px)  {
   .chart-row, .mid-row { grid-template-columns:1fr; }
   .kpi-grid { grid-template-columns:repeat(2,1fr); }
@@ -198,6 +200,22 @@ table.mon-tbl tr:hover td { background:#fafbff; }
 
 <div class="container">
 
+  <!-- ── Alert banner ─────────────────────────────────────────────────────── -->
+  {% if alerts %}
+  <div style="margin-bottom:1.25rem;">
+    {% for alert in alerts %}
+    <div style="display:flex;align-items:flex-start;gap:.75rem;padding:.75rem 1rem;
+                border-radius:10px;margin-bottom:.5rem;
+                background:{% if alert.level == 'critical' %}rgba(239,68,68,.1){% else %}rgba(245,158,11,.1){% endif %};
+                border-left:4px solid {% if alert.level == 'critical' %}#ef4444{% else %}#f59e0b{% endif %};">
+      <i class="fas {% if alert.level == 'critical' %}fa-exclamation-circle{% else %}fa-exclamation-triangle{% endif %}"
+         style="color:{% if alert.level == 'critical' %}#ef4444{% else %}#f59e0b{% endif %};margin-top:.15rem;"></i>
+      <span style="font-size:.83rem;color:#1e293b;font-weight:500;">{{ alert.msg }}</span>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
   <!-- ── KPI Row ───────────────────────────────────────────────────────────── -->
   <div class="kpi-grid">
     <div class="kpi">
@@ -235,6 +253,26 @@ table.mon-tbl tr:hover td { background:#fafbff; }
       <div class="kpi-sub">{{ all_failed }} failed of {{ all_total }}</div>
     </div>
     <div class="kpi">
+      <div class="kpi-icon" style="background:#fce7f3;color:#9d174d;"><i class="fas fa-stopwatch"></i></div>
+      <div class="kpi-val">{% if p99_latency %}{{ p99_latency }}ms{% else %}—{% endif %}</div>
+      <div class="kpi-lbl">P99 Latency</div>
+      <div class="kpi-sub">99th percentile</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-icon" style="background:#d1fae5;color:#065f46;"><i class="fas fa-stream"></i></div>
+      <div class="kpi-val">{{ throughput_per_hour }}</div>
+      <div class="kpi-lbl">Req / Hour</div>
+      <div class="kpi-sub">avg over {{ days }}d window</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-icon" style="background:{% if acc_std and acc_std > 15 %}#fee2e2;color:#dc2626{% else %}#f0fdf4;color:#16a34a{% endif %};"><i class="fas fa-wave-square"></i></div>
+      <div class="kpi-val {% if acc_std and acc_std > 15 %}acc-lo{% endif %}">
+        {% if acc_std %}±{{ acc_std }}%{% else %}—{% endif %}
+      </div>
+      <div class="kpi-lbl">Accuracy Volatility</div>
+      <div class="kpi-sub">std dev across runs</div>
+    </div>
+    <div class="kpi">
       <div class="kpi-icon" style="background:#e0e7ff;color:#4338ca;"><i class="fas fa-robot"></i></div>
       <div class="kpi-val">{{ total_runs }}</div>
       <div class="kpi-lbl">Scheduler Runs</div>
@@ -253,6 +291,100 @@ table.mon-tbl tr:hover td { background:#fafbff; }
       <canvas id="trendChart" height="110"></canvas>
     </div>
   </div>
+
+  <!-- ── Class Metrics row ────────────────────────────────────────────────── -->
+  {% if tp or fp or fn or tn %}
+  <div style="display:grid;grid-template-columns:1fr 1fr 1.4fr;gap:1rem;margin-bottom:1rem;">
+
+    <!-- Confusion Matrix -->
+    <div class="card">
+      <div class="card-title"><i class="fas fa-th"></i> Confusion Matrix <span style="font-size:.72rem;font-weight:400;color:#94a3b8;">(all-time)</span></div>
+      <div style="display:grid;grid-template-columns:auto 1fr 1fr;gap:4px;font-size:.78rem;margin-top:.5rem;">
+        <!-- header row -->
+        <div></div>
+        <div style="text-align:center;font-weight:700;color:#6366f1;padding:.3rem .5rem;">Pred: Seizure</div>
+        <div style="text-align:center;font-weight:700;color:#8b5cf6;padding:.3rem .5rem;">Pred: LPD</div>
+        <!-- actual seizure row -->
+        <div style="font-weight:700;color:#6366f1;writing-mode:initial;padding:.3rem .5rem .3rem 0;display:flex;align-items:center;">Act: Seizure</div>
+        <div style="background:#dcfce7;border-radius:8px;padding:.65rem;text-align:center;">
+          <div style="font-size:1.4rem;font-weight:800;color:#15803d;">{{ tp }}</div>
+          <div style="color:#166534;font-size:.68rem;font-weight:600;">TP</div>
+        </div>
+        <div style="background:#fee2e2;border-radius:8px;padding:.65rem;text-align:center;">
+          <div style="font-size:1.4rem;font-weight:800;color:#dc2626;">{{ fn }}</div>
+          <div style="color:#b91c1c;font-size:.68rem;font-weight:600;">FN</div>
+        </div>
+        <!-- actual lpd row -->
+        <div style="font-weight:700;color:#8b5cf6;padding:.3rem .5rem .3rem 0;display:flex;align-items:center;">Act: LPD</div>
+        <div style="background:#fef9c3;border-radius:8px;padding:.65rem;text-align:center;">
+          <div style="font-size:1.4rem;font-weight:800;color:#a16207;">{{ fp }}</div>
+          <div style="color:#92400e;font-size:.68rem;font-weight:600;">FP</div>
+        </div>
+        <div style="background:#dcfce7;border-radius:8px;padding:.65rem;text-align:center;">
+          <div style="font-size:1.4rem;font-weight:800;color:#15803d;">{{ tn }}</div>
+          <div style="color:#166534;font-size:.68rem;font-weight:600;">TN</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Class Metrics -->
+    <div class="card">
+      <div class="card-title"><i class="fas fa-table"></i> Class Metrics <span style="font-size:.72rem;font-weight:400;color:#94a3b8;">(all-time)</span></div>
+      <table style="width:100%;border-collapse:collapse;font-size:.79rem;margin-top:.4rem;">
+        <thead>
+          <tr style="border-bottom:2px solid #f1f5f9;">
+            <th style="text-align:left;padding:.3rem .4rem;color:#94a3b8;font-weight:600;">Metric</th>
+            <th style="text-align:center;padding:.3rem .4rem;color:#6366f1;font-weight:700;">Seizure</th>
+            <th style="text-align:center;padding:.3rem .4rem;color:#8b5cf6;font-weight:700;">LPD</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="border-bottom:1px solid #f8fafc;">
+            <td style="padding:.4rem .4rem;color:#64748b;font-weight:500;">Precision</td>
+            <td style="text-align:center;font-weight:700;color:{% if precision_seizure >= 80 %}#15803d{% elif precision_seizure >= 60 %}#a16207{% else %}#dc2626{% endif %};">
+              {% if precision_seizure %}{{ precision_seizure }}%{% else %}—{% endif %}</td>
+            <td style="text-align:center;font-weight:700;color:{% if precision_lpd >= 80 %}#15803d{% elif precision_lpd >= 60 %}#a16207{% else %}#dc2626{% endif %};">
+              {% if precision_lpd %}{{ precision_lpd }}%{% else %}—{% endif %}</td>
+          </tr>
+          <tr style="border-bottom:1px solid #f8fafc;">
+            <td style="padding:.4rem .4rem;color:#64748b;font-weight:500;">Recall</td>
+            <td style="text-align:center;font-weight:700;color:{% if recall_seizure >= 80 %}#15803d{% elif recall_seizure >= 60 %}#a16207{% else %}#dc2626{% endif %};">
+              {% if recall_seizure %}{{ recall_seizure }}%{% else %}—{% endif %}</td>
+            <td style="text-align:center;font-weight:700;color:{% if recall_lpd >= 80 %}#15803d{% elif recall_lpd >= 60 %}#a16207{% else %}#dc2626{% endif %};">
+              {% if recall_lpd %}{{ recall_lpd }}%{% else %}—{% endif %}</td>
+          </tr>
+          <tr style="border-bottom:1px solid #f8fafc;">
+            <td style="padding:.4rem .4rem;color:#64748b;font-weight:500;">F1 Score</td>
+            <td style="text-align:center;font-weight:700;color:{% if f1_seizure >= 80 %}#15803d{% elif f1_seizure >= 60 %}#a16207{% else %}#dc2626{% endif %};">
+              {% if f1_seizure %}{{ f1_seizure }}%{% else %}—{% endif %}</td>
+            <td style="text-align:center;font-weight:700;color:{% if f1_lpd >= 80 %}#15803d{% elif f1_lpd >= 60 %}#a16207{% else %}#dc2626{% endif %};">
+              {% if f1_lpd %}{{ f1_lpd }}%{% else %}—{% endif %}</td>
+          </tr>
+          <tr>
+            <td style="padding:.4rem .4rem;color:#64748b;font-weight:500;">FNR <span style="font-size:.68rem;color:#94a3b8;">(missed)</span></td>
+            <td style="text-align:center;font-weight:700;color:{% if fnr_seizure > 10 %}#dc2626{% elif fnr_seizure > 5 %}#a16207{% else %}#15803d{% endif %};">
+              {% if fnr_seizure %}{{ fnr_seizure }}%{% else %}—{% endif %}</td>
+            <td style="text-align:center;color:#94a3b8;">—</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Calibration Chart -->
+    <div class="card">
+      <div class="card-title">
+        <i class="fas fa-sliders-h"></i> Confidence Calibration
+        {% if ece %}<span style="margin-left:.5rem;background:{% if ece > 10 %}#fee2e2;color:#dc2626{% else %}#dcfce7;color:#15803d{% endif %};
+          padding:.1rem .45rem;border-radius:10px;font-size:.7rem;font-weight:700;">ECE {{ ece }}%</span>{% endif %}
+      </div>
+      <canvas id="calChart" height="130"></canvas>
+      <p style="font-size:.7rem;color:#94a3b8;margin-top:.4rem;text-align:center;">
+        Diagonal = perfect calibration · bars above diagonal = overconfident
+      </p>
+    </div>
+
+  </div>
+  {% endif %}
 
   <!-- ── Mid row: label dist + model breakdown + confidence ───────────────── -->
   <div class="mid-row">
@@ -555,6 +687,41 @@ if (tLabels.length) {
   trendEl.parentElement.innerHTML +=
     '<p style="text-align:center;color:#94a3b8;font-size:.82rem;padding:1.5rem 0;">No comparable runs yet — accuracy trend will appear after the scheduler runs.</p>';
   trendEl.remove();
+}
+
+/* ── Calibration chart ───────────────────────────────────────────────────── */
+const calEl = document.getElementById('calChart');
+if (calEl) {
+  const calLabels   = {{ cal_labels|safe }};
+  const calExpected = {{ cal_expected|safe }};
+  const calActual   = {{ cal_actual|safe }};
+  new Chart(calEl, {
+    type: 'bar',
+    data: {
+      labels: calLabels,
+      datasets: [
+        { label: 'Actual Accuracy %', data: calActual,
+          backgroundColor: calActual.map(v =>
+            v === null ? 'rgba(148,163,184,.3)' :
+            Math.abs(v - calExpected[calActual.indexOf(v)]) <= 10 ? 'rgba(99,102,241,.7)' : 'rgba(239,68,68,.7)'
+          ),
+          borderRadius: 3, order: 1 },
+        { label: 'Expected (diagonal)', data: calExpected,
+          type: 'line', borderColor: '#10b981', borderDash: [5, 4],
+          backgroundColor: 'transparent', pointRadius: 2, tension: 0, order: 0 },
+      ],
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { position: 'top', labels: { font: { size: 10 } } } },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 9 } } },
+        y: { beginAtZero: true, max: 100,
+             ticks: { callback: v => v + '%', font: { size: 9 } },
+             grid: { color: '#f1f5f9' } },
+      },
+    },
+  });
 }
 
 /* ── Table pagination & filtering ─────────────────────────────────────────── */
