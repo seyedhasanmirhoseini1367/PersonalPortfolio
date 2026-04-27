@@ -149,8 +149,8 @@ SYNTHETIC_MONITOR = {
     'DATA_DIR':        config('SYNTHETIC_DATA_DIR', default=''),
     'TARGET_CSV':      config('SYNTHETIC_TARGET_CSV', default=''),
     'PROJECT_TITLE':   'Seizure Detection',
-    'MIN_SAMPLES':     20,
-    'MAX_SAMPLES':     35,
+    'MIN_SAMPLES':     100,
+    'MAX_SAMPLES':     200,
     'INTERVAL_MINUTES': config('MONITOR_INTERVAL_MINUTES', default=30, cast=int),
 }
 
