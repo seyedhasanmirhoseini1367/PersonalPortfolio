@@ -144,17 +144,26 @@ GROQ_API_KEY            = config('GROQ_API_KEY',            default='')
 MONITORING_ALERT_EMAIL  = config('MONITORING_ALERT_EMAIL',  default='')
 SLACK_WEBHOOK_URL       = config('SLACK_WEBHOOK_URL',       default='')
 
+# ── Synthetic Monitor ─────────────────────────────────────────────────────
+SYNTHETIC_MONITOR = {
+    'DATA_DIR':      config('SYNTHETIC_DATA_DIR', default=''),
+    'TARGET_CSV':    config('SYNTHETIC_TARGET_CSV', default=''),
+    'PROJECT_TITLE': 'Seizure Detection',
+    'MIN_SAMPLES':   5,
+    'MAX_SAMPLES':   15,
+}
+
 # ── RAG Configuration ─────────────────────────────────────────────────────────
 RAG_CONFIG = {
-    'EMBEDDING_MODEL':  'BAAI/bge-small-en-v1.5',
+    'EMBEDDING_MODEL':  'BAAI/bge-base-en-v1.5',
     'VECTOR_STORE_PATH': BASE_DIR / 'rag_system' / 'vector_store',
     'DOCUMENTS_PATH':    BASE_DIR / 'rag_system' / 'documents',
-    'CHUNK_SIZE':        1000,
-    'CHUNK_OVERLAP':     200,
+    'CHUNK_SIZE':        300,
+    'CHUNK_OVERLAP':     50,
     'GEMINI_MODEL':      'gemini-2.0-flash',
     'ANTHROPIC_MODEL':   'claude-haiku-4-5-20251001',
     'OPENAI_MODEL':      'gpt-4o-mini',
-    'GROQ_MODEL':        'llama-3.1-8b-instant',
+    'GROQ_MODEL':        'llama-3.3-70b-versatile',
     'MAX_TOKENS':        1200,
 }
 

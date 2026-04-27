@@ -111,6 +111,104 @@
 
     </div>
 
+    <!-- ── Synthetic Monitor Health Card ───────────────────────────────────── -->
+    {% if syn_total %}
+    <div style="background:white; border-radius:16px; border:1px solid #e2e8f0;
+                box-shadow:0 1px 3px rgba(0,0,0,.05); padding:1.5rem; margin-top:1.5rem;">
+      <h3 style="font-size:1rem; font-weight:700; color:#1e293b; margin:0 0 1.25rem;">
+        <i class="fas fa-robot me-2" style="color:#8b5cf6;"></i>
+        Synthetic Monitor
+        <span style="font-size:.78rem; font-weight:400; color:#94a3b8; margin-left:.5rem;">
+          bot runs — excluded from real-traffic stats above
+        </span>
+      </h3>
+      <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:1rem; margin-bottom:1.5rem;">
+        <div style="text-align:center; padding:1rem; background:#f8f9fa; border-radius:12px;">
+          <div style="font-size:1.6rem; font-weight:700; color:#8b5cf6;">{{ syn_total }}</div>
+          <div style="font-size:.78rem; color:#94a3b8;">Total Runs</div>
+        </div>
+        {% if syn_accuracy is not None %}
+        <div style="text-align:center; padding:1rem; background:#f8f9fa; border-radius:12px;">
+          <div style="font-size:1.6rem; font-weight:700;
+                      color:{% if syn_accuracy >= 80 %}#10b981{% elif syn_accuracy >= 60 %}#f59e0b{% else %}#ef4444{% endif %};">
+            {{ syn_accuracy }}%
+          </div>
+          <div style="font-size:.78rem; color:#94a3b8;">Accuracy ({{ syn_comparable }} labeled)</div>
+        </div>
+        {% endif %}
+        {% if syn_avg_ms %}
+        <div style="text-align:center; padding:1rem; background:#f8f9fa; border-radius:12px;">
+          <div style="font-size:1.6rem; font-weight:700; color:#f59e0b;">{{ syn_avg_ms }}ms</div>
+          <div style="font-size:.78rem; color:#94a3b8;">Avg Latency</div>
+        </div>
+        {% endif %}
+        {% if syn_avg_conf %}
+        <div style="text-align:center; padding:1rem; background:#f8f9fa; border-radius:12px;">
+          <div style="font-size:1.6rem; font-weight:700; color:#64748b;">{{ syn_avg_conf }}%</div>
+          <div style="font-size:.78rem; color:#94a3b8;">Avg Confidence</div>
+        </div>
+        {% endif %}
+        {% if syn_failed %}
+        <div style="text-align:center; padding:1rem; background:#fef2f2; border-radius:12px;">
+          <div style="font-size:1.6rem; font-weight:700; color:#ef4444;">{{ syn_failed }}</div>
+          <div style="font-size:.78rem; color:#94a3b8;">Failed Runs</div>
+        </div>
+        {% endif %}
+      </div>
+      <!-- Recent synthetic runs -->
+      {% if syn_recent %}
+      <table style="width:100%; border-collapse:collapse; font-size:.83rem;">
+        <thead>
+          <tr style="border-bottom:2px solid #f1f5f9; color:#94a3b8; text-align:left;">
+            <th style="padding:.4rem .6rem;">EEG ID</th>
+            <th style="padding:.4rem .6rem;">Predicted</th>
+            <th style="padding:.4rem .6rem;">Expected</th>
+            <th style="padding:.4rem .6rem;">Match</th>
+            <th style="padding:.4rem .6rem;">Conf</th>
+            <th style="padding:.4rem .6rem;">Latency</th>
+            <th style="padding:.4rem .6rem;">Time</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for log in syn_recent %}
+          <tr style="border-bottom:1px solid #f8f9fa;">
+            <td style="padding:.4rem .6rem; font-family:monospace; color:#64748b; font-size:.8rem;">
+              {{ log.input_data.eeg_id|default:"—" }}
+            </td>
+            <td style="padding:.4rem .6rem; color:#1e293b; font-weight:500;">
+              {{ log.label|default:"—" }}
+            </td>
+            <td style="padding:.4rem .6rem; color:#64748b;">
+              {{ log.input_data.expected_label|default:"—" }}
+            </td>
+            <td style="padding:.4rem .6rem;">
+              {% if log.input_data.comparable %}
+                {% if log.input_data.is_correct %}
+                  <span style="color:#10b981; font-weight:700;">✓</span>
+                {% else %}
+                  <span style="color:#ef4444; font-weight:700;">✗</span>
+                {% endif %}
+              {% else %}
+                <span style="color:#94a3b8;">—</span>
+              {% endif %}
+            </td>
+            <td style="padding:.4rem .6rem; color:#64748b;">
+              {% if log.confidence %}{{ log.confidence|floatformat:2 }}{% else %}—{% endif %}
+            </td>
+            <td style="padding:.4rem .6rem; color:#64748b;">
+              {% if log.inference_ms %}{{ log.inference_ms }}ms{% else %}—{% endif %}
+            </td>
+            <td style="padding:.4rem .6rem; color:#94a3b8; white-space:nowrap;">
+              {{ log.created_at|timesince }} ago
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% endif %}
+    </div>
+    {% endif %}
+
     <!-- ── Sources + recent activity ────────────────────────────────────────── -->
     <div style="display:grid; grid-template-columns:200px 1fr; gap:1.5rem; margin-top:1.5rem; align-items:start;">
 

@@ -21,23 +21,27 @@ def dashboard(request):
     project_id = request.GET.get('project')
     selected_project = None
 
-    logs = PredictionLog.objects.filter(created_at__gte=since)
+    # Real traffic only — synthetic runs are shown separately below.
+    all_logs = PredictionLog.objects.filter(created_at__gte=since)
     if project_id:
-        logs = logs.filter(project_id=project_id)
+        all_logs = all_logs.filter(project_id=project_id)
         try:
             selected_project = Projects.objects.get(pk=project_id)
         except Projects.DoesNotExist:
             pass
 
-    # ── Summary stats ──────────────────────────────────────────────────────────
-    total       = logs.count()
-    successful  = logs.filter(success=True).count()
-    failed      = logs.filter(success=False).count()
-    success_rate = round(successful / total * 100, 1) if total else 0
-    avg_latency = logs.filter(success=True).aggregate(v=Avg('inference_ms'))['v']
-    avg_conf    = logs.filter(success=True).aggregate(v=Avg('confidence'))['v']
+    logs            = all_logs.exclude(source='synthetic')
+    synthetic_logs  = all_logs.filter(source='synthetic')
 
-    # ── Requests per day (chart) ───────────────────────────────────────────────
+    # ── Real-traffic summary stats ─────────────────────────────────────────────
+    total        = logs.count()
+    successful   = logs.filter(success=True).count()
+    failed       = logs.filter(success=False).count()
+    success_rate = round(successful / total * 100, 1) if total else 0
+    avg_latency  = logs.filter(success=True).aggregate(v=Avg('inference_ms'))['v']
+    avg_conf     = logs.filter(success=True).aggregate(v=Avg('confidence'))['v']
+
+    # ── Requests per day (chart — real traffic only) ───────────────────────────
     daily = (
         logs.annotate(day=TruncDate('created_at'))
             .values('day')
@@ -60,11 +64,27 @@ def dashboard(request):
             .order_by('-total')
     )
 
-    # ── Latest 20 predictions ──────────────────────────────────────────────────
-    recent = logs.select_related('project', 'user')[:20]
-
-    # ── Source breakdown ───────────────────────────────────────────────────────
+    # ── Latest 20 real predictions ─────────────────────────────────────────────
+    recent  = logs.select_related('project', 'user')[:20]
     sources = logs.values('source').annotate(count=Count('id')).order_by('-count')
+
+    # ── Synthetic monitor health card ──────────────────────────────────────────
+    syn_total      = synthetic_logs.count()
+    syn_failed     = synthetic_logs.filter(success=False).count()
+    syn_avg_ms     = synthetic_logs.filter(success=True).aggregate(v=Avg('inference_ms'))['v']
+    syn_avg_conf   = synthetic_logs.filter(success=True).aggregate(v=Avg('confidence'))['v']
+    syn_recent     = synthetic_logs.select_related('project').order_by('-created_at')[:10]
+
+    # Accuracy: count comparable logs where is_correct is stored in input_data
+    syn_correct    = sum(
+        1 for log in synthetic_logs
+        if log.input_data.get('comparable') and log.input_data.get('is_correct')
+    )
+    syn_comparable = sum(
+        1 for log in synthetic_logs
+        if log.input_data.get('comparable')
+    )
+    syn_accuracy = round(syn_correct / syn_comparable * 100, 1) if syn_comparable else None
 
     return render(request, 'monitoring/dashboard.html', {
         'projects':         projects,
@@ -83,6 +103,14 @@ def dashboard(request):
         'model_stats':      model_stats,
         'recent':           recent,
         'sources':          sources,
+        # Synthetic health
+        'syn_total':        syn_total,
+        'syn_failed':       syn_failed,
+        'syn_avg_ms':       round(syn_avg_ms, 1) if syn_avg_ms else None,
+        'syn_avg_conf':     round(syn_avg_conf * 100, 1) if syn_avg_conf else None,
+        'syn_accuracy':     syn_accuracy,
+        'syn_comparable':   syn_comparable,
+        'syn_recent':       syn_recent,
     })
 
 

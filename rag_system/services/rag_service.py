@@ -23,6 +23,72 @@ class RAGService:
         self.retrieval   = RetrievalService()
         self.generation  = GenerationService()
 
+    # ── Retrieval planner ─────────────────────────────────────────────────────
+
+    def _plan_retrieval(
+        self, question: str, history: List[Dict[str, str]]
+    ) -> tuple:
+        """
+        Uses Groq 8B to decide two things in one call:
+          1. Does this message need a knowledge-base search at all?
+          2. If yes, what is the best standalone search query?
+
+        Returns (needs_retrieval: bool, search_query: str).
+
+        Skip retrieval for greetings, thank-yous, "tell me more", pure reactions,
+        or anything fully answerable from conversation history.
+
+        Falls back to (True, original question) on any failure so retrieval
+        always runs if the planner is unavailable.
+        Only fires when conversation history exists; fresh sessions always retrieve.
+        """
+        if not history:
+            return True, question
+        try:
+            from groq import Groq
+            from django.conf import settings as django_settings
+            import json as _json
+            key = getattr(django_settings, 'GROQ_API_KEY', '')
+            if not key:
+                return True, question
+
+            history_text = '\n'.join(
+                f"{t['role'].upper()}: {t['content'][:300]}" for t in history[-6:]
+            )
+            prompt = (
+                "You are a retrieval planner for a portfolio chatbot about Hasan Mirhoseini, an ML/AI engineer.\n"
+                "Given conversation history and a new message, decide:\n"
+                "1. needs_retrieval: true if the message asks for new information from the portfolio "
+                "(skills, projects, CV, experience, job fit). false if it is a greeting, thank-you, "
+                "'tell me more about that', 'can you expand', pure reaction, or fully answerable from "
+                "conversation history alone.\n"
+                "2. search_query: if needs_retrieval is true, write the best standalone search query "
+                "that captures the full intent using conversation context. If false, leave it empty.\n\n"
+                "Respond with JSON only — no explanation:\n"
+                "{\"needs_retrieval\": true/false, \"search_query\": \"...\"}\n\n"
+                f"Conversation:\n{history_text}\n\n"
+                f"New message: {question}"
+            )
+            client = Groq(api_key=key)
+            resp = client.chat.completions.create(
+                model='llama-3.1-8b-instant',
+                messages=[{'role': 'user', 'content': prompt}],
+                max_tokens=80,
+                temperature=0,
+            )
+            raw = resp.choices[0].message.content.strip()
+            # Extract JSON even if the model adds surrounding text
+            start, end = raw.find('{'), raw.rfind('}')
+            if start != -1 and end != -1:
+                parsed = _json.loads(raw[start:end + 1])
+                needs  = bool(parsed.get('needs_retrieval', True))
+                query  = parsed.get('search_query', '').strip() or question
+                logger.debug('plan_retrieval: needs=%s query="%s"', needs, query)
+                return needs, query
+        except Exception as exc:
+            logger.debug('plan_retrieval failed (%s), defaulting to retrieve', exc)
+        return True, question
+
     # ── History helper ────────────────────────────────────────────────────────
 
     def _get_history(self, session: Optional[ChatSession]) -> List[Dict[str, str]]:
@@ -33,7 +99,7 @@ class RAGService:
         if session is None:
             return []
         turns = []
-        for log in session.messages.order_by('-created_at')[:6]:
+        for log in session.messages.order_by('-created_at')[:12]:
             turns.append({'role': 'assistant', 'content': log.response})
             turns.append({'role': 'user',      'content': log.query})
         turns.reverse()   # oldest first
@@ -132,37 +198,44 @@ class RAGService:
             return f"data: {json.dumps(payload)}\n\n"
 
         try:
-            # Step 1: classify the query → get the right document types to search.
-            # We run only the router (zero LLM calls, pure keyword matching) so
-            # there is no latency cost before streaming starts.
-            if document_types is None:
-                from rag_system.graph.nodes import router_node
-                route = router_node({"question": question}).get("route", "general")
-                _ROUTE_DOC_TYPES = {
-                    "cv":       ["resume", "skill", "project"],
-                    "thesis":   ["project_documentation", "project"],
-                    "ml_model": ["project", "project_documentation"],
-                    "projects": ["project", "project_documentation", "resume"],
-                    "general":  None,   # None = search everything
-                    "job_fit":  ["resume", "skill", "project", "project_documentation"],
-                }
-                resolved_types = _ROUTE_DOC_TYPES.get(route)
-                logger.debug("stream_query: routed to '%s' → types=%s", route, resolved_types)
+            # Step 1: decide whether to retrieve and build the best search query.
+            needs_retrieval, search_query = self._plan_retrieval(question, history)
+
+            if not needs_retrieval:
+                # Conversational follow-up — answer directly from history, no search.
+                logger.debug("stream_query: skipping retrieval for conversational message")
+                chunks = []
+                route  = "conversational"
             else:
-                route = "general"
-                resolved_types = document_types
+                # Step 2: classify the query → get the right document types to search.
+                if document_types is None:
+                    from rag_system.graph.nodes import router_node
+                    route = router_node({"question": search_query}).get("route", "general")
+                    _ROUTE_DOC_TYPES = {
+                        "cv":       ["resume", "skill", "project"],
+                        "thesis":   ["project_documentation", "project"],
+                        "ml_model": ["project", "project_documentation"],
+                        "projects": ["project", "project_documentation", "resume"],
+                        "general":  None,
+                        "job_fit":  ["resume", "skill", "project", "project_documentation"],
+                    }
+                    resolved_types = _ROUTE_DOC_TYPES.get(route)
+                    logger.debug("stream_query: routed to '%s' → types=%s", route, resolved_types)
+                else:
+                    route = "general"
+                    resolved_types = document_types
 
-            # Step 2: retrieve the right chunks for the classified route.
-            top_k = 8 if route == "job_fit" else 5
-            chunks = self.retrieval.hybrid_retrieve(question, resolved_types, top_k=top_k)
+                # Step 3: retrieve the right chunks for the classified route.
+                top_k = 12 if route == "job_fit" else 5
+                chunks = self.retrieval.hybrid_retrieve(search_query, resolved_types, top_k=top_k)
 
-            # Step 3: grade relevance — skip for comprehensive listing routes.
-            _SKIP_GRADING = {'cv', 'projects', 'job_fit'}
-            if document_types is None and route not in _SKIP_GRADING:
-                from rag_system.graph.nodes import grade_relevance
-                chunks = grade_relevance(question, chunks)
+                # Step 4: grade relevance — skip for comprehensive listing routes.
+                _SKIP_GRADING = {'cv', 'projects', 'job_fit'}
+                if document_types is None and route not in _SKIP_GRADING:
+                    from rag_system.graph.nodes import grade_relevance
+                    chunks = grade_relevance(search_query, chunks)
 
-            # Step 4: stream the answer token by token.
+            # Step 5: stream the answer token by token.
             for token in self.generation.generate_streaming(question, chunks, history=history, route=route):
                 full_text += token
                 yield _sse({'type': 'token', 'content': token})

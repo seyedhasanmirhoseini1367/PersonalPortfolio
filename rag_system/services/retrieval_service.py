@@ -5,15 +5,18 @@ from typing import List, Dict, Any, Optional
 from .embedding_service import EmbeddingService
 
 # Minimum cosine similarity to include a chunk in results.
-# BGE-small scores are higher than MiniLM (0.5+ range), so 0.45 filters
-# truly unrelated documents without cutting off legitimate matches.
-_SIMILARITY_THRESHOLD = 0.45
+# BGE-base scores are in the 0.3–0.7 range for related content;
+# 0.28 keeps legitimate but loosely-phrased matches without opening the
+# flood gates to truly unrelated chunks.
+_SIMILARITY_THRESHOLD = 0.28
 
 # Per-intent document-type boosts applied BEFORE ranking so the right
 # documents win without any hard-coded ordering workarounds.
 # Values are added to the raw cosine similarity score.
 _INTENT_BOOSTS: Dict[str, Dict[str, float]] = {
-    "job_fit":  {"resume": 0.20, "skill": 0.08},
+    # resume boost reduced: 0.20 → 0.10 so project documents can compete.
+    # project/project_documentation added so evidence chunks rank alongside CV.
+    "job_fit":  {"resume": 0.10, "skill": 0.08, "project": 0.06, "project_documentation": 0.06},
     "cv":       {"resume": 0.15, "skill": 0.05},
     "thesis":   {"project_documentation": 0.12},
     "ml_model": {"project_documentation": 0.10},
