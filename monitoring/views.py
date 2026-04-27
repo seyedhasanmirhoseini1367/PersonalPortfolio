@@ -93,11 +93,12 @@ def dashboard(request):
         for r in trend_qs
     ])
 
-    # Summary stats across all runs in the selected window (still useful)
+    # Summary stats across all logs in the selected window
     syn_total    = synthetic_logs.count()
     syn_failed   = synthetic_logs.filter(success=False).count()
     syn_avg_ms   = synthetic_logs.filter(success=True).aggregate(v=Avg('inference_ms'))['v']
     syn_avg_conf = synthetic_logs.filter(success=True).aggregate(v=Avg('confidence'))['v']
+    syn_recent   = synthetic_logs.select_related('project').order_by('-created_at')[:50]
 
     # All-time accuracy from MonitorRun aggregates (cheaper than scanning JSON)
     from django.db.models import Sum
@@ -134,6 +135,7 @@ def dashboard(request):
         'syn_avg_conf':     round(syn_avg_conf * 100, 1) if syn_avg_conf else None,
         'syn_accuracy':     syn_accuracy,
         'syn_comparable':   all_comparable,
+        'syn_recent':       syn_recent,
         # Run history & trend
         'run_history':      run_history,
         'trend_labels':     trend_labels,
