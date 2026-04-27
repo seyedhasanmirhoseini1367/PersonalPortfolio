@@ -146,11 +146,12 @@ SLACK_WEBHOOK_URL       = config('SLACK_WEBHOOK_URL',       default='')
 
 # ── Synthetic Monitor ─────────────────────────────────────────────────────
 SYNTHETIC_MONITOR = {
-    'DATA_DIR':      config('SYNTHETIC_DATA_DIR', default=''),
-    'TARGET_CSV':    config('SYNTHETIC_TARGET_CSV', default=''),
-    'PROJECT_TITLE': 'Seizure Detection',
-    'MIN_SAMPLES':   5,
-    'MAX_SAMPLES':   15,
+    'DATA_DIR':        config('SYNTHETIC_DATA_DIR', default=''),
+    'TARGET_CSV':      config('SYNTHETIC_TARGET_CSV', default=''),
+    'PROJECT_TITLE':   'Seizure Detection',
+    'MIN_SAMPLES':     20,
+    'MAX_SAMPLES':     35,
+    'INTERVAL_MINUTES': config('MONITOR_INTERVAL_MINUTES', default=30, cast=int),
 }
 
 # ── RAG Configuration ─────────────────────────────────────────────────────────
