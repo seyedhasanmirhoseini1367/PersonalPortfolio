@@ -293,7 +293,7 @@ table.mon-tbl tr:hover td { background:#fafbff; }
           <div style="display:flex;gap:.65rem;flex-wrap:wrap;font-size:.75rem;color:#64748b;">
             <span><b>{{ m.total }}</b> calls</span>
             {% if m.avg_ms %}<span>⏱ {{ m.avg_ms|floatformat:0 }}ms</span>{% endif %}
-            {% if m.avg_conf %}<span>🎯 {{ m.avg_conf|floatformat:2 }}</span>{% endif %}
+            {% if m.avg_conf %}<span>🎯 {% widthratio m.avg_conf 1 100 %}%</span>{% endif %}
             {% if m.errors %}<span style="color:#ef4444;">✗ {{ m.errors }} err</span>{% endif %}
           </div>
         </div>
@@ -388,7 +388,7 @@ table.mon-tbl tr:hover td { background:#fafbff; }
             <td>
               {% if log.confidence %}
                 <span style="font-weight:600;color:{% if log.confidence >= 0.8 %}#10b981{% elif log.confidence >= 0.6 %}#f59e0b{% else %}#ef4444{% endif %};">
-                  {{ log.confidence|floatformat:1 }}%</span>
+                  {% widthratio log.confidence 1 100 %}%</span>
               {% else %}—{% endif %}
             </td>
             <td>{% if log.inference_ms %}<span style="font-family:monospace;">{{ log.inference_ms }}ms</span>{% else %}—{% endif %}</td>
@@ -478,7 +478,7 @@ table.mon-tbl tr:hover td { background:#fafbff; }
               {% if run.avg_latency_ms %}{{ run.avg_latency_ms|floatformat:0 }}ms{% else %}—{% endif %}
             </td>
             <td style="color:#64748b;">
-              {% if run.avg_confidence %}{{ run.avg_confidence|floatformat:2 }}{% else %}—{% endif %}
+              {% if run.avg_confidence %}{% widthratio run.avg_confidence 1 100 %}%{% else %}—{% endif %}
             </td>
             <td>
               <span class="badge badge-{% if run.triggered_by == 'scheduler' %}syn{% else %}real{% endif %}">
