@@ -1,465 +1,601 @@
 {% extends 'base.html' %}
-{% block title %}Model Monitoring | HasanPortfolio{% endblock %}
+{% block title %}ML Monitoring — HasanPortfolio{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ── Base ──────────────────────────────────────────────────────────────────── */
+.mon { background:#f1f5f9; min-height:100vh; padding-bottom:3rem; }
+
+/* ── Header ────────────────────────────────────────────────────────────────── */
+.mon-hdr {
+  background:linear-gradient(135deg,#0f0c29 0%,#302b63 55%,#24243e 100%);
+  color:white; padding:1.25rem 0; margin-bottom:1.75rem;
+}
+.mon-hdr-inner {
+  display:flex; justify-content:space-between; align-items:center;
+  flex-wrap:wrap; gap:1rem;
+}
+.mon-hdr h1 { font-size:1.4rem; font-weight:800; margin:0 0 .2rem; }
+.mon-hdr p  { font-size:.78rem; opacity:.8; margin:0; }
+
+.mon-status {
+  display:inline-flex; align-items:center; gap:.45rem;
+  padding:.3rem .75rem; border-radius:20px; font-size:.78rem; font-weight:700;
+}
+.mon-status.healthy  { background:rgba(16,185,129,.25); color:#6ee7b7; }
+.mon-status.warning  { background:rgba(245,158,11,.25);  color:#fcd34d; }
+.mon-status.stale    { background:rgba(239,68,68,.25);   color:#fca5a5; }
+.mon-status.unknown  { background:rgba(148,163,184,.2);  color:#cbd5e1; }
+.status-dot {
+  width:8px; height:8px; border-radius:50%;
+  animation:blink 1.6s ease-in-out infinite;
+}
+.healthy .status-dot  { background:#10b981; }
+.warning .status-dot  { background:#f59e0b; }
+.stale .status-dot    { background:#ef4444; }
+.unknown .status-dot  { background:#94a3b8; animation:none; }
+@keyframes blink { 0%,100%{opacity:.4} 50%{opacity:1} }
+
+.mon-hdr-right { display:flex; gap:.75rem; align-items:center; flex-wrap:wrap; }
+.mon-hdr select {
+  padding:.35rem .75rem; border-radius:8px; border:none;
+  background:rgba(255,255,255,.15); color:white; font-size:.8rem; cursor:pointer;
+}
+.mon-hdr select option { background:#302b63; }
+.range-btn {
+  padding:.28rem .7rem; border-radius:16px; border:none; cursor:pointer;
+  font-size:.78rem; font-weight:700;
+  background:rgba(255,255,255,.15); color:white;
+}
+.range-btn.active { background:white; color:#302b63; }
+
+/* ── Cards ─────────────────────────────────────────────────────────────────── */
+.card {
+  background:white; border-radius:14px;
+  border:1px solid #e2e8f0; box-shadow:0 1px 4px rgba(0,0,0,.06);
+  padding:1.25rem 1.4rem;
+}
+.card-title {
+  font-size:.82rem; font-weight:700; color:#64748b;
+  text-transform:uppercase; letter-spacing:.06em;
+  margin-bottom:1rem; display:flex; align-items:center; gap:.4rem;
+}
+
+/* ── KPI grid ──────────────────────────────────────────────────────────────── */
+.kpi-grid {
+  display:grid;
+  grid-template-columns:repeat(6,1fr);
+  gap:.9rem; margin-bottom:1.4rem;
+}
+.kpi {
+  background:white; border-radius:12px;
+  border:1px solid #e2e8f0; box-shadow:0 1px 3px rgba(0,0,0,.05);
+  padding:.9rem 1rem;
+}
+.kpi-icon {
+  width:34px; height:34px; border-radius:9px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:.95rem; margin-bottom:.55rem;
+}
+.kpi-val  { font-size:1.55rem; font-weight:800; color:#1e293b; line-height:1; margin-bottom:.15rem; }
+.kpi-lbl  { font-size:.72rem; color:#94a3b8; font-weight:500; }
+.kpi-sub  { font-size:.7rem; color:#cbd5e1; margin-top:.1rem; }
+
+/* ── Main chart row ─────────────────────────────────────────────────────────── */
+.chart-row { display:grid; grid-template-columns:1.5fr 1fr; gap:1.1rem; margin-bottom:1.1rem; }
+.mid-row   { display:grid; grid-template-columns:1fr 1fr 1fr; gap:1.1rem; margin-bottom:1.1rem; }
+
+/* ── Table card ─────────────────────────────────────────────────────────────── */
+.tbl-card { margin-bottom:1.1rem; }
+.tbl-tabs { display:flex; gap:.35rem; margin-bottom:1rem; }
+.tbl-tab  {
+  padding:.3rem .85rem; border-radius:20px; font-size:.78rem; font-weight:600;
+  border:1.5px solid #e2e8f0; background:white; color:#64748b; cursor:pointer;
+  transition:all .15s;
+}
+.tbl-tab.active { background:#302b63; color:white; border-color:#302b63; }
+
+table.mon-tbl { width:100%; border-collapse:collapse; font-size:.8rem; }
+table.mon-tbl thead tr { border-bottom:2px solid #f1f5f9; }
+table.mon-tbl th {
+  padding:.45rem .6rem; text-align:left;
+  font-size:.72rem; font-weight:700; color:#94a3b8; text-transform:uppercase;
+  letter-spacing:.05em; white-space:nowrap;
+}
+table.mon-tbl td {
+  padding:.42rem .6rem; border-bottom:1px solid #f8fafc;
+  color:#374151; vertical-align:middle;
+}
+table.mon-tbl tr:hover td { background:#fafbff; }
+
+.badge {
+  display:inline-block; padding:.1rem .5rem; border-radius:10px;
+  font-size:.71rem; font-weight:700;
+}
+.badge-real    { background:#e0f2fe; color:#0369a1; }
+.badge-syn     { background:#f3e8ff; color:#7c3aed; }
+.badge-demo    { background:#fef3c7; color:#b45309; }
+.badge-api     { background:#dcfce7; color:#166534; }
+.badge-ok      { background:#dcfce7; color:#166534; }
+.badge-err     { background:#fee2e2; color:#dc2626; }
+
+.acc-hi  { color:#10b981; font-weight:700; }
+.acc-mid { color:#f59e0b; font-weight:700; }
+.acc-lo  { color:#ef4444; font-weight:700; }
+
+/* ── Pagination ─────────────────────────────────────────────────────────────── */
+.pager {
+  display:flex; align-items:center; justify-content:space-between;
+  margin-top:.85rem; padding-top:.75rem; border-top:1px solid #f1f5f9;
+}
+.pager-info { font-size:.77rem; color:#94a3b8; }
+.pager-btns { display:flex; gap:.4rem; }
+.pager-btn  {
+  padding:.28rem .75rem; border-radius:8px; border:1.5px solid #e2e8f0;
+  background:white; font-size:.78rem; font-weight:600; color:#374151; cursor:pointer;
+}
+.pager-btn:disabled { opacity:.35; cursor:not-allowed; }
+.pager-btn:not(:disabled):hover { background:#f8fafc; }
+
+/* ── Empty state ────────────────────────────────────────────────────────────── */
+.empty { text-align:center; padding:2.5rem 1rem; color:#94a3b8; font-size:.85rem; }
+
+@media (max-width:1100px) { .kpi-grid { grid-template-columns:repeat(3,1fr); } }
+@media (max-width:768px)  {
+  .chart-row, .mid-row { grid-template-columns:1fr; }
+  .kpi-grid { grid-template-columns:repeat(2,1fr); }
+}
+</style>
+{% endblock %}
 
 {% block content %}
-<div style="background:#f8f9fa; min-height:100vh; padding-bottom:3rem;">
+<div class="mon">
 
-  <!-- Header -->
-  <div style="background:linear-gradient(135deg,#302b63 0%,#24243e 100%);
-              color:white; padding:2rem 0; margin-bottom:2rem;">
-    <div class="container">
-      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
-        <div>
-          <h1 style="font-size:1.9rem; font-weight:700; margin:0;">
-            <i class="fas fa-chart-line me-2"></i>Model Monitoring
-          </h1>
-          <p style="opacity:.9; margin:.4rem 0 0; font-size:.95rem;">
-            Real-time inference tracking · latency · drift signals
-          </p>
+<!-- ── Header ──────────────────────────────────────────────────────────────── -->
+<div class="mon-hdr">
+  <div class="container">
+    <div class="mon-hdr-inner">
+      <div>
+        <h1><i class="fas fa-chart-line me-2"></i>Model Monitoring</h1>
+        <p>Inference tracking · latency percentiles · accuracy drift · run history</p>
+      </div>
+      <div class="mon-hdr-right">
+        <!-- Health badge -->
+        <div class="mon-status {{ model_status }}">
+          <span class="status-dot"></span>
+          {% if model_status == 'healthy' %}Healthy
+          {% elif model_status == 'warning' %}Warning
+          {% elif model_status == 'stale'   %}Stale
+          {% else %}No Data{% endif %}
         </div>
-        <div style="display:flex; gap:.75rem; align-items:center; flex-wrap:wrap;">
-          <!-- Project filter -->
-          <form method="get" style="display:flex; gap:.5rem; align-items:center;">
-            <input type="hidden" name="days" value="{{ days }}">
-            <select name="project" onchange="this.form.submit()"
-                    style="padding:.45rem .9rem; border-radius:8px; border:none;
-                           background:rgba(255,255,255,.2); color:white; font-size:.88rem; cursor:pointer;">
-              <option value="">All Models</option>
-              {% for p in projects %}
-                <option value="{{ p.pk }}" {% if selected_project.pk == p.pk %}selected{% endif %}>{{ p.title }}</option>
-              {% endfor %}
-            </select>
-          </form>
-          <!-- Time range -->
-          <form method="get" style="display:flex; gap:.35rem;">
-            {% if selected_project %}<input type="hidden" name="project" value="{{ selected_project.pk }}">{% endif %}
-            {% for opt,lbl in time_ranges %}
-              <button type="submit" name="days" value="{{ opt }}"
-                      style="padding:.35rem .85rem; border-radius:20px; border:none; cursor:pointer; font-size:.82rem; font-weight:600;
-                             background:{% if days == opt %}white{% else %}rgba(255,255,255,.2){% endif %};
-                             color:{% if days == opt %}#302b63{% else %}white{% endif %};">
-                {{ lbl }}
-              </button>
+        {% if last_run %}
+        <span style="font-size:.75rem;opacity:.7;">
+          Last run {{ last_run.started_at|timesince }} ago
+        </span>
+        {% endif %}
+        <!-- Project filter -->
+        <form method="get" style="display:inline;">
+          <input type="hidden" name="days" value="{{ days }}">
+          <select name="project" onchange="this.form.submit()">
+            <option value="">All Models</option>
+            {% for p in projects %}
+              <option value="{{ p.pk }}" {% if selected_project.pk == p.pk %}selected{% endif %}>{{ p.title }}</option>
             {% endfor %}
-          </form>
+          </select>
+        </form>
+        <!-- Time range -->
+        <form method="get" style="display:flex;gap:.3rem;">
+          {% if selected_project %}<input type="hidden" name="project" value="{{ selected_project.pk }}">{% endif %}
+          {% for opt,lbl in time_ranges %}
+            <button type="submit" name="days" value="{{ opt }}"
+                    class="range-btn {% if days == opt %}active{% endif %}">{{ lbl }}</button>
+          {% endfor %}
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- ── KPI Row ───────────────────────────────────────────────────────────── -->
+  <div class="kpi-grid">
+    <div class="kpi">
+      <div class="kpi-icon" style="background:#ede9fe;color:#7c3aed;"><i class="fas fa-bolt"></i></div>
+      <div class="kpi-val">{{ all_total }}</div>
+      <div class="kpi-lbl">Total Predictions</div>
+      <div class="kpi-sub">real + synthetic, {{ days }}d</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-icon" style="background:{% if syn_accuracy >= 80 %}#dcfce7;color:#15803d{% elif syn_accuracy %}#fef9c3;color:#a16207{% else %}#f1f5f9;color:#94a3b8{% endif %};"><i class="fas fa-bullseye"></i></div>
+      <div class="kpi-val {% if syn_accuracy %}{% if syn_accuracy >= 80 %}acc-hi{% elif syn_accuracy >= 60 %}acc-mid{% else %}acc-lo{% endif %}{% endif %}">
+        {% if syn_accuracy %}{{ syn_accuracy }}%{% else %}—{% endif %}
+      </div>
+      <div class="kpi-lbl">All-time Accuracy</div>
+      <div class="kpi-sub">{{ all_comparable }} labeled samples</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-icon" style="background:#fef9c3;color:#a16207;"><i class="fas fa-tachometer-alt"></i></div>
+      <div class="kpi-val">{% if p50_latency %}{{ p50_latency }}ms{% else %}—{% endif %}</div>
+      <div class="kpi-lbl">P50 Latency</div>
+      <div class="kpi-sub">median inference time</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-icon" style="background:#fee2e2;color:#dc2626;"><i class="fas fa-stopwatch"></i></div>
+      <div class="kpi-val">{% if p95_latency %}{{ p95_latency }}ms{% else %}—{% endif %}</div>
+      <div class="kpi-lbl">P95 Latency</div>
+      <div class="kpi-sub">95th percentile</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-icon" style="background:#ffe4e6;color:#be123c;"><i class="fas fa-exclamation-triangle"></i></div>
+      <div class="kpi-val {% if all_error_rt > 5 %}acc-lo{% elif all_error_rt > 0 %}acc-mid{% else %}acc-hi{% endif %}">
+        {{ all_error_rt }}%
+      </div>
+      <div class="kpi-lbl">Error Rate</div>
+      <div class="kpi-sub">{{ all_failed }} failed of {{ all_total }}</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-icon" style="background:#e0e7ff;color:#4338ca;"><i class="fas fa-robot"></i></div>
+      <div class="kpi-val">{{ total_runs }}</div>
+      <div class="kpi-lbl">Scheduler Runs</div>
+      <div class="kpi-sub">all-time synthetic runs</div>
+    </div>
+  </div>
+
+  <!-- ── Charts row ───────────────────────────────────────────────────────── -->
+  <div class="chart-row">
+    <div class="card">
+      <div class="card-title"><i class="fas fa-chart-bar"></i> Prediction Volume · {{ days }}d</div>
+      <canvas id="volChart" height="110"></canvas>
+    </div>
+    <div class="card">
+      <div class="card-title"><i class="fas fa-chart-line"></i> Accuracy &amp; Latency Trend</div>
+      <canvas id="trendChart" height="110"></canvas>
+    </div>
+  </div>
+
+  <!-- ── Mid row: label dist + model breakdown + confidence ───────────────── -->
+  <div class="mid-row">
+
+    <!-- Label distribution -->
+    <div class="card">
+      <div class="card-title"><i class="fas fa-tags"></i> Label Distribution</div>
+      {% if label_dist %}
+        {% for row in label_dist %}
+        <div style="margin-bottom:.55rem;">
+          <div style="display:flex;justify-content:space-between;margin-bottom:.2rem;font-size:.79rem;">
+            <span style="color:#374151;font-weight:600;">{{ row.label|truncatechars:22 }}</span>
+            <span style="color:#94a3b8;">{{ row.count }}</span>
+          </div>
+          <div style="background:#f1f5f9;border-radius:4px;height:6px;">
+            {% if label_dist.0.count %}
+            <div style="height:100%;border-radius:4px;background:linear-gradient(90deg,#6366f1,#8b5cf6);
+                        width:{% widthratio row.count label_dist.0.count 100 %}%;"></div>
+            {% endif %}
+          </div>
         </div>
+        {% endfor %}
+      {% else %}
+        <div class="empty">No predictions yet.</div>
+      {% endif %}
+    </div>
+
+    <!-- Per-model breakdown -->
+    <div class="card">
+      <div class="card-title"><i class="fas fa-microchip"></i> Per-Model Stats</div>
+      {% if model_stats %}
+        {% for m in model_stats %}
+        <div style="margin-bottom:.8rem;padding-bottom:.8rem;
+                    border-bottom:{% if not forloop.last %}1px solid #f1f5f9{% else %}none{% endif %}">
+          <div style="font-size:.82rem;font-weight:700;color:#1e293b;margin-bottom:.3rem;">
+            {{ m.project__title|truncatechars:26 }}
+          </div>
+          <div style="display:flex;gap:.65rem;flex-wrap:wrap;font-size:.75rem;color:#64748b;">
+            <span><b>{{ m.total }}</b> calls</span>
+            {% if m.avg_ms %}<span>⏱ {{ m.avg_ms|floatformat:0 }}ms</span>{% endif %}
+            {% if m.avg_conf %}<span>🎯 {{ m.avg_conf|floatformat:2 }}</span>{% endif %}
+            {% if m.errors %}<span style="color:#ef4444;">✗ {{ m.errors }} err</span>{% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class="empty" style="padding:1.5rem 0;">No real-user predictions yet.</div>
+      {% endif %}
+    </div>
+
+    <!-- Synthetic health summary -->
+    <div class="card">
+      <div class="card-title"><i class="fas fa-robot" style="color:#8b5cf6;"></i> Synthetic Monitor</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;">
+        <div style="background:#f8fafc;border-radius:10px;padding:.7rem;text-align:center;">
+          <div style="font-size:1.3rem;font-weight:800;color:#6366f1;">{{ total_runs }}</div>
+          <div style="font-size:.7rem;color:#94a3b8;margin-top:.1rem;">Total Runs</div>
+        </div>
+        <div style="background:#f8fafc;border-radius:10px;padding:.7rem;text-align:center;">
+          <div style="font-size:1.3rem;font-weight:800;
+            color:{% if syn_accuracy %}{% if syn_accuracy >= 80 %}#10b981{% elif syn_accuracy >= 60 %}#f59e0b{% else %}#ef4444{% endif %}{% else %}#94a3b8{% endif %};">
+            {% if syn_accuracy %}{{ syn_accuracy }}%{% else %}—{% endif %}
+          </div>
+          <div style="font-size:.7rem;color:#94a3b8;margin-top:.1rem;">Accuracy</div>
+        </div>
+        <div style="background:#f8fafc;border-radius:10px;padding:.7rem;text-align:center;">
+          <div style="font-size:1.3rem;font-weight:800;color:#f59e0b;">
+            {% if syn_avg_ms %}{{ syn_avg_ms }}ms{% else %}—{% endif %}
+          </div>
+          <div style="font-size:.7rem;color:#94a3b8;margin-top:.1rem;">Avg Latency</div>
+        </div>
+        <div style="background:#f8fafc;border-radius:10px;padding:.7rem;text-align:center;">
+          <div style="font-size:1.3rem;font-weight:800;color:#64748b;">
+            {% if syn_avg_conf %}{{ syn_avg_conf }}%{% else %}—{% endif %}
+          </div>
+          <div style="font-size:.7rem;color:#94a3b8;margin-top:.1rem;">Avg Confidence</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── Predictions Table (paginated, tabbed) ─────────────────────────────── -->
+  <div class="card tbl-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.85rem;flex-wrap:wrap;gap:.5rem;">
+      <div class="card-title" style="margin:0;"><i class="fas fa-list"></i> Prediction Log</div>
+      <div class="tbl-tabs">
+        <button class="tbl-tab active" onclick="filterTable('all',this)">All</button>
+        <button class="tbl-tab" onclick="filterTable('web',this)">Web / Demo</button>
+        <button class="tbl-tab" onclick="filterTable('synthetic',this)">Synthetic</button>
+      </div>
+    </div>
+    <div style="overflow-x:auto;">
+      <table class="mon-tbl" id="predTbl">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Time</th>
+            <th>Model</th>
+            <th>Predicted Label</th>
+            <th>Expected</th>
+            <th>Match</th>
+            <th>Confidence</th>
+            <th>Latency</th>
+            <th>Source</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="predBody">
+          {% for log in combined_recent %}
+          <tr class="pred-row"
+              data-source="{% if log.source == 'synthetic' %}synthetic{% else %}web{% endif %}">
+            <td style="color:#94a3b8;font-size:.72rem;">{{ forloop.counter }}</td>
+            <td style="white-space:nowrap;color:#64748b;">{{ log.created_at|date:"M d H:i:s" }}</td>
+            <td style="font-weight:600;">{{ log.project.title|truncatechars:18 }}</td>
+            <td style="font-weight:500;">{{ log.label|default:"—" }}</td>
+            <td style="color:#64748b;">
+              {% if log.source == 'synthetic' %}
+                {{ log.input_data.expected_label|default:"—" }}
+              {% else %}—{% endif %}
+            </td>
+            <td>
+              {% if log.source == 'synthetic' and log.input_data.comparable %}
+                {% if log.input_data.is_correct %}
+                  <span style="color:#10b981;font-weight:700;font-size:.9rem;">✓</span>
+                {% else %}
+                  <span style="color:#ef4444;font-weight:700;font-size:.9rem;">✗</span>
+                {% endif %}
+              {% else %}
+                <span style="color:#cbd5e1;">—</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if log.confidence %}
+                <span style="font-weight:600;color:{% if log.confidence >= 0.8 %}#10b981{% elif log.confidence >= 0.6 %}#f59e0b{% else %}#ef4444{% endif %};">
+                  {{ log.confidence|floatformat:1 }}%</span>
+              {% else %}—{% endif %}
+            </td>
+            <td>{% if log.inference_ms %}<span style="font-family:monospace;">{{ log.inference_ms }}ms</span>{% else %}—{% endif %}</td>
+            <td>
+              <span class="badge badge-{% if log.source == 'synthetic' %}syn{% elif log.source == 'demo' %}demo{% elif log.source == 'api' %}api{% else %}real{% endif %}">
+                {{ log.source }}
+              </span>
+            </td>
+            <td>
+              {% if log.success %}
+                <span class="badge badge-ok">OK</span>
+              {% else %}
+                <span class="badge badge-err" title="{{ log.error_message }}">FAIL</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="10" class="empty">No predictions in this time window.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div class="pager" id="pager">
+      <span class="pager-info" id="pagerInfo"></span>
+      <div class="pager-btns">
+        <button class="pager-btn" id="prevBtn" onclick="changePage(-1)">← Prev</button>
+        <span id="pageNumBadge" style="padding:.28rem .65rem;background:#f1f5f9;border-radius:8px;font-size:.78rem;font-weight:700;color:#374151;"></span>
+        <button class="pager-btn" id="nextBtn" onclick="changePage(1)">Next →</button>
       </div>
     </div>
   </div>
 
-  <div class="container">
-
-    <!-- ── KPI Cards ────────────────────────────────────────────────────────── -->
-    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:1rem; margin-bottom:2rem;">
-      {% include 'monitoring/_kpi.html' with icon="fas fa-bolt" label="Total Predictions" value=total color="#302b63" %}
-      {% include 'monitoring/_kpi.html' with icon="fas fa-check-circle" label="Success Rate" value=success_rate|stringformat:".1f"|add:"%" color="#10b981" %}
-      {% include 'monitoring/_kpi.html' with icon="fas fa-times-circle" label="Errors" value=failed color="#ef4444" %}
-      {% include 'monitoring/_kpi.html' with icon="fas fa-stopwatch" label="Avg Latency" value=avg_latency|default:"—"|stringformat:"s"|add:"ms" color="#f59e0b" %}
-      {% include 'monitoring/_kpi.html' with icon="fas fa-percentage" label="Avg Confidence" value=avg_conf|default:"—"|stringformat:"s"|add:"%" color="#8b5cf6" %}
+  <!-- ── Run History ───────────────────────────────────────────────────────── -->
+  {% if run_history %}
+  <div class="card">
+    <div class="card-title" style="margin-bottom:.85rem;">
+      <i class="fas fa-history"></i> Scheduler Run History
+      <span style="font-size:.72rem;font-weight:400;color:#cbd5e1;margin-left:.4rem;">all-time · newest first</span>
     </div>
-
-    <div style="display:grid; grid-template-columns:1fr 340px; gap:1.5rem; align-items:start;">
-
-      <!-- ── Requests over time chart ──────────────────────────────────────── -->
-      <div style="background:white; border-radius:16px; border:1px solid #e2e8f0;
-                  box-shadow:0 1px 3px rgba(0,0,0,.05); padding:1.5rem;">
-        <h3 style="font-size:1rem; font-weight:700; color:#1e293b; margin:0 0 1.25rem;">
-          <i class="fas fa-chart-bar me-2" style="color:#302b63;"></i>
-          Requests over time
-        </h3>
-        <canvas id="requestsChart" height="90"></canvas>
-      </div>
-
-      <!-- ── Per-model breakdown ───────────────────────────────────────────── -->
-      <div style="background:white; border-radius:16px; border:1px solid #e2e8f0;
-                  box-shadow:0 1px 3px rgba(0,0,0,.05); padding:1.5rem;">
-        <h3 style="font-size:1rem; font-weight:700; color:#1e293b; margin:0 0 1.25rem;">
-          <i class="fas fa-robot me-2" style="color:#302b63;"></i>
-          Per-model stats
-        </h3>
-        {% if model_stats %}
-          {% for m in model_stats %}
-          <div style="margin-bottom:1rem; padding-bottom:1rem;
-                      border-bottom:{% if not forloop.last %}1px solid #f1f5f9{% else %}none{% endif %};">
-            <div style="display:flex; justify-content:space-between; margin-bottom:.3rem;">
-              <span style="font-size:.88rem; font-weight:600; color:#1e293b;">
-                {{ m.project__title|truncatechars:28 }}
-              </span>
-              <span style="font-size:.82rem; color:#64748b;">{{ m.total }} calls</span>
-            </div>
-            <div style="display:flex; gap:.5rem; font-size:.78rem; color:#94a3b8; flex-wrap:wrap;">
-              {% if m.avg_ms %}<span>⏱ {{ m.avg_ms|floatformat:0 }}ms</span>{% endif %}
-              {% if m.avg_conf %}<span>🎯 {{ m.avg_conf|floatformat:2 }}</span>{% endif %}
-              {% if m.errors %}<span style="color:#ef4444;">✗ {{ m.errors }} err</span>{% endif %}
-            </div>
-            <!-- Usage bar -->
-            {% if total %}
-            <div style="margin-top:.4rem; background:#f1f5f9; border-radius:4px; height:6px; overflow:hidden;">
-              <div style="height:100%; border-radius:4px;
-                          background:linear-gradient(90deg,#302b63,#24243e);
-                          width:{% widthratio m.total total 100 %}%"></div>
-            </div>
-            {% endif %}
-          </div>
-          {% endfor %}
-        {% else %}
-          <p style="color:#94a3b8; font-size:.88rem; text-align:center; padding:2rem 0;">
-            No predictions yet.<br>Run a model demo to see data here.
-          </p>
-        {% endif %}
-      </div>
-
-    </div>
-
-    <!-- ── Synthetic Monitor Health Card ───────────────────────────────────── -->
-    {% if syn_total %}
-    <div style="background:white; border-radius:16px; border:1px solid #e2e8f0;
-                box-shadow:0 1px 3px rgba(0,0,0,.05); padding:1.5rem; margin-top:1.5rem;">
-      <h3 style="font-size:1rem; font-weight:700; color:#1e293b; margin:0 0 1.25rem;">
-        <i class="fas fa-robot me-2" style="color:#8b5cf6;"></i>
-        Synthetic Monitor
-        <span style="font-size:.78rem; font-weight:400; color:#94a3b8; margin-left:.5rem;">
-          bot runs — excluded from real-traffic stats above
-        </span>
-      </h3>
-      <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:1rem; margin-bottom:1.5rem;">
-        <div style="text-align:center; padding:1rem; background:#f8f9fa; border-radius:12px;">
-          <div style="font-size:1.6rem; font-weight:700; color:#8b5cf6;">{{ syn_total }}</div>
-          <div style="font-size:.78rem; color:#94a3b8;">Total Runs</div>
-        </div>
-        {% if syn_accuracy is not None %}
-        <div style="text-align:center; padding:1rem; background:#f8f9fa; border-radius:12px;">
-          <div style="font-size:1.6rem; font-weight:700;
-                      color:{% if syn_accuracy >= 80 %}#10b981{% elif syn_accuracy >= 60 %}#f59e0b{% else %}#ef4444{% endif %};">
-            {{ syn_accuracy }}%
-          </div>
-          <div style="font-size:.78rem; color:#94a3b8;">Accuracy ({{ syn_comparable }} labeled)</div>
-        </div>
-        {% endif %}
-        {% if syn_avg_ms %}
-        <div style="text-align:center; padding:1rem; background:#f8f9fa; border-radius:12px;">
-          <div style="font-size:1.6rem; font-weight:700; color:#f59e0b;">{{ syn_avg_ms }}ms</div>
-          <div style="font-size:.78rem; color:#94a3b8;">Avg Latency</div>
-        </div>
-        {% endif %}
-        {% if syn_avg_conf %}
-        <div style="text-align:center; padding:1rem; background:#f8f9fa; border-radius:12px;">
-          <div style="font-size:1.6rem; font-weight:700; color:#64748b;">{{ syn_avg_conf }}%</div>
-          <div style="font-size:.78rem; color:#94a3b8;">Avg Confidence</div>
-        </div>
-        {% endif %}
-        {% if syn_failed %}
-        <div style="text-align:center; padding:1rem; background:#fef2f2; border-radius:12px;">
-          <div style="font-size:1.6rem; font-weight:700; color:#ef4444;">{{ syn_failed }}</div>
-          <div style="font-size:.78rem; color:#94a3b8;">Failed Runs</div>
-        </div>
-        {% endif %}
-      </div>
-      <!-- Recent synthetic runs -->
-      {% if syn_recent %}
-      <table style="width:100%; border-collapse:collapse; font-size:.83rem;">
+    <div style="overflow-x:auto;">
+      <table class="mon-tbl">
         <thead>
-          <tr style="border-bottom:2px solid #f1f5f9; color:#94a3b8; text-align:left;">
-            <th style="padding:.4rem .6rem;">EEG ID</th>
-            <th style="padding:.4rem .6rem;">Predicted</th>
-            <th style="padding:.4rem .6rem;">Expected</th>
-            <th style="padding:.4rem .6rem;">Match</th>
-            <th style="padding:.4rem .6rem;">Conf</th>
-            <th style="padding:.4rem .6rem;">Latency</th>
-            <th style="padding:.4rem .6rem;">Time</th>
+          <tr>
+            <th>#</th>
+            <th>Started</th>
+            <th>Duration</th>
+            <th>Samples</th>
+            <th>OK</th>
+            <th>Fail</th>
+            <th>Comparable</th>
+            <th>Accuracy</th>
+            <th>Avg Latency</th>
+            <th>Avg Conf</th>
+            <th>Trigger</th>
           </tr>
         </thead>
         <tbody>
-          {% for log in syn_recent %}
-          <tr style="border-bottom:1px solid #f8f9fa;">
-            <td style="padding:.4rem .6rem; font-family:monospace; color:#64748b; font-size:.8rem;">
-              {{ log.input_data.eeg_id|default:"—" }}
+          {% for run in run_history %}
+          <tr>
+            <td style="color:#94a3b8;font-size:.72rem;">{{ forloop.counter }}</td>
+            <td style="white-space:nowrap;color:#64748b;">{{ run.started_at|date:"M d H:i" }}</td>
+            <td style="color:#94a3b8;font-family:monospace;">
+              {% if run.duration_s %}{{ run.duration_s }}s{% else %}—{% endif %}
             </td>
-            <td style="padding:.4rem .6rem; color:#1e293b; font-weight:500;">
-              {{ log.label|default:"—" }}
-            </td>
-            <td style="padding:.4rem .6rem; color:#64748b;">
-              {{ log.input_data.expected_label|default:"—" }}
-            </td>
-            <td style="padding:.4rem .6rem;">
-              {% if log.input_data.comparable %}
-                {% if log.input_data.is_correct %}
-                  <span style="color:#10b981; font-weight:700;">✓</span>
-                {% else %}
-                  <span style="color:#ef4444; font-weight:700;">✗</span>
-                {% endif %}
+            <td style="font-weight:700;color:#374151;">{{ run.n_samples }}</td>
+            <td style="color:#10b981;font-weight:700;">{{ run.n_success }}</td>
+            <td>
+              {% if run.n_failed %}
+                <span style="color:#ef4444;font-weight:700;">{{ run.n_failed }}</span>
               {% else %}
-                <span style="color:#94a3b8;">—</span>
+                <span style="color:#cbd5e1;">0</span>
               {% endif %}
             </td>
-            <td style="padding:.4rem .6rem; color:#64748b;">
-              {% if log.confidence %}{{ log.confidence|floatformat:2 }}{% else %}—{% endif %}
+            <td style="color:#64748b;">{{ run.n_comparable }}</td>
+            <td>
+              {% if run.n_comparable %}
+                {% with acc=run.accuracy %}
+                <span class="{% if acc >= 80 %}acc-hi{% elif acc >= 60 %}acc-mid{% else %}acc-lo{% endif %}">
+                  {{ acc }}%
+                </span>
+                {% endwith %}
+              {% else %}
+                <span style="color:#cbd5e1;">—</span>
+              {% endif %}
             </td>
-            <td style="padding:.4rem .6rem; color:#64748b;">
-              {% if log.inference_ms %}{{ log.inference_ms }}ms{% else %}—{% endif %}
+            <td style="font-family:monospace;color:#64748b;">
+              {% if run.avg_latency_ms %}{{ run.avg_latency_ms|floatformat:0 }}ms{% else %}—{% endif %}
             </td>
-            <td style="padding:.4rem .6rem; color:#94a3b8; white-space:nowrap;">
-              {{ log.created_at|timesince }} ago
+            <td style="color:#64748b;">
+              {% if run.avg_confidence %}{{ run.avg_confidence|floatformat:2 }}{% else %}—{% endif %}
+            </td>
+            <td>
+              <span class="badge badge-{% if run.triggered_by == 'scheduler' %}syn{% else %}real{% endif %}">
+                {{ run.triggered_by }}
+              </span>
             </td>
           </tr>
           {% endfor %}
         </tbody>
       </table>
-      {% endif %}
     </div>
-    {% endif %}
-
-    <!-- ── Synthetic monitor trend + run history ──────────────────────────── -->
-    {% if run_history %}
-    <div style="margin-top:1.5rem; display:grid; grid-template-columns:1fr 1fr; gap:1.5rem; align-items:start;">
-
-      <!-- Accuracy & latency trend chart -->
-      <div style="background:white; border-radius:16px; border:1px solid #e2e8f0;
-                  box-shadow:0 1px 3px rgba(0,0,0,.05); padding:1.5rem;">
-        <h3 style="font-size:1rem; font-weight:700; color:#1e293b; margin:0 0 1.25rem;">
-          <i class="fas fa-chart-line me-2" style="color:#8b5cf6;"></i>
-          Accuracy &amp; Latency Trend
-          <span style="font-size:.75rem; font-weight:400; color:#94a3b8; margin-left:.4rem;">last 20 comparable runs</span>
-        </h3>
-        <canvas id="trendChart" height="130"></canvas>
-      </div>
-
-      <!-- Run history table -->
-      <div style="background:white; border-radius:16px; border:1px solid #e2e8f0;
-                  box-shadow:0 1px 3px rgba(0,0,0,.05); padding:1.5rem; overflow-x:auto;">
-        <h3 style="font-size:1rem; font-weight:700; color:#1e293b; margin:0 0 1.25rem;">
-          <i class="fas fa-history me-2" style="color:#8b5cf6;"></i>
-          Run History
-          <span style="font-size:.75rem; font-weight:400; color:#94a3b8; margin-left:.4rem;">last 50 runs</span>
-        </h3>
-        <table style="width:100%; border-collapse:collapse; font-size:.8rem;">
-          <thead>
-            <tr style="border-bottom:2px solid #f1f5f9; color:#94a3b8; text-align:left;">
-              <th style="padding:.35rem .5rem;">Started</th>
-              <th style="padding:.35rem .5rem; text-align:center;">Samples</th>
-              <th style="padding:.35rem .5rem; text-align:center;">OK / Fail</th>
-              <th style="padding:.35rem .5rem; text-align:center;">Accuracy</th>
-              <th style="padding:.35rem .5rem; text-align:center;">Latency</th>
-              <th style="padding:.35rem .5rem; text-align:center;">Trigger</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for run in run_history %}
-            <tr style="border-bottom:1px solid #f8f9fa;">
-              <td style="padding:.35rem .5rem; color:#64748b; white-space:nowrap;">
-                {{ run.started_at|date:"M d H:i" }}
-              </td>
-              <td style="padding:.35rem .5rem; text-align:center; color:#1e293b; font-weight:600;">
-                {{ run.n_samples }}
-              </td>
-              <td style="padding:.35rem .5rem; text-align:center;">
-                <span style="color:#10b981; font-weight:600;">{{ run.n_success }}</span>
-                {% if run.n_failed %}
-                  / <span style="color:#ef4444; font-weight:600;">{{ run.n_failed }}</span>
-                {% endif %}
-              </td>
-              <td style="padding:.35rem .5rem; text-align:center;">
-                {% if run.n_comparable %}
-                  {% with acc=run.accuracy %}
-                  <span style="font-weight:700;
-                    color:{% if acc >= 80 %}#10b981{% elif acc >= 60 %}#f59e0b{% else %}#ef4444{% endif %};">
-                    {{ acc }}%
-                  </span>
-                  <span style="color:#94a3b8; font-size:.72rem;">({{ run.n_comparable }})</span>
-                  {% endwith %}
-                {% else %}
-                  <span style="color:#94a3b8;">—</span>
-                {% endif %}
-              </td>
-              <td style="padding:.35rem .5rem; text-align:center; color:#64748b;">
-                {% if run.avg_latency_ms %}{{ run.avg_latency_ms|floatformat:0 }}ms{% else %}—{% endif %}
-              </td>
-              <td style="padding:.35rem .5rem; text-align:center;">
-                <span style="background:#f1f5f9; padding:.1rem .45rem; border-radius:8px;
-                             font-size:.72rem; color:#64748b;">
-                  {{ run.triggered_by }}
-                </span>
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    </div>
-    {% endif %}
-
-    <!-- ── Sources + recent activity ────────────────────────────────────────── -->
-    <div style="display:grid; grid-template-columns:200px 1fr; gap:1.5rem; margin-top:1.5rem; align-items:start;">
-
-      <!-- Source breakdown -->
-      <div style="background:white; border-radius:16px; border:1px solid #e2e8f0;
-                  box-shadow:0 1px 3px rgba(0,0,0,.05); padding:1.5rem;">
-        <h3 style="font-size:.95rem; font-weight:700; color:#1e293b; margin:0 0 1rem;">
-          <i class="fas fa-code me-2" style="color:#302b63;"></i>Sources
-        </h3>
-        {% for s in sources %}
-        <div style="display:flex; justify-content:space-between; margin-bottom:.6rem;
-                    font-size:.85rem; color:#64748b;">
-          <span style="text-transform:capitalize;">{{ s.source }}</span>
-          <span style="font-weight:600; color:#1e293b;">{{ s.count }}</span>
-        </div>
-        {% empty %}
-          <p style="color:#94a3b8; font-size:.85rem;">No data</p>
-        {% endfor %}
-      </div>
-
-      <!-- Recent predictions table -->
-      <div style="background:white; border-radius:16px; border:1px solid #e2e8f0;
-                  box-shadow:0 1px 3px rgba(0,0,0,.05); padding:1.5rem; overflow-x:auto;">
-        <h3 style="font-size:1rem; font-weight:700; color:#1e293b; margin:0 0 1.25rem;">
-          <i class="fas fa-list me-2" style="color:#302b63;"></i>Recent Predictions
-        </h3>
-        {% if recent %}
-        <table style="width:100%; border-collapse:collapse; font-size:.85rem;">
-          <thead>
-            <tr style="border-bottom:2px solid #f1f5f9; color:#94a3b8; text-align:left;">
-              <th style="padding:.5rem .75rem;">Model</th>
-              <th style="padding:.5rem .75rem;">Label</th>
-              <th style="padding:.5rem .75rem;">Conf</th>
-              <th style="padding:.5rem .75rem;">Latency</th>
-              <th style="padding:.5rem .75rem;">Source</th>
-              <th style="padding:.5rem .75rem;">Status</th>
-              <th style="padding:.5rem .75rem;">Time</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for log in recent %}
-            <tr style="border-bottom:1px solid #f8f9fa;">
-              <td style="padding:.5rem .75rem; color:#1e293b; font-weight:500;">
-                {{ log.project.title|truncatechars:20 }}
-              </td>
-              <td style="padding:.5rem .75rem; color:#64748b;">{{ log.label|default:"—" }}</td>
-              <td style="padding:.5rem .75rem; color:#64748b;">
-                {% if log.confidence %}{{ log.confidence|floatformat:2 }}{% else %}—{% endif %}
-              </td>
-              <td style="padding:.5rem .75rem; color:#64748b;">
-                {% if log.inference_ms %}{{ log.inference_ms }}ms{% else %}—{% endif %}
-              </td>
-              <td style="padding:.5rem .75rem;">
-                <span style="background:#f1f5f9; padding:.15rem .5rem; border-radius:10px;
-                             font-size:.78rem; color:#64748b; text-transform:capitalize;">
-                  {{ log.source }}
-                </span>
-              </td>
-              <td style="padding:.5rem .75rem;">
-                {% if log.success %}
-                  <span style="color:#10b981; font-weight:600;">✓</span>
-                {% else %}
-                  <span style="color:#ef4444; font-weight:600;" title="{{ log.error_message }}">✗</span>
-                {% endif %}
-              </td>
-              <td style="padding:.5rem .75rem; color:#94a3b8; white-space:nowrap;">
-                {{ log.created_at|timesince }} ago
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-        {% else %}
-          <p style="color:#94a3b8; font-size:.88rem; text-align:center; padding:2rem 0;">
-            No prediction logs yet in this period.
-          </p>
-        {% endif %}
-      </div>
-    </div>
-
   </div>
-</div>
+  {% endif %}
 
-<!-- Chart.js -->
+</div><!-- /container -->
+</div><!-- /mon -->
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
-const labels = {{ chart_labels|safe }};
-const counts = {{ chart_counts|safe }};
-const errors = {{ chart_errors|safe }};
-
-// ── Trend chart (accuracy + latency per run) ──────────────────────────────
-const trendEl = document.getElementById('trendChart');
-if (trendEl) {
-  const tLabels   = {{ trend_labels|safe }};
-  const tAccuracy = {{ trend_accuracy|safe }};
-  const tLatency  = {{ trend_latency|safe }};
-  new Chart(trendEl, {
-    type: 'line',
-    data: {
-      labels: tLabels,
-      datasets: [
-        {
-          label: 'Accuracy %',
-          data: tAccuracy,
-          borderColor: '#8b5cf6',
-          backgroundColor: 'rgba(139,92,246,0.08)',
-          yAxisID: 'yAcc',
-          tension: 0.35,
-          pointRadius: 4,
-          fill: true,
-        },
-        {
-          label: 'Avg Latency ms',
-          data: tLatency,
-          borderColor: '#f59e0b',
-          backgroundColor: 'transparent',
-          yAxisID: 'yMs',
-          tension: 0.35,
-          pointRadius: 3,
-          borderDash: [4, 3],
-        },
-      ],
-    },
-    options: {
-      responsive: true,
-      interaction: { mode: 'index', intersect: false },
-      plugins: { legend: { position: 'top' } },
-      scales: {
-        yAcc: {
-          type: 'linear', position: 'left',
-          min: 0, max: 100,
-          ticks: { callback: v => v + '%' },
-          grid: { color: '#f1f5f9' },
-        },
-        yMs: {
-          type: 'linear', position: 'right',
-          ticks: { callback: v => v + 'ms' },
-          grid: { drawOnChartArea: false },
-        },
-        x: { grid: { display: false }, ticks: { maxRotation: 35, font: { size: 10 } } },
-      },
-    },
-  });
-}
-
-new Chart(document.getElementById('requestsChart'), {
+/* ── Volume chart ─────────────────────────────────────────────────────────── */
+new Chart(document.getElementById('volChart'), {
   type: 'bar',
   data: {
-    labels,
+    labels: {{ chart_labels|safe }},
     datasets: [
-      {
-        label: 'Successful',
-        data: counts.map((c, i) => c - errors[i]),
-        backgroundColor: 'rgba(102,126,234,0.7)',
-        borderRadius: 4,
-      },
-      {
-        label: 'Errors',
-        data: errors,
-        backgroundColor: 'rgba(239,68,68,0.65)',
-        borderRadius: 4,
-      },
+      { label:'Successful', data: {{ chart_counts|safe }}.map((c,i)=>c-{{ chart_errors|safe }}[i]),
+        backgroundColor:'rgba(99,102,241,.7)', borderRadius:3 },
+      { label:'Errors', data: {{ chart_errors|safe }},
+        backgroundColor:'rgba(239,68,68,.65)', borderRadius:3 },
     ],
   },
-  options: {
-    responsive: true,
-    plugins: { legend: { position: 'top' } },
-    scales: {
-      x: { stacked: true, grid: { display: false } },
-      y: { stacked: true, beginAtZero: true, ticks: { precision: 0 } },
+  options:{
+    responsive:true, plugins:{legend:{position:'top',labels:{font:{size:11}}}},
+    scales:{
+      x:{stacked:true,grid:{display:false},ticks:{font:{size:10}}},
+      y:{stacked:true,beginAtZero:true,ticks:{precision:0,font:{size:10}}},
     },
   },
 });
+
+/* ── Accuracy / latency trend chart ──────────────────────────────────────── */
+const trendEl = document.getElementById('trendChart');
+const tLabels   = {{ trend_labels|safe }};
+const tAccuracy = {{ trend_accuracy|safe }};
+const tLatency  = {{ trend_latency|safe }};
+if (tLabels.length) {
+  new Chart(trendEl, {
+    type:'line',
+    data:{
+      labels: tLabels,
+      datasets:[
+        { label:'Accuracy %', data:tAccuracy, borderColor:'#6366f1',
+          backgroundColor:'rgba(99,102,241,.08)', yAxisID:'yA',
+          tension:.35, pointRadius:3, fill:true },
+        { label:'Latency ms', data:tLatency, borderColor:'#f59e0b',
+          backgroundColor:'transparent', yAxisID:'yL',
+          tension:.35, pointRadius:2, borderDash:[4,3] },
+      ],
+    },
+    options:{
+      responsive:true,
+      interaction:{mode:'index',intersect:false},
+      plugins:{legend:{position:'top',labels:{font:{size:11}}}},
+      scales:{
+        yA:{type:'linear',position:'left',min:0,max:100,
+            ticks:{callback:v=>v+'%',font:{size:10}},grid:{color:'#f1f5f9'}},
+        yL:{type:'linear',position:'right',
+            ticks:{callback:v=>v+'ms',font:{size:10}},grid:{drawOnChartArea:false}},
+        x:{grid:{display:false},ticks:{maxRotation:35,font:{size:9}}},
+      },
+    },
+  });
+} else {
+  trendEl.parentElement.innerHTML +=
+    '<p style="text-align:center;color:#94a3b8;font-size:.82rem;padding:1.5rem 0;">No comparable runs yet — accuracy trend will appear after the scheduler runs.</p>';
+  trendEl.remove();
+}
+
+/* ── Table pagination & filtering ─────────────────────────────────────────── */
+const PAGE_SIZE = 15;
+let page = 1;
+let activeSource = 'all';
+
+function visibleRows() {
+  return [...document.querySelectorAll('.pred-row')].filter(r => {
+    if (activeSource === 'all') return true;
+    return r.dataset.source === activeSource;
+  });
+}
+
+function renderPage() {
+  const rows  = visibleRows();
+  const total = rows.length;
+  const start = (page - 1) * PAGE_SIZE;
+  const end   = Math.min(start + PAGE_SIZE, total);
+
+  document.querySelectorAll('.pred-row').forEach(r => r.style.display = 'none');
+  rows.slice(start, end).forEach(r => r.style.display = '');
+
+  document.getElementById('pagerInfo').textContent =
+    total ? `Showing ${start+1}–${end} of ${total} predictions` : 'No predictions';
+  document.getElementById('pageNumBadge').textContent =
+    `Page ${page} / ${Math.max(1, Math.ceil(total/PAGE_SIZE))}`;
+  document.getElementById('prevBtn').disabled = page <= 1;
+  document.getElementById('nextBtn').disabled = end >= total;
+}
+
+function changePage(dir) { page += dir; renderPage(); }
+
+function filterTable(src, btn) {
+  activeSource = src;
+  page = 1;
+  document.querySelectorAll('.tbl-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderPage();
+}
+
+renderPage(); // init
 </script>
 {% endblock %}
