@@ -48,6 +48,62 @@ class PredictionLog(models.Model):
         return f'{self.project.title} | {self.label} | {self.created_at:%Y-%m-%d %H:%M}'
 
 
+class MonitorRun(models.Model):
+    """
+    One row per synthetic-monitor execution.
+    Groups all PredictionLogs from a single scheduler/manual run into an
+    aggregate so you can track accuracy and latency trends over time.
+    """
+    TRIGGER_SCHEDULER = 'scheduler'
+    TRIGGER_MANUAL    = 'manual'
+    TRIGGER_CHOICES   = [
+        (TRIGGER_SCHEDULER, 'Scheduler'),
+        (TRIGGER_MANUAL,    'Manual'),
+    ]
+
+    project        = models.ForeignKey(
+        'projects.Projects', on_delete=models.CASCADE,
+        related_name='monitor_runs',
+    )
+    started_at     = models.DateTimeField()
+    completed_at   = models.DateTimeField(null=True, blank=True)
+    triggered_by   = models.CharField(
+        max_length=20, default=TRIGGER_SCHEDULER, choices=TRIGGER_CHOICES,
+    )
+
+    # Sample counts
+    n_samples      = models.IntegerField(default=0)
+    n_success      = models.IntegerField(default=0)
+    n_failed       = models.IntegerField(default=0)
+
+    # Accuracy (only for samples with known labels)
+    n_comparable   = models.IntegerField(default=0)
+    n_correct      = models.IntegerField(default=0)
+
+    # Performance aggregates
+    avg_latency_ms = models.FloatField(null=True, blank=True)
+    avg_confidence = models.FloatField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-started_at']
+        indexes  = [models.Index(fields=['project', 'started_at'])]
+
+    def __str__(self):
+        return f'{self.project.title} run @ {self.started_at:%Y-%m-%d %H:%M} ({self.n_samples} samples)'
+
+    @property
+    def accuracy(self):
+        if self.n_comparable > 0:
+            return round(self.n_correct / self.n_comparable * 100, 1)
+        return None
+
+    @property
+    def duration_s(self):
+        if self.completed_at and self.started_at:
+            return round((self.completed_at - self.started_at).total_seconds(), 1)
+        return None
+
+
 class ModelHealthSnapshot(models.Model):
     """
     Daily snapshot of model health metrics.

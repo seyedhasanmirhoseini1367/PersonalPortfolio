@@ -7,7 +7,7 @@ from django.utils import timezone
 from datetime import timedelta
 import json
 
-from .models import PredictionLog
+from .models import PredictionLog, MonitorRun
 from projects.models import Projects
 
 
@@ -68,23 +68,47 @@ def dashboard(request):
     recent  = logs.select_related('project', 'user')[:20]
     sources = logs.values('source').annotate(count=Count('id')).order_by('-count')
 
-    # ── Synthetic monitor health card ──────────────────────────────────────────
-    syn_total      = synthetic_logs.count()
-    syn_failed     = synthetic_logs.filter(success=False).count()
-    syn_avg_ms     = synthetic_logs.filter(success=True).aggregate(v=Avg('inference_ms'))['v']
-    syn_avg_conf   = synthetic_logs.filter(success=True).aggregate(v=Avg('confidence'))['v']
-    syn_recent     = synthetic_logs.select_related('project').order_by('-created_at')[:10]
+    # ── Synthetic monitor — run-level history ─────────────────────────────────
+    # All-time totals (not filtered by `since` — runs accumulate forever)
+    run_history = (
+        MonitorRun.objects
+        .filter(project_id=project_id) if project_id
+        else MonitorRun.objects.all()
+    ).select_related('project').order_by('-started_at')[:50]
 
-    # Accuracy: count comparable logs where is_correct is stored in input_data
-    syn_correct    = sum(
-        1 for log in synthetic_logs
-        if log.input_data.get('comparable') and log.input_data.get('is_correct')
+    # Last 20 runs that have comparable samples → used for the trend chart
+    trend_qs = list(reversed(
+        (MonitorRun.objects.filter(project_id=project_id, n_comparable__gt=0)
+         if project_id
+         else MonitorRun.objects.filter(n_comparable__gt=0))
+        .order_by('-started_at')[:20]
+    ))
+    trend_labels   = json.dumps([r.started_at.strftime('%m/%d %H:%M') for r in trend_qs])
+    trend_accuracy = json.dumps([
+        round(r.n_correct / r.n_comparable * 100, 1) if r.n_comparable else None
+        for r in trend_qs
+    ])
+    trend_latency  = json.dumps([
+        round(r.avg_latency_ms, 1) if r.avg_latency_ms else None
+        for r in trend_qs
+    ])
+
+    # Summary stats across all runs in the selected window (still useful)
+    syn_total    = synthetic_logs.count()
+    syn_failed   = synthetic_logs.filter(success=False).count()
+    syn_avg_ms   = synthetic_logs.filter(success=True).aggregate(v=Avg('inference_ms'))['v']
+    syn_avg_conf = synthetic_logs.filter(success=True).aggregate(v=Avg('confidence'))['v']
+
+    # All-time accuracy from MonitorRun aggregates (cheaper than scanning JSON)
+    from django.db.models import Sum
+    run_totals   = (MonitorRun.objects.filter(project_id=project_id) if project_id
+                    else MonitorRun.objects.all()).aggregate(
+        total_comparable=Sum('n_comparable'),
+        total_correct=Sum('n_correct'),
     )
-    syn_comparable = sum(
-        1 for log in synthetic_logs
-        if log.input_data.get('comparable')
-    )
-    syn_accuracy = round(syn_correct / syn_comparable * 100, 1) if syn_comparable else None
+    all_comparable = run_totals['total_comparable'] or 0
+    all_correct    = run_totals['total_correct'] or 0
+    syn_accuracy   = round(all_correct / all_comparable * 100, 1) if all_comparable else None
 
     return render(request, 'monitoring/dashboard.html', {
         'projects':         projects,
@@ -103,14 +127,18 @@ def dashboard(request):
         'model_stats':      model_stats,
         'recent':           recent,
         'sources':          sources,
-        # Synthetic health
+        # Synthetic health summary
         'syn_total':        syn_total,
         'syn_failed':       syn_failed,
         'syn_avg_ms':       round(syn_avg_ms, 1) if syn_avg_ms else None,
         'syn_avg_conf':     round(syn_avg_conf * 100, 1) if syn_avg_conf else None,
         'syn_accuracy':     syn_accuracy,
-        'syn_comparable':   syn_comparable,
-        'syn_recent':       syn_recent,
+        'syn_comparable':   all_comparable,
+        # Run history & trend
+        'run_history':      run_history,
+        'trend_labels':     trend_labels,
+        'trend_accuracy':   trend_accuracy,
+        'trend_latency':    trend_latency,
     })
 
 

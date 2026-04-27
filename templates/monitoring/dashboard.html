@@ -209,6 +209,85 @@
     </div>
     {% endif %}
 
+    <!-- ── Synthetic monitor trend + run history ──────────────────────────── -->
+    {% if run_history %}
+    <div style="margin-top:1.5rem; display:grid; grid-template-columns:1fr 1fr; gap:1.5rem; align-items:start;">
+
+      <!-- Accuracy & latency trend chart -->
+      <div style="background:white; border-radius:16px; border:1px solid #e2e8f0;
+                  box-shadow:0 1px 3px rgba(0,0,0,.05); padding:1.5rem;">
+        <h3 style="font-size:1rem; font-weight:700; color:#1e293b; margin:0 0 1.25rem;">
+          <i class="fas fa-chart-line me-2" style="color:#8b5cf6;"></i>
+          Accuracy &amp; Latency Trend
+          <span style="font-size:.75rem; font-weight:400; color:#94a3b8; margin-left:.4rem;">last 20 comparable runs</span>
+        </h3>
+        <canvas id="trendChart" height="130"></canvas>
+      </div>
+
+      <!-- Run history table -->
+      <div style="background:white; border-radius:16px; border:1px solid #e2e8f0;
+                  box-shadow:0 1px 3px rgba(0,0,0,.05); padding:1.5rem; overflow-x:auto;">
+        <h3 style="font-size:1rem; font-weight:700; color:#1e293b; margin:0 0 1.25rem;">
+          <i class="fas fa-history me-2" style="color:#8b5cf6;"></i>
+          Run History
+          <span style="font-size:.75rem; font-weight:400; color:#94a3b8; margin-left:.4rem;">last 50 runs</span>
+        </h3>
+        <table style="width:100%; border-collapse:collapse; font-size:.8rem;">
+          <thead>
+            <tr style="border-bottom:2px solid #f1f5f9; color:#94a3b8; text-align:left;">
+              <th style="padding:.35rem .5rem;">Started</th>
+              <th style="padding:.35rem .5rem; text-align:center;">Samples</th>
+              <th style="padding:.35rem .5rem; text-align:center;">OK / Fail</th>
+              <th style="padding:.35rem .5rem; text-align:center;">Accuracy</th>
+              <th style="padding:.35rem .5rem; text-align:center;">Latency</th>
+              <th style="padding:.35rem .5rem; text-align:center;">Trigger</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for run in run_history %}
+            <tr style="border-bottom:1px solid #f8f9fa;">
+              <td style="padding:.35rem .5rem; color:#64748b; white-space:nowrap;">
+                {{ run.started_at|date:"M d H:i" }}
+              </td>
+              <td style="padding:.35rem .5rem; text-align:center; color:#1e293b; font-weight:600;">
+                {{ run.n_samples }}
+              </td>
+              <td style="padding:.35rem .5rem; text-align:center;">
+                <span style="color:#10b981; font-weight:600;">{{ run.n_success }}</span>
+                {% if run.n_failed %}
+                  / <span style="color:#ef4444; font-weight:600;">{{ run.n_failed }}</span>
+                {% endif %}
+              </td>
+              <td style="padding:.35rem .5rem; text-align:center;">
+                {% if run.n_comparable %}
+                  {% with acc=run.accuracy %}
+                  <span style="font-weight:700;
+                    color:{% if acc >= 80 %}#10b981{% elif acc >= 60 %}#f59e0b{% else %}#ef4444{% endif %};">
+                    {{ acc }}%
+                  </span>
+                  <span style="color:#94a3b8; font-size:.72rem;">({{ run.n_comparable }})</span>
+                  {% endwith %}
+                {% else %}
+                  <span style="color:#94a3b8;">—</span>
+                {% endif %}
+              </td>
+              <td style="padding:.35rem .5rem; text-align:center; color:#64748b;">
+                {% if run.avg_latency_ms %}{{ run.avg_latency_ms|floatformat:0 }}ms{% else %}—{% endif %}
+              </td>
+              <td style="padding:.35rem .5rem; text-align:center;">
+                <span style="background:#f1f5f9; padding:.1rem .45rem; border-radius:8px;
+                             font-size:.72rem; color:#64748b;">
+                  {{ run.triggered_by }}
+                </span>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endif %}
+
     <!-- ── Sources + recent activity ────────────────────────────────────────── -->
     <div style="display:grid; grid-template-columns:200px 1fr; gap:1.5rem; margin-top:1.5rem; align-items:start;">
 
@@ -298,6 +377,61 @@
 const labels = {{ chart_labels|safe }};
 const counts = {{ chart_counts|safe }};
 const errors = {{ chart_errors|safe }};
+
+// ── Trend chart (accuracy + latency per run) ──────────────────────────────
+const trendEl = document.getElementById('trendChart');
+if (trendEl) {
+  const tLabels   = {{ trend_labels|safe }};
+  const tAccuracy = {{ trend_accuracy|safe }};
+  const tLatency  = {{ trend_latency|safe }};
+  new Chart(trendEl, {
+    type: 'line',
+    data: {
+      labels: tLabels,
+      datasets: [
+        {
+          label: 'Accuracy %',
+          data: tAccuracy,
+          borderColor: '#8b5cf6',
+          backgroundColor: 'rgba(139,92,246,0.08)',
+          yAxisID: 'yAcc',
+          tension: 0.35,
+          pointRadius: 4,
+          fill: true,
+        },
+        {
+          label: 'Avg Latency ms',
+          data: tLatency,
+          borderColor: '#f59e0b',
+          backgroundColor: 'transparent',
+          yAxisID: 'yMs',
+          tension: 0.35,
+          pointRadius: 3,
+          borderDash: [4, 3],
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      interaction: { mode: 'index', intersect: false },
+      plugins: { legend: { position: 'top' } },
+      scales: {
+        yAcc: {
+          type: 'linear', position: 'left',
+          min: 0, max: 100,
+          ticks: { callback: v => v + '%' },
+          grid: { color: '#f1f5f9' },
+        },
+        yMs: {
+          type: 'linear', position: 'right',
+          ticks: { callback: v => v + 'ms' },
+          grid: { drawOnChartArea: false },
+        },
+        x: { grid: { display: false }, ticks: { maxRotation: 35, font: { size: 10 } } },
+      },
+    },
+  });
+}
 
 new Chart(document.getElementById('requestsChart'), {
   type: 'bar',

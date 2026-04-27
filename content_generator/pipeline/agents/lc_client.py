@@ -24,9 +24,16 @@ def get_llm() -> ChatGroq:
 
 # ── LLM call ─────────────────────────────────────────────────
 
-def lc_generate(prompt: str) -> str:
-    """Invoke ChatGroq via LangChain and return raw text."""
-    llm = get_llm()
+def lc_generate(prompt: str, model: str = None) -> str:
+    """Invoke ChatGroq via LangChain and return raw text.
+
+    Pass model= to override the default (e.g. for translation tasks that
+    need a more capable model than the default 8b-instant).
+    """
+    if model:
+        llm = ChatGroq(model=model, api_key=GROQ_API_KEY, temperature=0.3, max_retries=3)
+    else:
+        llm = get_llm()
     for attempt in range(4):
         try:
             response = llm.invoke([HumanMessage(content=prompt)])

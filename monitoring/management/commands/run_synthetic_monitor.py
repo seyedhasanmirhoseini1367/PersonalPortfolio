@@ -15,8 +15,8 @@ Schedule on Azure (WebJob):
     Set CRON_SETTINGS in Azure Portal: 0 * * * * *
 
 Required .env variables:
-    SYNTHETIC_DATA_DIR=D:\Thesis\hms-harmful-brain-activity-classification\test_data
-    SYNTHETIC_TARGET_CSV=D:\Thesis\hms-harmful-brain-activity-classification\target.csv
+    SYNTHETIC_DATA_DIR=D:\Thesis\hms-harmful-brain-activity-classification/test_data
+    SYNTHETIC_TARGET_CSV=D:\Thesis\hms-harmful-brain-activity-classification/target.csv
 """
 
 import io
@@ -28,6 +28,7 @@ from pathlib import Path
 from django.core.management.base import BaseCommand
 from django.conf import settings
 from django.core.files.uploadedfile import InMemoryUploadedFile
+from django.utils import timezone
 
 import pandas as pd
 
@@ -54,6 +55,11 @@ class Command(BaseCommand):
         parser.add_argument(
             '--samples', type=int, default=None,
             help='Fixed number of samples (default: random 5–15)',
+        )
+        parser.add_argument(
+            '--triggered-by', default='scheduler',
+            choices=['scheduler', 'manual'],
+            help='Who triggered this run (used in MonitorRun record)',
         )
 
     def handle(self, *args, **options):
@@ -120,9 +126,12 @@ class Command(BaseCommand):
         )
 
         # ── Run inference ─────────────────────────────────────────────────────
-        from monitoring.models import PredictionLog
+        from monitoring.models import PredictionLog, MonitorRun
 
         ok = fail = correct = comparable = 0
+        latencies: list[float] = []
+        confidences: list[float] = []
+        run_started = timezone.now()
 
         for file_path in selected:
             eeg_id       = file_path.stem          # "51360893"
@@ -182,6 +191,9 @@ class Command(BaseCommand):
                     f'  {eeg_id:<15} → {pred_label:<35} '
                     f'{confidence:.1%}  {inference_ms}ms{verdict}'
                 )
+                latencies.append(inference_ms)
+                if confidence is not None:
+                    confidences.append(confidence)
                 ok += 1
 
             except Exception as exc:
@@ -215,3 +227,18 @@ class Command(BaseCommand):
         self.stdout.write(style(
             f'Done: {ok} OK, {fail} failed{acc_str}'
         ))
+
+        # ── Persist run-level aggregate ───────────────────────────────────────
+        MonitorRun.objects.create(
+            project        = project,
+            started_at     = run_started,
+            completed_at   = timezone.now(),
+            triggered_by   = options.get('triggered_by', 'scheduler'),
+            n_samples      = ok + fail,
+            n_success      = ok,
+            n_failed       = fail,
+            n_comparable   = comparable,
+            n_correct      = correct,
+            avg_latency_ms = sum(latencies) / len(latencies) if latencies else None,
+            avg_confidence = sum(confidences) / len(confidences) if confidences else None,
+        )
