@@ -24,16 +24,24 @@ _JOB_FIT_KEYWORDS = {
     "evaluate fit", "assess fit", "check fit",
     "am i a good fit", "is he a good fit", "would hasan fit",
     "hiring for", "open position", "apply for",
+    # Hiring intent
+    "want to hire", "looking to hire", "hire hasan", "hire him",
+    "considering hiring", "thinking of hiring",
+    "for this position", "for this role", "for the role", "for the position",
+    "evaluate him", "evaluate hasan", "assess him", "assess hasan",
+    "how suitable", "how good is", "is he suitable",
     # Competency / seniority evaluation
     "competency", "competencies", "seniority",
     "senior ml", "senior data", "senior engineer",
+    "junior ml", "junior ai", "junior data", "junior engineer",
+    "mid-level", "lead engineer",
     "qualified for", "ready to be", "ready for a",
     "fit as a", "fit for a",
     "is he qualified", "is he ready", "does he have the",
     "what level", "which level", "level of engineer",
     "can he work as", "could he work as",
     "is hasan", "does hasan have",
-    "junior or senior", "mid-level", "lead engineer",
+    "junior or senior",
 }
 
 _CV_KEYWORDS = {
@@ -203,7 +211,7 @@ def job_fit_node(state: AgentState) -> Dict[str, Any]:
     chunks = retrieval.hybrid_retrieve(
         query=state["question"],
         document_types=["resume", "skill", "project", "project_documentation"],
-        top_k=8,
+        top_k=12,
         intent="job_fit",
     )
     logger.debug("job_fit_node: retrieved %d chunks", len(chunks))
@@ -292,9 +300,10 @@ def generate_node(state: AgentState) -> Dict[str, Any]:
     generation = GenerationService()
 
     answer = generation.generate_response(
-        question=state["question"],
+        query=state["question"],
         context_chunks=state.get("context_chunks", []),
         history=state.get("history", []),
+        route=state.get("route", "general"),
     )
     logger.debug("generate_node: answer length=%d", len(answer))
     return {"answer": answer}

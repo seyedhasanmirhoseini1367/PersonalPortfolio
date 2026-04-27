@@ -40,8 +40,9 @@ class GenerationService:
         query: str,
         context_chunks: List[Dict[str, Any]],
         history: Optional[List[HistoryItem]] = None,
+        route: str = "general",
     ) -> str:
-        system_prompt, messages = self._build_messages(query, context_chunks, history)
+        system_prompt, messages = self._build_messages(query, context_chunks, history, route=route)
         return (
             self._call_llm(system_prompt, messages)
             or self._fallback_response(query, context_chunks)
@@ -119,7 +120,15 @@ class GenerationService:
         Returns (system_prompt, messages_list) where messages_list is in
         OpenAI/Anthropic format: [{"role": ..., "content": ...}, ...]
         """
-        if route == "job_fit":
+        if route == "conversational":
+            system_prompt = (
+                "You are Hasan's portfolio assistant — a friendly AI that answers questions "
+                "about Hasan Mirhoseini, a Data Scientist and ML Engineer based in Helsinki, Finland. "
+                "This is a conversational follow-up — no new context has been retrieved. "
+                "Answer naturally using the conversation history above. "
+                "Be concise and friendly."
+            )
+        elif route == "job_fit":
             system_prompt = (
                 "You are an expert technical recruiter specialising in ML engineering and data science.\n\n"
 
