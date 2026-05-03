@@ -19,6 +19,9 @@ python manage.py migrate --noinput
 echo "Ensuring superuser exists..."
 python manage.py ensure_superuser
 
+echo "Populating resume data (skips if already present)..."
+python manage.py populate_resume --if-empty || echo "populate_resume skipped or errored (non-fatal)"
+
 echo "Starting gunicorn..."
 gunicorn PersonalPortfolio.wsgi:application \
     --bind 0.0.0.0:${PORT:-8000} \

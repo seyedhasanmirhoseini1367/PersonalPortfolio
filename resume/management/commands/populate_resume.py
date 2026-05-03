@@ -19,12 +19,22 @@ class Command(BaseCommand):
             action="store_true",
             help="Delete all existing resume entries before populating.",
         )
+        parser.add_argument(
+            "--if-empty",
+            action="store_true",
+            help="Skip silently if Education entries already exist (safe for repeated deploys).",
+        )
 
     def handle(self, **options):
         from resume.models import (
             ResumeSetting, Education, Experience,
             Skill, ProjectHighlight, Language,
         )
+
+        # ── Guard: skip if DB already has data (safe for repeated deploys) ────
+        if options.get("if_empty") and Education.objects.exists():
+            self.stdout.write("Resume data already present — skipping (use --clear to reset).")
+            return
 
         # ── 1. ResumeSetting (singleton) ──────────────────────────────────────
         resume, created = ResumeSetting.objects.get_or_create(pk=1)
