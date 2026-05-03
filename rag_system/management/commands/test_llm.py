@@ -25,18 +25,30 @@ class Command(BaseCommand):
             self._test_groq(groq_key)
         if gemini_key:
             self._test_gemini(gemini_key)
+        if anthropic_key:
+            self._test_anthropic(anthropic_key)
 
     def _test_groq(self, key):
-        self.stdout.write("Testing Groq...")
+        self.stdout.write("Testing Groq (llama-3.1-8b-instant, streaming)...")
         try:
             from groq import Groq
             client = Groq(api_key=key)
-            resp = client.chat.completions.create(
+            stream = client.chat.completions.create(
                 model="llama-3.1-8b-instant",
-                messages=[{"role": "user", "content": "Say OK"}],
+                messages=[{"role": "user", "content": "Say OK in one word"}],
                 max_tokens=5,
+                stream=True,
             )
-            self.stdout.write(self.style.SUCCESS(f"  Groq OK: {resp.choices[0].message.content}"))
+            tokens = []
+            for chunk in stream:
+                t = chunk.choices[0].delta.content or ''
+                if t:
+                    tokens.append(t)
+            result = ''.join(tokens)
+            if result:
+                self.stdout.write(self.style.SUCCESS(f"  Groq streaming OK: {result}"))
+            else:
+                self.stdout.write(self.style.ERROR("  Groq streaming FAIL: no tokens yielded"))
         except ImportError:
             self.stdout.write(self.style.ERROR("  Groq FAIL: groq package not installed"))
         except Exception as e:
@@ -58,3 +70,19 @@ class Command(BaseCommand):
             self.stdout.write(self.style.ERROR("  Gemini FAIL: google-genai package not installed"))
         except Exception as e:
             self.stdout.write(self.style.ERROR(f"  Gemini FAIL: {e}"))
+
+    def _test_anthropic(self, key):
+        self.stdout.write("Testing Anthropic...")
+        try:
+            import anthropic
+            client = anthropic.Anthropic(api_key=key)
+            msg = client.messages.create(
+                model="claude-haiku-4-5-20251001",
+                max_tokens=5,
+                messages=[{"role": "user", "content": "Say OK"}],
+            )
+            self.stdout.write(self.style.SUCCESS(f"  Anthropic OK: {msg.content[0].text}"))
+        except ImportError:
+            self.stdout.write(self.style.ERROR("  Anthropic FAIL: anthropic package not installed"))
+        except Exception as e:
+            self.stdout.write(self.style.ERROR(f"  Anthropic FAIL: {e}"))

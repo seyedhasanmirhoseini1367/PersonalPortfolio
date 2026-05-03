@@ -71,13 +71,15 @@ class GenerationService:
                 yielded = True
                 yield token
 
-        if self.groq_api_key:
-            yield from _track(self._stream_groq(system_prompt, messages))
-        elif self.gemini_api_key:
-            yield from _track(self._stream_gemini(system_prompt, messages))
-        elif self.anthropic_api_key:
-            yield from _track(self._stream_anthropic(system_prompt, messages))
-        elif self.openai_api_key:
+        # Try each provider independently so a silent failure in one doesn't
+        # block the next (e.g. Groq yields nothing without raising → try Gemini).
+        if self.groq_api_key and not yielded:
+            yield from _track(self._stream_groq_only(system_prompt, messages))
+        if self.gemini_api_key and not yielded:
+            yield from _track(self._stream_gemini_only(system_prompt, messages))
+        if self.anthropic_api_key and not yielded:
+            yield from _track(self._stream_anthropic_only(system_prompt, messages))
+        if self.openai_api_key and not yielded:
             yield from _track(self._stream_openai(system_prompt, messages))
 
         # If nothing was yielded (no keys, or all LLMs failed) — emit fallback
@@ -339,7 +341,86 @@ class GenerationService:
             logger.warning('OpenAI error: %s', exc)
             return None
 
-    # ── Streaming LLM calls ───────────────────────────────────────────────────
+    # ── Streaming LLM calls (independent — no internal fallback chaining) ────────
+
+    def _stream_groq_only(
+        self, system_prompt: str, messages: List[HistoryItem]
+    ) -> Generator[str, None, None]:
+        """Groq streaming — yields tokens or nothing; never chains to another provider."""
+        if not self.groq_api_key:
+            return
+        try:
+            from groq import Groq
+            client = Groq(api_key=self.groq_api_key)
+            stream = client.chat.completions.create(
+                model=self.groq_model,
+                messages=[{'role': 'system', 'content': system_prompt}] + messages,
+                max_tokens=self.max_tokens,
+                temperature=0.7,
+                stream=True,
+            )
+            for chunk in stream:
+                text = chunk.choices[0].delta.content or ''
+                if text:
+                    yield text
+        except ImportError:
+            logger.warning('groq package not installed.')
+        except Exception as exc:
+            logger.warning('Groq stream error: %s', exc)
+
+    def _stream_gemini_only(
+        self, system_prompt: str, messages: List[HistoryItem]
+    ) -> Generator[str, None, None]:
+        """Gemini streaming — yields tokens or nothing; never chains to another provider."""
+        if not self.gemini_api_key:
+            return
+        try:
+            from google import genai
+            from google.genai import types
+            client  = genai.Client(api_key=self.gemini_api_key)
+            history = self._to_gemini_history(messages[:-1])
+            latest  = messages[-1]['content']
+            for chunk in client.models.generate_content_stream(
+                model=self.gemini_model,
+                contents=history + [latest],
+                config=types.GenerateContentConfig(
+                    system_instruction=system_prompt,
+                    max_output_tokens=self.max_tokens,
+                    temperature=0.7,
+                ),
+            ):
+                text = getattr(chunk, 'text', '') or ''
+                if text:
+                    yield text
+        except ImportError:
+            logger.warning('google-genai not installed.')
+        except Exception as exc:
+            logger.warning('Gemini stream error: %s', exc)
+
+    def _stream_anthropic_only(
+        self, system_prompt: str, messages: List[HistoryItem]
+    ) -> Generator[str, None, None]:
+        """Anthropic streaming — yields tokens or nothing; never chains to another provider."""
+        if not self.anthropic_api_key:
+            return
+        try:
+            import anthropic
+            client = anthropic.Anthropic(api_key=self.anthropic_api_key)
+            with client.messages.stream(
+                model=self.anthropic_model,
+                max_tokens=self.max_tokens,
+                system=system_prompt,
+                messages=messages,
+            ) as stream:
+                for text in stream.text_stream:
+                    if text:
+                        yield text
+        except ImportError:
+            logger.warning('anthropic not installed.')
+        except Exception as exc:
+            logger.warning('Anthropic stream error: %s', exc)
+
+    # ── Legacy streaming methods (kept for internal fallback chains) ──────────
 
     def _stream_groq(
         self, system_prompt: str, messages: List[HistoryItem]

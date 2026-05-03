@@ -214,7 +214,7 @@ RAG_CONFIG = {
     'GEMINI_MODEL':      'gemini-2.0-flash',
     'ANTHROPIC_MODEL':   'claude-haiku-4-5-20251001',
     'OPENAI_MODEL':      'gpt-4o-mini',
-    'GROQ_MODEL':        'llama-3.3-70b-versatile',
+    'GROQ_MODEL':        'llama-3.1-8b-instant',
     'MAX_TOKENS':        1200,
 }
 
