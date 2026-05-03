@@ -370,6 +370,9 @@ class GenerationService:
     def _stream_gemini(
         self, system_prompt: str, messages: List[HistoryItem]
     ) -> Generator[str, None, None]:
+        if not self.gemini_api_key:
+            yield from self._stream_anthropic(system_prompt, messages)
+            return
         try:
             from google import genai
             from google.genai import types
