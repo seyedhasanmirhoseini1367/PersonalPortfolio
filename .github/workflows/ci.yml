@@ -98,13 +98,4 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  deploy:
-    name: Trigger Azure redeploy
-    runs-on: ubuntu-latest
-    needs: docker
-    if: github.ref == 'refs/heads/main'
-
-    steps:
-      - name: Ping Azure webhook to pull new image
-        run: |
-          curl -s -X POST "${{ secrets.AZURE_WEBHOOK_URL }}" || true
+  # Azure deploy removed — site is now served by Railway
