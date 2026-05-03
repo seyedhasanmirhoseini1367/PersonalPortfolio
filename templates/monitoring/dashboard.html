@@ -146,6 +146,15 @@ table.mon-tbl tr:hover td { background:#fafbff; }
 @media (max-width:768px)  {
   .chart-row, .mid-row { grid-template-columns:1fr; }
   .kpi-grid { grid-template-columns:repeat(2,1fr); }
+  .mon-hdr-inner { flex-direction:column; align-items:flex-start; }
+  .mon-hdr-right { width:100%; justify-content:flex-start; }
+  .table-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+}
+@media (max-width:480px) {
+  .kpi-grid { grid-template-columns:repeat(2,1fr); }
+  .kpi-val  { font-size:1.3rem; }
+  .kpi-lbl  { font-size:.68rem; }
+  .card     { padding:.85rem; }
 }
 </style>
 {% endblock %}

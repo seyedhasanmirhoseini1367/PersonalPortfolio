@@ -159,8 +159,11 @@
         /* Photo on the right */
         .hero-photo {
             flex-shrink: 0;
-            transform: translateX(-50px);  /* Moves left smoothly */
+            transform: translateX(-50px);
             padding-right: 3rem;
+        }
+        @media (max-width: 700px) {
+            .hero-photo { transform: none; padding-right: 0; }
         }
 
         .hero-photo img,

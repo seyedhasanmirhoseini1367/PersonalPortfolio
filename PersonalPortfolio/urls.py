@@ -20,6 +20,7 @@ urlpatterns = [
     path('resume/', include('resume.urls')),
     path('rag/', include('rag_system.urls')),
     path('accounts/', include('accounts.urls')),
+    path('auth/',     include('allauth.urls')),
     path('stories/', include('stories.urls')),
     path('monitoring/', include('monitoring.urls')),
     path('ai-content-generator/', include('content_generator.urls')),

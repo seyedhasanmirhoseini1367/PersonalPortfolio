@@ -21,6 +21,7 @@ decorator==5.2.1
 distro==1.9.0
 dj-database-url==3.1.2
 Django==5.2.12
+django-allauth==0.63.6
 django-crispy-forms==2.6
 faiss-cpu==1.13.2
 fastparquet==2026.3.0

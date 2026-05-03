@@ -24,8 +24,14 @@ INSTALLED_APPS = [
     'django.contrib.sitemaps',
 
     # Third-party
+    'django.contrib.sites',
     'crispy_forms',
     'crispy_bootstrap5',
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+    'allauth.socialaccount.providers.google',
+    'allauth.socialaccount.providers.github',
 
     # Project apps
     'projects',
@@ -42,15 +48,23 @@ INSTALLED_APPS = [
 
 AUTH_USER_MODEL = 'accounts.CustomUser'
 
+SITE_ID = 1
+
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+    'allauth.account.auth_backends.AuthenticationBackend',
+]
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',          # serve static files
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'allauth.account.middleware.AccountMiddleware',
 ]
 
 ROOT_URLCONF = 'PersonalPortfolio.urls'
@@ -102,6 +116,36 @@ USE_I18N      = True
 USE_TZ        = True
 
 # ── Static files ──────────────────────────────────────────────────────────────
+# ── django-allauth ────────────────────────────────────────────────────────────
+ACCOUNT_EMAIL_REQUIRED          = True
+ACCOUNT_USERNAME_REQUIRED       = False
+ACCOUNT_AUTHENTICATION_METHOD   = 'email'
+ACCOUNT_EMAIL_VERIFICATION      = 'none'
+SOCIALACCOUNT_AUTO_SIGNUP       = True
+SOCIALACCOUNT_EMAIL_AUTHENTICATION             = True
+SOCIALACCOUNT_EMAIL_AUTHENTICATION_AUTO_CONNECT = True
+LOGIN_REDIRECT_URL  = '/'
+LOGOUT_REDIRECT_URL = '/'
+
+SOCIALACCOUNT_PROVIDERS = {
+    'google': {
+        'APP': {
+            'client_id': config('GOOGLE_CLIENT_ID',     default=''),
+            'secret':    config('GOOGLE_CLIENT_SECRET', default=''),
+        },
+        'SCOPE': ['profile', 'email'],
+        'AUTH_PARAMS': {'access_type': 'online'},
+        'OAUTH_PKCE_ENABLED': True,
+    },
+    'github': {
+        'APP': {
+            'client_id': config('GITHUB_CLIENT_ID',     default=''),
+            'secret':    config('GITHUB_CLIENT_SECRET', default=''),
+        },
+        'SCOPE': ['user:email', 'read:user'],
+    },
+}
+
 STATIC_URL  = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_DIRS = [BASE_DIR / 'static']
