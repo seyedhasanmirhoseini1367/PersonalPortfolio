@@ -39,7 +39,7 @@ googleapis-common-protos==1.73.1
 graphviz==0.21
 grpcio==1.80.0
 grpcio-status==1.71.2
-gunicorn==25.3.0
+gunicorn==22.0.0
 h11==0.16.0
 hf-xet==1.4.2
 html5lib==1.1
