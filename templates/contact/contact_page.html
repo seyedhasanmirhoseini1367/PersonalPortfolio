@@ -33,13 +33,13 @@
         text-align: center;
     }
     .contact-title {
-        font-size: 1.55rem;
+        font-size: 1.3rem;
         font-weight: 800;
         margin-bottom: .35rem;
         letter-spacing: -.01em;
     }
     .contact-subtitle {
-        font-size: .83rem;
+        font-size: .82rem;
         opacity: .88;
         max-width: 520px;
         margin: 0 auto;
@@ -190,7 +190,15 @@
 
     @media (max-width: 768px) {
         .contact-layout { grid-template-columns: 1fr; gap: 1rem; }
-        .contact-title  { font-size: 1.3rem; }
+        .contact-title  { font-size: 1.1rem; }
+        .contact-methods, .contact-form-section { padding: 1rem; }
+    }
+
+    @media (max-width: 480px) {
+        .contact-hero { padding: 1.25rem 20px 1.2rem; }
+        .contact-title { font-size: 1rem; }
+        .availability-section { padding: 1rem; }
+        .form-control { border-radius: 6px; }
     }
 </style>
 {% endblock %}

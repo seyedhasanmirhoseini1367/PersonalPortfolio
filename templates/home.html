@@ -188,14 +188,22 @@
         }
 
         @media (max-width: 700px) {
-            .hero { padding: 2.5rem 20px 2rem; }
-            .hero-inner { grid-template-columns: 1fr; text-align: center; gap: 1.5rem; }
+            .hero { padding: 2rem 20px 1.75rem; }
+            .hero-inner { grid-template-columns: 1fr; text-align: center; gap: 1.25rem; padding-left: 0; }
             .hero-inner { flex-direction: column-reverse; }
             .hero-photo { margin: 0 auto; }
-            .hero-photo img, .hero-photo .hero-avatar { width: 130px; height: 130px; }
-            .hero h1 { font-size: 1.9rem; }
-            .hero-buttons { justify-content: center; }
-            .hero-desc { margin-left: auto; margin-right: auto; }
+            .hero-photo img, .hero-photo .hero-avatar { width: 120px; height: 120px; }
+            .hero h1 { font-size: 1.7rem; }
+            .hero-role { font-size: .9rem; }
+            .hero-desc { margin-left: auto; margin-right: auto; font-size: .82rem; }
+            .hero-buttons { justify-content: center; flex-wrap: wrap; }
+            .hero-buttons .btn, .btn-ai { width: 100%; justify-content: center; box-sizing: border-box; }
+        }
+
+        @media (max-width: 480px) {
+            .hero h1 { font-size: 1.45rem; }
+            .stat-number { font-size: 1.45rem; }
+            .about-card { padding: 1rem 1.1rem; }
         }
 
         /* Stats */
@@ -286,7 +294,7 @@
         }
 
         .section-title {
-            font-size: 1.4rem;
+            font-size: 1.05rem;
             color: var(--text);
             font-weight: 700;
         }

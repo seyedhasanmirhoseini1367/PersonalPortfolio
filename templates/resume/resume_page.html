@@ -202,10 +202,22 @@
         .resume-sidebar { position: static; }
     }
     @media (max-width: 768px) {
-        .resume-hero { padding: 1.5rem 0; }
+        .resume-hero { padding: 1rem; gap: 1rem; }
+        .resume-hero-right { justify-content: flex-start; }
         .resume-main, .resume-sidebar { padding: .9rem; }
         .item-oneliner { flex-direction: column; gap: .05rem; }
         .item-dash { display: none; }
+        .core-skills-table { display: block; }
+        .core-skills-table tr { display: flex; flex-wrap: wrap; gap: .25rem; border-bottom: none; padding-bottom: .3rem; }
+        .core-skills-cat { width: 100%; white-space: normal; font-size: .72rem; padding-bottom: 0; }
+        .core-skills-list { padding-top: 0; }
+    }
+
+    @media (max-width: 480px) {
+        .resume-title { font-size: 1rem; }
+        .resume-hero-right { flex-wrap: wrap; }
+        .project-header { flex-direction: column; gap: .3rem; }
+        .project-links { justify-content: flex-start; }
     }
 </style>
 {% endblock %}

@@ -188,5 +188,13 @@
     .social-btn:hover {
         border-color: #302b63; box-shadow: 0 2px 8px rgba(48,43,99,.12);
     }
+
+    @media (max-width: 480px) {
+        .auth-wrap { padding: 1rem .75rem; align-items: flex-start; padding-top: 1.5rem; }
+        .auth-card { padding: 1.5rem 1.25rem 1.25rem; border-radius: 12px; }
+        .auth-card input[type="text"],
+        .auth-card input[type="password"],
+        .auth-card input[type="email"] { font-size: 16px !important; }
+    }
 </style>
 {% endblock %}
