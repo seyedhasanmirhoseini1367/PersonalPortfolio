@@ -108,11 +108,16 @@ STATICFILES_DIRS = [BASE_DIR / 'static']
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # ── Media files ───────────────────────────────────────────────────────────────
-MEDIA_URL  = '/media/'
-# On Azure App Service (WEBSITES_ENABLE_APP_SERVICE_STORAGE=true),
-# /home is a persistent Azure Files mount — use it so uploads survive restarts.
-_azure_home = Path('/home/media')
-MEDIA_ROOT = _azure_home if _azure_home.parent.exists() else BASE_DIR / 'media'
+MEDIA_URL = '/media/'
+
+# We check if the environment variable 'WEBSITE_SITE_NAME' exists.
+# Azure always sets this variable, while Railway and your PC do not.
+if os.environ.get('WEBSITE_SITE_NAME'):
+    # If we are on Azure, use the persistent home directory
+    MEDIA_ROOT = Path('/home/media')
+else:
+    # If we are on Railway or Local PC, use the project folder
+    MEDIA_ROOT = BASE_DIR / 'media'
 
 # ── Default primary key ────────────────────────────────────────────────────────
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
