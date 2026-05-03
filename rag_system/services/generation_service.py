@@ -65,6 +65,8 @@ class GenerationService:
 
         yielded = False
 
+        print(f"[GEN] groq_key={bool(self.groq_api_key)} gemini_key={bool(self.gemini_api_key)} anthropic_key={bool(self.anthropic_api_key)} model={self.groq_model}", flush=True)
+
         def _track(gen):
             nonlocal yielded
             for token in gen:
@@ -74,16 +76,23 @@ class GenerationService:
         # Try each provider independently so a silent failure in one doesn't
         # block the next (e.g. Groq yields nothing without raising → try Gemini).
         if self.groq_api_key and not yielded:
+            print("[GEN] trying Groq...", flush=True)
             yield from _track(self._stream_groq_only(system_prompt, messages))
+            print(f"[GEN] after Groq yielded={yielded}", flush=True)
         if self.gemini_api_key and not yielded:
+            print("[GEN] trying Gemini...", flush=True)
             yield from _track(self._stream_gemini_only(system_prompt, messages))
+            print(f"[GEN] after Gemini yielded={yielded}", flush=True)
         if self.anthropic_api_key and not yielded:
+            print("[GEN] trying Anthropic...", flush=True)
             yield from _track(self._stream_anthropic_only(system_prompt, messages))
+            print(f"[GEN] after Anthropic yielded={yielded}", flush=True)
         if self.openai_api_key and not yielded:
             yield from _track(self._stream_openai(system_prompt, messages))
 
         # If nothing was yielded (no keys, or all LLMs failed) — emit fallback
         if not yielded:
+            print("[GEN] all providers failed — emitting fallback", flush=True)
             yield self._fallback_response(query, context_chunks)
 
     # ── Prediction interpretation (non-streaming, used by project views) ──────
