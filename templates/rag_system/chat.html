@@ -330,24 +330,115 @@ main { padding: 0 !important; margin: 0 !important; min-height: unset !important
 .message.assistant .message-bubble strong { font-weight:700; }
 .message.assistant .message-bubble a     { color:#302b63; text-decoration:underline; }
 
+/* ── Mobile top bar ──────────────────────────────────────────────────────── */
+.mobile-chat-bar {
+    display: none;
+    align-items: center;
+    gap: .6rem;
+    padding: .55rem .85rem;
+    background: linear-gradient(135deg, #302b63, #a78bfa);
+    color: white;
+    flex-shrink: 0;
+}
+.btn-sidebar-toggle {
+    background: rgba(255,255,255,.18);
+    border: none; color: white;
+    width: 34px; height: 34px; border-radius: 8px;
+    font-size: 1.05rem; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+}
+.mobile-chat-title {
+    font-size: .85rem; font-weight: 600; flex: 1;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.sidebar-close-btn {
+    display: none;
+    background: none; border: none; color: #64748b;
+    font-size: 1.15rem; width: 32px; height: 32px;
+    align-items: center; justify-content: center;
+    cursor: pointer; border-radius: 6px; flex-shrink: 0;
+}
+.sidebar-close-btn:hover { background: #e2e8f0; color: #1e293b; }
+
+.sidebar-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,.45);
+    z-index: 299;
+}
+.sidebar-overlay.visible { display: block; }
+
 /* Responsive */
 @media (max-width: 768px) {
-    .ai-wrapper { flex-direction: column; height: 100vh; border-radius: 0; }
-    .chat-sidebar { width:100%; min-width:0; max-height:260px; border-right:none; border-bottom:1px solid #e2e8f0; }
-    .sidebar-brand-nav { gap: .2rem .4rem; }
-    .sessions-list { max-height:110px; }
-    .chat-main { flex: 1; }
+    .ai-wrapper {
+        flex-direction: column;
+        height: 100dvh;
+        border-radius: 0;
+    }
+
+    /* Slide-in sidebar overlay */
+    .chat-sidebar {
+        position: fixed;
+        top: 0; left: 0;
+        width: 280px; min-width: 280px;
+        height: 100%;
+        z-index: 300;
+        border-right: 1px solid #e2e8f0;
+        transform: translateX(-100%);
+        transition: transform .25s ease;
+        box-shadow: 4px 0 24px rgba(0,0,0,.18);
+    }
+    .chat-sidebar.open { transform: translateX(0); }
+
+    .sidebar-close-btn { display: flex; }
+
+    .sidebar-top {
+        display: flex;
+        align-items: center;
+        gap: .5rem;
+    }
+    .sidebar-top .btn-new-chat { flex: 1; }
+
+    .sessions-list { flex: 1; max-height: unset; }
+
+    .mobile-chat-bar { display: flex; }
+
+    .chat-main {
+        flex: 1; display: flex; flex-direction: column; min-height: 0;
+    }
+
+    .chat-messages { padding: .75rem .9rem; }
+
+    .chat-input-container { padding: .6rem .75rem; }
+}
+
+@media (max-width: 480px) {
+    .message-bubble { padding: .6rem .85rem; font-size: .875rem; }
+    .message-avatar { width: 28px; height: 28px; font-size: .8rem; }
+    .message-content { max-width: calc(100% - 40px); }
+    .suggestion-chip { font-size: .75rem; padding: .3rem .65rem; }
+    .suggestions { gap: .35rem; }
+    /* Prevent iOS auto-zoom on textarea focus */
+    .chat-input { font-size: 16px !important; }
+    .send-button { padding: 0 .85rem; min-width: 52px; }
+    .empty-state { padding: 1.5rem .75rem; }
+    .empty-state-icon { font-size: 2.5rem; }
+    .empty-state h3 { font-size: 1rem; }
+    .empty-state p { font-size: .8rem; }
 }
 </style>
 {% endblock %}
 
 {% block content %}
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
 <div class="ai-wrapper">
 
     <!-- ═══ SIDEBAR ═══════════════════════════════════════════════════════════ -->
-    <aside class="chat-sidebar">
+    <aside class="chat-sidebar" id="chatSidebar">
         <div class="sidebar-top">
             <button class="btn-new-chat" id="btnNewChat">＋ New Chat</button>
+            <button class="sidebar-close-btn" id="sidebarClose" aria-label="Close sidebar">✕</button>
         </div>
         <div class="sidebar-label">Conversations</div>
         <div class="sessions-list" id="sessionsList">
@@ -357,6 +448,13 @@ main { padding: 0 !important; margin: 0 !important; min-height: unset !important
 
     <!-- ═══ MAIN CHAT ══════════════════════════════════════════════════════════ -->
     <div class="chat-main">
+
+        <!-- Mobile top bar (hidden on desktop) -->
+        <div class="mobile-chat-bar">
+            <button class="btn-sidebar-toggle" id="sidebarToggle" aria-label="Open conversations">☰</button>
+            <span class="mobile-chat-title">AI Assistant</span>
+            <button class="btn-new-chat" id="btnNewChatMobile" style="width:auto;padding:.35rem .8rem;font-size:.8rem;">＋</button>
+        </div>
 
         <div class="chat-messages" id="chatMessages">
             <div class="empty-state" id="emptyState">
@@ -823,6 +921,58 @@ class PortfolioChat {
     }
 }
 
-document.addEventListener('DOMContentLoaded', () => new PortfolioChat());
+document.addEventListener('DOMContentLoaded', () => {
+    new PortfolioChat();
+
+    // Mobile sidebar toggle
+    const sidebar  = document.getElementById('chatSidebar');
+    const overlay  = document.getElementById('sidebarOverlay');
+    const toggle   = document.getElementById('sidebarToggle');
+    const closeBtn = document.getElementById('sidebarClose');
+    const newChatMobile = document.getElementById('btnNewChatMobile');
+
+    function openSidebar() {
+        sidebar.classList.add('open');
+        overlay.classList.add('visible');
+        document.body.style.overflow = 'hidden';
+    }
+    function closeSidebar() {
+        sidebar.classList.remove('open');
+        overlay.classList.remove('visible');
+        document.body.style.overflow = '';
+    }
+
+    if (toggle)   toggle.addEventListener('click', openSidebar);
+    if (closeBtn) closeBtn.addEventListener('click', closeSidebar);
+    if (overlay)  overlay.addEventListener('click', closeSidebar);
+
+    // Close sidebar when a session is selected on mobile
+    if (sidebar) {
+        sidebar.querySelectorAll('.sessions-list').forEach(list => {
+            list.addEventListener('click', e => {
+                if (e.target.closest('.session-item') && !e.target.closest('.btn-session-menu')) {
+                    if (window.innerWidth <= 768) closeSidebar();
+                }
+            });
+        });
+        // Also observe dynamically added session items via MutationObserver
+        const sessionsList = document.getElementById('sessionsList');
+        if (sessionsList) {
+            sessionsList.addEventListener('click', e => {
+                if (e.target.closest('.session-item') && !e.target.closest('.btn-session-menu')) {
+                    if (window.innerWidth <= 768) closeSidebar();
+                }
+            });
+        }
+    }
+
+    // Mobile "+" button triggers new chat and closes sidebar
+    if (newChatMobile) {
+        newChatMobile.addEventListener('click', () => {
+            document.getElementById('btnNewChat')?.click();
+            closeSidebar();
+        });
+    }
+});
 </script>
 {% endblock %}
