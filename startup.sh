@@ -1,25 +1,27 @@
 #!/bin/bash
-# Azure App Service startup script
-
-set -e  # Stop script if any command fails
+# Startup script — works on Railway and Azure App Service
 
 echo "Starting deployment..."
 
-# Run database migrations
-echo "Creating persistent media directories..."
-mkdir -p /home/media/profile_pics /home/media/stories /home/media/projects/models
+# On Azure, WEBSITE_SITE_NAME is set — create persistent media dirs there.
+# On Railway/local, media lives inside the project directory (BASE_DIR/media).
+if [ -n "$WEBSITE_SITE_NAME" ]; then
+    echo "Azure detected — creating /home/media directories..."
+    mkdir -p /home/media/profile_pics /home/media/stories /home/media/projects/models
+else
+    echo "Railway/local detected — creating local media directories..."
+    mkdir -p media/profile_pics media/stories media/projects/models
+fi
 
 echo "Running migrations..."
 python manage.py migrate --noinput
 
-# Create superuser if not exists
 echo "Ensuring superuser exists..."
 python manage.py ensure_superuser
 
-echo "Starting gunicorn server..."
-# Start the server
+echo "Starting gunicorn..."
 gunicorn PersonalPortfolio.wsgi:application \
-    --bind 0.0.0.0:8000 \
+    --bind 0.0.0.0:${PORT:-8000} \
     --workers 2 \
     --timeout 120 \
     --access-logfile - \

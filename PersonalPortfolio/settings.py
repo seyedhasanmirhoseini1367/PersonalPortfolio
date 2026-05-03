@@ -186,13 +186,17 @@ PERSONALITY_DATA_DIR = config(
 # ── Production security (only active when DEBUG=False) ────────────────────────
 if not DEBUG:
     SECURE_PROXY_SSL_HEADER        = ('HTTP_X_FORWARDED_PROTO', 'https')
-    SECURE_SSL_REDIRECT            = False  # ← changed
+    SECURE_SSL_REDIRECT            = False
     SECURE_HSTS_SECONDS            = 31536000
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SESSION_COOKIE_SECURE          = True
     CSRF_COOKIE_SECURE             = True
     SECURE_BROWSER_XSS_FILTER      = True
     SECURE_CONTENT_TYPE_NOSNIFF    = True
+    # Required for Cloudflare + Railway: list trusted origins for CSRF
+    _csrf_origins = config('CSRF_TRUSTED_ORIGINS', default='', cast=Csv())
+    if _csrf_origins:
+        CSRF_TRUSTED_ORIGINS = list(_csrf_origins)
 
 # ── Logging ───────────────────────────────────────────────────────────────────
 LOGGING = {
