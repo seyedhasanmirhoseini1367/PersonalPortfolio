@@ -11,4 +11,5 @@ urlpatterns = [
     path('api/history/',                        views.chat_history,       name='chat_history'),
     path('api/sessions/',                       views.sessions_api,       name='sessions_api'),
     path('api/sessions/<uuid:session_id>/',     views.session_detail_api, name='session_detail_api'),
+    path('api/llm-debug/',                      views.llm_debug,          name='llm_debug'),
 ]

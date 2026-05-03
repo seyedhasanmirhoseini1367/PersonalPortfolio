@@ -7,10 +7,30 @@ from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
+from django.conf import settings as django_settings
+
 from .models import ChatSession, QueryLog
 from .services.rag_service import RAGService
 
 logger = logging.getLogger(__name__)
+
+
+# ── Quick env debug (open, temp) ──────────────────────────────────────────────
+
+def llm_debug(request):
+    groq_key    = getattr(django_settings, 'GROQ_API_KEY', '')
+    gemini_key  = getattr(django_settings, 'GEMINI_API_KEY', '')
+    anthropic_key = getattr(django_settings, 'ANTHROPIC_API_KEY', '')
+    groq_model  = django_settings.RAG_CONFIG.get('GROQ_MODEL', '?')
+    return JsonResponse({
+        'groq_key_set':     bool(groq_key),
+        'groq_key_prefix':  groq_key[:8] if groq_key else '',
+        'gemini_key_set':   bool(gemini_key),
+        'anthropic_key_set': bool(anthropic_key),
+        'groq_model':       groq_model,
+        'debug':            django_settings.DEBUG,
+        'platform':         'railway' if not getattr(django_settings, 'WEBSITE_SITE_NAME', '') else 'azure',
+    })
 
 
 # ── Page view ──────────────────────────────────────────────────────────────────
