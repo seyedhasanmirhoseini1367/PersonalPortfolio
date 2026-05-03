@@ -10,31 +10,37 @@ class Command(BaseCommand):
     help = "Test connectivity to each configured LLM provider."
 
     def handle(self, **options):
-        groq_key    = getattr(settings, 'GROQ_API_KEY', '')
-        gemini_key  = getattr(settings, 'GEMINI_API_KEY', '')
-        openai_key  = getattr(settings, 'OPENAI_API_KEY', '')
+        groq_key      = getattr(settings, 'GROQ_API_KEY', '')
+        gemini_key    = getattr(settings, 'GEMINI_API_KEY', '')
+        openai_key    = getattr(settings, 'OPENAI_API_KEY', '')
         anthropic_key = getattr(settings, 'ANTHROPIC_API_KEY', '')
+        groq_model    = settings.RAG_CONFIG.get('GROQ_MODEL', '?')
 
-        self.stdout.write(f"GROQ_API_KEY    : {'SET (' + groq_key[:8] + '...)' if groq_key else 'NOT SET'}")
-        self.stdout.write(f"GEMINI_API_KEY  : {'SET (' + gemini_key[:8] + '...)' if gemini_key else 'NOT SET'}")
-        self.stdout.write(f"OPENAI_API_KEY  : {'SET' if openai_key else 'NOT SET'}")
+        self.stdout.write(f"GROQ_API_KEY     : {'SET (' + groq_key[:8] + '...)' if groq_key else 'NOT SET'}")
+        self.stdout.write(f"GEMINI_API_KEY   : {'SET (' + gemini_key[:8] + '...)' if gemini_key else 'NOT SET'}")
+        self.stdout.write(f"OPENAI_API_KEY   : {'SET' if openai_key else 'NOT SET'}")
         self.stdout.write(f"ANTHROPIC_API_KEY: {'SET' if anthropic_key else 'NOT SET'}")
+        self.stdout.write(f"GROQ_MODEL (settings): {groq_model}")
         self.stdout.write("")
 
         if groq_key:
-            self._test_groq(groq_key)
+            self._test_groq(groq_key, groq_model)
         if gemini_key:
             self._test_gemini(gemini_key)
         if anthropic_key:
             self._test_anthropic(anthropic_key)
 
-    def _test_groq(self, key):
-        self.stdout.write("Testing Groq (llama-3.1-8b-instant, streaming)...")
+        self.stdout.write("")
+        self.stdout.write("--- Full GenerationService path test ---")
+        self._test_generation_service()
+
+    def _test_groq(self, key, model):
+        self.stdout.write(f"Testing Groq ({model}, streaming)...")
         try:
             from groq import Groq
             client = Groq(api_key=key)
             stream = client.chat.completions.create(
-                model="llama-3.1-8b-instant",
+                model=model,
                 messages=[{"role": "user", "content": "Say OK in one word"}],
                 max_tokens=5,
                 stream=True,
@@ -86,3 +92,21 @@ class Command(BaseCommand):
             self.stdout.write(self.style.ERROR("  Anthropic FAIL: anthropic package not installed"))
         except Exception as e:
             self.stdout.write(self.style.ERROR(f"  Anthropic FAIL: {e}"))
+
+    def _test_generation_service(self):
+        """Test the EXACT same path the live chat uses."""
+        self.stdout.write("Testing GenerationService.generate_streaming (actual chat path)...")
+        try:
+            from rag_system.services.generation_service import GenerationService
+            svc = GenerationService()
+            self.stdout.write(f"  groq_key set: {bool(svc.groq_api_key)}, model: {svc.groq_model}")
+            tokens = []
+            for token in svc.generate_streaming("Say hello in one sentence", []):
+                tokens.append(token)
+            result = ''.join(tokens)
+            if result and 'unavailable' not in result.lower():
+                self.stdout.write(self.style.SUCCESS(f"  GenerationService OK: {result[:120]}"))
+            else:
+                self.stdout.write(self.style.ERROR(f"  GenerationService FAIL — got fallback: {result[:200]}"))
+        except Exception as e:
+            self.stdout.write(self.style.ERROR(f"  GenerationService FAIL: {e}"))
