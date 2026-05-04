@@ -218,12 +218,15 @@ class GenerationService:
         if len(input_data) > 30:
             input_summary += f'\n  ... and {len(input_data) - 30} more features'
 
+        confidence = input_data.get('confidence', '')
+        confidence_str = f' (confidence: {confidence:.1%})' if isinstance(confidence, float) else ''
+
         user_content = (
             f"Project: {project_title}\n"
             f"Description: {project_description[:300]}\n"
             f"Model type: {model_type}\n"
             f"Target variable: {target_feature}\n"
-            f"Prediction outcome: {label_str} (raw: {prediction_result})\n\n"
+            f"Prediction: {label_str}{confidence_str}\n\n"
             f"Key input features:\n{input_summary}\n\n"
             f"Relevant context:\n{context_text or 'No additional context available.'}\n\n"
             "Please interpret this result:"
