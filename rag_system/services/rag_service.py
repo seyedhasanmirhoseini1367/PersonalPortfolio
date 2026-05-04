@@ -324,11 +324,11 @@ class RAGService:
                 'interpretation': interpretation,
                 'sources':        [c['metadata'] for c in chunks],
             }
-        except Exception as exc:
+        except BaseException as exc:
             traceback.print_exc()
             return {
                 'success':        False,
-                'interpretation': f'Interpretation unavailable: {exc}',
+                'interpretation': f'Interpretation unavailable: {type(exc).__name__}: {exc}',
                 'sources':        [],
             }
 
