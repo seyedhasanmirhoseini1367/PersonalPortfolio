@@ -47,14 +47,75 @@
   .btn-run:hover    { background: #4f46e5; }
   .btn-run:disabled { background: #a5b4fc; cursor: not-allowed; }
 
-  /* ── Spinner ───────────────────────────────────────────────────── */
-  .spinner-wrap { display: none; text-align: center; padding: 1.5rem 0; }
-  .spinner {
-    display: inline-block; width: 36px; height: 36px;
+  /* ── Progress panel ────────────────────────────────────────────── */
+  .progress-panel {
+    display: none;
+    background: white;
+    border-radius: 14px;
+    border: 1.5px solid #e0e7ff;
+    box-shadow: 0 4px 24px rgba(99,102,241,.08);
+    padding: 1.75rem 2rem;
+    margin-bottom: 1.5rem;
+  }
+  .progress-header {
+    display: flex; align-items: center; gap: .75rem; margin-bottom: 1.25rem;
+  }
+  .progress-spinner {
+    width: 28px; height: 28px; flex-shrink: 0;
     border: 3px solid #e0e7ff; border-top: 3px solid #6366f1;
     border-radius: 50%; animation: spin .75s linear infinite;
   }
+  .progress-title {
+    font-size: 1rem; font-weight: 700; color: #1e293b;
+  }
+  .progress-subtitle {
+    font-size: .8rem; color: #64748b; margin-top: .1rem;
+  }
+  /* Progress bar */
+  .prog-bar-track {
+    background: #f1f5f9; border-radius: 99px;
+    height: 6px; overflow: hidden; margin-bottom: 1.25rem;
+  }
+  .prog-bar-fill {
+    height: 100%; border-radius: 99px;
+    background: linear-gradient(90deg, #6366f1, #8b5cf6);
+    width: 0%; transition: width .8s ease;
+  }
+  /* Stages */
+  .stages { display: flex; flex-direction: column; gap: .55rem; }
+  .stage {
+    display: flex; align-items: center; gap: .65rem;
+    font-size: .84rem; color: #94a3b8; transition: color .3s;
+  }
+  .stage.active  { color: #4f46e5; font-weight: 600; }
+  .stage.done    { color: #10b981; }
+  .stage-icon {
+    width: 20px; height: 20px; border-radius: 50%;
+    border: 2px solid currentColor; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: .7rem; transition: background .3s, border-color .3s;
+  }
+  .stage.active .stage-icon {
+    border-color: #6366f1; background: #ede9fe;
+    animation: pulse-ring .9s ease infinite;
+  }
+  .stage.done .stage-icon {
+    border-color: #10b981; background: #d1fae5; color: #10b981;
+  }
+  @keyframes pulse-ring {
+    0%,100% { box-shadow: 0 0 0 0 rgba(99,102,241,.35); }
+    50%      { box-shadow: 0 0 0 5px rgba(99,102,241,0); }
+  }
+  /* Timer + note row */
+  .progress-footer {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: 1.1rem; font-size: .78rem; color: #94a3b8;
+  }
+  .progress-footer strong { color: #6366f1; }
   @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Spinner (kept for fallback) ───────────────────────────────── */
+  .spinner-wrap { display: none; }
 
   /* ── Model cards grid ──────────────────────────────────────────── */
   .models-grid {
@@ -226,11 +287,47 @@
     <div class="error-box" id="error-box"></div>
   </div>
 
-  {# ── Spinner ── #}
-  <div class="spinner-wrap" id="spinner">
-    <div class="spinner"></div>
-    <p class="mt-2 text-muted" style="font-size:.84rem;">Running all models…</p>
+  {# ── Progress panel ── #}
+  <div class="progress-panel" id="progress-panel">
+    <div class="progress-header">
+      <div class="progress-spinner"></div>
+      <div>
+        <div class="progress-title" id="prog-title">Initialising…</div>
+        <div class="progress-subtitle" id="prog-subtitle">Preparing inference pipeline</div>
+      </div>
+    </div>
+
+    <div class="prog-bar-track">
+      <div class="prog-bar-fill" id="prog-bar"></div>
+    </div>
+
+    <div class="stages">
+      <div class="stage" id="stage-0">
+        <div class="stage-icon">1</div>
+        <span>Loading models into memory</span>
+      </div>
+      <div class="stage" id="stage-1">
+        <div class="stage-icon">2</div>
+        <span>Preprocessing EEG signal (bandpass filter · normalisation)</span>
+      </div>
+      <div class="stage" id="stage-2">
+        <div class="stage-icon">3</div>
+        <span>Running inference — CNN, GRU, and Fusion models in parallel</span>
+      </div>
+      <div class="stage" id="stage-3">
+        <div class="stage-icon">4</div>
+        <span>Computing ensemble vote &amp; generating AI interpretation</span>
+      </div>
+    </div>
+
+    <div class="progress-footer">
+      <span>Elapsed: <strong id="prog-elapsed">0s</strong></span>
+      <span>Estimated time: <strong>45 – 60 s</strong> &nbsp;&#9201;</span>
+    </div>
   </div>
+
+  {# ── Hidden spinner (kept for JS compat) ── #}
+  <div class="spinner-wrap" id="spinner" style="display:none;"></div>
 
   {# ── Ensemble box ── #}
   <div class="ensemble-box" id="ensemble-box">
@@ -326,12 +423,94 @@ function attachFile(f) {
   runBtn.disabled = false;
 }
 
+/* ── Progress tracker ───────────────────────────────────────────── */
+const STAGES = [
+  { title: 'Loading models',       subtitle: 'CNN, GRU-Attention and Fusion weights loading into memory…',       pct: 15, dur: 8  },
+  { title: 'Preprocessing EEG',    subtitle: 'Bandpass filtering · standardisation · window segmentation…',      pct: 35, dur: 10 },
+  { title: 'Running inference',    subtitle: 'All three models are analysing the EEG signal — please wait…',     pct: 70, dur: 30 },
+  { title: 'Computing ensemble',   subtitle: 'Majority vote · generating AI interpretation…',                    pct: 90, dur: 8  },
+];
+
+let _progTimer   = null;
+let _elapsedTimer = null;
+let _stageIndex  = 0;
+let _elapsedSec  = 0;
+
+function startProgress() {
+  const panel = document.getElementById('progress-panel');
+  panel.style.display = 'block';
+  _stageIndex = 0;
+  _elapsedSec = 0;
+  _advanceStage(0);
+
+  _elapsedTimer = setInterval(() => {
+    _elapsedSec++;
+    const el = document.getElementById('prog-elapsed');
+    if (el) el.textContent = _elapsedSec + 's';
+  }, 1000);
+}
+
+function _advanceStage(idx) {
+  if (idx >= STAGES.length) return;
+  const s = STAGES[idx];
+
+  // Update header
+  document.getElementById('prog-title').textContent    = s.title;
+  document.getElementById('prog-subtitle').textContent = s.subtitle;
+
+  // Update bar
+  document.getElementById('prog-bar').style.width = s.pct + '%';
+
+  // Update stage rows
+  for (let i = 0; i < STAGES.length; i++) {
+    const el = document.getElementById(`stage-${i}`);
+    if (!el) continue;
+    el.classList.remove('active', 'done');
+    const icon = el.querySelector('.stage-icon');
+    if (i < idx)       { el.classList.add('done');   icon.textContent = '✓'; }
+    else if (i === idx) { el.classList.add('active'); icon.textContent = i + 1; }
+    else               {                              icon.textContent = i + 1; }
+  }
+
+  _stageIndex = idx;
+  if (idx < STAGES.length - 1) {
+    _progTimer = setTimeout(() => _advanceStage(idx + 1), s.dur * 1000);
+  }
+}
+
+function stopProgress(success) {
+  clearTimeout(_progTimer);
+  clearInterval(_elapsedTimer);
+
+  if (success) {
+    // Flash all stages done briefly, then hide
+    document.getElementById('prog-bar').style.width = '100%';
+    document.getElementById('prog-title').textContent    = 'Complete';
+    document.getElementById('prog-subtitle').textContent = 'Results ready — scroll down';
+    for (let i = 0; i < STAGES.length; i++) {
+      const el = document.getElementById(`stage-${i}`);
+      if (el) {
+        el.classList.remove('active');
+        el.classList.add('done');
+        const icon = el.querySelector('.stage-icon');
+        if (icon) icon.textContent = '✓';
+      }
+    }
+    setTimeout(() => {
+      document.getElementById('progress-panel').style.display = 'none';
+    }, 1800);
+  } else {
+    document.getElementById('progress-panel').style.display = 'none';
+  }
+}
+
 /* ── Reset UI ───────────────────────────────────────────────────── */
 function resetUI() {
   document.getElementById('error-box').style.display     = 'none';
   document.getElementById('ensemble-box').style.display  = 'none';
   document.getElementById('interp-panel').style.display  = 'none';
   document.getElementById('summary-card').style.display  = 'none';
+  document.getElementById('progress-panel').style.display = 'none';
 
   PROJECT_IDS.forEach(id => {
     const card = document.getElementById(`mc-${id}`);
@@ -468,7 +647,7 @@ async function runComparison() {
   }
 
   resetUI();
-  document.getElementById('spinner').style.display = 'block';
+  startProgress();
   runBtn.disabled = true;
   PROJECT_IDS.forEach(id => setCardRunning(id));
 
@@ -482,12 +661,12 @@ async function runComparison() {
       headers: { 'X-CSRFToken': CSRF },
     });
 
-    document.getElementById('spinner').style.display = 'none';
     runBtn.disabled = false;
 
     let data;
     try { data = await res.json(); }
     catch {
+      stopProgress(false);
       const eb = document.getElementById('error-box');
       eb.textContent = `Server error (HTTP ${res.status}) — could not parse response.`;
       eb.style.display = 'block';
@@ -499,11 +678,14 @@ async function runComparison() {
     }
 
     if (!data.success) {
+      stopProgress(false);
       const eb = document.getElementById('error-box');
       eb.textContent = data.error || 'Comparison failed.';
       eb.style.display = 'block';
       return;
     }
+
+    stopProgress(true);
 
     // Render each model card
     (data.results || []).forEach(r => setCardResult(r));
@@ -534,7 +716,7 @@ async function runComparison() {
     }
 
   } catch (err) {
-    document.getElementById('spinner').style.display = 'none';
+    stopProgress(false);
     runBtn.disabled = false;
     const eb = document.getElementById('error-box');
     eb.textContent = 'Could not reach the server. Check your connection and try again.';
