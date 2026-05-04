@@ -1,0 +1,510 @@
+{% extends 'base.html' %}
+{% block title %}Seizure Detection — Model Comparison{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* ── Layout ────────────────────────────────────────────────────── */
+  .cmp-wrap { max-width: 1100px; margin: 0 auto; }
+
+  .card-panel {
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: 0 4px 24px rgba(0,0,0,.07);
+    padding: 1.75rem 2rem;
+    margin-bottom: 1.5rem;
+  }
+
+  /* ── Drop zone ─────────────────────────────────────────────────── */
+  .drop-zone {
+    border: 2px dashed #cbd5e1;
+    border-radius: 10px;
+    padding: 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color .2s, background .2s;
+  }
+  .drop-zone.dragover { border-color: #6366f1; background: #f5f3ff; }
+  .drop-zone.has-file { border-color: #10b981; background: #f0fdf4; }
+  .drop-zone.error    { border-color: #f87171; background: #fef2f2; }
+  .dz-icon { font-size: 2rem; color: #94a3b8; margin-bottom: .5rem; }
+  .drop-zone.has-file .dz-icon { color: #10b981; }
+  .dz-filename { font-weight: 600; color: #1e293b; font-size: .9rem; margin-top: .4rem; }
+
+  /* ── Buttons ───────────────────────────────────────────────────── */
+  .btn-run {
+    display: inline-block;
+    padding: .8rem 2.5rem;
+    margin-top: 1rem;
+    background: #6366f1;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .15s;
+  }
+  .btn-run:hover    { background: #4f46e5; }
+  .btn-run:disabled { background: #a5b4fc; cursor: not-allowed; }
+
+  /* ── Spinner ───────────────────────────────────────────────────── */
+  .spinner-wrap { display: none; text-align: center; padding: 1.5rem 0; }
+  .spinner {
+    display: inline-block; width: 36px; height: 36px;
+    border: 3px solid #e0e7ff; border-top: 3px solid #6366f1;
+    border-radius: 50%; animation: spin .75s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Model cards grid ──────────────────────────────────────────── */
+  .models-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.25rem;
+    margin-top: 1.5rem;
+  }
+
+  .model-card {
+    border-radius: 12px;
+    border: 2px solid #e2e8f0;
+    padding: 1.5rem;
+    background: #fafafa;
+    transition: border-color .2s, background .2s;
+    position: relative;
+  }
+  .model-card.running  { border-color: #a5b4fc; background: #f5f3ff; }
+  .model-card.done-lpd { border-color: #f59e0b; background: #fffbeb; }
+  .model-card.done-seizure { border-color: #f87171; background: #fff5f5; }
+  .model-card.done-other   { border-color: #0ea5e9; background: #f0f9ff; }
+  .model-card.failed   { border-color: #fca5a5; background: #fef2f2; }
+
+  .mc-badge {
+    font-size: .7rem;
+    font-weight: 700;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    padding: .2rem .55rem;
+    border-radius: 4px;
+    background: #e0e7ff;
+    color: #4338ca;
+    display: inline-block;
+    margin-bottom: .6rem;
+  }
+  .mc-title   { font-size: .95rem; font-weight: 700; color: #1e293b; margin-bottom: .4rem; }
+  .mc-label   {
+    font-size: 1.45rem; font-weight: 700; color: #0c4a6e;
+    margin: .5rem 0 .3rem; line-height: 1.2;
+  }
+  .mc-conf    { font-size: .85rem; color: #64748b; }
+  .mc-ms      { font-size: .75rem; color: #94a3b8; margin-top: .4rem; }
+  .mc-error   { font-size: .82rem; color: #b91c1c; margin-top: .4rem; }
+  .mc-spinner {
+    display: inline-block; width: 20px; height: 20px;
+    border: 2px solid #ddd6fe; border-top: 2px solid #6366f1;
+    border-radius: 50%; animation: spin .75s linear infinite;
+    vertical-align: middle; margin-right: .4rem;
+  }
+
+  /* ── Ensemble verdict ──────────────────────────────────────────── */
+  .ensemble-box {
+    display: none;
+    border-radius: 14px;
+    padding: 2rem;
+    text-align: center;
+    border: 2px solid #0ea5e9;
+    background: #f0f9ff;
+    margin-bottom: 1.5rem;
+  }
+  .ensemble-box.seizure { border-color: #f87171; background: #fff5f5; }
+  .ensemble-box.lpd     { border-color: #f59e0b; background: #fffbeb; }
+  .ens-eyebrow  { font-size: .78rem; text-transform: uppercase; letter-spacing: .1em;
+                  font-weight: 700; color: #0369a1; margin-bottom: .4rem; }
+  .ens-label    { font-size: 2.4rem; font-weight: 800; color: #0c4a6e; line-height: 1.1; }
+  .ens-votes    { font-size: .92rem; color: #0369a1; margin-top: .5rem; }
+
+  /* ── AI Interpretation ─────────────────────────────────────────── */
+  .interp-panel {
+    display: none;
+    border: 1.5px solid #818cf8;
+    border-radius: 12px;
+    padding: 1.5rem;
+    background: #fafafe;
+    margin-top: 1.25rem;
+  }
+  .interp-header { display: flex; align-items: center; gap: .5rem; margin-bottom: .75rem; }
+  .interp-badge  {
+    font-size: .7rem; font-weight: 700; letter-spacing: .08em;
+    color: #4338ca; background: #e0e7ff; border-radius: 4px;
+    padding: .15rem .5rem; text-transform: uppercase;
+  }
+  .interp-title  { font-size: .9rem; font-weight: 600; color: #4338ca; }
+  .interp-text   { font-size: .91rem; line-height: 1.8; color: #374151; }
+  .interp-dots::after { content: ''; animation: dots 1.2s infinite; }
+  @keyframes dots { 0%{content:''} 33%{content:'.'} 66%{content:'..'} 100%{content:'...'} }
+
+  /* ── Error/info boxes ──────────────────────────────────────────── */
+  .error-box {
+    display: none;
+    background: #fef2f2; border: 1.5px solid #fca5a5;
+    border-radius: 8px; padding: 1rem 1.25rem;
+    margin-top: 1rem; color: #991b1b; font-size: .9rem;
+  }
+
+  /* ── File summary ──────────────────────────────────────────────── */
+  .summary-table { width: 100%; font-size: .78rem; border-collapse: collapse; }
+  .summary-table td { padding: .25rem .4rem; border-bottom: 1px solid #e0f2fe; }
+  .summary-table td:first-child { font-weight: 500; color: #0369a1; width: 45%; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="cmp-wrap">
+
+  <div class="mb-4">
+    <a href="{% url 'projects_list' %}" style="font-size:.87rem; color:#64748b;">&larr; Back to models</a>
+    <h1 class="mt-2 mb-1">Seizure Detection — Model Comparison</h1>
+    <p class="text-muted mb-0" style="font-size:.92rem;">
+      Upload one EEG file and see predictions from all three architectures side by side.
+    </p>
+  </div>
+
+  {% if not seizure_projects %}
+  <div class="alert alert-warning">
+    No seizure detection models are configured yet. Add projects with
+    <code>file_input_config.handler = "seizure_eeg"</code> in Django admin.
+  </div>
+  {% else %}
+
+  {# ── Upload card ── #}
+  <div class="card-panel">
+    <h5 class="mb-1">Upload EEG File</h5>
+    <p class="text-muted mb-3" style="font-size:.86rem;">
+      Parquet or CSV with 19 EEG channels (+ optional EKG), sampled at 200 Hz.
+      Minimum 10 seconds recommended.
+    </p>
+
+    <div class="drop-zone" id="drop-zone">
+      <div class="dz-icon" id="dz-icon">&#8679;</div>
+      <div id="dz-label">Drag &amp; drop or <strong>click to browse</strong></div>
+      <div class="dz-filename" id="dz-filename"></div>
+      <div style="font-size:.76rem; color:#94a3b8; margin-top:.3rem;">Accepted: PARQUET, CSV</div>
+    </div>
+    <input type="file" id="file-input" accept=".parquet,.csv" style="display:none">
+
+    <div style="text-align:center;">
+      <button class="btn-run" id="run-btn" onclick="runComparison()" disabled>
+        &#9654; Run All Models
+      </button>
+    </div>
+
+    <div class="error-box" id="error-box"></div>
+  </div>
+
+  {# ── Spinner ── #}
+  <div class="spinner-wrap" id="spinner">
+    <div class="spinner"></div>
+    <p class="mt-2 text-muted" style="font-size:.84rem;">Running all models…</p>
+  </div>
+
+  {# ── Ensemble box ── #}
+  <div class="ensemble-box" id="ensemble-box">
+    <div class="ens-eyebrow">Ensemble Vote (majority)</div>
+    <div class="ens-label" id="ens-label"></div>
+    <div class="ens-votes" id="ens-votes"></div>
+  </div>
+
+  {# ── Model cards ── #}
+  <div class="models-grid" id="models-grid">
+    {% for p in seizure_projects %}
+    <div class="model-card" id="mc-{{ p.id }}">
+      <span class="mc-badge">
+        {{ p.file_input_config.model_variant|default:"model" }}
+      </span>
+      <div class="mc-title">{{ p.title }}</div>
+      <div class="mc-label" id="mc-label-{{ p.id }}" style="color:#94a3b8;">—</div>
+      <div class="mc-conf"  id="mc-conf-{{ p.id }}"></div>
+      <div class="mc-ms"    id="mc-ms-{{ p.id }}"></div>
+      <div class="mc-error" id="mc-err-{{ p.id }}"></div>
+    </div>
+    {% endfor %}
+  </div>
+
+  {# ── AI Interpretation ── #}
+  <div class="interp-panel card-panel" id="interp-panel" style="display:none;">
+    <div class="interp-header">
+      <span class="interp-badge">AI</span>
+      <span class="interp-title">Ensemble Interpretation</span>
+    </div>
+    <div class="interp-text" id="interp-text">
+      <span style="color:#818cf8; font-style:italic;">
+        Generating explanation<span class="interp-dots"></span>
+      </span>
+    </div>
+  </div>
+
+  {# ── File summary (shared across all models) ── #}
+  <div class="card-panel" id="summary-card" style="display:none;">
+    <strong style="font-size:.88rem; color:#374151;">File Summary</strong>
+    <table class="summary-table mt-2" id="summary-table"></table>
+  </div>
+
+  {% endif %}
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+/* ── Constants ──────────────────────────────────────────────────── */
+const COMPARE_URL  = "{% url 'seizure_comparison_predict' %}";
+const ENSEMBLE_INTERP_URL = "/seizure-comparison/interpret-ensemble/";
+const CSRF         = "{{ csrf_token }}";
+
+/* ── Registered project IDs from server ────────────────────────── */
+const PROJECT_IDS = [{% for p in seizure_projects %}{{ p.id }}{% if not forloop.last %},{% endif %}{% endfor %}];
+
+/* ── Drop zone ──────────────────────────────────────────────────── */
+const dropZone  = document.getElementById('drop-zone');
+const fileInput = document.getElementById('file-input');
+const runBtn    = document.getElementById('run-btn');
+
+dropZone.addEventListener('click',     () => fileInput.click());
+dropZone.addEventListener('dragover',  e  => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('dragover');
+  if (e.dataTransfer.files[0]) attachFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', () => {
+  if (fileInput.files[0]) attachFile(fileInput.files[0]);
+});
+
+function attachFile(f) {
+  fileInput._file = f;
+  const kb = (f.size / 1024).toFixed(1);
+  document.getElementById('dz-filename').textContent = `${f.name}  (${kb} KB)`;
+  document.getElementById('dz-label').innerHTML = 'File ready — click <strong>Run All Models</strong>';
+  dropZone.classList.remove('error');
+  dropZone.classList.add('has-file');
+  runBtn.disabled = false;
+}
+
+/* ── Reset UI ───────────────────────────────────────────────────── */
+function resetUI() {
+  document.getElementById('error-box').style.display     = 'none';
+  document.getElementById('ensemble-box').style.display  = 'none';
+  document.getElementById('interp-panel').style.display  = 'none';
+  document.getElementById('summary-card').style.display  = 'none';
+
+  PROJECT_IDS.forEach(id => {
+    const card = document.getElementById(`mc-${id}`);
+    if (!card) return;
+    card.className = 'model-card';
+    document.getElementById(`mc-label-${id}`).textContent  = '—';
+    document.getElementById(`mc-label-${id}`).style.color  = '#94a3b8';
+    document.getElementById(`mc-conf-${id}`).textContent   = '';
+    document.getElementById(`mc-ms-${id}`).textContent     = '';
+    document.getElementById(`mc-err-${id}`).textContent    = '';
+  });
+}
+
+function setCardRunning(id) {
+  const card = document.getElementById(`mc-${id}`);
+  if (!card) return;
+  card.classList.add('running');
+  document.getElementById(`mc-label-${id}`).innerHTML =
+    '<span class="mc-spinner"></span> Running…';
+}
+
+function setCardResult(r) {
+  const card   = document.getElementById(`mc-${r.project_id}`);
+  const lblEl  = document.getElementById(`mc-label-${r.project_id}`);
+  const confEl = document.getElementById(`mc-conf-${r.project_id}`);
+  const msEl   = document.getElementById(`mc-ms-${r.project_id}`);
+  const errEl  = document.getElementById(`mc-err-${r.project_id}`);
+  if (!card) return;
+
+  card.classList.remove('running');
+
+  if (!r.success) {
+    card.classList.add('failed');
+    lblEl.textContent  = 'Error';
+    lblEl.style.color  = '#b91c1c';
+    errEl.textContent  = r.error || 'Unknown error';
+    return;
+  }
+
+  const label = r.prediction_label || String(r.prediction);
+  lblEl.textContent = label;
+  lblEl.style.color = '';
+
+  const ll = label.toLowerCase();
+  if (ll.includes('seizure')) {
+    card.classList.add('done-seizure');
+  } else if (ll.includes('lpd') || ll.includes('periodic')) {
+    card.classList.add('done-lpd');
+  } else {
+    card.classList.add('done-other');
+  }
+
+  if (r.confidence != null) {
+    confEl.textContent = `Confidence: ${(r.confidence * 100).toFixed(1)}%`;
+  }
+  if (r.inference_ms != null) {
+    msEl.textContent = `${r.inference_ms} ms`;
+  }
+}
+
+/* ── Show ensemble ──────────────────────────────────────────────── */
+function showEnsemble(label, votes) {
+  const box    = document.getElementById('ensemble-box');
+  const lblEl  = document.getElementById('ens-label');
+  const votesEl = document.getElementById('ens-votes');
+
+  box.className = 'ensemble-box';
+  const ll = (label || '').toLowerCase();
+  if (ll.includes('seizure'))                      box.classList.add('seizure');
+  else if (ll.includes('lpd') || ll.includes('periodic')) box.classList.add('lpd');
+
+  lblEl.textContent = label || '—';
+
+  const total = Object.values(votes).reduce((a, b) => a + b, 0);
+  const win   = votes[label] || 0;
+  votesEl.textContent = `${win} of ${total} model${total !== 1 ? 's' : ''} agree`;
+
+  box.style.display = 'block';
+}
+
+/* ── AI ensemble interpretation ─────────────────────────────────── */
+async function fetchEnsembleInterpretation(ensembleLabel, ensembleVotes, results) {
+  const panel  = document.getElementById('interp-panel');
+  const textEl = document.getElementById('interp-text');
+
+  panel.style.display = 'block';
+  textEl.innerHTML = '<span style="color:#818cf8;font-style:italic;">Generating ensemble explanation<span class="interp-dots"></span></span>';
+
+  // Build per-model summary for the prompt
+  const modelsData = results
+    .filter(r => r.success)
+    .map(r => ({
+      variant:    r.model_variant  || '?',
+      title:      r.project_title  || '',
+      label:      r.prediction_label || String(r.prediction),
+      confidence: r.confidence != null ? r.confidence : null,
+      ms:         r.inference_ms  != null ? r.inference_ms : null,
+    }));
+
+  try {
+    const res = await fetch(ENSEMBLE_INTERP_URL, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+      body:    JSON.stringify({
+        ensemble_label: ensembleLabel,
+        ensemble_votes: ensembleVotes,
+        models_data:    modelsData,
+      }),
+    });
+    let d;
+    try { d = await res.json(); }
+    catch { textEl.textContent = `Server error (HTTP ${res.status}) — interpretation unavailable.`; return; }
+
+    if (d.interpretation) {
+      textEl.textContent = d.interpretation;
+    } else if (d.error) {
+      textEl.textContent = `Interpretation error: ${d.error}`;
+    } else {
+      textEl.textContent = 'No interpretation available.';
+    }
+  } catch (err) {
+    textEl.textContent = 'Could not reach interpretation service.';
+  }
+}
+
+/* ── Main comparison runner ─────────────────────────────────────── */
+async function runComparison() {
+  const file = fileInput._file;
+  if (!file) {
+    const eb = document.getElementById('error-box');
+    eb.textContent = 'Please select a file first.';
+    eb.style.display = 'block';
+    return;
+  }
+
+  resetUI();
+  document.getElementById('spinner').style.display = 'block';
+  runBtn.disabled = true;
+  PROJECT_IDS.forEach(id => setCardRunning(id));
+
+  const form = new FormData();
+  form.append('signal_file', file);
+
+  try {
+    const res  = await fetch(COMPARE_URL, {
+      method:  'POST',
+      body:    form,
+      headers: { 'X-CSRFToken': CSRF },
+    });
+
+    document.getElementById('spinner').style.display = 'none';
+    runBtn.disabled = false;
+
+    let data;
+    try { data = await res.json(); }
+    catch {
+      const eb = document.getElementById('error-box');
+      eb.textContent = `Server error (HTTP ${res.status}) — could not parse response.`;
+      eb.style.display = 'block';
+      PROJECT_IDS.forEach(id => {
+        const card = document.getElementById(`mc-${id}`);
+        if (card) { card.classList.remove('running'); card.classList.add('failed'); }
+      });
+      return;
+    }
+
+    if (!data.success) {
+      const eb = document.getElementById('error-box');
+      eb.textContent = data.error || 'Comparison failed.';
+      eb.style.display = 'block';
+      return;
+    }
+
+    // Render each model card
+    (data.results || []).forEach(r => setCardResult(r));
+
+    // Ensemble
+    if (data.ensemble_label) {
+      showEnsemble(data.ensemble_label, data.ensemble_votes || {});
+    }
+
+    // File summary (from first successful result)
+    const first = (data.results || []).find(r => r.success && r.input_summary);
+    if (first && first.input_summary && Object.keys(first.input_summary).length) {
+      const tbl = document.getElementById('summary-table');
+      tbl.innerHTML = Object.entries(first.input_summary).map(([k, v]) => {
+        const val = Array.isArray(v) ? v.slice(0, 8).join(', ') + (v.length > 8 ? ' …' : '') : v;
+        return `<tr><td>${k.replace(/_/g, ' ')}</td><td>${val}</td></tr>`;
+      }).join('');
+      document.getElementById('summary-card').style.display = 'block';
+    }
+
+    // AI ensemble interpretation — passes all model results + vote breakdown
+    if (data.ensemble_label) {
+      fetchEnsembleInterpretation(
+        data.ensemble_label,
+        data.ensemble_votes || {},
+        data.results || [],
+      );
+    }
+
+  } catch (err) {
+    document.getElementById('spinner').style.display = 'none';
+    runBtn.disabled = false;
+    const eb = document.getElementById('error-box');
+    eb.textContent = 'Could not reach the server. Check your connection and try again.';
+    eb.style.display = 'block';
+    console.error(err);
+  }
+}
+</script>
+{% endblock %}

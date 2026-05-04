@@ -288,6 +288,19 @@
 
   </div><!-- .pred-card -->
 
+  {% if handler_slug == 'seizure_eeg' %}
+  <div class="pred-card" style="text-align:center; padding: 1.25rem 2rem;">
+    <p style="font-size:.86rem; color:#64748b; margin-bottom:.75rem;">
+      Want to compare CNN, GRU, and Fusion predictions on the same file?
+    </p>
+    <a href="{% url 'seizure_comparison' %}"
+       style="display:inline-block; padding:.65rem 1.5rem; background:#0ea5e9; color:#fff;
+              border-radius:8px; font-weight:600; font-size:.9rem; text-decoration:none;">
+      &#8680; Compare all 3 models
+    </a>
+  </div>
+  {% endif %}
+
   <div class="pred-card" style="font-size:.85rem; color:#64748b;">
     <strong style="color:#374151;">Model info</strong>
     &nbsp;&middot;&nbsp; Type: {{ project.get_model_type_display|default:"—" }}

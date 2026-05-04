@@ -3,6 +3,7 @@ from .views import (
     projects_list, project_detail, home,
     prediction_demo, file_prediction, sample_prediction, make_prediction,
     interpret_prediction, add_project_comment, roadmap,
+    seizure_comparison_view, seizure_comparison_predict, interpret_ensemble,
 )
 from .api import api_model_list, api_model_detail, api_predict, api_docs
 
@@ -16,6 +17,10 @@ urlpatterns = [
     path('project/<int:project_id>/make-prediction/', make_prediction, name='make_prediction'),
     path('project/<int:project_id>/interpret/', interpret_prediction, name='interpret_prediction'),
     path('project/<int:project_id>/comment/', add_project_comment, name='add_project_comment'),
+
+    path('seizure-comparison/', seizure_comparison_view, name='seizure_comparison'),
+    path('seizure-comparison/predict/', seizure_comparison_predict, name='seizure_comparison_predict'),
+    path('seizure-comparison/interpret-ensemble/', interpret_ensemble, name='interpret_ensemble'),
 
     path('roadmap/', roadmap, name='roadmap'),
 

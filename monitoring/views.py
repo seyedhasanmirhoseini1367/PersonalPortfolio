@@ -296,6 +296,156 @@ def api_stats(request):
 
 
 @staff_member_required
+def comparison_view(request):
+    """
+    Side-by-side synthetic comparison dashboard.
+    Shows per-model and ensemble accuracy for every run_synthetic_comparison run.
+    """
+    from collections import defaultdict
+
+    # All comparison logs, newest first
+    all_logs = (
+        PredictionLog.objects
+        .filter(source='synthetic_comparison')
+        .order_by('-created_at')
+        .select_related('project')
+    )
+
+    # ── Discover distinct runs ────────────────────────────────────────────────
+    run_meta = {}   # run_id → {date, n_files, projects}
+    for log in all_logs:
+        rid = (log.input_data or {}).get('comparison_run_id')
+        if not rid:
+            continue
+        if rid not in run_meta:
+            run_meta[rid] = {'date': log.created_at, 'n_files': set(), 'project_ids': set()}
+        run_meta[rid]['n_files'].add((log.input_data or {}).get('eeg_id', ''))
+        run_meta[rid]['project_ids'].add(log.project_id)
+
+    # Sort runs newest-first
+    sorted_runs = sorted(run_meta.items(), key=lambda x: x[1]['date'], reverse=True)
+
+    # ── Select active run ─────────────────────────────────────────────────────
+    selected_run_id = request.GET.get('run') or (sorted_runs[0][0] if sorted_runs else None)
+
+    run_logs = [l for l in all_logs if
+                (l.input_data or {}).get('comparison_run_id') == selected_run_id]
+
+    # ── Build model list (ordered by project id for stable column order) ──────
+    seizure_projects = sorted(
+        {l.project for l in run_logs},
+        key=lambda p: p.id,
+    )
+    model_info = [
+        {
+            'project': p,
+            'variant': (p.file_input_config or {}).get('model_variant', '?'),
+            'title':   p.title,
+        }
+        for p in seizure_projects
+    ]
+
+    # ── Group logs by eeg_id ──────────────────────────────────────────────────
+    by_eeg = defaultdict(dict)  # eeg_id → {variant: log}
+    for log in run_logs:
+        eeg_id  = (log.input_data or {}).get('eeg_id', '?')
+        variant = (log.input_data or {}).get('model_variant', '?')
+        by_eeg[eeg_id][variant] = log
+
+    # ── Build row objects for template ────────────────────────────────────────
+    rows = []
+    ens_correct = ens_comparable = 0
+    model_correct   = defaultdict(int)
+    model_comparable = defaultdict(int)
+
+    for eeg_id, variant_map in sorted(by_eeg.items()):
+        # Read shared fields from any log
+        any_log      = next(iter(variant_map.values()))
+        expected     = (any_log.input_data or {}).get('expected_label', 'unknown')
+        can_compare  = (any_log.input_data or {}).get('comparable', False)
+        ensemble_lbl = (any_log.input_data or {}).get('ensemble_label')
+        all_agree    = (any_log.input_data or {}).get('all_agree', False)
+
+        cells = []
+        valid_norms = []
+        for mi in model_info:
+            v   = mi['variant']
+            log = variant_map.get(v)
+            if log is None:
+                cells.append({'label': '—', 'correct': None, 'confidence': None, 'ms': None, 'success': None})
+                continue
+            if not log.success:
+                cells.append({'label': 'Error', 'correct': None, 'confidence': None, 'ms': None, 'success': False})
+                continue
+
+            norm    = log.label.upper().startswith('LPD') and 'LPD' or log.label.strip()
+            correct = (log.input_data or {}).get('is_correct')
+            cells.append({
+                'label':      log.label,
+                'correct':    correct,
+                'confidence': round(log.confidence * 100, 1) if log.confidence else None,
+                'ms':         log.inference_ms,
+                'success':    True,
+            })
+            if can_compare and correct is not None:
+                model_correct[v]    += int(bool(correct))
+                model_comparable[v] += 1
+            if log.label:
+                valid_norms.append(log.label)
+
+        ens_correct_row = None
+        if can_compare and ensemble_lbl:
+            ens_comparable += 1
+            ens_correct_row = _norm_label(ensemble_lbl) == _norm_label(expected)
+            if ens_correct_row:
+                ens_correct += 1
+
+        rows.append({
+            'eeg_id':       eeg_id,
+            'expected':     expected,
+            'can_compare':  can_compare,
+            'cells':        cells,
+            'ensemble':     ensemble_lbl,
+            'ens_correct':  ens_correct_row,
+            'all_agree':    all_agree,
+        })
+
+    # ── Per-model summary cards ───────────────────────────────────────────────
+    model_summaries = []
+    for mi in model_info:
+        v   = mi['variant']
+        comp = model_comparable[v]
+        corr = model_correct[v]
+        model_summaries.append({
+            'variant':    v,
+            'title':      mi['title'],
+            'comparable': comp,
+            'correct':    corr,
+            'accuracy':   round(100 * corr / comp, 1) if comp else None,
+        })
+
+    ens_accuracy = round(100 * ens_correct / ens_comparable, 1) if ens_comparable else None
+
+    return render(request, 'monitoring/comparison.html', {
+        'sorted_runs':     sorted_runs,
+        'selected_run_id': selected_run_id,
+        'model_info':      model_info,
+        'model_summaries': model_summaries,
+        'rows':            rows,
+        'ens_correct':     ens_correct,
+        'ens_comparable':  ens_comparable,
+        'ens_accuracy':    ens_accuracy,
+        'run_date':        run_meta[selected_run_id]['date'] if selected_run_id in run_meta else None,
+    })
+
+
+def _norm_label(label: str) -> str:
+    if label.upper().startswith('LPD'):
+        return 'LPD'
+    return label.strip()
+
+
+@staff_member_required
 def storage_debug(request):
     """Temporary debug view — shows storage config on Azure."""
     import os

@@ -6,6 +6,7 @@ from django.views.decorators.http import require_POST
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db.models import Q
+import io
 import json
 import pandas as pd
 import os
@@ -357,6 +358,151 @@ def interpret_prediction(request, project_id):
         import traceback
         traceback.print_exc()
         return JsonResponse({'error': f'[{type(e).__name__}] {e}'}, status=500)
+
+
+@csrf_exempt
+def interpret_ensemble(request):
+    """Build an ensemble-aware interpretation across all seizure model results."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    try:
+        body           = json.loads(request.body)
+        ensemble_label = body.get('ensemble_label', '')
+        ensemble_votes = body.get('ensemble_votes', {})
+        models_data    = body.get('models_data', [])
+
+        if not ensemble_label:
+            return JsonResponse({'error': 'ensemble_label is required'}, status=400)
+
+        from rag_system.services.generation_service import GenerationService
+        gen = GenerationService()
+        interpretation = gen.generate_ensemble_interpretation(
+            ensemble_label=ensemble_label,
+            ensemble_votes=ensemble_votes,
+            models_data=models_data,
+        )
+        return JsonResponse({'success': True, 'interpretation': interpretation})
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON body'}, status=400)
+    except BaseException as e:
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'error': f'[{type(e).__name__}] {e}'}, status=500)
+
+
+def seizure_comparison_view(request):
+    """GET: Side-by-side comparison of all three seizure EEG models."""
+    seizure_projects = [
+        p for p in Projects.objects.filter(is_public=True)
+        if (p.file_input_config or {}).get('handler') == 'seizure_eeg'
+    ]
+    return render(request, 'projects/seizure_comparison.html', {
+        'seizure_projects': seizure_projects,
+        'page_title':       'Seizure Detection — Model Comparison',
+    })
+
+
+@csrf_exempt
+def seizure_comparison_predict(request):
+    """POST: Run all seizure_eeg models on the uploaded file; return JSON with all results."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+    uploaded = request.FILES.get('signal_file')
+    if not uploaded:
+        return JsonResponse({'error': 'No file received. Please select a file and try again.'}, status=400)
+
+    seizure_projects = [
+        p for p in Projects.objects.filter(is_public=True)
+        if (p.file_input_config or {}).get('handler') == 'seizure_eeg'
+    ]
+    if not seizure_projects:
+        return JsonResponse({'error': 'No seizure detection models are configured.'}, status=404)
+
+    file_bytes = uploaded.read()
+    filename   = uploaded.name
+
+    from projects.inference import get_handler
+    from projects.inference.base import InferenceError
+    from monitoring.utils import log_prediction
+    import time
+
+    results = []
+    for project in seizure_projects:
+        file_obj      = io.BytesIO(file_bytes)
+        file_obj.name = filename
+        variant       = (project.file_input_config or {}).get('model_variant', 'unknown')
+
+        try:
+            handler = get_handler(project)
+            t0      = time.perf_counter()
+            result  = handler.run(file_obj)
+            ms      = int((time.perf_counter() - t0) * 1000)
+
+            try:
+                log_prediction(
+                    project=project, user=request.user, input_type='file',
+                    prediction=result.get('prediction'),
+                    confidence=result.get('prediction_proba'),
+                    label=str(result.get('prediction_label', '')),
+                    inference_ms=ms, success=True,
+                    source='web_comparison', request=request,
+                )
+            except Exception:
+                pass
+
+            results.append({
+                'project_id':       project.id,
+                'project_title':    project.title,
+                'model_variant':    variant,
+                'success':          True,
+                'prediction':       result.get('prediction'),
+                'prediction_label': result.get('prediction_label'),
+                'confidence':       result.get('prediction_proba'),
+                'inference_ms':     ms,
+                'input_summary':    result.get('input_summary', {}),
+                'input_data':       result.get('input_data', {}),
+            })
+
+        except InferenceError as e:
+            log_prediction(project=project, user=request.user, input_type='file',
+                           success=False, error_message=str(e),
+                           source='web_comparison', request=request)
+            results.append({
+                'project_id':    project.id,
+                'project_title': project.title,
+                'model_variant': variant,
+                'success':       False,
+                'error':         str(e),
+            })
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            log_prediction(project=project, user=request.user, input_type='file',
+                           success=False, error_message=str(e),
+                           source='web_comparison', request=request)
+            results.append({
+                'project_id':    project.id,
+                'project_title': project.title,
+                'model_variant': variant,
+                'success':       False,
+                'error':         f'{type(e).__name__}: {e}',
+            })
+
+    # Majority-vote ensemble over successful predictions
+    labels = [r['prediction_label'] for r in results if r.get('success') and r.get('prediction_label')]
+    ensemble_label = None
+    ensemble_votes = {}
+    if labels:
+        ensemble_votes = {lbl: labels.count(lbl) for lbl in set(labels)}
+        ensemble_label = max(ensemble_votes, key=ensemble_votes.get)
+
+    return JsonResponse({
+        'success':        True,
+        'results':        results,
+        'ensemble_label': ensemble_label,
+        'ensemble_votes': ensemble_votes,
+    })
 
 
 def roadmap(request):

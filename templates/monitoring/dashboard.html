@@ -202,6 +202,13 @@ table.mon-tbl tr:hover td { background:#fafbff; }
                     class="range-btn {% if days == opt %}active{% endif %}">{{ lbl }}</button>
           {% endfor %}
         </form>
+        <!-- Comparison link -->
+        <a href="{% url 'monitoring:comparison' %}"
+           style="padding:.28rem .7rem;border-radius:16px;border:1px solid rgba(255,255,255,.4);
+                  color:white;font-size:.78rem;font-weight:700;text-decoration:none;
+                  display:inline-flex;align-items:center;gap:.35rem;white-space:nowrap;">
+          &#9878; Model Comparison
+        </a>
       </div>
     </div>
   </div>
@@ -505,18 +512,18 @@ table.mon-tbl tr:hover td { background:#fafbff; }
         <tbody id="predBody">
           {% for log in combined_recent %}
           <tr class="pred-row"
-              data-source="{% if log.source == 'synthetic' %}synthetic{% else %}web{% endif %}">
+              data-source="{% if log.source == 'synthetic' or log.source == 'synthetic_comparison' %}synthetic{% else %}web{% endif %}">
             <td style="color:#94a3b8;font-size:.72rem;">{{ forloop.counter }}</td>
             <td style="white-space:nowrap;color:#64748b;">{{ log.created_at|date:"M d H:i:s" }}</td>
             <td style="font-weight:600;">{{ log.project.title|truncatechars:18 }}</td>
             <td style="font-weight:500;">{{ log.label|default:"—" }}</td>
             <td style="color:#64748b;">
-              {% if log.source == 'synthetic' %}
+              {% if log.source == 'synthetic' or log.source == 'synthetic_comparison' %}
                 {{ log.input_data.expected_label|default:"—" }}
               {% else %}—{% endif %}
             </td>
             <td>
-              {% if log.source == 'synthetic' and log.input_data.comparable %}
+              {% if log.input_data.comparable %}
                 {% if log.input_data.is_correct %}
                   <span style="color:#10b981;font-weight:700;font-size:.9rem;">✓</span>
                 {% else %}
@@ -534,7 +541,7 @@ table.mon-tbl tr:hover td { background:#fafbff; }
             </td>
             <td>{% if log.inference_ms %}<span style="font-family:monospace;">{{ log.inference_ms }}ms</span>{% else %}—{% endif %}</td>
             <td>
-              <span class="badge badge-{% if log.source == 'synthetic' %}syn{% elif log.source == 'demo' %}demo{% elif log.source == 'api' %}api{% else %}real{% endif %}">
+              <span class="badge badge-{% if log.source == 'synthetic' or log.source == 'synthetic_comparison' %}syn{% elif log.source == 'demo' %}demo{% elif log.source == 'api' %}api{% else %}real{% endif %}">
                 {{ log.source }}
               </span>
             </td>

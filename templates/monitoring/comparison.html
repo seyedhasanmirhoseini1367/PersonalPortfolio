@@ -1,0 +1,354 @@
+{% extends 'base.html' %}
+{% block title %}Model Comparison — Monitoring{% endblock %}
+
+{% block extra_css %}
+<style>
+.mon { background:#f1f5f9; min-height:100vh; padding-bottom:3rem; }
+
+.mon-hdr {
+  background:linear-gradient(135deg,#0f0c29 0%,#302b63 55%,#24243e 100%);
+  color:white; padding:1.25rem 0; margin-bottom:1.75rem;
+}
+.mon-hdr-inner {
+  display:flex; justify-content:space-between; align-items:center;
+  flex-wrap:wrap; gap:1rem;
+}
+.mon-hdr h1 { font-size:1.4rem; font-weight:800; margin:0 0 .2rem; }
+.mon-hdr p  { font-size:.78rem; opacity:.8; margin:0; }
+
+.card {
+  background:white; border-radius:14px;
+  border:1px solid #e2e8f0; box-shadow:0 1px 4px rgba(0,0,0,.06);
+  padding:1.25rem 1.4rem;
+}
+.card-title {
+  font-size:.82rem; font-weight:700; color:#64748b;
+  text-transform:uppercase; letter-spacing:.06em;
+  margin:0 0 .6rem;
+}
+
+/* ── Run selector ──────────────────────────────────────────────────────────── */
+.run-selector {
+  display:flex; align-items:center; gap:.75rem; flex-wrap:wrap;
+}
+.run-selector label { font-size:.82rem; color:#64748b; font-weight:600; }
+.run-selector select {
+  padding:.35rem .75rem; border-radius:8px; border:1px solid #cbd5e1;
+  background:white; font-size:.82rem; cursor:pointer; color:#1e293b;
+}
+
+/* ── Summary cards grid ────────────────────────────────────────────────────── */
+.summary-grid {
+  display:grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap:1rem; margin-bottom:1.5rem;
+}
+.summary-card {
+  background:white; border-radius:14px; padding:1rem 1.2rem;
+  border:1px solid #e2e8f0; box-shadow:0 1px 4px rgba(0,0,0,.06);
+  text-align:center;
+}
+.summary-card.ensemble {
+  border-color:#6366f1; box-shadow:0 0 0 2px rgba(99,102,241,.15);
+}
+.sc-variant {
+  font-size:.72rem; font-weight:700; text-transform:uppercase;
+  letter-spacing:.08em; color:#64748b; margin-bottom:.25rem;
+}
+.sc-title { font-size:.8rem; color:#1e293b; font-weight:600; margin-bottom:.6rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.sc-acc {
+  font-size:2rem; font-weight:900; line-height:1;
+  margin-bottom:.25rem;
+}
+.sc-acc.high   { color:#10b981; }
+.sc-acc.mid    { color:#f59e0b; }
+.sc-acc.low    { color:#ef4444; }
+.sc-acc.none   { color:#94a3b8; font-size:1.4rem; }
+.sc-sub { font-size:.72rem; color:#94a3b8; }
+
+/* ── Comparison table ──────────────────────────────────────────────────────── */
+.cmp-wrap { overflow-x:auto; }
+.cmp-table {
+  width:100%; border-collapse:collapse; font-size:.82rem;
+  white-space:nowrap;
+}
+.cmp-table th {
+  background:#f8fafc; padding:.55rem .85rem;
+  border-bottom:2px solid #e2e8f0; text-align:left;
+  font-size:.72rem; font-weight:700; text-transform:uppercase;
+  letter-spacing:.06em; color:#64748b;
+}
+.cmp-table td {
+  padding:.5rem .85rem; border-bottom:1px solid #f1f5f9;
+  vertical-align:middle;
+}
+.cmp-table tr:hover td { background:#f8fafc; }
+
+/* Row with full-agreement highlight */
+.cmp-table tr.agree-row td { border-left:3px solid #6366f1; }
+.cmp-table tr.agree-row td:not(:first-child) { border-left:none; }
+
+/* Cell badges */
+.cell-badge {
+  display:inline-flex; align-items:center; gap:.3rem;
+  padding:.2rem .55rem; border-radius:20px; font-size:.76rem; font-weight:700;
+}
+.badge-correct  { background:#d1fae5; color:#065f46; }
+.badge-wrong    { background:#fee2e2; color:#991b1b; }
+.badge-unknown  { background:#f1f5f9; color:#475569; }
+.badge-error    { background:#fff7ed; color:#c2410c; }
+.badge-missing  { background:#f8fafc; color:#94a3b8; }
+
+.conf-pill {
+  font-size:.7rem; color:#94a3b8;
+  background:#f1f5f9; border-radius:10px;
+  padding:.1rem .4rem; margin-left:.2rem;
+}
+.ms-pill {
+  font-size:.68rem; color:#94a3b8; margin-left:.15rem;
+}
+
+/* Ensemble col */
+.ens-correct  { color:#10b981; font-weight:800; }
+.ens-wrong    { color:#ef4444; font-weight:800; }
+.ens-unknown  { color:#94a3b8; }
+
+.agree-icon { font-size:.8rem; }
+
+/* Expected label chip */
+.exp-chip {
+  padding:.15rem .5rem; border-radius:20px; font-size:.72rem; font-weight:700;
+}
+.exp-seizure { background:#fee2e2; color:#991b1b; }
+.exp-lpd     { background:#ede9fe; color:#5b21b6; }
+.exp-unknown { background:#f1f5f9; color:#64748b; }
+
+/* ── Empty state ───────────────────────────────────────────────────────────── */
+.empty-state {
+  text-align:center; padding:3rem 1rem; color:#94a3b8;
+}
+.empty-state svg { width:48px; height:48px; margin-bottom:1rem; opacity:.4; }
+.empty-state p { font-size:.9rem; }
+
+/* ── Back link ─────────────────────────────────────────────────────────────── */
+.back-link {
+  font-size:.8rem; color:rgba(255,255,255,.7); text-decoration:none;
+  display:inline-flex; align-items:center; gap:.35rem;
+}
+.back-link:hover { color:white; }
+
+@media(max-width:640px){
+  .cmp-table th, .cmp-table td { padding:.4rem .5rem; }
+  .sc-acc { font-size:1.6rem; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="mon">
+
+  <!-- ── Header ─────────────────────────────────────────────────────────────── -->
+  <div class="mon-hdr">
+    <div class="container">
+      <div class="mon-hdr-inner">
+        <div>
+          <h1>&#9878; Model Comparison</h1>
+          <p>Synthetic side-by-side results for all seizure detection models</p>
+        </div>
+        <div>
+          <a href="{% url 'monitoring:dashboard' %}" class="back-link">
+            &#8592; Back to Dashboard
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+
+    {% if not sorted_runs %}
+    <!-- ── No data yet ─────────────────────────────────────────────────────── -->
+    <div class="card">
+      <div class="empty-state">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+            d="M9 17v-2m3 2v-4m3 4v-6M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+        </svg>
+        <p><strong>No comparison runs found yet.</strong></p>
+        <p style="margin-top:.5rem;">Run <code>python manage.py run_synthetic_comparison</code> to generate data.</p>
+      </div>
+    </div>
+
+    {% else %}
+
+    <!-- ── Run selector ────────────────────────────────────────────────────── -->
+    <div class="card" style="margin-bottom:1.25rem;">
+      <div class="run-selector">
+        <label for="run-select">Comparison run:</label>
+        <select id="run-select" onchange="location='?run='+this.value">
+          {% for run_id, meta in sorted_runs %}
+          <option value="{{ run_id }}" {% if run_id == selected_run_id %}selected{% endif %}>
+            {{ meta.date|date:"Y-m-d H:i" }} &nbsp;—&nbsp; {{ meta.n_files|length }} file{{ meta.n_files|length|pluralize }}
+            &nbsp;({{ run_id }})
+          </option>
+          {% endfor %}
+        </select>
+        {% if run_date %}
+        <span style="font-size:.78rem;color:#64748b;">
+          {{ run_date|date:"D, d M Y  H:i" }}
+        </span>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- ── Summary cards ──────────────────────────────────────────────────── -->
+    <div class="summary-grid">
+      {% for ms in model_summaries %}
+      {% with acc=ms.accuracy %}
+      <div class="summary-card">
+        <div class="sc-variant">{{ ms.variant }}</div>
+        <div class="sc-title" title="{{ ms.title }}">{{ ms.title }}</div>
+        {% if acc is not None %}
+          <div class="sc-acc {% if acc >= 80 %}high{% elif acc >= 60 %}mid{% else %}low{% endif %}">
+            {{ acc }}<span style="font-size:1rem;font-weight:600;">%</span>
+          </div>
+          <div class="sc-sub">{{ ms.correct }}/{{ ms.comparable }} correct</div>
+        {% else %}
+          <div class="sc-acc none">—</div>
+          <div class="sc-sub">no comparable samples</div>
+        {% endif %}
+      </div>
+      {% endwith %}
+      {% endfor %}
+
+      <!-- Ensemble card -->
+      <div class="summary-card ensemble">
+        <div class="sc-variant" style="color:#6366f1;">Ensemble</div>
+        <div class="sc-title">Majority Vote</div>
+        {% if ens_accuracy is not None %}
+          <div class="sc-acc {% if ens_accuracy >= 80 %}high{% elif ens_accuracy >= 60 %}mid{% else %}low{% endif %}">
+            {{ ens_accuracy }}<span style="font-size:1rem;font-weight:600;">%</span>
+          </div>
+          <div class="sc-sub">{{ ens_correct }}/{{ ens_comparable }} correct</div>
+        {% else %}
+          <div class="sc-acc none">—</div>
+          <div class="sc-sub">no comparable samples</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- ── Comparison table ────────────────────────────────────────────────── -->
+    <div class="card">
+      <p class="card-title">Sample-by-sample comparison — run {{ selected_run_id }}</p>
+
+      {% if rows %}
+      <div class="cmp-wrap">
+        <table class="cmp-table">
+          <thead>
+            <tr>
+              <th>EEG ID</th>
+              <th>True Label</th>
+              {% for mi in model_info %}
+              <th>{{ mi.variant }}</th>
+              {% endfor %}
+              <th>Ensemble</th>
+              <th style="text-align:center;">Agree?</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in rows %}
+            <tr {% if row.all_agree %}class="agree-row"{% endif %}>
+
+              <!-- EEG ID -->
+              <td style="font-family:monospace;font-size:.78rem;color:#475569;">
+                {{ row.eeg_id }}
+              </td>
+
+              <!-- True label -->
+              <td>
+                {% if row.can_compare %}
+                  {% if row.expected == 'Seizure' %}
+                  <span class="exp-chip exp-seizure">{{ row.expected }}</span>
+                  {% elif row.expected == 'LPD' %}
+                  <span class="exp-chip exp-lpd">{{ row.expected }}</span>
+                  {% else %}
+                  <span class="exp-chip exp-unknown">{{ row.expected }}</span>
+                  {% endif %}
+                {% else %}
+                  <span class="exp-chip exp-unknown">unknown</span>
+                {% endif %}
+              </td>
+
+              <!-- Per-model cells -->
+              {% for cell in row.cells %}
+              <td>
+                {% if cell.success is None %}
+                  <span class="cell-badge badge-missing">—</span>
+                {% elif not cell.success %}
+                  <span class="cell-badge badge-error">Error</span>
+                {% elif cell.correct is True %}
+                  <span class="cell-badge badge-correct">&#10003; {{ cell.label }}</span>
+                  {% if cell.confidence %}<span class="conf-pill">{{ cell.confidence }}%</span>{% endif %}
+                  {% if cell.ms %}<span class="ms-pill">{{ cell.ms }}ms</span>{% endif %}
+                {% elif cell.correct is False %}
+                  <span class="cell-badge badge-wrong">&#10007; {{ cell.label }}</span>
+                  {% if cell.confidence %}<span class="conf-pill">{{ cell.confidence }}%</span>{% endif %}
+                  {% if cell.ms %}<span class="ms-pill">{{ cell.ms }}ms</span>{% endif %}
+                {% else %}
+                  <span class="cell-badge badge-unknown">{{ cell.label }}</span>
+                  {% if cell.confidence %}<span class="conf-pill">{{ cell.confidence }}%</span>{% endif %}
+                  {% if cell.ms %}<span class="ms-pill">{{ cell.ms }}ms</span>{% endif %}
+                {% endif %}
+              </td>
+              {% endfor %}
+
+              <!-- Ensemble -->
+              <td>
+                {% if row.ensemble %}
+                  {% if row.ens_correct is True %}
+                  <span class="ens-correct">&#10003; {{ row.ensemble }}</span>
+                  {% elif row.ens_correct is False %}
+                  <span class="ens-wrong">&#10007; {{ row.ensemble }}</span>
+                  {% else %}
+                  <span class="ens-unknown">{{ row.ensemble }}</span>
+                  {% endif %}
+                {% else %}
+                  <span class="ens-unknown">—</span>
+                {% endif %}
+              </td>
+
+              <!-- All agree? -->
+              <td style="text-align:center;">
+                {% if row.all_agree %}
+                <span class="agree-icon" title="All models agree" style="color:#6366f1;">&#9673;</span>
+                {% else %}
+                <span class="agree-icon" title="Models disagree" style="color:#cbd5e1;">&#9675;</span>
+                {% endif %}
+              </td>
+
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      {% else %}
+      <div class="empty-state">
+        <p>No logs found for run <code>{{ selected_run_id }}</code>.</p>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- ── Legend ─────────────────────────────────────────────────────────── -->
+    <div style="margin-top:.75rem; display:flex; gap:1rem; flex-wrap:wrap; font-size:.75rem; color:#64748b; align-items:center;">
+      <span><span class="cell-badge badge-correct" style="font-size:.7rem;">&#10003;</span> Correct</span>
+      <span><span class="cell-badge badge-wrong" style="font-size:.7rem;">&#10007;</span> Wrong</span>
+      <span><span class="cell-badge badge-unknown" style="font-size:.7rem;">&#9679;</span> No ground truth</span>
+      <span><span class="cell-badge badge-error" style="font-size:.7rem;">&#9888;</span> Inference error</span>
+      <span style="color:#6366f1;">&#9673; All models agreed</span>
+    </div>
+
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -108,6 +108,70 @@ class GenerationService:
             or self._fallback_interpretation(project_title, target_feature, prediction_label or str(prediction_result))
         )
 
+    def generate_ensemble_interpretation(
+        self,
+        ensemble_label: str,
+        ensemble_votes: Dict[str, int],
+        models_data: List[Dict[str, Any]],
+    ) -> str:
+        """Interpret an ensemble majority-vote result across multiple seizure models."""
+        system_prompt, messages = self._build_ensemble_messages(
+            ensemble_label, ensemble_votes, models_data
+        )
+        return (
+            self._call_llm(system_prompt, messages)
+            or self._fallback_interpretation('Seizure Detection Ensemble', 'seizure vs LPD', ensemble_label)
+        )
+
+    def _build_ensemble_messages(
+        self,
+        ensemble_label: str,
+        ensemble_votes: Dict[str, int],
+        models_data: List[Dict[str, Any]],
+    ):
+        total_models = sum(ensemble_votes.values()) if ensemble_votes else len(models_data)
+        vote_for_winner = ensemble_votes.get(ensemble_label, 0)
+        unanimous = vote_for_winner == total_models
+
+        vote_breakdown = ', '.join(
+            f'{label}: {count} model{"s" if count != 1 else ""}'
+            for label, count in sorted(ensemble_votes.items(), key=lambda x: -x[1])
+        ) if ensemble_votes else 'not available'
+
+        model_lines = '\n'.join(
+            f'  - {m.get("variant","?").upper()} ({m.get("title","")}):'
+            f' predicted "{m.get("label","?")}"'
+            + (f', confidence {m["confidence"]*100:.1f}%' if m.get("confidence") is not None else '')
+            + (f', {m["ms"]}ms' if m.get("ms") is not None else '')
+            for m in models_data
+        )
+
+        agreement_phrase = (
+            'All models unanimously agreed on this result.' if unanimous
+            else f'{vote_for_winner} of {total_models} models voted for this outcome.'
+        )
+
+        system_prompt = (
+            "You are a clinical EEG AI assistant interpreting an ensemble of seizure detection models. "
+            "Your job is to explain what the ENSEMBLE CONSENSUS means — not any single model's output. "
+            "Structure your response as 3 short paragraphs:\n"
+            "1. What the ensemble voted for and what that outcome means clinically (name it, don't hedge).\n"
+            "2. What agreement or disagreement across models tells us about the confidence in this result.\n"
+            "3. One important clinical caveat about acting on an automated EEG prediction.\n"
+            "Write naturally — no bullet points, no markdown headers. "
+            "Be direct and medically grounded. Maximum 120 words total."
+        )
+
+        user_content = (
+            f"Ensemble verdict: {ensemble_label}\n"
+            f"Vote breakdown: {vote_breakdown}\n"
+            f"{agreement_phrase}\n\n"
+            f"Individual model results:\n{model_lines}\n\n"
+            "Interpret the ensemble result:"
+        )
+
+        return system_prompt, [{'role': 'user', 'content': user_content}]
+
     # ── Prompt builders ───────────────────────────────────────────────────────
 
     def _build_messages(
