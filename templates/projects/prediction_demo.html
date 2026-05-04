@@ -426,14 +426,23 @@ async function fetchInterpretation(predValue, predLabel, inputData) {
       headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
       body: JSON.stringify({
         prediction:       predValue,
-        prediction_label: predLabel,   // ← human label now passed to RAG
+        prediction_label: predLabel,
         input_data:       inputData,
       }),
     });
-    const d = await res.json();
+
+    let d;
+    try {
+      d = await res.json();
+    } catch {
+      textEl.textContent = `Server error (HTTP ${res.status}) — interpretation unavailable.`;
+      return;
+    }
 
     if (d.interpretation) {
       textEl.textContent = d.interpretation;
+    } else if (d.error) {
+      textEl.textContent = `Interpretation error: ${d.error}`;
     } else {
       textEl.textContent = 'No interpretation available.';
     }
@@ -445,8 +454,9 @@ async function fetchInterpretation(predValue, predLabel, inputData) {
         sources.style.display = 'block';
       }
     }
-  } catch {
-    textEl.textContent = 'Could not load interpretation.';
+  } catch (err) {
+    textEl.textContent = 'Could not reach interpretation service.';
+    console.error('fetchInterpretation error:', err);
   }
 }
 
