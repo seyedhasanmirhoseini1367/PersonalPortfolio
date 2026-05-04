@@ -159,6 +159,14 @@ class ProjectAdmin(admin.ModelAdmin):
             )
         }),
 
+        ('Disclaimer / Warnings', {
+            'fields': ('health_disclaimer',),
+            'description': (
+                'Set a health disclaimer to display a warning banner on all prediction pages. '
+                'Required for any medical or health-related portfolio demo.'
+            ),
+        }),
+
         ('Technical specifications', {
             'fields': (
                 'skills_used',

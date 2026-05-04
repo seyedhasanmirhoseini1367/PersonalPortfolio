@@ -412,6 +412,12 @@ def seizure_comparison_predict(request):
     if not uploaded:
         return JsonResponse({'error': 'No file received. Please select a file and try again.'}, status=400)
 
+    if not uploaded.name.lower().endswith('.parquet'):
+        return JsonResponse(
+            {'error': f'Only .parquet files are accepted. You uploaded "{uploaded.name}".'},
+            status=400,
+        )
+
     seizure_projects = [
         p for p in Projects.objects.filter(is_public=True)
         if (p.file_input_config or {}).get('handler') == 'seizure_eeg'

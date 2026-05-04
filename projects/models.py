@@ -189,6 +189,17 @@ class Projects(models.Model):
         help_text="What did you learn from this project?",
     )
 
+    health_disclaimer = models.TextField(
+        blank=True,
+        default='',
+        help_text=(
+            "If set, a warning banner is shown on all prediction pages for this model. "
+            "Use this for medical/health models to clarify this is a portfolio demo only. "
+            "Example: 'This model is a portfolio demonstration and must not be used for "
+            "medical diagnosis or clinical decision-making.'"
+        ),
+    )
+
     # ── Technical Specifications ──────────────────────────────────────────────
 
     data_type = models.CharField(

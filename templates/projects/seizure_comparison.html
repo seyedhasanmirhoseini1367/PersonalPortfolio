@@ -160,6 +160,23 @@
 {% block content %}
 <div class="cmp-wrap">
 
+  <!-- ── Health disclaimer banner (always shown for medical models) ── -->
+  <div style="display:flex;align-items:flex-start;gap:.75rem;padding:.9rem 1.1rem;
+              border-radius:10px;margin-bottom:1.25rem;
+              background:#fefce8;border:1.5px solid #fbbf24;">
+    <span style="font-size:1.25rem;line-height:1.1;">&#9888;&#65039;</span>
+    <div>
+      <strong style="font-size:.86rem;color:#92400e;display:block;margin-bottom:.25rem;">
+        Portfolio Demo — Not for Clinical or Medical Use
+      </strong>
+      <span style="font-size:.82rem;color:#78350f;line-height:1.6;">
+        These models are experimental research prototypes built for portfolio demonstration only.
+        They <strong>must not</strong> be used to diagnose, treat, or make any decision about
+        a person's health. Always consult a qualified medical professional for any health concern.
+      </span>
+    </div>
+  </div>
+
   <div class="mb-4">
     <a href="{% url 'projects_list' %}" style="font-size:.87rem; color:#64748b;">&larr; Back to models</a>
     <h1 class="mt-2 mb-1">Seizure Detection — Model Comparison</h1>
@@ -177,19 +194,28 @@
 
   {# ── Upload card ── #}
   <div class="card-panel">
-    <h5 class="mb-1">Upload EEG File</h5>
-    <p class="text-muted mb-3" style="font-size:.86rem;">
-      Parquet or CSV with 19 EEG channels (+ optional EKG), sampled at 200 Hz.
-      Minimum 10 seconds recommended.
+    <h5 class="mb-1">Upload EEG File <span style="font-size:.75rem;font-weight:400;color:#94a3b8;">(Parquet only)</span></h5>
+    <p class="text-muted mb-1" style="font-size:.86rem;">
+      Upload a <strong>.parquet</strong> EEG file with 19 channels sampled at 200 Hz.
+      Minimum 10 seconds of signal recommended.
+    </p>
+    <p style="font-size:.82rem;color:#64748b;margin-bottom:1rem;">
+      &#128196; Need test data?
+      <a href="https://www.kaggle.com/competitions/hms-harmful-brain-activity-classification/data"
+         target="_blank" rel="noopener"
+         style="color:#6366f1;font-weight:600;">
+        Download sample .parquet files from the HMS Kaggle competition &#8599;
+      </a>
+      — use any file from the <code>train_eegs/</code> folder.
     </p>
 
     <div class="drop-zone" id="drop-zone">
       <div class="dz-icon" id="dz-icon">&#8679;</div>
       <div id="dz-label">Drag &amp; drop or <strong>click to browse</strong></div>
       <div class="dz-filename" id="dz-filename"></div>
-      <div style="font-size:.76rem; color:#94a3b8; margin-top:.3rem;">Accepted: PARQUET, CSV</div>
+      <div style="font-size:.76rem; color:#94a3b8; margin-top:.3rem;">Accepted: .parquet files only</div>
     </div>
-    <input type="file" id="file-input" accept=".parquet,.csv" style="display:none">
+    <input type="file" id="file-input" accept=".parquet" style="display:none">
 
     <div style="text-align:center;">
       <button class="btn-run" id="run-btn" onclick="runComparison()" disabled>
@@ -281,6 +307,16 @@ fileInput.addEventListener('change', () => {
 });
 
 function attachFile(f) {
+  if (!f.name.toLowerCase().endsWith('.parquet')) {
+    dropZone.classList.add('error');
+    document.getElementById('dz-label').innerHTML =
+      '<strong style="color:#b91c1c;">Only .parquet files are accepted.</strong>';
+    document.getElementById('dz-filename').textContent =
+      `"${f.name}" is not a parquet file.`;
+    runBtn.disabled = true;
+    fileInput._file = null;
+    return;
+  }
   fileInput._file = f;
   const kb = (f.size / 1024).toFixed(1);
   document.getElementById('dz-filename').textContent = `${f.name}  (${kb} KB)`;

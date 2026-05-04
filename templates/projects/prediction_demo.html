@@ -151,6 +151,20 @@
 {% block content %}
 <div class="container" style="max-width: 820px;">
 
+  {% if project.health_disclaimer %}
+  <div style="display:flex;align-items:flex-start;gap:.75rem;padding:.9rem 1.1rem;
+              border-radius:10px;margin-bottom:1.25rem;
+              background:#fefce8;border:1.5px solid #fbbf24;">
+    <span style="font-size:1.2rem;line-height:1;">&#9888;&#65039;</span>
+    <div>
+      <strong style="font-size:.85rem;color:#92400e;display:block;margin-bottom:.2rem;">
+        Portfolio Demo — Not for Clinical Use
+      </strong>
+      <span style="font-size:.83rem;color:#78350f;">{{ project.health_disclaimer }}</span>
+    </div>
+  </div>
+  {% endif %}
+
   <div class="mb-4">
     <a href="{% url 'project_detail' project.id %}" style="font-size:.87rem; color:#64748b;">&larr; Back to project</a>
     <h1 class="mt-2 mb-1">{{ project.title }}</h1>
