@@ -6,7 +6,7 @@ from django.contrib.auth import get_user_model
 class Command(BaseCommand):
     help = 'Create superuser if it does not exist, always sync password'
 
-    def handle(self, *_):
+    def handle(self, *args, **kwargs):
         User = get_user_model()
         username = os.environ.get('SUPERUSER_USERNAME', 'seyed')
         password = os.environ.get('SUPERUSER_PASSWORD', 'Seyed@2024')
