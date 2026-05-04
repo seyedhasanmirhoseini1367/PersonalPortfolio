@@ -73,6 +73,9 @@ ENV SECRET_KEY=build-time-dummy-not-used-in-production \
     DATABASE_URL=""
 RUN python manage.py collectstatic --noinput
 
+# Switch back to root so Railway-mounted volumes (e.g. /app/media) are writable
+USER root
+
 EXPOSE 8000
 
 CMD ["bash", "startup.sh"]
