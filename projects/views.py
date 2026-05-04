@@ -332,13 +332,20 @@ def interpret_prediction(request, project_id):
         if prediction_result is None:
             return JsonResponse({'error': 'prediction value is required'}, status=400)
 
-        from rag_system.services.rag_service import RAGService
-        result = RAGService().interpret_prediction(
-            project=project,
+        from rag_system.services.generation_service import GenerationService
+        gen = GenerationService()
+        label_str = prediction_label or str(prediction_result)
+        interpretation = gen.generate_prediction_interpretation(
+            project_title=project.title,
+            project_description=project.description,
+            model_type=project.get_model_type_display() if project.model_type else 'ML Model',
+            target_feature=project.target_feature,
             input_data=input_data,
             prediction_result=float(prediction_result),
-            prediction_label=prediction_label,
+            prediction_label=label_str,
+            context_chunks=[],
         )
+        result = {'success': True, 'interpretation': interpretation, 'sources': []}
         return JsonResponse({
             'success':        result['success'],
             'interpretation': result['interpretation'],

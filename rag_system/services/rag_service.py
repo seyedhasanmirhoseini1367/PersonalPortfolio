@@ -300,23 +300,13 @@ class RAGService:
         prediction_label: str = '',
     ) -> Dict[str, Any]:
         label_str = prediction_label or str(prediction_result)
-        retrieval_query = (
-            f"{project.title} {project.description[:150]} "
-            f"{project.target_feature} {label_str}"
-        )
 
-        # Step 1: retrieval (isolated — if it fails we still attempt generation)
+        # Skip retrieval for prediction interpretation — the sentence transformer
+        # loading on top of a cached CNN model causes OOM on Railway's container.
+        # The LLM has sufficient domain knowledge (EEG, seizure, LPD) from training.
         chunks = []
-        try:
-            chunks = self.retrieval.hybrid_retrieve(
-                retrieval_query,
-                document_types=['project', 'project_documentation', 'skill', 'resume'],
-            )
-        except BaseException as exc:
-            logger.error('interpret_prediction retrieval failed (%s): %s', type(exc).__name__, exc)
-            traceback.print_exc()
 
-        # Step 2: generation
+        # Generation
         try:
             interpretation = self.generation.generate_prediction_interpretation(
                 project_title=project.title,
