@@ -240,14 +240,24 @@ class RAGService:
                 full_text += token
                 yield _sse({'type': 'token', 'content': token})
 
-            # Persist completed exchange
-            log = QueryLog.objects.create(
-                session=session,
-                query=question,
-                response=full_text,
-                sources=[c['metadata'] for c in chunks],
-            )
-            self._auto_title(session, question)
+            # Persist completed exchange — session may have been deleted
+            # concurrently (user deleted it while query was running), so guard.
+            try:
+                session.refresh_from_db()
+                log = QueryLog.objects.create(
+                    session=session,
+                    query=question,
+                    response=full_text,
+                    sources=[c['metadata'] for c in chunks],
+                )
+                self._auto_title(session, question)
+                query_id      = str(log.id)
+                session_id_str = str(session.id)
+                session_title  = session.title
+            except Exception:
+                query_id       = ''
+                session_id_str = ''
+                session_title  = ''
 
             # Send sources + session metadata as one final event
             serialisable_sources = [
@@ -260,9 +270,9 @@ class RAGService:
             yield _sse({
                 'type':          'sources',
                 'sources':       serialisable_sources,
-                'query_id':      str(log.id),
-                'session_id':    str(session.id),
-                'session_title': session.title,
+                'query_id':      query_id,
+                'session_id':    session_id_str,
+                'session_title': session_title,
             })
             yield _sse({'type': 'done'})
 
