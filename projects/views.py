@@ -347,7 +347,9 @@ def interpret_prediction(request, project_id):
     except json.JSONDecodeError:
         return JsonResponse({'error': 'Invalid JSON body'}, status=400)
     except BaseException as e:
-        return JsonResponse({'error': str(e)}, status=500)
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'error': f'[{type(e).__name__}] {e}'}, status=500)
 
 
 def roadmap(request):
