@@ -208,8 +208,12 @@ class GenerationService:
 
         system_prompt = (
             "You are a domain-expert assistant interpreting machine learning model predictions. "
+            "The model has produced EXACTLY ONE predicted outcome — interpret only that outcome. "
+            "Do NOT introduce, mention, or confuse the result with any other class or condition not stated in the prediction. "
             "Provide a clear, structured interpretation: "
-            "(1) plain-language meaning, (2) domain background, (3) important caveats. "
+            "(1) plain-language meaning of the predicted class specifically, "
+            "(2) domain background for that class, "
+            "(3) important caveats. "
             "Write 3–4 concise paragraphs. Do not use markdown headers or bullet points."
         )
 
