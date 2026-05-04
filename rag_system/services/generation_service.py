@@ -65,7 +65,9 @@ class GenerationService:
 
         yielded = False
 
+        import os
         print(f"[GEN] groq_key={bool(self.groq_api_key)} gemini_key={bool(self.gemini_api_key)} anthropic_key={bool(self.anthropic_api_key)} model={self.groq_model}", flush=True)
+        print(f"[GEN] groq_raw='{self.groq_api_key[:8] if self.groq_api_key else 'EMPTY'}' os_env='{os.environ.get('GROQ_API_KEY','NOT_SET')[:8]}'", flush=True)
 
         def _track(gen):
             nonlocal yielded
