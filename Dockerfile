@@ -50,11 +50,20 @@ COPY --from=builder /install /usr/local
 # Copy project source
 COPY . .
 
-# Create non-root user
-RUN addgroup --system app && adduser --system --ingroup app app \
+# Create non-root user with a real home dir so HuggingFace cache works
+RUN addgroup --system app && adduser --system --ingroup app --home /app app \
  && chown -R app:app /app
 
+# Point HuggingFace / sentence-transformers cache inside /app (writable by app user)
+ENV HF_HOME=/app/.cache/huggingface \
+    SENTENCE_TRANSFORMERS_HOME=/app/.cache/sentence-transformers \
+    TRANSFORMERS_CACHE=/app/.cache/huggingface/hub
+
 USER app
+
+# Pre-download the embedding model at build time so it's baked into the image
+# and never needs a runtime download (avoids permission errors on cold start)
+RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('BAAI/bge-base-en-v1.5')"
 
 # Collect static files at build time
 # SECRET_KEY is required by Django settings even for collectstatic — use a dummy value
