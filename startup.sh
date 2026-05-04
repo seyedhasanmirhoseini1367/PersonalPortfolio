@@ -25,7 +25,7 @@ python manage.py populate_resume --if-empty || echo "populate_resume skipped or 
 echo "Starting gunicorn..."
 gunicorn PersonalPortfolio.wsgi:application \
     --bind 0.0.0.0:${PORT:-8000} \
-    --workers 2 \
+    --workers 1 \
     --timeout 120 \
     --access-logfile - \
     --error-logfile -
