@@ -4,21 +4,22 @@
 {% block extra_css %}
 <style>
   /* ── Layout ────────────────────────────────────────────────────── */
-  .cmp-wrap { max-width: 1100px; margin: 0 auto; }
+  .cmp-wrap { max-width: 1060px; margin: 0 auto; padding-bottom: 2rem; }
 
   .card-panel {
     background: #fff;
-    border-radius: 14px;
-    box-shadow: 0 4px 24px rgba(0,0,0,.07);
-    padding: 1.75rem 2rem;
-    margin-bottom: 1.5rem;
+    border-radius: 10px;
+    box-shadow: 0 1px 6px rgba(0,0,0,.06);
+    border: 1px solid #e2e8f0;
+    padding: 1.1rem 1.4rem;
+    margin-bottom: 1rem;
   }
 
   /* ── Drop zone ─────────────────────────────────────────────────── */
   .drop-zone {
     border: 2px dashed #cbd5e1;
-    border-radius: 10px;
-    padding: 2rem;
+    border-radius: 8px;
+    padding: 1.1rem 1rem;
     text-align: center;
     cursor: pointer;
     transition: border-color .2s, background .2s;
@@ -26,20 +27,20 @@
   .drop-zone.dragover { border-color: #6366f1; background: #f5f3ff; }
   .drop-zone.has-file { border-color: #10b981; background: #f0fdf4; }
   .drop-zone.error    { border-color: #f87171; background: #fef2f2; }
-  .dz-icon { font-size: 2rem; color: #94a3b8; margin-bottom: .5rem; }
+  .dz-icon { font-size: 1.4rem; color: #94a3b8; margin-bottom: .25rem; }
   .drop-zone.has-file .dz-icon { color: #10b981; }
-  .dz-filename { font-weight: 600; color: #1e293b; font-size: .9rem; margin-top: .4rem; }
+  .dz-filename { font-weight: 600; color: #1e293b; font-size: .85rem; margin-top: .2rem; }
 
   /* ── Buttons ───────────────────────────────────────────────────── */
   .btn-run {
     display: inline-block;
-    padding: .8rem 2.5rem;
-    margin-top: 1rem;
+    padding: .55rem 2rem;
+    margin-top: .75rem;
     background: #6366f1;
     color: #fff;
     border: none;
-    border-radius: 8px;
-    font-size: 1rem;
+    border-radius: 7px;
+    font-size: .92rem;
     font-weight: 600;
     cursor: pointer;
     transition: background .15s;
@@ -51,30 +52,30 @@
   .progress-panel {
     display: none;
     background: white;
-    border-radius: 14px;
-    border: 1.5px solid #e0e7ff;
-    box-shadow: 0 4px 24px rgba(99,102,241,.08);
-    padding: 1.75rem 2rem;
-    margin-bottom: 1.5rem;
+    border-radius: 10px;
+    border: 1px solid #e0e7ff;
+    box-shadow: 0 1px 6px rgba(99,102,241,.07);
+    padding: 1rem 1.4rem;
+    margin-bottom: 1rem;
   }
   .progress-header {
-    display: flex; align-items: center; gap: .75rem; margin-bottom: 1.25rem;
+    display: flex; align-items: center; gap: .6rem; margin-bottom: .9rem;
   }
   .progress-spinner {
-    width: 28px; height: 28px; flex-shrink: 0;
-    border: 3px solid #e0e7ff; border-top: 3px solid #6366f1;
+    width: 22px; height: 22px; flex-shrink: 0;
+    border: 2.5px solid #e0e7ff; border-top: 2.5px solid #6366f1;
     border-radius: 50%; animation: spin .75s linear infinite;
   }
   .progress-title {
-    font-size: 1rem; font-weight: 700; color: #1e293b;
+    font-size: .92rem; font-weight: 700; color: #1e293b;
   }
   .progress-subtitle {
-    font-size: .8rem; color: #64748b; margin-top: .1rem;
+    font-size: .76rem; color: #64748b; margin-top: .05rem;
   }
   /* Progress bar */
   .prog-bar-track {
     background: #f1f5f9; border-radius: 99px;
-    height: 6px; overflow: hidden; margin-bottom: 1.25rem;
+    height: 5px; overflow: hidden; margin-bottom: .9rem;
   }
   .prog-bar-fill {
     height: 100%; border-radius: 99px;
@@ -82,18 +83,18 @@
     width: 0%; transition: width .8s ease;
   }
   /* Stages */
-  .stages { display: flex; flex-direction: column; gap: .55rem; }
+  .stages { display: flex; flex-direction: column; gap: .35rem; }
   .stage {
-    display: flex; align-items: center; gap: .65rem;
-    font-size: .84rem; color: #94a3b8; transition: color .3s;
+    display: flex; align-items: center; gap: .5rem;
+    font-size: .79rem; color: #94a3b8; transition: color .3s;
   }
   .stage.active  { color: #4f46e5; font-weight: 600; }
   .stage.done    { color: #10b981; }
   .stage-icon {
-    width: 20px; height: 20px; border-radius: 50%;
+    width: 17px; height: 17px; border-radius: 50%;
     border: 2px solid currentColor; flex-shrink: 0;
     display: flex; align-items: center; justify-content: center;
-    font-size: .7rem; transition: background .3s, border-color .3s;
+    font-size: .62rem; transition: background .3s, border-color .3s;
   }
   .stage.active .stage-icon {
     border-color: #6366f1; background: #ede9fe;
@@ -109,7 +110,7 @@
   /* Timer + note row */
   .progress-footer {
     display: flex; justify-content: space-between; align-items: center;
-    margin-top: 1.1rem; font-size: .78rem; color: #94a3b8;
+    margin-top: .7rem; font-size: .74rem; color: #94a3b8;
   }
   .progress-footer strong { color: #6366f1; }
   @keyframes spin { to { transform: rotate(360deg); } }
@@ -120,15 +121,16 @@
   /* ── Model cards grid ──────────────────────────────────────────── */
   .models-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 1.25rem;
-    margin-top: 1.5rem;
+    grid-template-columns: repeat(3, 1fr);
+    gap: .75rem;
+    margin-top: .75rem;
   }
+  @media(max-width:680px){ .models-grid { grid-template-columns: 1fr; } }
 
   .model-card {
-    border-radius: 12px;
-    border: 2px solid #e2e8f0;
-    padding: 1.5rem;
+    border-radius: 8px;
+    border: 1.5px solid #e2e8f0;
+    padding: 1rem 1.1rem;
     background: #fafafa;
     transition: border-color .2s, background .2s;
     position: relative;
@@ -140,66 +142,68 @@
   .model-card.failed   { border-color: #fca5a5; background: #fef2f2; }
 
   .mc-badge {
-    font-size: .7rem;
+    font-size: .65rem;
     font-weight: 700;
     letter-spacing: .07em;
     text-transform: uppercase;
-    padding: .2rem .55rem;
+    padding: .15rem .45rem;
     border-radius: 4px;
     background: #e0e7ff;
     color: #4338ca;
     display: inline-block;
-    margin-bottom: .6rem;
+    margin-bottom: .4rem;
   }
-  .mc-title   { font-size: .95rem; font-weight: 700; color: #1e293b; margin-bottom: .4rem; }
+  .mc-title   { font-size: .82rem; font-weight: 600; color: #475569; margin-bottom: .2rem; }
   .mc-label   {
-    font-size: 1.45rem; font-weight: 700; color: #0c4a6e;
-    margin: .5rem 0 .3rem; line-height: 1.2;
+    font-size: 1.15rem; font-weight: 700; color: #0c4a6e;
+    margin: .3rem 0 .15rem; line-height: 1.25;
   }
-  .mc-conf    { font-size: .85rem; color: #64748b; }
-  .mc-ms      { font-size: .75rem; color: #94a3b8; margin-top: .4rem; }
-  .mc-error   { font-size: .82rem; color: #b91c1c; margin-top: .4rem; }
+  .mc-conf    { font-size: .78rem; color: #64748b; }
+  .mc-ms      { font-size: .7rem; color: #94a3b8; margin-top: .25rem; }
+  .mc-error   { font-size: .78rem; color: #b91c1c; margin-top: .25rem; }
   .mc-spinner {
-    display: inline-block; width: 20px; height: 20px;
+    display: inline-block; width: 16px; height: 16px;
     border: 2px solid #ddd6fe; border-top: 2px solid #6366f1;
     border-radius: 50%; animation: spin .75s linear infinite;
-    vertical-align: middle; margin-right: .4rem;
+    vertical-align: middle; margin-right: .3rem;
   }
 
   /* ── Ensemble verdict ──────────────────────────────────────────── */
   .ensemble-box {
     display: none;
-    border-radius: 14px;
-    padding: 2rem;
-    text-align: center;
-    border: 2px solid #0ea5e9;
+    border-radius: 8px;
+    padding: .9rem 1.25rem;
+    border: 1.5px solid #0ea5e9;
     background: #f0f9ff;
-    margin-bottom: 1.5rem;
+    margin-bottom: .75rem;
+    display: none;
+    align-items: center;
+    gap: 1.25rem;
   }
   .ensemble-box.seizure { border-color: #f87171; background: #fff5f5; }
   .ensemble-box.lpd     { border-color: #f59e0b; background: #fffbeb; }
-  .ens-eyebrow  { font-size: .78rem; text-transform: uppercase; letter-spacing: .1em;
-                  font-weight: 700; color: #0369a1; margin-bottom: .4rem; }
-  .ens-label    { font-size: 2.4rem; font-weight: 800; color: #0c4a6e; line-height: 1.1; }
-  .ens-votes    { font-size: .92rem; color: #0369a1; margin-top: .5rem; }
+  .ens-eyebrow  { font-size: .68rem; text-transform: uppercase; letter-spacing: .1em;
+                  font-weight: 700; color: #0369a1; margin-bottom: .1rem; }
+  .ens-label    { font-size: 1.5rem; font-weight: 800; color: #0c4a6e; line-height: 1.15; }
+  .ens-votes    { font-size: .78rem; color: #0369a1; margin-top: .1rem; }
 
   /* ── AI Interpretation ─────────────────────────────────────────── */
   .interp-panel {
     display: none;
-    border: 1.5px solid #818cf8;
-    border-radius: 12px;
-    padding: 1.5rem;
+    border: 1px solid #c7d2fe;
+    border-radius: 8px;
+    padding: 1rem 1.2rem;
     background: #fafafe;
-    margin-top: 1.25rem;
+    margin-top: .75rem;
   }
-  .interp-header { display: flex; align-items: center; gap: .5rem; margin-bottom: .75rem; }
+  .interp-header { display: flex; align-items: center; gap: .4rem; margin-bottom: .5rem; }
   .interp-badge  {
-    font-size: .7rem; font-weight: 700; letter-spacing: .08em;
+    font-size: .65rem; font-weight: 700; letter-spacing: .08em;
     color: #4338ca; background: #e0e7ff; border-radius: 4px;
-    padding: .15rem .5rem; text-transform: uppercase;
+    padding: .12rem .4rem; text-transform: uppercase;
   }
-  .interp-title  { font-size: .9rem; font-weight: 600; color: #4338ca; }
-  .interp-text   { font-size: .91rem; line-height: 1.8; color: #374151; }
+  .interp-title  { font-size: .82rem; font-weight: 600; color: #4338ca; }
+  .interp-text   { font-size: .84rem; line-height: 1.75; color: #374151; }
   .interp-dots::after { content: ''; animation: dots 1.2s infinite; }
   @keyframes dots { 0%{content:''} 33%{content:'.'} 66%{content:'..'} 100%{content:'...'} }
 
@@ -221,28 +225,25 @@
 {% block content %}
 <div class="cmp-wrap">
 
-  <!-- ── Health disclaimer banner (always shown for medical models) ── -->
-  <div style="display:flex;align-items:flex-start;gap:.75rem;padding:.9rem 1.1rem;
-              border-radius:10px;margin-bottom:1.25rem;
-              background:#fefce8;border:1.5px solid #fbbf24;">
-    <span style="font-size:1.25rem;line-height:1.1;">&#9888;&#65039;</span>
-    <div>
-      <strong style="font-size:.86rem;color:#92400e;display:block;margin-bottom:.25rem;">
-        Portfolio Demo — Not for Clinical or Medical Use
-      </strong>
-      <span style="font-size:.82rem;color:#78350f;line-height:1.6;">
-        These models are experimental research prototypes built for portfolio demonstration only.
-        They <strong>must not</strong> be used to diagnose, treat, or make any decision about
-        a person's health. Always consult a qualified medical professional for any health concern.
-      </span>
-    </div>
+  <!-- ── Health disclaimer ── -->
+  <div style="display:flex;align-items:center;gap:.6rem;padding:.6rem .9rem;
+              border-radius:8px;margin-bottom:.85rem;
+              background:#fefce8;border:1px solid #fbbf24;">
+    <span style="font-size:1rem;">&#9888;&#65039;</span>
+    <span style="font-size:.78rem;color:#78350f;line-height:1.5;">
+      <strong>Portfolio demo only.</strong>
+      These models must not be used to diagnose, treat, or make any health decision.
+      Always consult a qualified medical professional.
+    </span>
   </div>
 
-  <div class="mb-4">
-    <a href="{% url 'projects_list' %}" style="font-size:.87rem; color:#64748b;">&larr; Back to models</a>
-    <h1 class="mt-2 mb-1">Seizure Detection — Model Comparison</h1>
-    <p class="text-muted mb-0" style="font-size:.92rem;">
-      Upload one EEG file and see predictions from all three architectures side by side.
+  <div style="margin-bottom:.85rem;">
+    <a href="{% url 'projects_list' %}" style="font-size:.8rem;color:#64748b;">&larr; Back to models</a>
+    <h1 style="font-size:1.4rem;font-weight:800;margin:.35rem 0 .2rem;color:#1e293b;">
+      Seizure Detection — Model Comparison
+    </h1>
+    <p style="color:#64748b;font-size:.84rem;margin:0;">
+      Upload one EEG file · all three architectures run side by side · ensemble majority vote
     </p>
   </div>
 
@@ -331,9 +332,12 @@
 
   {# ── Ensemble box ── #}
   <div class="ensemble-box" id="ensemble-box">
-    <div class="ens-eyebrow">Ensemble Vote (majority)</div>
-    <div class="ens-label" id="ens-label"></div>
-    <div class="ens-votes" id="ens-votes"></div>
+    <div style="font-size:1.6rem;opacity:.5;">&#9878;</div>
+    <div>
+      <div class="ens-eyebrow">Ensemble — majority vote</div>
+      <div class="ens-label" id="ens-label"></div>
+      <div class="ens-votes" id="ens-votes"></div>
+    </div>
   </div>
 
   {# ── Model cards ── #}
@@ -588,7 +592,7 @@ function showEnsemble(label, votes) {
   const win   = votes[label] || 0;
   votesEl.textContent = `${win} of ${total} model${total !== 1 ? 's' : ''} agree`;
 
-  box.style.display = 'block';
+  box.style.display = 'flex';
 }
 
 /* ── AI ensemble interpretation ─────────────────────────────────── */
