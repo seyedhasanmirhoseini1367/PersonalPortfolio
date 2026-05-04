@@ -346,7 +346,7 @@ def interpret_prediction(request, project_id):
         })
     except json.JSONDecodeError:
         return JsonResponse({'error': 'Invalid JSON body'}, status=400)
-    except Exception as e:
+    except BaseException as e:
         return JsonResponse({'error': str(e)}, status=500)
 
 

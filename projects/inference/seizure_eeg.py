@@ -41,6 +41,10 @@ from sklearn.preprocessing import StandardScaler
 from .registry import register
 from .base import InferenceHandler, InferenceError
 
+# Module-level cache: (model_path, variant) → loaded model
+# Avoids reloading from disk on every request (was causing 55-60s latency).
+_MODEL_CACHE: dict = {}
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Signal processing  (matches CNNDataset exactly)
@@ -439,29 +443,35 @@ class SeizureEEGHandler(InferenceHandler):
         variant     = self.cfg.get("model_variant", "cnn_simple")
         num_classes = len(self.cfg.get("label_map", self.DEFAULT_LABEL_MAP))
 
-        try:
-            if variant == "cnn_transformer":
-                model = _build_cnn_transformer(num_classes=num_classes)
-            else:
-                model = _build_cnn_simple(num_classes=num_classes)
+        cache_key = (model_path, variant, num_classes)
+        model = _MODEL_CACHE.get(cache_key)
+        if model is None:
+            try:
+                if variant == "cnn_transformer":
+                    model = _build_cnn_transformer(num_classes=num_classes)
+                else:
+                    model = _build_cnn_simple(num_classes=num_classes)
 
-            state_dict = torch.load(model_path, map_location="cpu",
-                                    weights_only=True)
-            model.load_state_dict(state_dict)
-        except RuntimeError as e:
-            raise InferenceError(
-                f"Model weights could not be loaded into the '{variant}' architecture. "
-                f"Detail: {e}. "
-                "If you recently changed the model, update 'model_variant' in file_input_config."
-            )
-        except Exception as e:
-            raise InferenceError(f"Failed to load model: {e}")
+                state_dict = torch.load(model_path, map_location="cpu",
+                                        weights_only=True)
+                model.load_state_dict(state_dict)
+            except RuntimeError as e:
+                raise InferenceError(
+                    f"Model weights could not be loaded into the '{variant}' architecture. "
+                    f"Detail: {e}. "
+                    "If you recently changed the model, update 'model_variant' in file_input_config."
+                )
+            except Exception as e:
+                raise InferenceError(f"Failed to load model: {e}")
 
-        model.eval()
-        device = torch.device("cpu")  # CPU on server; GPU auto if CUDA available
-        if torch.cuda.is_available():
-            device = torch.device("cuda")
-        model.to(device)
+            model.eval()
+            device = torch.device("cpu")
+            if torch.cuda.is_available():
+                device = torch.device("cuda")
+            model.to(device)
+            _MODEL_CACHE[cache_key] = model
+        else:
+            device = next(model.parameters()).device
 
         # ── Inference ─────────────────────────────────────────────────────────
         x = torch.tensor(tensor, dtype=torch.float32).to(device)
