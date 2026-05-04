@@ -248,8 +248,8 @@ class GenerationService:
                 result = caller(system_prompt, messages)
                 if result:
                     return result
-            except Exception as exc:
-                logger.warning('LLM call failed (%s): %s', caller.__name__, exc)
+            except BaseException as exc:
+                logger.warning('LLM call failed (%s): %s: %s', caller.__name__, type(exc).__name__, exc)
         return None
 
     def _call_groq(self, system_prompt: str, messages: List[HistoryItem]) -> Optional[str]:
