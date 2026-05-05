@@ -99,6 +99,7 @@ def add_project_comment(request, project_id):
 
 def home(request):
     from django.contrib.auth import get_user_model
+    from resume.models import ResumeSetting
     User = get_user_model()
 
     skill_count = {}
@@ -107,6 +108,7 @@ def home(request):
             skill_count[s] = skill_count.get(s, 0) + 1
 
     portfolio_owner = User.objects.filter(is_superuser=True).first()
+    resume_setting = ResumeSetting.objects.prefetch_related('quick_facts').first()
 
     return render(request, 'home.html', {
         'featured_projects': Projects.objects.filter(is_featured=True, is_public=True)[:6],
@@ -116,6 +118,8 @@ def home(request):
         'skill_choices':     dict(Projects.SKILL_CHOICES),
         'latest_stories':    Story.objects.filter(status=Story.Status.PUBLISHED).order_by('-published_at')[:4],
         'portfolio_owner':   portfolio_owner,
+        'resume_setting':    resume_setting,
+        'quick_facts':       resume_setting.quick_facts.all() if resume_setting else [],
     })
 
 

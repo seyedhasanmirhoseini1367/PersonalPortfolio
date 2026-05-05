@@ -697,22 +697,21 @@
                 <h2 style="font-size:1.1rem; font-weight:700; margin-bottom:.75rem; color:var(--text,#1e293b);">
                     About Me
                 </h2>
-                <p>
-                    I'm a Data Scientist with a Master's degree in Statistical Data Analytics, a Bachelor's in Mathematics, and an Master of Business Administration (MBA) degree. 
-                    I'm currently based in Tampere, Finland. I specialise in building and deploying machine learning
-                    systems end-to-end — from data processing and model training to production monitoring and CI/CD pipelines.
-                </p>
-                <p>
-                    My focus is on the intersection of <strong>ML Engineering and MLOps</strong>: making models
-                    reliable, reproducible, and observable in production. This portfolio is itself a live MLOps
-                    project — containerised with Docker, deployed via GitHub Actions, and equipped with a
-                    real-time prediction monitoring dashboard.
-                </p>
-                <p>
-                    I'm actively looking for <strong>ML Engineer</strong> or <strong>Data Scientist</strong>
-                    roles in Finland or remote, where I can apply both my modelling expertise and
-                    my growing infrastructure skills.
-                </p>
+                {% if resume_setting and resume_setting.about_paragraph_1 %}
+                    <p>{{ resume_setting.about_paragraph_1|safe }}</p>
+                {% else %}
+                    <p>I'm a Data Scientist with a Master's degree in Statistical Data Analytics, a Bachelor's in Mathematics, and a Master of Business Administration (MBA) degree. I'm currently based in Helsinki, Finland. I specialise in building and deploying machine learning systems end-to-end — from data processing and model training to production monitoring and CI/CD pipelines.</p>
+                {% endif %}
+                {% if resume_setting and resume_setting.about_paragraph_2 %}
+                    <p>{{ resume_setting.about_paragraph_2|safe }}</p>
+                {% else %}
+                    <p>My focus is on the intersection of <strong>ML Engineering and MLOps</strong>: making models reliable, reproducible, and observable in production. This portfolio is itself a live MLOps project — containerised with Docker, deployed via GitHub Actions, and equipped with a real-time prediction monitoring dashboard.</p>
+                {% endif %}
+                {% if resume_setting and resume_setting.about_paragraph_3 %}
+                    <p>{{ resume_setting.about_paragraph_3|safe }}</p>
+                {% else %}
+                    <p>I'm actively looking for <strong>ML Engineer</strong> or <strong>Data Scientist</strong> roles in Finland or remote, where I can apply both my modelling expertise and my growing infrastructure skills.</p>
+                {% endif %}
                 <div style="margin-top:1rem; display:flex; gap:.6rem; flex-wrap:wrap;">
                     <a href="{% url 'resume:resume_page' %}" class="btn" style="font-size:.82rem; padding:.4rem 1rem;">
                         View Resume
@@ -726,34 +725,22 @@
                 <h2 style="font-size:1.1rem; font-weight:700; margin-bottom:.75rem; color:var(--text,#1e293b);">
                     Quick Facts
                 </h2>
-                <div class="highlight-item">
-                    <span class="highlight-icon">🎓</span>
-                    <span><strong>MSc Data Science</strong> + BSc Mathematics</span>
-                </div>
-                <div class="highlight-item">
-                    <span class="highlight-icon">📍</span>
-                    <span>Helsinki, Finland · open to remote</span>
-                </div>
-                <div class="highlight-item">
-                    <span class="highlight-icon">🤖</span>
-                    <span>ML · Deep Learning · NLP · RAG systems</span>
-                </div>
-                <div class="highlight-item">
-                    <span class="highlight-icon">⚙️</span>
-                    <span>Docker · GitHub Actions · MLflow · Azure (learning)</span>
-                </div>
-                <div class="highlight-item">
-                    <span class="highlight-icon">🐍</span>
-                    <span>Python · PyTorch · Scikit-learn · Django · FastAPI</span>
-                </div>
-                <div class="highlight-item">
-                    <span class="highlight-icon">📊</span>
-                    <span>Live prediction monitoring on every model in this portfolio</span>
-                </div>
-                <div class="highlight-item">
-                    <span class="highlight-icon">🚀</span>
-                    <span>REST API for all deployed models — <a href="{% url 'api_docs' %}" style="color:#2563eb;">see docs</a></span>
-                </div>
+                {% if quick_facts %}
+                    {% for fact in quick_facts %}
+                    <div class="highlight-item">
+                        <span class="highlight-icon">{{ fact.icon }}</span>
+                        <span>{{ fact.text|safe }}{% if fact.link_url %} — <a href="{{ fact.link_url }}" style="color:#2563eb;">{{ fact.link_text }}</a>{% endif %}</span>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="highlight-item"><span class="highlight-icon">🎓</span><span><strong>MSc Data Science</strong> + BSc Mathematics</span></div>
+                    <div class="highlight-item"><span class="highlight-icon">📍</span><span>Helsinki, Finland · open to remote</span></div>
+                    <div class="highlight-item"><span class="highlight-icon">🤖</span><span>ML · Deep Learning · NLP · RAG systems</span></div>
+                    <div class="highlight-item"><span class="highlight-icon">⚙️</span><span>Docker · GitHub Actions · MLflow · Azure (learning)</span></div>
+                    <div class="highlight-item"><span class="highlight-icon">🐍</span><span>Python · PyTorch · Scikit-learn · Django · FastAPI</span></div>
+                    <div class="highlight-item"><span class="highlight-icon">📊</span><span>Live prediction monitoring on every model in this portfolio</span></div>
+                    <div class="highlight-item"><span class="highlight-icon">🚀</span><span>REST API for all deployed models — <a href="{% url 'api_docs' %}" style="color:#2563eb;">see docs</a></span></div>
+                {% endif %}
             </div>
         </div>
     </section>

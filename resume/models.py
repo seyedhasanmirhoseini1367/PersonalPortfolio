@@ -19,6 +19,20 @@ class ResumeSetting(models.Model):
         help_text="Your professional summary/objective"
     )
 
+    # Homepage About Me (three editable paragraphs; HTML allowed)
+    about_paragraph_1 = models.TextField(
+        blank=True, default="",
+        help_text="First paragraph of the About Me section on the homepage.",
+    )
+    about_paragraph_2 = models.TextField(
+        blank=True, default="",
+        help_text="Second paragraph (focus / specialisation). You can use &lt;strong&gt; for bold.",
+    )
+    about_paragraph_3 = models.TextField(
+        blank=True, default="",
+        help_text="Third paragraph (what you are looking for). You can use &lt;strong&gt; for bold.",
+    )
+
     # Social Links
     github_url = models.URLField(blank=True)
     linkedin_url = models.URLField(blank=True)
@@ -275,3 +289,38 @@ class Language(models.Model):
 
     def __str__(self):
         return f"{self.get_language_display()} - {self.get_proficiency_display()}"
+
+
+class QuickFact(models.Model):
+    """
+    A single item in the Quick Facts list on the homepage About Me card.
+    """
+    resume = models.ForeignKey(
+        'ResumeSetting', on_delete=models.CASCADE,
+        related_name='quick_facts',
+    )
+    icon = models.CharField(
+        max_length=10, default='📌',
+        help_text="Emoji icon shown before the fact, e.g. 🎓",
+    )
+    text = models.CharField(
+        max_length=300,
+        help_text="The fact text. You can use HTML e.g. <strong>bold</strong>.",
+    )
+    link_text = models.CharField(
+        max_length=100, blank=True,
+        help_text="Optional: label of an inline link, e.g. 'see docs'",
+    )
+    link_url = models.CharField(
+        max_length=300, blank=True,
+        help_text="Optional: URL for the inline link (relative or absolute)",
+    )
+    display_order = models.IntegerField(default=0)
+
+    class Meta:
+        ordering = ['display_order']
+        verbose_name = 'Quick Fact'
+        verbose_name_plural = 'Quick Facts'
+
+    def __str__(self):
+        return self.text[:60]

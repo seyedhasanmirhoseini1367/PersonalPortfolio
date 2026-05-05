@@ -3,7 +3,7 @@ from django.contrib import admin
 from django.utils.html import format_html
 from .models import (
     ResumeSetting, Education, Experience, Skill,
-    ProjectHighlight, Certification, Language,
+    ProjectHighlight, Certification, Language, QuickFact,
 )
 
 
@@ -64,6 +64,13 @@ class LanguageInline(admin.TabularInline):
     ordering = ('display_order',)
 
 
+class QuickFactInline(admin.TabularInline):
+    model = QuickFact
+    extra = 1
+    fields = ('icon', 'text', 'link_text', 'link_url', 'display_order')
+    ordering = ('display_order',)
+
+
 class ProjectHighlightInline(admin.StackedInline):
     model = ProjectHighlight
     extra = 0
@@ -84,6 +91,7 @@ class ProjectHighlightInline(admin.StackedInline):
 @admin.register(ResumeSetting)
 class ResumeSettingAdmin(admin.ModelAdmin):
     inlines = [
+        QuickFactInline,
         EducationInline,
         ExperienceInline,
         SkillInline,
@@ -102,6 +110,10 @@ class ResumeSettingAdmin(admin.ModelAdmin):
         }),
         ('Professional Summary', {
             'fields': ('professional_summary',),
+        }),
+        ('Homepage — About Me', {
+            'description': 'These three paragraphs appear in the About Me card on the homepage. HTML tags like &lt;strong&gt; are allowed.',
+            'fields': ('about_paragraph_1', 'about_paragraph_2', 'about_paragraph_3'),
         }),
         ('Social Links', {
             'fields': (
