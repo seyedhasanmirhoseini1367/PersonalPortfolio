@@ -35,27 +35,29 @@
     .hero-link:hover { background: rgba(255,255,255,.15); color: white; }
     .hero-link svg { width: 13px; height: 13px; fill: currentColor; flex-shrink: 0; }
 
-    /* ── Layout ───────────────────────────────────────────────────── */
-    .resume-layout {
-        display: grid;
-        grid-template-columns: 1fr 2fr;
-        gap: .85rem;
-        max-width: 1500px;
-        margin: 0 auto;
+    /* ── Layout: single column ────────────────────────────────────── */
+    .resume-layout { display: flex; flex-direction: column; gap: .85rem; }
+
+    /* ── Main Content ─────────────────────────────────────────────── */
+    .resume-main {
+        background: white;
+        padding: 1rem 1.2rem;
+        border-radius: 12px;
+        box-shadow: 0 2px 12px rgba(0,0,0,.08);
     }
 
-    /* ── Sidebar ──────────────────────────────────────────────────── */
-    .resume-sidebar {
-        background: #f8fafc;
-        padding: .9rem 1rem;
-        border-radius: 12px;
-        height: fit-content;
-        position: sticky;
-        top: 1.25rem;
+    /* ── Bottom info strip ────────────────────────────────────────── */
+    .resume-bottom {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: .85rem;
     }
-    .sidebar-section { margin-bottom: .75rem; }
-    .sidebar-section:last-child { margin-bottom: 0; }
-    .sidebar-title {
+    .info-card {
+        background: #f8fafc;
+        border-radius: 12px;
+        padding: .9rem 1rem;
+    }
+    .info-card-title {
         font-size: .72rem; font-weight: 700; text-transform: uppercase;
         letter-spacing: .05em; color: #1e293b; margin-bottom: .45rem;
         padding-bottom: .28rem; border-bottom: 2px solid #302b63;
@@ -67,19 +69,6 @@
         margin-bottom: .3rem; color: #64748b; font-size: .74rem;
     }
     .contact-icon { margin-right: .45rem; font-size: .8rem; width: 15px; text-align: center; }
-
-    /* ── Skills (tag clouds per category) ────────────────────────── */
-    .skill-cat-block { margin-bottom: .5rem; }
-    .skill-cat-label {
-        font-size: .68rem; font-weight: 700; color: #374151;
-        margin-bottom: .18rem; text-transform: uppercase; letter-spacing: .04em;
-    }
-    .skill-tags { display: flex; flex-wrap: wrap; gap: .18rem; }
-    .skill-tag {
-        background: #e0e7ff; color: #3730a3;
-        padding: .08rem .38rem; border-radius: 7px;
-        font-size: .67rem; font-weight: 500;
-    }
 
     /* ── Languages ────────────────────────────────────────────────── */
     .language-item { display: flex; justify-content: space-between; margin-bottom: .28rem; }
@@ -100,14 +89,6 @@
         border: 1px solid #bbf7d0;
         padding: .08rem .38rem; border-radius: 7px;
         font-size: .67rem; font-weight: 500;
-    }
-
-    /* ── Main Content ─────────────────────────────────────────────── */
-    .resume-main {
-        background: white;
-        padding: 1rem 1.2rem;
-        border-radius: 12px;
-        box-shadow: 0 2px 12px rgba(0,0,0,.08);
     }
     .main-section { margin-bottom: 1.1rem; }
     .main-section:last-child { margin-bottom: 0; }
@@ -197,14 +178,11 @@
     .project-link:hover { background: #302b63; color: white; }
 
     /* ── Responsive ───────────────────────────────────────────────── */
-    @media (max-width: 968px) {
-        .resume-layout { grid-template-columns: 1fr; gap: 1rem; }
-        .resume-sidebar { position: static; }
-    }
     @media (max-width: 768px) {
         .resume-hero { padding: 1rem; gap: 1rem; }
         .resume-hero-right { justify-content: flex-start; }
-        .resume-main, .resume-sidebar { padding: .9rem; }
+        .resume-main, .info-card { padding: .9rem; }
+        .resume-bottom { grid-template-columns: 1fr; }
         .item-oneliner { flex-direction: column; gap: .05rem; }
         .item-dash { display: none; }
         .core-skills-table { display: block; }
@@ -212,7 +190,6 @@
         .core-skills-cat { width: 100%; white-space: normal; font-size: .72rem; padding-bottom: 0; }
         .core-skills-list { padding-top: 0; }
     }
-
     @media (max-width: 480px) {
         .resume-title { font-size: 1rem; }
         .resume-hero-right { flex-wrap: wrap; }
@@ -269,76 +246,6 @@
 </section>
 
     <div class="resume-layout">
-
-        <!-- ── Sidebar ── -->
-        <aside class="resume-sidebar">
-
-            <!-- Contact -->
-            <section class="sidebar-section">
-                <h3 class="sidebar-title">Contact</h3>
-                <div class="contact-item">
-                    <span class="contact-icon">📧</span>
-                    <span>{{ resume_settings.email }}</span>
-                </div>
-                {% if resume_settings.phone %}
-                <div class="contact-item">
-                    <span class="contact-icon">📱</span>
-                    <span>{{ resume_settings.phone }}</span>
-                </div>
-                {% endif %}
-                <div class="contact-item">
-                    <span class="contact-icon">📍</span>
-                    <span>{{ resume_settings.location }}</span>
-                </div>
-                {% if resume_settings.website %}
-                <div class="contact-item">
-                    <span class="contact-icon">🌐</span>
-                    <a href="{{ resume_settings.website }}" target="_blank">Portfolio Website</a>
-                </div>
-                {% endif %}
-            </section>
-
-            <!-- Languages -->
-            {% if languages %}
-            <section class="sidebar-section">
-                <h3 class="sidebar-title">Languages</h3>
-                {% for lang in languages %}
-                <div class="language-item">
-                    <span class="language-name">{{ lang.get_language_display }}</span>
-                    <span class="language-level">{{ lang.get_proficiency_display }}</span>
-                </div>
-                {% endfor %}
-            </section>
-            {% endif %}
-
-            <!-- Soft Skills -->
-            {% if soft_skills %}
-            <section class="sidebar-section">
-                <h3 class="sidebar-title">Soft Skills</h3>
-                <div class="mbti-badge">
-                    <svg width="11" height="11" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/></svg>
-                    INFJ · Myers-Briggs
-                </div>
-                <div class="soft-skill-tags">
-                    {% for skill in soft_skills %}<span class="soft-skill-tag">{{ skill.name }}</span>{% endfor %}
-                </div>
-            </section>
-            {% endif %}
-
-            <!-- Certifications -->
-            {% if certifications %}
-            <section class="sidebar-section">
-                <h3 class="sidebar-title">Certifications</h3>
-                {% for cert in certifications %}
-                <div style="margin-bottom:.5rem;">
-                    <div style="font-weight:600;color:#374151;font-size:.74rem;">{{ cert.name }}</div>
-                    <div style="color:#64748b;font-size:.68rem;">{{ cert.issuing_organization }} · {{ cert.issue_date|date:"M Y" }}</div>
-                </div>
-                {% endfor %}
-            </section>
-            {% endif %}
-
-        </aside>
 
         <!-- ── Main Content ── -->
         <main class="resume-main">
@@ -449,7 +356,77 @@
             {% endif %}
 
         </main>
-    </div>
-</div>
+
+        <!-- ── Bottom info strip ── -->
+        <div class="resume-bottom">
+
+            <!-- Contact -->
+            <div class="info-card">
+                <h3 class="info-card-title">Contact</h3>
+                <div class="contact-item">
+                    <span class="contact-icon">📧</span>
+                    <span>{{ resume_settings.email }}</span>
+                </div>
+                {% if resume_settings.phone %}
+                <div class="contact-item">
+                    <span class="contact-icon">📱</span>
+                    <span>{{ resume_settings.phone }}</span>
+                </div>
+                {% endif %}
+                <div class="contact-item">
+                    <span class="contact-icon">📍</span>
+                    <span>{{ resume_settings.location }}</span>
+                </div>
+                {% if resume_settings.website %}
+                <div class="contact-item">
+                    <span class="contact-icon">🌐</span>
+                    <a href="{{ resume_settings.website }}" target="_blank" style="color:#302b63;">Portfolio Website</a>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Languages -->
+            {% if languages %}
+            <div class="info-card">
+                <h3 class="info-card-title">Languages</h3>
+                {% for lang in languages %}
+                <div class="language-item">
+                    <span class="language-name">{{ lang.get_language_display }}</span>
+                    <span class="language-level">{{ lang.get_proficiency_display }}</span>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- Soft Skills -->
+            {% if soft_skills %}
+            <div class="info-card">
+                <h3 class="info-card-title">Soft Skills</h3>
+                <div class="mbti-badge">
+                    <svg width="11" height="11" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/></svg>
+                    INFJ · Myers-Briggs
+                </div>
+                <div class="soft-skill-tags">
+                    {% for skill in soft_skills %}<span class="soft-skill-tag">{{ skill.name }}</span>{% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Certifications -->
+            {% if certifications %}
+            <div class="info-card">
+                <h3 class="info-card-title">Certifications</h3>
+                {% for cert in certifications %}
+                <div style="margin-bottom:.5rem;">
+                    <div style="font-weight:600;color:#374151;font-size:.74rem;">{{ cert.name }}</div>
+                    <div style="color:#64748b;font-size:.68rem;">{{ cert.issuing_organization }} · {{ cert.issue_date|date:"M Y" }}</div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+        </div><!-- end .resume-bottom -->
+
+    </div><!-- end .resume-layout -->
 </div>
 {% endblock %}
