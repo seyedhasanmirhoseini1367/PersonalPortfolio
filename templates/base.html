@@ -507,8 +507,8 @@
                     <li><a href="{% url 'projects_list' %}"
                            {% if request.resolver_match.url_name == 'projects_list' %}class="active"{% endif %}>ML Models</a></li>
 
-                    <li><a href="{% url 'stories:story_list' %}"
-                           {% if request.resolver_match.url_name == 'story_list' %}class="active"{% endif %}>Stories</a></li>
+                    <!-- <li><a href="{% url 'stories:story_list' %}"
+                           {% if request.resolver_match.url_name == 'story_list' %}class="active"{% endif %}>Stories</a></li> -->
 
                     <li><a href="{% url 'rag_system:chat' %}"
                            {% if request.resolver_match.url_name == 'chat' %}class="active"{% endif %}>AI Assistant</a></li>
