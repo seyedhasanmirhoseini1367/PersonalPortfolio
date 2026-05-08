@@ -380,10 +380,19 @@
                         predictions.
                         Test the model's capabilities with custom inputs and see how it performs.
                     </p>
-                    <a href="{% url 'prediction_demo' project.id %}" class="prediction-button">
-                        <span>Try Live Prediction</span>
-                        <span>→</span>
-                    </a>
+                    <div style="display:flex; gap:1rem; justify-content:center; flex-wrap:wrap;">
+                        <a href="{% url 'prediction_demo' project.id %}" class="prediction-button">
+                            <span>Try Live Demo</span>
+                            <span>→</span>
+                        </a>
+                        {% if project.file_input_config.handler == 'seizure_eeg' %}
+                        <a href="{% url 'seizure_realtime' %}" class="prediction-button"
+                           style="background:rgba(0,0,0,.15); border-color:rgba(255,255,255,.4);">
+                            <span>⚡ Try Real-time Inference</span>
+                            <span>→</span>
+                        </a>
+                        {% endif %}
+                    </div>
                 </div>
             </section>
         {% endif %}
@@ -491,6 +500,14 @@
                            style="background: #ecfdf5; border-color: #10b981;">
                             <span class="link-icon">🤖</span>
                             <span>Live Prediction Demo</span>
+                        </a>
+                    {% endif %}
+
+                    {% if project.file_input_config.handler == 'seizure_eeg' %}
+                        <a href="{% url 'seizure_realtime' %}" class="project-link"
+                           style="background:#eef2ff; border-color:#6366f1;">
+                            <span class="link-icon">⚡</span>
+                            <span>Real-time Inference</span>
                         </a>
                     {% endif %}
 

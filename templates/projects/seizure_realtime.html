@@ -1,0 +1,867 @@
+{% extends 'base.html' %}
+{% block title %}Real-time EEG Inference — Dev Test{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ── Page shell ──────────────────────────────────────────────────────────── */
+.rt-wrap {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: .75rem 1rem 2rem;
+  overflow-x: hidden;
+}
+
+.dev-banner {
+  background: linear-gradient(90deg,#f59e0b,#fbbf24);
+  color:#1c1917; padding:.45rem 1rem; border-radius:8px;
+  font-weight:600; font-size:.85rem; margin-bottom:.9rem;
+  display:flex; align-items:center; gap:.45rem;
+}
+
+/* ── Upload card ─────────────────────────────────────────────────────────── */
+.upload-card {
+  background:#fff; border:1px solid #e2e8f0; border-radius:10px;
+  box-shadow:0 1px 5px rgba(0,0,0,.05); padding:1rem 1.2rem;
+  margin-bottom:.8rem;
+}
+.upload-card h2 { margin:0 0 .3rem; font-size:.98rem; color:#1e293b; }
+.upload-card p  { margin:0 0 .6rem; font-size:.82rem; color:#64748b; }
+
+.drop-zone {
+  border:2px dashed #cbd5e1; border-radius:8px; padding:.85rem 1rem;
+  text-align:center; cursor:pointer; transition:border-color .2s, background .2s;
+  font-size:.82rem; color:#64748b;
+}
+.drop-zone.dragover   { border-color:#6366f1; background:#f5f3ff; }
+.drop-zone.has-files  { border-color:#10b981; background:#f0fdf4; }
+.drop-zone.has-error  { border-color:#f87171; background:#fef2f2; }
+
+.file-list { margin-top:.5rem; display:flex; flex-wrap:wrap; gap:.35rem; }
+.file-chip {
+  background:#f1f5f9; border-radius:20px; padding:.18rem .65rem;
+  font-size:.78rem; color:#475569; display:flex; align-items:center; gap:.3rem;
+}
+.file-chip .rm { cursor:pointer; color:#94a3b8; font-size:.7rem; }
+.file-chip .rm:hover { color:#ef4444; }
+
+.upload-footer { display:flex; align-items:center; gap:.75rem; flex-wrap:wrap; margin-top:.6rem; }
+
+.btn-load {
+  padding:.4rem 1.3rem; background:#6366f1; color:#fff; border:none;
+  border-radius:7px; font-size:.88rem; font-weight:600; cursor:pointer;
+  transition:background .15s;
+}
+.btn-load:hover    { background:#4f46e5; }
+.btn-load:disabled { background:#a5b4fc; cursor:not-allowed; }
+
+.interval-row { display:flex; align-items:center; gap:.4rem; font-size:.82rem; color:#475569; }
+.interval-row label { font-weight:600; color:#1e293b; }
+.interval-row select {
+  padding:.18rem .4rem; border:1px solid #cbd5e1; border-radius:5px;
+  font-size:.82rem; background:#fff; color:#1e293b;
+}
+
+/* ── Main monitor layout ─────────────────────────────────────────────────── */
+.monitor-layout {
+  display:none; gap:.8rem;
+  grid-template-columns: minmax(0, 1fr) 220px;
+  grid-template-rows: 1fr auto;  /* first row fills, history row auto */
+  width: 100%;
+  box-sizing: border-box;
+  min-width: 0;
+  min-height: 400px;
+}
+.monitor-layout.visible { display:grid; }
+
+/* ── EEG canvas card ─────────────────────────────────────────────────────── */
+.canvas-card {
+  background:#fff; border:1px solid #e2e8f0; border-radius:10px;
+  box-shadow:0 1px 5px rgba(0,0,0,.05); padding:.75rem .9rem;
+  grid-column:1; grid-row:1;
+  min-width:0; overflow:hidden;
+  /* stretch vertically to match the side-panel height */
+  display:flex; flex-direction:column;
+}
+.canvas-header {
+  display:flex; justify-content:space-between; align-items:center;
+  margin-bottom:.4rem; flex-shrink:0;
+}
+.canvas-title { font-weight:700; font-size:.88rem; color:#1e293b; }
+.time-badge {
+  font-family:monospace; background:#eef2ff; color:#6366f1;
+  padding:.12rem .55rem; border-radius:6px; font-size:.95rem; font-weight:700;
+}
+
+/* The canvas is drawn inside a flex row: label-column + canvas */
+.canvas-row {
+  display:flex; gap:0; min-width:0; overflow:hidden;
+  flex:1; min-height:550px; /* grow to fill card */
+}
+
+.ch-labels {
+  display:flex; flex-direction:column;
+  width:64px; flex-shrink:0;
+  /* height synced to canvas via JS */
+}
+.ch-label {
+  flex:1; display:flex; align-items:center; justify-content:flex-end;
+  padding-right:6px; font-size:9.5px; font-family:monospace;
+  color:#64748b; border-right:1px solid #e2e8f0; white-space:nowrap;
+  min-height:0;
+}
+
+#eegCanvas {
+  flex:1; min-width:0; width:0; display:block;
+  border-radius:0 4px 4px 0; background:#f8fafc;
+  /* height driven by flex — JS reads clientHeight and sets the draw buffer */
+}
+
+/* ── Right panel: prediction + controls ──────────────────────────────────── */
+.side-panel {
+  grid-column:2; grid-row:1;
+  display:flex; flex-direction:column; gap:.7rem;
+}
+
+.pred-card, .ctrl-card {
+  background:#fff; border:1px solid #e2e8f0; border-radius:10px;
+  box-shadow:0 1px 5px rgba(0,0,0,.05); padding:.85rem 1rem;
+}
+
+.pred-card h3, .model-card h3, .ctrl-card h3 {
+  margin:0 0 .5rem; font-size:.85rem; font-weight:700; color:#1e293b;
+}
+
+/* ── Model selector card ─────────────────────────────────────────────────── */
+.model-card {
+  background:#fff; border:1px solid #e2e8f0; border-radius:10px;
+  box-shadow:0 1px 5px rgba(0,0,0,.05); padding:.85rem 1rem;
+}
+.model-select {
+  width:100%; padding:.35rem .5rem; border:1px solid #cbd5e1; border-radius:7px;
+  font-size:.85rem; color:#1e293b; background:#fff; cursor:pointer;
+  appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2394a3b8' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat:no-repeat; background-position:right .6rem center; padding-right:1.8rem;
+}
+.model-select:focus { outline:none; border-color:#6366f1; }
+.model-select option[value="ensemble"] { font-weight:700; }
+.model-badge {
+  display:inline-block; margin-top:.4rem; font-size:.75rem; font-weight:600;
+  padding:.15rem .55rem; border-radius:20px; background:#eef2ff; color:#6366f1;
+}
+
+/* ── Ensemble vote breakdown ─────────────────────────────────────────────── */
+.votes-wrap { margin-top:.5rem; display:flex; flex-direction:column; gap:.25rem; }
+.vote-row {
+  display:flex; align-items:center; gap:.4rem; font-size:.75rem;
+  padding:.2rem .5rem; border-radius:5px; background:#f8fafc;
+}
+.vote-variant { flex:1; color:#475569; font-family:monospace; }
+.vote-label   { font-weight:700; }
+.vote-conf    { color:#94a3b8; }
+.vote-winner  { background:#f0fdf4; }
+
+.result-badge {
+  width:100%; text-align:center; font-size:1.45rem; font-weight:800;
+  padding:.55rem .5rem; border-radius:9px; display:block;
+  transition:all .25s; margin-bottom:.5rem;
+}
+.badge-idle    { background:#f8fafc; color:#94a3b8; border:2px solid #e2e8f0; }
+.badge-working { background:#fffbeb; color:#d97706; border:2px solid #fcd34d; }
+.badge-seizure { background:#fef2f2; color:#ef4444; border:2px solid #fca5a5; }
+.badge-lpd     { background:#eef2ff; color:#6366f1; border:2px solid #a5b4fc; }
+.badge-error   { background:#fff7ed; color:#ea580c; border:2px solid #fdba74; }
+
+.pred-meta { font-size:.78rem; color:#64748b; line-height:1.7; }
+.pred-meta b { color:#1e293b; }
+
+/* ── Controls card ───────────────────────────────────────────────────────── */
+.ctrl-row { display:flex; align-items:center; gap:.5rem; margin-bottom:.5rem; }
+
+.btn-icon {
+  width:34px; height:34px; border:none; border-radius:7px; cursor:pointer;
+  font-size:1rem; display:flex; align-items:center; justify-content:center;
+  transition:background .15s;
+}
+.btn-play  { background:#6366f1; color:#fff; }
+.btn-play:hover  { background:#4f46e5; }
+.btn-play:disabled  { background:#a5b4fc; cursor:not-allowed; }
+.btn-stop  { background:#ef4444; color:#fff; }
+.btn-stop:hover  { background:#dc2626; }
+.btn-stop:disabled  { background:#fca5a5; cursor:not-allowed; }
+.btn-reset { background:#f1f5f9; color:#475569; }
+.btn-reset:hover { background:#e2e8f0; }
+.btn-reset:disabled { opacity:.5; cursor:not-allowed; }
+
+/* Progress bar */
+.progress-wrap { margin-top:.3rem; }
+.progress-bar-bg {
+  background:#f1f5f9; border-radius:4px; height:6px; overflow:hidden;
+}
+.progress-bar-fill {
+  background:#6366f1; height:100%; border-radius:4px;
+  transition:width .1s linear; width:0%;
+}
+.progress-label { font-size:.75rem; color:#94a3b8; margin-top:.25rem; text-align:center; }
+
+/* ── History card (full width bottom) ───────────────────────────────────── */
+.history-card {
+  grid-column:1 / -1; grid-row:2;
+  background:#fff; border:1px solid #e2e8f0; border-radius:10px;
+  box-shadow:0 1px 5px rgba(0,0,0,.05); padding:.75rem 1rem;
+}
+.history-card h3 { margin:0 0 .5rem; font-size:.85rem; font-weight:700; color:#1e293b; }
+.history-list { display:flex; flex-wrap:wrap; gap:.35rem; }
+.hist-item {
+  display:flex; align-items:center; gap:.5rem;
+  padding:.25rem .65rem; border-radius:6px; font-size:.78rem;
+}
+.hist-seizure { background:#fef2f2; }
+.hist-lpd     { background:#eef2ff; }
+.hist-time    { font-family:monospace; color:#94a3b8; }
+.hist-label   { font-weight:700; }
+.hist-conf    { color:#64748b; }
+.hist-ms      { color:#94a3b8; }
+
+/* ── Overlay note ────────────────────────────────────────────────────────── */
+.window-note {
+  font-size:.75rem; color:#94a3b8; text-align:right; margin-top:.25rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="rt-wrap">
+
+  <div class="dev-banner">
+    <i class="fas fa-flask"></i>
+    Development &amp; Test — Real-time Streaming Inference &nbsp;·&nbsp;
+    Model always receives a full 10-second window (matches training). Interval = sliding stride.
+  </div>
+
+  <!-- ── Upload ──────────────────────────────────────────────────────────── -->
+  <div class="upload-card">
+    <h2>Upload EEG Signal Files</h2>
+    <p>Drop up to 10 <strong>.parquet</strong> files. Multiple files are concatenated in order.</p>
+
+    <div class="drop-zone" id="dropZone">
+      <i class="fas fa-upload" style="font-size:1.2rem;color:#94a3b8;margin-bottom:.2rem"></i><br>
+      Drop files here or click to browse (max 10)
+      <input type="file" id="fileInput" accept=".parquet,.csv" multiple style="display:none">
+    </div>
+
+    <div class="file-list" id="fileList"></div>
+
+    <div class="upload-footer">
+      <button class="btn-load" id="loadBtn" disabled>Load &amp; Concatenate</button>
+      <div class="interval-row">
+        <label for="intervalSelect">Classify every</label>
+        <select id="intervalSelect">
+          <option value="2000">2 s</option>
+          <option value="4000" selected>4 s</option>
+          <option value="6000">6 s</option>
+          <option value="10000">10 s (non-overlapping)</option>
+        </select>
+      </div>
+      <span id="loadStatus" style="font-size:.78rem;color:#64748b"></span>
+    </div>
+  </div>
+
+  <!-- ── Monitor grid (hidden until loaded) ─────────────────────────────── -->
+  <div class="monitor-layout" id="monitorLayout">
+
+    <!-- EEG canvas -->
+    <div class="canvas-card">
+      <div class="canvas-header">
+        <span class="canvas-title">Live EEG — all channels &nbsp;·&nbsp; 10 s window</span>
+        <span class="time-badge" id="timeBadge">0.0 s</span>
+      </div>
+      <div class="canvas-row">
+        <div class="ch-labels" id="chLabels"></div>
+        <canvas id="eegCanvas"></canvas>
+      </div>
+      <div class="window-note" id="windowNote"></div>
+    </div>
+
+    <!-- Right: prediction + controls -->
+    <div class="side-panel">
+
+      <!-- Model selector -->
+      <div class="model-card">
+        <h3><i class="fas fa-microchip" style="color:#6366f1"></i> Model</h3>
+        <select class="model-select" id="modelSelect">
+          <option value="" disabled>Loading models…</option>
+        </select>
+        <div id="modelBadge"></div>
+      </div>
+
+      <div class="pred-card">
+        <h3><i class="fas fa-brain" style="color:#6366f1"></i> Classification</h3>
+        <div id="labelFullName" style="font-size:.72rem;color:#94a3b8;margin-bottom:.3rem;min-height:.9rem"></div>
+        <span class="result-badge badge-idle" id="resultBadge">—</span>
+        <div class="pred-meta" id="predMeta"></div>
+        <div class="votes-wrap" id="votesWrap" style="display:none"></div>
+      </div>
+
+      <div class="ctrl-card">
+        <div class="ctrl-row">
+          <button class="btn-icon btn-play"  id="startBtn" title="Start replay" disabled>&#9654;</button>
+          <button class="btn-icon btn-stop"  id="stopBtn"  title="Stop"         disabled>&#9632;</button>
+          <button class="btn-icon btn-reset" id="resetBtn" title="Reset to start" disabled>&#8635;</button>
+        </div>
+        <div class="interval-row" style="margin-bottom:.4rem">
+          <label>Stride:</label>
+          <select id="intervalSelect2">
+            <option value="2000">2 s</option>
+            <option value="4000" selected>4 s</option>
+            <option value="6000">6 s</option>
+            <option value="10000">10 s</option>
+          </select>
+        </div>
+        <div class="progress-wrap">
+          <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressFill"></div></div>
+          <div class="progress-label" id="progressLabel">0.0 s / — s</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- History -->
+    <div class="history-card">
+      <h3>Classification history</h3>
+      <div class="history-list" id="historyList">
+        <span style="font-size:.8rem;color:#94a3b8">No classifications yet.</span>
+      </div>
+    </div>
+
+  </div><!-- /monitor-layout -->
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+'use strict';
+
+// ── Brain-region colour map ───────────────────────────────────────────────────
+// Keys are lowercase channel name prefixes / exact names
+const REGION_COLORS = {
+  // Frontal — blue family
+  fp: '#3b82f6', f: '#60a5fa',
+  // Temporal — green family
+  t: '#10b981',
+  // Central — slate/neutral
+  c: '#6366f1',
+  // Parietal — orange family
+  p: '#f97316',
+  // Occipital — red family
+  o: '#ef4444',
+};
+
+function channelColor(name) {
+  const n = name.toLowerCase().replace(/[^a-z]/g, '');
+  if (n.startsWith('fp')) return REGION_COLORS.fp;
+  if (n.startsWith('f'))  return REGION_COLORS.f;
+  if (n.startsWith('t'))  return REGION_COLORS.t;
+  if (n.startsWith('c'))  return REGION_COLORS.c;
+  if (n.startsWith('p'))  return REGION_COLORS.p;
+  if (n.startsWith('o'))  return REGION_COLORS.o;
+  return '#94a3b8';
+}
+
+// ── Constants ─────────────────────────────────────────────────────────────────
+const TICK_MS          = 50;
+const SAMPLES_PER_TICK = 10;   // 200 Hz real-time
+const DISPLAY_SAMPLES  = 2000; // 10-second window
+const LABEL_W          = 64;
+
+// Read the CSS-computed canvas height (flex fills the card).
+// The draw buffer (canvas.height attribute) must match the CSS display size.
+function computeCanvasH() {
+  return canvas.clientHeight || Math.max(400, window.innerHeight - 350);
+}
+
+// Sync the canvas draw-buffer dimensions to its CSS display size,
+// and match the label column height to the canvas.
+function syncCanvas() {
+  const h = computeCanvasH();
+  canvas.width  = canvas.clientWidth || 900;
+  canvas.height = h;
+  chLabels.style.height = h + 'px';
+}
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let signalData    = {};
+let columns       = [];
+let totalSamples  = 0;
+let chMin         = {};
+let chMax         = {};
+let currentSample = 0;
+let replayTimer   = null;
+let lastPredictTs = -Infinity;
+let history       = [];
+let selectedFiles = [];
+
+// ── DOM refs ──────────────────────────────────────────────────────────────────
+const dropZone      = document.getElementById('dropZone');
+const fileInput     = document.getElementById('fileInput');
+const fileList      = document.getElementById('fileList');
+const loadBtn       = document.getElementById('loadBtn');
+const loadStatus    = document.getElementById('loadStatus');
+const intSel1       = document.getElementById('intervalSelect');
+const intSel2       = document.getElementById('intervalSelect2');
+const modelSelect   = document.getElementById('modelSelect');
+const modelBadge    = document.getElementById('modelBadge');
+const monitorLayout = document.getElementById('monitorLayout');
+const chLabels      = document.getElementById('chLabels');
+const canvas        = document.getElementById('eegCanvas');
+const timeBadge     = document.getElementById('timeBadge');
+const windowNote    = document.getElementById('windowNote');
+const startBtn      = document.getElementById('startBtn');
+const stopBtn       = document.getElementById('stopBtn');
+const resetBtn      = document.getElementById('resetBtn');
+const progressFill  = document.getElementById('progressFill');
+const progressLabel = document.getElementById('progressLabel');
+const resultBadge   = document.getElementById('resultBadge');
+const predMeta      = document.getElementById('predMeta');
+const votesWrap     = document.getElementById('votesWrap');
+const historyList   = document.getElementById('historyList');
+
+let ctx = null;
+
+// ── Load available models into dropdown ───────────────────────────────────────
+const MODEL_LABELS = {
+  cnn_simple:       'CNN Simple',
+  cnn_transformer:  'CNN Transformer',
+  gru_attention:    'GRU Attention',
+  fusion:           'Fusion (CNN + GRU)',
+};
+
+// "LPD (Lateralised Periodic Discharge)" → "LPD"
+function shortLabel(label) {
+  if (!label) return '—';
+  const i = label.indexOf('(');
+  return i > 0 ? label.substring(0, i).trim() : label;
+}
+// "LPD (Lateralised Periodic Discharge)" → "Lateralised Periodic Discharge"
+function expandedLabel(label) {
+  if (!label) return '';
+  const m = label.match(/\(([^)]+)\)/);
+  return m ? m[1] : '';
+}
+
+(async function loadModels() {
+  try {
+    const resp = await fetch('{% url "seizure_realtime_models" %}');
+    const data = await resp.json();
+    const models = data.models || [];
+
+    modelSelect.innerHTML = '';
+    models.forEach(m => {
+      const opt = document.createElement('option');
+      opt.value       = m.variant;
+      opt.textContent = MODEL_LABELS[m.variant] || m.variant;
+      modelSelect.appendChild(opt);
+    });
+
+    // Ensemble option — always last
+    if (models.length > 1) {
+      const sep = document.createElement('option');
+      sep.disabled = true;
+      sep.textContent = '──────────';
+      modelSelect.appendChild(sep);
+
+      const ens = document.createElement('option');
+      ens.value       = 'ensemble';
+      ens.textContent = `Ensemble (majority vote · ${models.length} models)`;
+      modelSelect.appendChild(ens);
+    }
+
+    if (!modelSelect.options.length) {
+      modelSelect.innerHTML = '<option value="" disabled>No models configured</option>';
+    }
+  } catch (e) {
+    modelSelect.innerHTML = '<option value="" disabled>Could not load models</option>';
+  }
+  updateModelBadge();
+})();
+
+modelSelect.addEventListener('change', updateModelBadge);
+
+function updateModelBadge() {
+  const v = modelSelect.value;
+  if (!v) { modelBadge.innerHTML = ''; return; }
+  const isEnsemble = v === 'ensemble';
+  modelBadge.innerHTML = `<span class="model-badge">${
+    isEnsemble ? '⚡ Majority vote' : MODEL_LABELS[v] || v
+  }</span>`;
+}
+
+// Keep the two interval selectors in sync
+intSel1.addEventListener('change', () => { intSel2.value = intSel1.value; });
+intSel2.addEventListener('change', () => { intSel1.value = intSel2.value; });
+
+// ── File selection ────────────────────────────────────────────────────────────
+dropZone.addEventListener('click', () => fileInput.click());
+dropZone.addEventListener('dragover',  e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', ()  => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('dragover');
+  addFiles(Array.from(e.dataTransfer.files));
+});
+fileInput.addEventListener('change', () => {
+  addFiles(Array.from(fileInput.files));
+  fileInput.value = '';
+});
+
+function addFiles(incoming) {
+  for (const f of incoming) {
+    if (selectedFiles.length >= 10) break;
+    if (!selectedFiles.find(x => x.name === f.name)) selectedFiles.push(f);
+  }
+  renderFileList();
+}
+
+function renderFileList() {
+  dropZone.classList.toggle('has-files', selectedFiles.length > 0);
+  dropZone.classList.remove('has-error');
+  fileList.innerHTML = selectedFiles.map((f, i) => `
+    <span class="file-chip">
+      <i class="fas fa-file" style="font-size:.7rem"></i>
+      ${f.name}
+      <span class="rm" data-idx="${i}" title="Remove">✕</span>
+    </span>`).join('');
+  fileList.querySelectorAll('.rm').forEach(el =>
+    el.addEventListener('click', () => {
+      selectedFiles.splice(parseInt(el.dataset.idx), 1);
+      renderFileList();
+      if (!selectedFiles.length) loadBtn.disabled = true;
+    })
+  );
+  loadBtn.disabled = selectedFiles.length === 0;
+}
+
+// ── Load signal ───────────────────────────────────────────────────────────────
+loadBtn.addEventListener('click', async () => {
+  if (!selectedFiles.length) return;
+  loadBtn.disabled = true;
+  loadBtn.textContent = 'Loading…';
+  loadStatus.textContent = '';
+  stopReplay();
+
+  const fd = new FormData();
+  selectedFiles.forEach(f => fd.append('files', f));
+
+  try {
+    const resp = await fetch('{% url "seizure_realtime_load" %}', { method: 'POST', body: fd });
+    const data = await resp.json();
+
+    if (!resp.ok || data.error) {
+      setLoadError(data.error || 'Load failed.');
+      return;
+    }
+
+    columns      = data.columns;
+    totalSamples = data.total_samples;
+    signalData   = {};
+    for (const col of columns) {
+      signalData[col] = new Float32Array(data.data[col]);
+    }
+
+    // Precompute per-channel display range from first 10 s
+    const calibEnd = Math.min(DISPLAY_SAMPLES, totalSamples);
+    for (const col of columns) {
+      const sub = signalData[col].subarray(0, calibEnd);
+      let mn = sub[0], mx = sub[0];
+      for (let i = 1; i < sub.length; i++) {
+        if (sub[i] < mn) mn = sub[i];
+        if (sub[i] > mx) mx = sub[i];
+      }
+      // Small padding so signal doesn't touch the strip edge
+      const pad = (mx - mn) * -0.03 || 0.01;
+      chMin[col] = mn - pad;
+      chMax[col] = mx + pad;
+    }
+
+    // Build label column (height set after canvas is measured below)
+    chLabels.innerHTML = '';
+    columns.forEach(col => {
+      const el = document.createElement('div');
+      el.className = 'ch-label';
+      el.textContent = col.replace(/^[A-Za-z]+\s+/, '').substring(0, 8);
+      el.title = col;
+      el.style.color = channelColor(col);
+      chLabels.appendChild(el);
+    });
+
+    // Show grid, let CSS flex size the canvas, then sync the draw buffer.
+    monitorLayout.classList.add('visible');
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      syncCanvas();
+      ctx = canvas.getContext('2d');
+      currentSample = 0;
+      drawEEG();
+    }));
+
+    const filesSummary = data.files
+      ? data.files.map(f => `${f.name} (${(f.samples/200).toFixed(1)} s)`).join(' + ')
+      : '';
+    loadStatus.textContent = `${data.file_count} file(s) · ${data.duration_sec} s total`;
+    windowNote.textContent = filesSummary;
+
+    startBtn.disabled = false;
+    resetBtn.disabled = false;
+    loadBtn.textContent = 'Reload';
+    loadBtn.disabled = false;
+
+  } catch (err) {
+    setLoadError('Network error: ' + err.message);
+  }
+});
+
+function setLoadError(msg) {
+  dropZone.classList.add('has-error');
+  loadStatus.textContent = '⚠ ' + msg;
+  loadBtn.disabled = false;
+  loadBtn.textContent = 'Retry';
+}
+
+// ── Replay controls ───────────────────────────────────────────────────────────
+startBtn.addEventListener('click', startReplay);
+stopBtn.addEventListener('click',  stopReplay);
+resetBtn.addEventListener('click', () => {
+  stopReplay();
+  currentSample = 0;
+  lastPredictTs = -Infinity;
+  history = [];
+  historyList.innerHTML = '<span style="font-size:.8rem;color:#94a3b8">No classifications yet.</span>';
+  resultBadge.className  = 'result-badge badge-idle';
+  resultBadge.textContent = '—';
+  predMeta.innerHTML = '';
+  timeBadge.textContent = '0.0 s';
+  progressFill.style.width = '0%';
+  progressLabel.textContent = `0.0 s / ${(totalSamples/200).toFixed(1)} s`;
+  if (ctx) drawEEG();
+  startBtn.disabled = false;
+});
+
+function startReplay() {
+  if (replayTimer) return;
+  startBtn.disabled = true;
+  stopBtn.disabled  = false;
+  replayTimer = setInterval(tick, TICK_MS);
+}
+
+function stopReplay() {
+  if (replayTimer) { clearInterval(replayTimer); replayTimer = null; }
+  startBtn.disabled = false;
+  stopBtn.disabled  = true;
+}
+
+function tick() {
+  currentSample = Math.min(currentSample + SAMPLES_PER_TICK, totalSamples);
+  drawEEG();
+
+  const secNow  = currentSample / 200;
+  const secTotal = totalSamples / 200;
+  timeBadge.textContent = secNow.toFixed(1) + ' s';
+  progressFill.style.width = ((currentSample / totalSamples) * 100).toFixed(1) + '%';
+  progressLabel.textContent = `${secNow.toFixed(1)} s / ${secTotal.toFixed(1)} s`;
+
+  const stride = parseInt(intSel2.value, 10);
+  const now = performance.now();
+  if (currentSample >= DISPLAY_SAMPLES && now - lastPredictTs >= stride) {
+    lastPredictTs = now;
+    predictChunk();
+  }
+
+  if (currentSample >= totalSamples) {
+    stopReplay();
+    startBtn.textContent = '↺';
+    startBtn.title = 'Replay from start (use Reset first)';
+  }
+}
+
+// ── Canvas drawing ────────────────────────────────────────────────────────────
+function drawEEG() {
+  if (!ctx) return;
+  const W  = canvas.width;
+  const H  = canvas.height || computeCanvasH();
+  const nCh = columns.length;
+  if (!nCh) return;
+
+  const chH = H / nCh;
+
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = '#f8fafc';
+  ctx.fillRect(0, 0, W, H);
+
+  // Channel dividers
+  ctx.strokeStyle = '#e2e8f0';
+  ctx.lineWidth = 0.5;
+  for (let i = 1; i < nCh; i++) {
+    const y = i * chH;
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+  }
+
+  const startIdx = Math.max(0, currentSample - DISPLAY_SAMPLES);
+  const endIdx   = currentSample;
+  const nPoints  = endIdx - startIdx;
+
+  for (let ci = 0; ci < nCh; ci++) {
+    const col = columns[ci];
+    const arr = signalData[col];
+    if (!arr || nPoints < 2) continue;
+
+    const mn    = chMin[col];
+    const mx    = chMax[col];
+    const range = mx - mn || 1;
+    const pad   = 3;
+    const yBase = ci * chH;
+
+    ctx.beginPath();
+    ctx.strokeStyle = channelColor(col);
+    ctx.lineWidth   = 0.9;
+
+    for (let i = 0; i < nPoints; i++) {
+      const x   = (i / DISPLAY_SAMPLES) * W;
+      const val = arr[startIdx + i];
+      const y   = yBase + pad + (1 - (val - mn) / range) * (chH - 2 * pad);
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  }
+
+  // Cursor line while buffer is filling (first 10 s)
+  if (currentSample < DISPLAY_SAMPLES) {
+    const cx = (currentSample / DISPLAY_SAMPLES) * W;
+    ctx.save();
+    ctx.strokeStyle = 'rgba(99,102,241,.3)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath(); ctx.moveTo(cx, 0); ctx.lineTo(cx, H); ctx.stroke();
+    ctx.restore();
+  }
+
+  // Time ticks at bottom of canvas (every 2 s)
+  ctx.fillStyle   = '#94a3b8';
+  ctx.font        = '9px monospace';
+  ctx.textAlign   = 'center';
+  const tickStep  = 400; // 2 s at 200 Hz
+  for (let t = 0; t <= DISPLAY_SAMPLES; t += tickStep) {
+    const x    = (t / DISPLAY_SAMPLES) * W;
+    const secLabel = ((startIdx + t) / 200).toFixed(0);
+    ctx.fillText(secLabel + 's', x, H - 2);
+  }
+  ctx.textAlign = 'left';
+}
+
+// ── Prediction ────────────────────────────────────────────────────────────────
+async function predictChunk() {
+  const winEnd   = currentSample;
+  const winStart = Math.max(0, winEnd - DISPLAY_SAMPLES);
+  const variant  = modelSelect.value || 'cnn_simple';
+
+  const chunkData = {};
+  for (const col of columns) {
+    chunkData[col] = Array.from(signalData[col].subarray(winStart, winEnd));
+  }
+
+  resultBadge.className   = 'result-badge badge-working';
+  resultBadge.textContent = 'Analyzing…';
+  predMeta.innerHTML      = '';
+  votesWrap.style.display = 'none';
+  votesWrap.innerHTML     = '';
+
+  try {
+    const resp = await fetch('{% url "seizure_realtime_predict_chunk" %}', {
+      method:  'POST',
+      headers: {'Content-Type': 'application/json'},
+      body:    JSON.stringify({data: chunkData, model_variant: variant}),
+    });
+    const r = await resp.json();
+
+    if (!resp.ok || r.error) {
+      resultBadge.className   = 'result-badge badge-error';
+      resultBadge.textContent = 'Error';
+      predMeta.innerHTML = `<span style="color:#ef4444">${r.error || 'Inference failed'}</span>`;
+      return;
+    }
+
+    const isSeizure  = (r.label || '').toLowerCase().includes('seizure');
+    const short      = shortLabel(r.label);
+    const expanded   = expandedLabel(r.label);
+    const labelFullName = document.getElementById('labelFullName');
+
+    resultBadge.className   = 'result-badge ' + (isSeizure ? 'badge-seizure' : 'badge-lpd');
+    resultBadge.textContent = short;
+    labelFullName.textContent = expanded ? short + ' = ' + expanded : '';
+
+    if (variant === 'ensemble' && r.per_model) {
+      predMeta.innerHTML = `
+        <b>Winner:</b> ${short} &nbsp;
+        <b>Avg conf:</b> ${(r.confidence * 100).toFixed(1)} %<br>
+        <b>Latency:</b> ${r.inference_ms} ms (all models)
+      `;
+      votesWrap.style.display = 'flex';
+      votesWrap.innerHTML = r.per_model.map(m => {
+        const mIsSeizure = (m.label || '').toLowerCase().includes('seizure');
+        const isWinner   = m.label === r.label;
+        return `<div class="vote-row${isWinner ? ' vote-winner' : ''}">
+          <span class="vote-variant">${MODEL_LABELS[m.variant] || m.variant}</span>
+          ${m.success
+            ? `<span class="vote-label" style="color:${mIsSeizure ? '#ef4444' : '#6366f1'}">${shortLabel(m.label)}</span>
+               <span class="vote-conf">${(m.confidence * 100).toFixed(0)}%</span>`
+            : `<span class="vote-label" style="color:#ef4444">failed</span>`
+          }
+        </div>`;
+      }).join('');
+    } else {
+      predMeta.innerHTML = `
+        <b>Confidence:</b> ${(r.confidence * 100).toFixed(1)} %<br>
+        <b>Latency:</b> ${r.inference_ms} ms<br>
+        <b>Variant:</b> ${MODEL_LABELS[r.variant] || r.variant || '—'}
+      `;
+    }
+
+    addHistory(r, winStart / 200, winEnd / 200, isSeizure, variant);
+
+  } catch (err) {
+    resultBadge.className   = 'result-badge badge-error';
+    resultBadge.textContent = 'Error';
+    predMeta.innerHTML = `<span style="color:#ef4444">Network: ${err.message}</span>`;
+  }
+}
+
+function addHistory(r, t0, t1, isSeizure, variant) {
+  history.unshift({r, t0, t1, isSeizure, variant});
+  if (history.length > 20) history.pop();
+
+  if (history.length === 1) historyList.innerHTML = '';
+
+  historyList.innerHTML = history.map(h => {
+    const votesSummary = h.variant === 'ensemble' && h.r.votes
+      ? ' · ' + Object.entries(h.r.votes).map(([l, n]) => `${shortLabel(l)}: ${n}`).join(', ')
+      : '';
+    return `<div class="hist-item ${h.isSeizure ? 'hist-seizure' : 'hist-lpd'}">
+      <span class="hist-time">${h.t0.toFixed(1)}–${h.t1.toFixed(1)}s</span>
+      <span class="hist-label">${shortLabel(h.r.label)}${votesSummary}</span>
+      <span class="hist-conf">${(h.r.confidence * 100).toFixed(0)}%</span>
+      <span class="hist-ms">${h.r.inference_ms}ms</span>
+    </div>`;
+  }).join('');
+}
+
+// ── Responsive canvas resize ──────────────────────────────────────────────────
+window.addEventListener('resize', () => {
+  if (!monitorLayout.classList.contains('visible') || !ctx) return;
+  syncCanvas();
+  ctx = canvas.getContext('2d');
+  drawEEG();
+});
+
+})();
+</script>
+{% endblock %}

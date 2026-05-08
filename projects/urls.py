@@ -4,6 +4,8 @@ from .views import (
     prediction_demo, file_prediction, sample_prediction, make_prediction,
     interpret_prediction, add_project_comment, roadmap,
     seizure_comparison_view, seizure_comparison_predict, interpret_ensemble,
+    seizure_realtime_view, seizure_realtime_load, seizure_realtime_predict_chunk,
+    seizure_realtime_models,
 )
 from .api import api_model_list, api_model_detail, api_predict, api_docs
 
@@ -21,6 +23,12 @@ urlpatterns = [
     path('seizure-comparison/', seizure_comparison_view, name='seizure_comparison'),
     path('seizure-comparison/predict/', seizure_comparison_predict, name='seizure_comparison_predict'),
     path('seizure-comparison/interpret-ensemble/', interpret_ensemble, name='interpret_ensemble'),
+
+    # DEV/TEST — real-time streaming inference
+    path('seizure-realtime/', seizure_realtime_view, name='seizure_realtime'),
+    path('seizure-realtime/load/', seizure_realtime_load, name='seizure_realtime_load'),
+    path('seizure-realtime/models/', seizure_realtime_models, name='seizure_realtime_models'),
+    path('seizure-realtime/predict-chunk/', seizure_realtime_predict_chunk, name='seizure_realtime_predict_chunk'),
 
     path('roadmap/', roadmap, name='roadmap'),
 

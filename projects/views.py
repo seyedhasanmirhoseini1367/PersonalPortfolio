@@ -520,6 +520,215 @@ def roadmap(request):
     return render(request, 'projects/roadmap.html')
 
 
+# ── Real-time EEG Seizure Detection — DEV / TEST only ─────────────────────────
+
+def seizure_realtime_view(request):
+    return render(request, 'projects/seizure_realtime.html')
+
+
+@csrf_exempt
+@require_POST
+def seizure_realtime_load(request):
+    """
+    Accept 1–10 .parquet/.csv EEG files (multipart field name "files"),
+    concatenate them row-wise, and return the combined signal as JSON.
+    All files must share the same column set.
+    Dev-only — no auth, no logging.
+    """
+    MAX_FILES = 10
+    files = request.FILES.getlist('files')
+    if not files:
+        return JsonResponse({'error': 'No files uploaded.'}, status=400)
+    if len(files) > MAX_FILES:
+        return JsonResponse({'error': f'Maximum {MAX_FILES} files allowed.'}, status=400)
+
+    frames = []
+    file_meta = []
+    ref_columns = None
+
+    for f in files:
+        name = f.name.lower()
+        if not (name.endswith('.parquet') or name.endswith('.csv')):
+            return JsonResponse(
+                {'error': f'"{f.name}" is not a .parquet or .csv file.'},
+                status=400,
+            )
+        try:
+            if name.endswith('.parquet'):
+                df_i = pd.read_parquet(io.BytesIO(f.read()))
+            else:
+                df_i = pd.read_csv(f)
+        except Exception as e:
+            return JsonResponse({'error': f'Could not read "{f.name}": {e}'}, status=400)
+
+        if 'EKG' in df_i.columns:
+            df_i = df_i.drop(columns=['EKG'])
+
+        cols_i = list(df_i.columns[:19])
+        df_i = df_i[cols_i]
+
+        if ref_columns is None:
+            ref_columns = cols_i
+        elif cols_i != ref_columns:
+            return JsonResponse(
+                {'error': f'Column mismatch in "{f.name}". '
+                          f'Expected {ref_columns}, got {cols_i}.'},
+                status=400,
+            )
+
+        file_meta.append({'name': f.name, 'samples': len(df_i)})
+        frames.append(df_i)
+
+    df = pd.concat(frames, ignore_index=True)
+    columns = ref_columns
+    total_samples = len(df)
+
+    if total_samples < 256:
+        return JsonResponse({'error': f'Combined signal too short ({total_samples} samples).'}, status=400)
+
+    data = {col: df[col].astype('float32').round(6).tolist() for col in columns}
+
+    return JsonResponse({
+        'columns':       columns,
+        'total_samples': total_samples,
+        'sampling_rate': 200,
+        'duration_sec':  round(total_samples / 200, 1),
+        'file_count':    len(files),
+        'files':         file_meta,
+        'data':          data,
+    })
+
+
+def seizure_realtime_models(request):
+    """GET: Return list of available seizure_eeg model variants from the database."""
+    seizure_projects = [
+        p for p in Projects.objects.filter(is_public=True)
+        if (p.file_input_config or {}).get('handler') == 'seizure_eeg'
+    ]
+    models = [
+        {
+            'variant': (p.file_input_config or {}).get('model_variant', 'unknown'),
+            'title':   p.title,
+        }
+        for p in seizure_projects
+    ]
+    return JsonResponse({'models': models})
+
+
+@csrf_exempt
+@require_POST
+def seizure_realtime_predict_chunk(request):
+    """
+    Accept a 10-second signal window as JSON, run inference, return classification.
+    Supports single-model and ensemble (majority vote) modes.
+    Dev-only — no auth, no logging.
+
+    Body: {
+        "data":          {"ch_name": [2000 floats], ...},
+        "model_variant": "cnn_simple" | "cnn_transformer" | "gru_attention"
+                       | "fusion"    | "ensemble"          (default: "cnn_simple")
+    }
+    """
+    import time
+    from projects.inference import get_handler
+    from projects.inference.base import InferenceError
+
+    try:
+        payload = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON body.'}, status=400)
+
+    signal_data = payload.get('data')
+    if not signal_data or not isinstance(signal_data, dict):
+        return JsonResponse({'error': 'Missing or invalid "data" field.'}, status=400)
+
+    requested_variant = payload.get('model_variant', 'cnn_simple')
+
+    try:
+        df = pd.DataFrame(signal_data)
+    except Exception as e:
+        return JsonResponse({'error': f'Could not build DataFrame: {e}'}, status=400)
+
+    seizure_projects = [
+        p for p in Projects.objects.filter(is_public=True)
+        if (p.file_input_config or {}).get('handler') == 'seizure_eeg'
+    ]
+    if not seizure_projects:
+        return JsonResponse({'error': 'No seizure detection model found on server.'}, status=503)
+
+    def _run_project(project, dataframe):
+        buf = io.BytesIO()
+        dataframe.to_parquet(buf, index=False)
+        buf.seek(0)
+        buf.name = 'chunk.parquet'
+        return get_handler(project).run(buf)
+
+    t0 = time.perf_counter()
+
+    if requested_variant == 'ensemble':
+        per_model = []
+        for project in seizure_projects:
+            variant = (project.file_input_config or {}).get('model_variant', 'unknown')
+            try:
+                res = _run_project(project, df)
+                per_model.append({
+                    'variant':    variant,
+                    'label':      res.get('prediction_label'),
+                    'confidence': round(float(res.get('prediction_proba') or 0), 4),
+                    'success':    True,
+                })
+            except Exception as e:
+                per_model.append({'variant': variant, 'success': False, 'error': str(e)})
+
+        ms = int((time.perf_counter() - t0) * 1000)
+
+        good = [r for r in per_model if r.get('success') and r.get('label')]
+        if not good:
+            return JsonResponse({'error': 'All models failed during ensemble inference.'}, status=500)
+
+        labels   = [r['label'] for r in good]
+        votes    = {lbl: labels.count(lbl) for lbl in set(labels)}
+        winner   = max(votes, key=votes.get)
+        avg_conf = sum(r['confidence'] for r in good if r['label'] == winner) / votes[winner]
+
+        return JsonResponse({
+            'label':        winner,
+            'confidence':   round(avg_conf, 4),
+            'inference_ms': ms,
+            'variant':      'ensemble',
+            'votes':        votes,
+            'per_model':    per_model,
+        })
+
+    else:
+        project = next(
+            (p for p in seizure_projects
+             if (p.file_input_config or {}).get('model_variant') == requested_variant),
+            None,
+        )
+        if project is None:
+            available = [(p.file_input_config or {}).get('model_variant', '?') for p in seizure_projects]
+            return JsonResponse(
+                {'error': f'Variant "{requested_variant}" not configured. Available: {available}'},
+                status=404,
+            )
+
+        try:
+            result = _run_project(project, df)
+        except InferenceError as e:
+            return JsonResponse({'error': str(e)}, status=400)
+        except Exception as e:
+            return JsonResponse({'error': f'Inference error: {type(e).__name__}: {e}'}, status=500)
+
+        ms = int((time.perf_counter() - t0) * 1000)
+        return JsonResponse({
+            'label':        result.get('prediction_label'),
+            'confidence':   round(float(result.get('prediction_proba') or 0), 4),
+            'inference_ms': ms,
+            'variant':      (project.file_input_config or {}).get('model_variant', 'unknown'),
+        })
+
+
 # ── Error handlers ────────────────────────────────────────────────────────────
 def error_404(request, exception=None):
     return render(request, '404.html', status=404)
