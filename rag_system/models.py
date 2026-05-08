@@ -11,6 +11,13 @@ class ChatSession(models.Model):
         default='New Chat',
         help_text='Auto-generated from the first question in the session',
     )
+    session_key = models.CharField(
+        max_length=40,
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text='Django session key — scopes this chat to one browser session',
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

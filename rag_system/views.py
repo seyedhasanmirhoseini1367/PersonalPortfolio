@@ -15,6 +15,18 @@ from .services.rag_service import RAGService
 logger = logging.getLogger(__name__)
 
 
+# ── Session-key helper ─────────────────────────────────────────────────────────
+
+def _get_session_key(request) -> str:
+    """
+    Return the Django session key for this visitor, creating the session first
+    if it hasn't been saved yet (e.g. first request with no cookie).
+    """
+    if not request.session.session_key:
+        request.session.save()
+    return request.session.session_key
+
+
 # ── Quick env debug (open, temp) ──────────────────────────────────────────────
 
 def llm_debug(request):
@@ -82,9 +94,10 @@ def stream_api(request):
         return StreamingHttpResponse(_err(), content_type='text/event-stream')
 
     document_types = None if document_type == 'all' else [document_type]
+    session_key    = _get_session_key(request)
 
-    rag     = RAGService()
-    stream  = rag.stream_query(question, document_types, session_id)
+    rag    = RAGService()
+    stream = rag.stream_query(question, document_types, session_id, session_key=session_key)
 
     response = StreamingHttpResponse(stream, content_type='text/event-stream')
     response['Cache-Control']     = 'no-cache'
@@ -110,12 +123,13 @@ def query_api(request):
     document_types = None if document_type == 'all' else [document_type]
     session_id     = data.get('session_id', '').strip() or None
     use_langgraph  = data.get('use_langgraph', False)
+    session_key    = _get_session_key(request)
 
     rag = RAGService()
     if use_langgraph:
-        result = rag.langgraph_query(question, session_id=session_id)
+        result = rag.langgraph_query(question, session_id=session_id, session_key=session_key)
     else:
-        result = rag.query(question, document_types, session_id=session_id)
+        result = rag.query(question, document_types, session_id=session_id, session_key=session_key)
 
     if not result.get('success', True):
         return JsonResponse(result, status=500)
@@ -127,8 +141,14 @@ def query_api(request):
 @require_http_methods(['GET', 'POST'])
 @csrf_exempt
 def sessions_api(request):
+    session_key = _get_session_key(request)
+
     if request.method == 'GET':
-        sessions = ChatSession.objects.all().order_by('-updated_at')
+        sessions = (
+            ChatSession.objects
+            .filter(session_key=session_key)
+            .order_by('-updated_at')
+        )
         data = []
         for s in sessions:
             last = s.messages.order_by('-created_at').first()
@@ -146,7 +166,7 @@ def sessions_api(request):
         return JsonResponse({'success': True, 'sessions': data})
 
     # POST — create new session
-    session = ChatSession.objects.create(title='New Chat')
+    session = ChatSession.objects.create(title='New Chat', session_key=session_key)
     return JsonResponse({
         'success': True,
         'session': {'id': str(session.id), 'title': session.title},
@@ -156,8 +176,10 @@ def sessions_api(request):
 @require_http_methods(['GET', 'PATCH', 'DELETE'])
 @csrf_exempt
 def session_detail_api(request, session_id):
+    session_key = _get_session_key(request)
+
     try:
-        session = ChatSession.objects.get(id=session_id)
+        session = ChatSession.objects.get(id=session_id, session_key=session_key)
     except ChatSession.DoesNotExist:
         return JsonResponse({'error': 'Session not found'}, status=404)
 
@@ -199,8 +221,13 @@ def session_detail_api(request, session_id):
 
 @require_http_methods(['GET'])
 def chat_history(request):
-    limit   = int(request.GET.get('limit', 20))
-    history = RAGService().get_chat_history(limit=limit)
+    session_key = _get_session_key(request)
+    limit       = int(request.GET.get('limit', 20))
+    history     = (
+        QueryLog.objects
+        .filter(session__session_key=session_key)
+        .order_by('-created_at')[:limit]
+    )
     return JsonResponse({
         'success': True,
         'history': [

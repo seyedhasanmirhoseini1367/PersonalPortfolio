@@ -108,14 +108,18 @@ class RAGService:
     # ── Session helpers ───────────────────────────────────────────────────────
 
     @staticmethod
-    def _resolve_session(session_id: Optional[str]) -> ChatSession:
-        """Return existing session or create a new one."""
-        if session_id:
+    def _resolve_session(
+        session_id: Optional[str],
+        session_key: Optional[str] = None,
+    ) -> ChatSession:
+        """Return an existing session owned by this visitor, or create a new one."""
+        if session_id and session_key:
             try:
-                return ChatSession.objects.get(id=session_id)
+                session = ChatSession.objects.get(id=session_id, session_key=session_key)
+                return session
             except (ChatSession.DoesNotExist, Exception):
                 pass
-        return ChatSession.objects.create(title='New Chat')
+        return ChatSession.objects.create(title='New Chat', session_key=session_key)
 
     @staticmethod
     def _auto_title(session: ChatSession, question: str) -> None:
@@ -131,8 +135,9 @@ class RAGService:
         question: str,
         document_types: Optional[List[str]] = None,
         session_id: Optional[str] = None,
+        session_key: Optional[str] = None,
     ) -> Dict[str, Any]:
-        session = self._resolve_session(session_id)
+        session = self._resolve_session(session_id, session_key)
         history = self._get_history(session)
 
         try:
@@ -182,6 +187,7 @@ class RAGService:
         question: str,
         document_types: Optional[List[str]] = None,
         session_id: Optional[str] = None,
+        session_key: Optional[str] = None,
     ) -> Generator[str, None, None]:
         """
         Yields SSE-formatted strings:
@@ -190,7 +196,7 @@ class RAGService:
             data: {"type": "done"}\\n\\n
             data: {"type": "error",   "message": "..."}\\n\\n
         """
-        session  = self._resolve_session(session_id)
+        session  = self._resolve_session(session_id, session_key)
         history  = self._get_history(session)
         full_text = ''
 
@@ -338,6 +344,7 @@ class RAGService:
         self,
         question: str,
         session_id: Optional[str] = None,
+        session_key: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Run the question through the LangGraph pipeline:
@@ -345,7 +352,7 @@ class RAGService:
 
         Returns the same dict format as query() for drop-in compatibility.
         """
-        session = self._resolve_session(session_id)
+        session = self._resolve_session(session_id, session_key)
         history = self._get_history(session)
 
         try:
