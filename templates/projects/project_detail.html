@@ -1,1019 +1,692 @@
 {% extends 'base.html' %}
+{% load editorjs_tags %}
 
 {% block title %}{{ project.title }} - HasanPortfolio{% endblock %}
 
 {% block extra_css %}
-    <style>
-        /* Project Detail Styles */
-        .project-detail-header {
-            background: linear-gradient(135deg, #302b63 0%, #a78bfa 100%);
-            color: white;
-            padding: 1rem 0;
-            border-radius: 15px;
-            margin-bottom: 1rem;
-        }
+<style>
+/* ── Top header ──────────────────────────────────────────────────────────── */
+.pd-header {
+    text-align: center;
+    margin-bottom: 1.75rem;
+    background: linear-gradient(135deg, #302b63 55%, #a78bfa 100%);
+    border-radius: 14px;
+    padding: 1.25rem 2.5rem 1.1rem;
+}
+.pd-page-title {
+    font-size: 1.9rem;
+    font-weight: 800;
+    color: #fff;
+    margin: 0 0 .45rem;
+    line-height: 1.25;
+}
+.pd-page-desc {
+    font-size: 1rem;
+    color: rgba(255,255,255,.8);
+    margin: 0 0 1.25rem;
+}
+.pd-header-btns {
+    display: flex;
+    justify-content: center;
+    gap: .75rem;
+    flex-wrap: wrap;
+}
+.pd-header-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+    padding: .6rem 1.4rem;
+    border-radius: 10px;
+    font-size: .95rem;
+    font-weight: 700;
+    text-decoration: none;
+    transition: transform .15s, box-shadow .15s;
+    box-shadow: 0 2px 8px rgba(0,0,0,.12);
+}
+.pd-header-btn:hover { transform: translateY(-2px); box-shadow: 0 5px 16px rgba(0,0,0,.18); }
+.pd-header-btn--green  { background: #059669; color: #fff; }
+.pd-header-btn--indigo { background: #4338ca; color: #fff; }
 
-        .project-title {
-            font-size: 1.8rem;
-            margin-bottom: 1rem;
-            font-weight: 700;
-            text-align: center;
-        }
+/* ── Layout ──────────────────────────────────────────────────────────────── */
+.pd-layout {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    gap: 1.5rem;
+    align-items: start;
+}
 
-        .project-short-desc {
-            font-size: 1.1rem;
-            opacity: 0.9;
-            margin-bottom: 2rem;
-            {#max-width: 800px;#}
-            text-align: center;
-        }
+/* ── Left sidebar ────────────────────────────────────────────────────────── */
+.pd-sidebar {
+    position: sticky;
+    top: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
 
-        .project-meta-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1.5rem;
-            margin-top: 2rem;
-        }
+.pd-sidebar-card {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 1.1rem 1.2rem;
+    box-shadow: 0 1px 4px rgba(0,0,0,.05);
+}
 
-        .meta-item {
-            background: rgba(255, 255, 255, 0.1);
-            padding: 0.5rem;
-            border-radius: 10px;
-            text-align: center;
-        }
+.pd-meta-row {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    font-size: .8rem;
+    padding: .3rem 0;
+    border-bottom: 1px solid #f1f5f9;
+    color: #475569;
+}
+.pd-meta-row:last-child { border-bottom: none; }
+.pd-meta-label { color: #94a3b8; min-width: 80px; }
+.pd-meta-value { font-weight: 600; color: #1e293b; }
 
-        .meta-label {
-            display: block;
-            font-size: 0.9rem;
-            opacity: 0.8;
-            margin-bottom: 0.5rem;
-        }
+/* section labels inside sidebar */
+.pd-section-label {
+    font-size: .7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .07em;
+    color: #94a3b8;
+    margin: 0 0 .65rem;
+}
 
-        .meta-value {
-            display: block;
-            font-size: 1.0rem;
-            font-weight: 500;
-        }
+/* links */
+.pd-link {
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+    padding: .5rem .65rem;
+    border-radius: 8px;
+    font-size: .85rem;
+    color: #475569;
+    text-decoration: none;
+    transition: background .15s, color .15s;
+    margin-bottom: .3rem;
+}
+.pd-link:last-child { margin-bottom: 0; }
+.pd-link:hover { background: #f1f5f9; color: #1e293b; }
+.pd-link i { width: 16px; text-align: center; color: #94a3b8; }
 
-        /* Content Sections */
-        .content-grid {
-            display: grid;
-            grid-template-columns: 2fr 1fr;
-            gap: 1.5rem;
-        }
+/* skill chips */
+.pd-skills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .4rem;
+}
+.pd-skill {
+    background: #eff6ff;
+    color: #3b82f6;
+    font-size: .75rem;
+    font-weight: 500;
+    padding: .2rem .6rem;
+    border-radius: 20px;
+}
 
-        .main-content {
-            background: white;
-            padding: 2rem;
-            border-radius: 10px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-        }
+/* metrics row */
+.pd-metrics {
+    display: flex;
+    flex-direction: column;
+    gap: .4rem;
+}
+.pd-metric-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: .85rem;
+    padding: .25rem 0;
+    border-bottom: 1px solid #f1f5f9;
+}
+.pd-metric-row:last-child { border-bottom: none; }
+.pd-metric-key   { color: #64748b; }
+.pd-metric-val   { font-weight: 700; color: #302b63; }
 
-        .sidebar {
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-        }
+/* experiment tracking rows */
+.pd-exp-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: .82rem;
+    padding: .2rem 0;
+    border-bottom: 1px solid #fef3c7;
+}
+.pd-exp-row:last-child { border-bottom: none; }
 
-        .sidebar-card {
-            background: white;
-            padding: 1.2rem;
-            border-radius: 10px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-        }
+/* ── Right content area ──────────────────────────────────────────────────── */
+.pd-content {
+    min-width: 0;
+}
 
-        .section {
-            margin-bottom: 3rem;
-        }
+/* content card */
+.pd-body {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 1.75rem 2rem;
+    box-shadow: 0 1px 4px rgba(0,0,0,.05);
+}
 
-        .section:last-child {
-            margin-bottom: 0;
-        }
+.pd-section { margin-bottom: 2.25rem; }
+.pd-section:last-child { margin-bottom: 0; }
 
-        .section-title {
-            font-size: 1.5rem;
-            color: #1e293b;
-            margin-bottom: 1rem;
-            padding-bottom: 0.5rem;
-            border-bottom: 3px solid #302b63;
-        }
+.pd-section-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0 0 .85rem;
+    padding-bottom: .45rem;
+    border-bottom: 2px solid #e2e8f0;
+}
 
-        .section-content {
-            line-height: 1.7;
-            color: #475569;
-        }
+.pd-section-content {
+    line-height: 1.75;
+    color: #475569;
+    font-size: .95rem;
+}
 
-        /* Skills & Links */
-        .skills-container {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.8rem;
-            margin-top: 1rem;
-        }
+/* ── Editor.js rendered blocks ───────────────────────────────────────────── */
+.pd-section-content .ejs-paragraph { margin: 0 0 .9rem; }
+.pd-section-content .ejs-header    { color: #1e293b; margin: 1.4rem 0 .5rem; }
+.pd-section-content .ejs-list      { padding-left: 1.4rem; margin: 0 0 .9rem; }
+.pd-section-content .ejs-list li   { margin-bottom: .3rem; }
+.pd-section-content .ejs-code {
+    background: #1e293b; color: #e2e8f0;
+    border-radius: 8px; padding: .85rem 1.1rem;
+    font-family: monospace; font-size: .86rem;
+    overflow-x: auto; margin: .9rem 0;
+}
+.pd-section-content .ejs-quote {
+    border-left: 3px solid #302b63;
+    margin: .9rem 0; padding: .65rem 1rem;
+    background: #f8fafc; border-radius: 0 8px 8px 0;
+    font-style: italic; color: #334155;
+}
+.pd-section-content .ejs-quote-cite {
+    display: block; font-style: normal;
+    font-size: .82rem; color: #64748b; margin-top: .35rem;
+}
+.pd-section-content .ejs-image { margin: 1.1rem 0; text-align: center; }
+.pd-section-content .ejs-image img {
+    max-width: 100%; border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,.1);
+}
+.pd-section-content .ejs-image--bordered img { border: 2px solid #e2e8f0; }
+.pd-section-content .ejs-image--stretched img { width: 100%; }
+.pd-section-content .ejs-image-caption {
+    font-size: .8rem; color: #94a3b8; margin-top: .35rem;
+}
+.pd-section-content .ejs-embed { margin: 1.1rem 0; }
+.pd-section-content .ejs-embed iframe { border-radius: 8px; width: 100%; }
 
-        .skill-tag {
-            background: #e0f2fe;
-            color: #0369a1;
-            padding: 0.5rem 1rem;
-            border-radius: 20px;
-            font-size: 0.9rem;
-            font-weight: 500;
-        }
+/* ── Related projects ────────────────────────────────────────────────────── */
+.related-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+}
+.related-card {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 1.1rem 1.2rem;
+    text-decoration: none;
+    color: inherit;
+    transition: transform .2s, box-shadow .2s;
+}
+.related-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,.08); }
+.related-type {
+    background: #f1f5f9; color: #475569;
+    font-size: .7rem; padding: .15rem .5rem;
+    border-radius: 8px; display: inline-block; margin-bottom: .4rem;
+}
+.related-title { font-size: 1rem; font-weight: 600; margin-bottom: .3rem; }
 
-        .links-container {
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-        }
-
-        .project-link {
-            display: flex;
-            align-items: center;
-            gap: 0.8rem;
-            padding: 1rem;
-            background: #f8fafc;
-            border-radius: 8px;
-            text-decoration: none;
-            color: #475569;
-            transition: all 0.3s;
-            border: 1px solid #e2e8f0;
-        }
-
-        .project-link:hover {
-            background: #302b63;
-            color: white;
-            transform: translateX(5px);
-        }
-
-        .link-icon {
-            font-size: 1.2rem;
-        }
-
-        /* Metrics */
-        .metrics-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 1rem;
-            margin-top: 1rem;
-        }
-
-        .metric-card {
-            background: #f0f9ff;
-            padding: 0.5rem;
-            border-radius: 10px;
-            text-align: center;
-            border-left: 4px solid #302b63;
-        }
-
-        .metric-value {
-            font-size: 1.8rem;
-            font-weight: bold;
-            color: #302b63;
-            margin-bottom: 0.5rem;
-        }
-
-        .metric-label {
-            color: #64748b;
-            font-size: 0.9rem;
-        }
-
-        /* Prediction Section */
-        .prediction-section {
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-            color: white;
-            padding: 1.0rem;
-            border-radius: 15px;
-            text-align: center;
-            margin: 2rem 0;
-        }
-
-        .prediction-content {
-            max-width: 1000px;
-            margin: 0 auto;
-        }
-
-        .prediction-title {
-            font-size: 1.6rem;
-            margin-bottom: 1rem;
-            font-weight: 700;
-        }
-
-        .prediction-description {
-            font-size: 1.0rem;
-            opacity: 0.9;
-            margin-bottom: 1rem;
-            line-height: 1.6;
-        }
-
-        .prediction-button {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.8rem;
-            padding: 1rem 2rem;
-            background: rgba(255, 255, 255, 0.2);
-            color: white;
-            text-decoration: none;
-            border-radius: 50px;
-            font-weight: 600;
-            font-size: 1.0rem;
-            transition: all 0.3s;
-            border: 2px solid rgba(255, 255, 255, 0.3);
-        }
-
-        .prediction-button:hover {
-            background: rgba(255, 255, 255, 0.3);
-            transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
-            color: white;
-        }
-
-        /* Related Projects */
-        .related-projects {
-            margin-top: 4rem;
-        }
-
-        .related-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 1.5rem;
-            margin-top: 1.5rem;
-        }
-
-        .related-card {
-            background: white;
-            padding: 1.5rem;
-            border-radius: 10px;
-            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
-            transition: transform 0.3s;
-            text-decoration: none;
-            color: inherit;
-        }
-
-        .related-card:hover {
-            transform: translateY(-3px);
-        }
-
-        .related-title {
-            font-size: 1.1rem;
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-        }
-
-        .related-type {
-            background: #f1f5f9;
-            color: #475569;
-            padding: 0.2rem 0.6rem;
-            border-radius: 10px;
-            font-size: 0.7rem;
-            display: inline-block;
-            margin-bottom: 0.5rem;
-        }
-
-        /* Back Button */
-        .back-button {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.8rem 1.5rem;
-            background: #64748b;
-            color: white;
-            text-decoration: none;
-            border-radius: 5px;
-            transition: background 0.3s;
-            margin-top: 2rem;
-        }
-
-        .back-button:hover {
-            background: #475569;
-            color: white;
-        }
-
-        /* Responsive */
-        @media (max-width: 968px) {
-            .content-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .project-title {
-                font-size: 2.2rem;
-            }
-
-            .project-meta-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
-
-        @media (max-width: 768px) {
-            .project-meta-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .prediction-section {
-                padding: 2rem 1.5rem;
-            }
-
-            .prediction-title {
-                font-size: 1.6rem;
-            }
-        }
-    </style>
+/* ── Responsive ──────────────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+    .pd-layout { grid-template-columns: 1fr; }
+    .pd-sidebar { position: static; }
+    .pd-page-title { font-size: 1.5rem; }
+}
+</style>
 {% endblock %}
 
 {% block content %}
-    <!-- Project Header -->
-    <section class="project-detail-header">
-        <div class="container">
-            <h1 class="project-title">{{ project.title }}</h1>
 
-            {% if project.short_description %}
-                <p class="project-short-desc" >{{ project.short_description }}</p>
+<!-- ── Top header ──────────────────────────────────────────────────────────── -->
+<div class="pd-header">
+    <h1 class="pd-page-title">{{ project.title }}</h1>
+    {% if project.short_description %}
+        <p class="pd-page-desc">{{ project.short_description }}</p>
+    {% endif %}
+    {% if project.has_prediction_capability %}
+    <div class="pd-header-btns">
+        <a href="{% url 'prediction_demo' project.id %}" class="pd-header-btn pd-header-btn--green">
+            <i class="fas fa-robot"></i> Live Demo
+        </a>
+        {% if project.file_input_config.handler == 'seizure_eeg' %}
+        <a href="{% url 'seizure_realtime' %}" class="pd-header-btn pd-header-btn--indigo">
+            <i class="fas fa-bolt"></i> Real-time Inference
+        </a>
+        <a href="{% url 'seizure_comparison' %}" class="pd-header-btn pd-header-btn--indigo">
+            <i class="fas fa-layer-group"></i> Compare 3 Models
+        </a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+<div class="pd-layout">
+
+    <!-- ── Left sidebar ──────────────────────────────────────────────────── -->
+    <aside class="pd-sidebar">
+
+        <!-- Meta info -->
+        <div class="pd-sidebar-card">
+            {% if project.model_type %}
+            <div class="pd-meta-row">
+                <span class="pd-meta-label">Type</span>
+                <span class="pd-meta-value">{{ project.get_model_type_display }}</span>
+            </div>
             {% endif %}
 
-            <div class="project-meta-grid">
-                <div class="meta-item">
-                    <span class="meta-label">Model Type</span>
-                    <span class="meta-value">{{ project.model_type }}</span>
-                </div>
+            {% if project.difficulty_level %}
+            <div class="pd-meta-row">
+                <span class="pd-meta-label">Difficulty</span>
+                <span class="pd-meta-value">{{ project.get_difficulty_level_display }}</span>
+            </div>
+            {% endif %}
 
-                <div class="meta-item">
-                    <span class="meta-label">Evaluation Metric</span>
-                    <span class="meta-value">{{ project.evaluation_metric }}</span>
-                </div>
+            {% if project.accuracy_score %}
+            <div class="pd-meta-row">
+                <span class="pd-meta-label">{{ project.evaluation_metric|default:"Score" }}</span>
+                <span class="pd-meta-value">{{ project.accuracy_score|floatformat:3 }}</span>
+            </div>
+            {% endif %}
 
-                <div class="meta-item">
-                    <span class="meta-label">Accuracy score</span>
-                    <span class="meta-value">{{ project.accuracy_score }}</span>
-                </div>
-
-
-                <div class="meta-item">
-                    <span class="meta-label">Difficulty</span>
-                    <span class="meta-value">{{ project.get_difficulty_level_display }}</span>
-                </div>
-
-{#                <div class="meta-item">#}
-{#                    <span class="meta-label">Data Type</span>#}
-{#                    <span class="meta-value">{{ project.get_data_type_display }}</span>#}
-{#                </div>#}
-
-                {% if project.start_date %}
-                    <div class="meta-item">
-                        <span class="meta-label">Timeline</span>
-                        <span class="meta-value">
-                    {{ project.start_date|date:"M Y" }}
-                            {% if project.end_date %} - {{ project.end_date|date:"M Y" }}{% endif %}
+            {% if project.start_date %}
+            <div class="pd-meta-row">
+                <span class="pd-meta-label">Timeline</span>
+                <span class="pd-meta-value">
+                    {{ project.start_date|date:"M Y" }}{% if project.end_date %} – {{ project.end_date|date:"M Y" }}{% endif %}
                 </span>
-                    </div>
-                {% endif %}
             </div>
-        </div>
-    </section>
-
-    <div class="container">
-        <!-- Prediction Section -->
-        {% if project.has_prediction_capability %}
-            <section class="prediction-section">
-                <div class="prediction-content">
-                    <h2 class="prediction-title">🚀 Live Prediction Demo</h2>
-                    <p class="prediction-description">
-                        Experience this machine learning model in action! Enter your own data and get real-time
-                        predictions.
-                        Test the model's capabilities with custom inputs and see how it performs.
-                    </p>
-                    <div style="display:flex; gap:1rem; justify-content:center; flex-wrap:wrap;">
-                        <a href="{% url 'prediction_demo' project.id %}" class="prediction-button">
-                            <span>Try Live Demo</span>
-                            <span>→</span>
-                        </a>
-                        {% if project.file_input_config.handler == 'seizure_eeg' %}
-                        <a href="{% url 'seizure_realtime' %}" class="prediction-button"
-                           style="background:rgba(0,0,0,.15); border-color:rgba(255,255,255,.4);">
-                            <span>⚡ Try Real-time Inference</span>
-                            <span>→</span>
-                        </a>
-                        {% endif %}
-                    </div>
-                </div>
-            </section>
-        {% endif %}
-    </div>
-
-    <div class="content-grid">
-        <!-- Main Content -->
-        <div class="main-content">
-            <!-- Description Section -->
-            <section class="section">
-                <h2 class="section-title">Project Overview</h2>
-                <div class="section-content">
-                    {{ project.description|linebreaks }}
-                </div>
-            </section>
-
-            <!-- Business Problem -->
-            {% if project.business_problem %}
-                <section class="section">
-                    <h2 class="section-title">Business Problem</h2>
-                    <div class="section-content">
-                        {{ project.business_problem|linebreaks }}
-                    </div>
-                </section>
             {% endif %}
 
-            <!-- Technical Approach -->
-            {% if project.technical_approach %}
-                <section class="section">
-                    <h2 class="section-title">Technical Approach</h2>
-                    <div class="section-content">
-                        {{ project.technical_approach|linebreaks }}
-                    </div>
-                </section>
-            {% endif %}
-
-            <!-- Challenges -->
-            {% if project.challenges %}
-                <section class="section">
-                    <h2 class="section-title">Challenges & Solutions</h2>
-                    <div class="section-content">
-                        {{ project.challenges|linebreaks }}
-                    </div>
-                </section>
-            {% endif %}
-
-            <!-- Key Achievements -->
-            {% if project.key_achievements %}
-                <section class="section">
-                    <h2 class="section-title">Key Achievements</h2>
-                    <div class="section-content">
-                        {{ project.key_achievements|linebreaks }}
-                    </div>
-                </section>
-            {% endif %}
-
-            <!-- Lessons Learned -->
-            {% if project.lessons_learned %}
-                <section class="section">
-                    <h2 class="section-title">Lessons Learned</h2>
-                    <div class="section-content">
-                        {{ project.lessons_learned|linebreaks }}
-                    </div>
-                </section>
+            {% if project.time_spent %}
+            <div class="pd-meta-row">
+                <span class="pd-meta-label">Time spent</span>
+                <span class="pd-meta-value">{{ project.time_spent }}</span>
+            </div>
             {% endif %}
         </div>
 
-        <!-- Sidebar -->
-        <div class="sidebar">
-            <!-- Project Links -->
-            <div class="sidebar-card">
-                <h3 style="margin-bottom: 1rem; color: #1e293b;">Project Links</h3>
-                <div class="links-container">
-                    {% if project.github_url %}
-                        <a href="{{ project.github_url }}" target="_blank" class="project-link">
-                            <span class="link-icon">💻</span>
-                            <span>GitHub Repository</span>
-                        </a>
-                    {% endif %}
+        <!-- Links -->
+        <div class="pd-sidebar-card">
+            <p class="pd-section-label">Links</p>
 
-                    {% if project.kaggle_url %}
-                        <a href="{{ project.kaggle_url }}" target="_blank" class="project-link">
-                            <span class="link-icon">🏆</span>
-                            <span>Kaggle Notebook</span>
-                        </a>
-                    {% endif %}
-
-                    {% if project.live_demo_url %}
-                        <a href="{{ project.live_demo_url }}" target="_blank" class="project-link">
-                            <span class="link-icon">🚀</span>
-                            <span>Live Demo</span>
-                        </a>
-                    {% endif %}
-
-                    {% if project.dataset_url %}
-                        <a href="{{ project.dataset_url }}" target="_blank" class="project-link">
-                            <span class="link-icon">📊</span>
-                            <span>Dataset Source</span>
-                        </a>
-                    {% endif %}
-
-                    <!-- Prediction Demo Link in Sidebar -->
-                    {% if project.has_prediction_capability %}
-                        <a href="{% url 'prediction_demo' project.id %}" class="project-link"
-                           style="background: #ecfdf5; border-color: #10b981;">
-                            <span class="link-icon">🤖</span>
-                            <span>Live Prediction Demo</span>
-                        </a>
-                    {% endif %}
-
-                    {% if project.file_input_config.handler == 'seizure_eeg' %}
-                        <a href="{% url 'seizure_realtime' %}" class="project-link"
-                           style="background:#eef2ff; border-color:#6366f1;">
-                            <span class="link-icon">⚡</span>
-                            <span>Real-time Inference</span>
-                        </a>
-                    {% endif %}
-
-                    {% if project.mlflow_tracking_url %}
-                        <a href="{{ project.mlflow_tracking_url }}" target="_blank" class="project-link"
-                           style="background:#fff7ed; border-color:#f97316;">
-                            <span class="link-icon">📊</span>
-                            <span>MLflow Experiments</span>
-                        </a>
-                    {% endif %}
-
-                    {% if project.has_api %}
-                        <a href="/api/models/{{ project.id }}/" target="_blank" class="project-link"
-                           style="background:#f0fdf4; border-color:#22c55e;">
-                            <span class="link-icon">⚡</span>
-                            <span>REST API Endpoint</span>
-                        </a>
-                    {% endif %}
-                </div>
-            </div>
-
-            <!-- MLflow / Experiment Tracking Card -->
-            {% if project.experiment_params or project.experiment_metrics %}
-            <div class="sidebar-card" style="border-color:#fed7aa;">
-                <h3 style="margin-bottom:1rem; color:#1e293b; display:flex; align-items:center; gap:.5rem;">
-                    <span style="background:#fff7ed; color:#f97316; padding:.25rem .55rem;
-                                 border-radius:8px; font-size:.85rem;">📊</span>
-                    Experiment Tracking
-                </h3>
-                {% if project.mlflow_run_id %}
-                <p style="font-size:.78rem; color:#94a3b8; margin-bottom:.75rem; font-family:monospace;">
-                    Run: {{ project.mlflow_run_id|truncatechars:24 }}
-                </p>
-                {% endif %}
-                {% if project.experiment_params %}
-                <div style="margin-bottom:.85rem;">
-                    <p style="font-size:.8rem; font-weight:700; color:#64748b; text-transform:uppercase;
-                               letter-spacing:.06em; margin-bottom:.4rem;">Hyperparameters</p>
-                    {% for k, v in project.experiment_params.items %}
-                    <div style="display:flex; justify-content:space-between; font-size:.85rem;
-                                padding:.2rem 0; border-bottom:1px solid #fef3c7;">
-                        <span style="color:#92400e;">{{ k }}</span>
-                        <span style="font-weight:600; color:#1e293b;">{{ v }}</span>
-                    </div>
-                    {% endfor %}
-                </div>
-                {% endif %}
-                {% if project.experiment_metrics %}
-                <div>
-                    <p style="font-size:.8rem; font-weight:700; color:#64748b; text-transform:uppercase;
-                               letter-spacing:.06em; margin-bottom:.4rem;">Final Metrics</p>
-                    {% for k, v in project.experiment_metrics.items %}
-                    <div style="display:flex; justify-content:space-between; font-size:.85rem;
-                                padding:.2rem 0; border-bottom:1px solid #fef3c7;">
-                        <span style="color:#92400e;">{{ k }}</span>
-                        <span style="font-weight:600; color:#10b981;">
-                            {% if v < 1 %}{{ v|floatformat:3 }}{% else %}{{ v|floatformat:1 }}{% endif %}
-                        </span>
-                    </div>
-                    {% endfor %}
-                </div>
-                {% endif %}
-            </div>
+            {% if project.github_url %}
+            <a href="{{ project.github_url }}" target="_blank" class="pd-link">
+                <i class="fab fa-github"></i> GitHub
+            </a>
             {% endif %}
 
-            <!-- Skills Used -->
-            <div class="sidebar-card">
-                <h3 style="margin-bottom: 1rem; color: #1e293b;">Skills & Technologies</h3>
-                <div class="skills-container">
-                    {% for skill in skills_display %}
-                        <span class="skill-tag">{{ skill }}</span>
-                    {% endfor %}
-                </div>
-
-                {% if project.libraries_used %}
-                    <div style="margin-top: 1rem;">
-                        <h4 style="margin-bottom: 0.5rem; font-size: 0.9rem; color: #64748b;">Libraries Used:</h4>
-                        <p style="font-size: 0.9rem; color: #475569;">{{ project.libraries_used }}</p>
-                    </div>
-                {% endif %}
-            </div>
-
-            <!-- Performance Metrics -->
-            {% if project.accuracy_score or project.kaggle_rank %}
-                <div class="sidebar-card">
-                    <h3 style="margin-bottom: 1rem; color: #1e293b;">Performance Metrics</h3>
-                    <div class="metrics-grid">
-                        {% if project.accuracy_score %}
-                            <div class="metric-card">
-                                <div class="metric-value">{{ project.accuracy_score|floatformat:3 }}</div>
-                                <div class="metric-label">
-                                    {{ project.evaluation_metric|default:"Accuracy" }}
-                                </div>
-                            </div>
-                        {% endif %}
-
-                        {% if project.kaggle_rank %}
-                            <div class="metric-card">
-                                <div class="metric-value">#{{ project.kaggle_rank }}</div>
-                                <div class="metric-label">
-                                    Kaggle Rank
-                                    {% if kaggle_percentile %}
-                                        <br>(Top {{ kaggle_percentile }}%)
-                                    {% endif %}
-                                </div>
-                            </div>
-                        {% endif %}
-                    </div>
-                </div>
+            {% if project.kaggle_url %}
+            <a href="{{ project.kaggle_url }}" target="_blank" class="pd-link">
+                <i class="fas fa-trophy"></i> Kaggle
+            </a>
             {% endif %}
 
-            <!-- Model Information -->
+            {% if project.dataset_url %}
+            <a href="{{ project.dataset_url }}" target="_blank" class="pd-link">
+                <i class="fas fa-database"></i> Dataset
+            </a>
+            {% endif %}
+
+            {% if project.live_demo_url %}
+            <a href="{{ project.live_demo_url }}" target="_blank" class="pd-link">
+                <i class="fas fa-external-link-alt"></i> Live Demo
+            </a>
+            {% endif %}
+
             {% if project.has_prediction_capability %}
-                <div class="sidebar-card">
-                    <h3 style="margin-bottom: 1rem; color: #1e293b;">Model Information</h3>
-                    <div style="display: flex; flex-direction: column; gap: 0.8rem;">
-                        {% if project.model_type %}
-                            <div>
-                                <strong>Model Type:</strong><br>
-                                {{ project.get_model_type_display }}
-                            </div>
-                        {% endif %}
-
-                        {% if project.target_feature %}
-                            <div>
-                                <strong>Target Variable:</strong><br>
-                                {{ project.target_feature }}
-                            </div>
-                        {% endif %}
-
-                        {% if project.input_features %}
-                            <div>
-                                <strong>Input Features:</strong><br>
-                                {{ project.input_features|length }} features
-                            </div>
-                        {% endif %}
-                    </div>
-                </div>
+            <a href="{% url 'prediction_demo' project.id %}" class="pd-link">
+                <i class="fas fa-robot"></i> Prediction Demo
+            </a>
             {% endif %}
 
-            <!-- Project Info -->
-            <div class="sidebar-card">
-                <h3 style="margin-bottom: 1rem; color: #1e293b;">Project Information</h3>
-                <div style="display: flex; flex-direction: column; gap: 0.8rem;">
-                    {% if project.time_spent %}
-                        <div>
-                            <strong>Time Spent:</strong><br>
-                            {{ project.time_spent }}
-                        </div>
-                    {% endif %}
+            {% if project.file_input_config.handler == 'seizure_eeg' %}
+            <a href="{% url 'seizure_realtime' %}" class="pd-link">
+                <i class="fas fa-bolt"></i> Real-time Inference
+            </a>
+            {% endif %}
 
-                    <div>
-                        <strong>Created:</strong><br>
-                        {{ project.created_at|date:"F j, Y" }}
-                    </div>
+            {% if project.mlflow_tracking_url %}
+            <a href="{{ project.mlflow_tracking_url }}" target="_blank" class="pd-link">
+                <i class="fas fa-chart-line"></i> MLflow
+            </a>
+            {% endif %}
 
-                    {% if project.updated_at != project.created_at %}
-                        <div>
-                            <strong>Last Updated:</strong><br>
-                            {{ project.updated_at|date:"F j, Y" }}
-                        </div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- ── Comments Section ──────────────────────────────────────────────── -->
-    <section class="project-comments-section container">
-        <div class="pc-header">
-            <h2 class="pc-title">
-                <i class="fas fa-comments me-2"></i>
-                Comments
-                <span class="pc-count">{{ comment_count }}</span>
-            </h2>
-            <p class="pc-subtitle">Share your thoughts, questions, or feedback about this project.</p>
+            {% if project.has_api %}
+            <a href="/api/models/{{ project.id }}/" target="_blank" class="pd-link">
+                <i class="fas fa-plug"></i> REST API
+            </a>
+            {% endif %}
         </div>
 
-        <!-- Comment form -->
-        {% if user.is_authenticated %}
-            <div class="pc-form-card">
-                <form method="post" action="{% url 'add_project_comment' project.id %}">
-                    {% csrf_token %}
-                    <input type="hidden" name="parent_id" value="">
-                    <div class="pc-form-group">
-                        <label class="pc-label">
-                            <span class="pc-avatar-sm">{{ user.username|first|upper }}</span>
-                            Add a comment
-                        </label>
-                        <textarea name="content" class="pc-textarea" rows="4"
-                                  placeholder="What do you think about this project or model?" required minlength="5"></textarea>
-                    </div>
-                    <button type="submit" class="pc-btn-submit">
-                        <i class="fas fa-paper-plane me-2"></i>Post Comment
-                    </button>
-                </form>
+        <!-- Skills -->
+        {% if skills_display %}
+        <div class="pd-sidebar-card">
+            <p class="pd-section-label">Skills & Tools</p>
+            <div class="pd-skills">
+                {% for skill in skills_display %}
+                    <span class="pd-skill">{{ skill }}</span>
+                {% endfor %}
             </div>
-        {% else %}
-            <div class="pc-login-prompt">
-                <i class="fas fa-lock fa-2x mb-3" style="color:#302b63;"></i>
-                <p>
-                    <a href="{% url 'accounts:login' %}">Log in</a> to leave a comment.
-                </p>
-            </div>
+            {% if project.libraries_used %}
+                <p style="font-size:.8rem; color:#64748b; margin:.75rem 0 0;">{{ project.libraries_used }}</p>
+            {% endif %}
+        </div>
         {% endif %}
 
-        <!-- Messages -->
-        {% for message in messages %}
-            <div class="pc-message pc-message-{{ message.tags }}">{{ message }}</div>
-        {% endfor %}
-
-        <!-- Comment list -->
-        <div class="pc-list">
-            {% for comment in comments %}
-                <div class="pc-comment" id="comment-{{ comment.id }}">
-                    <div class="pc-comment-avatar">{{ comment.author.username|first|upper }}</div>
-                    <div class="pc-comment-body">
-                        <div class="pc-comment-meta">
-                            <span class="pc-comment-author">{{ comment.author.username }}</span>
-                            <span class="pc-comment-date">{{ comment.created_at|date:"M j, Y · g:i a" }}</span>
-                        </div>
-                        <p class="pc-comment-text">{{ comment.content|linebreaksbr }}</p>
-
-                        <!-- Replies -->
-                        {% if comment.replies.all %}
-                            <div class="pc-replies">
-                                {% for reply in comment.replies.all %}
-                                    {% if reply.is_approved %}
-                                        <div class="pc-comment pc-reply">
-                                            <div class="pc-comment-avatar pc-avatar-sm">{{ reply.author.username|first|upper }}</div>
-                                            <div class="pc-comment-body">
-                                                <div class="pc-comment-meta">
-                                                    <span class="pc-comment-author">{{ reply.author.username }}</span>
-                                                    <span class="pc-comment-date">{{ reply.created_at|date:"M j, Y · g:i a" }}</span>
-                                                </div>
-                                                <p class="pc-comment-text">{{ reply.content|linebreaksbr }}</p>
-                                            </div>
-                                        </div>
-                                    {% endif %}
-                                {% endfor %}
-                            </div>
-                        {% endif %}
-
-                        <!-- Reply form trigger -->
-                        {% if user.is_authenticated %}
-                            <button class="pc-reply-toggle" data-comment="{{ comment.id }}">
-                                <i class="fas fa-reply me-1"></i>Reply
-                            </button>
-                            <div class="pc-reply-form" id="reply-form-{{ comment.id }}" style="display:none;">
-                                <form method="post" action="{% url 'add_project_comment' project.id %}">
-                                    {% csrf_token %}
-                                    <input type="hidden" name="parent_id" value="{{ comment.id }}">
-                                    <textarea name="content" class="pc-textarea pc-textarea-sm" rows="3"
-                                              placeholder="Write a reply…" required minlength="5"></textarea>
-                                    <div class="pc-reply-actions">
-                                        <button type="submit" class="pc-btn-submit pc-btn-sm">
-                                            <i class="fas fa-paper-plane me-1"></i>Reply
-                                        </button>
-                                        <button type="button" class="pc-btn-cancel" data-comment="{{ comment.id }}">Cancel</button>
-                                    </div>
-                                </form>
-                            </div>
-                        {% endif %}
-                    </div>
+        <!-- Metrics -->
+        {% if project.accuracy_score or project.kaggle_rank %}
+        <div class="pd-sidebar-card">
+            <p class="pd-section-label">Performance</p>
+            <div class="pd-metrics">
+                {% if project.accuracy_score %}
+                <div class="pd-metric-row">
+                    <span class="pd-metric-key">{{ project.evaluation_metric|default:"Score" }}</span>
+                    <span class="pd-metric-val">{{ project.accuracy_score|floatformat:3 }}</span>
                 </div>
-            {% empty %}
-                <div class="pc-empty">
-                    <i class="fas fa-comment-slash fa-2x mb-3" style="color:#cbd5e1;"></i>
-                    <p>No comments yet. Be the first to share your thoughts!</p>
+                {% endif %}
+                {% if project.kaggle_rank %}
+                <div class="pd-metric-row">
+                    <span class="pd-metric-key">Kaggle rank</span>
+                    <span class="pd-metric-val">#{{ project.kaggle_rank }}{% if kaggle_percentile %} · top {{ kaggle_percentile }}%{% endif %}</span>
                 </div>
-            {% endfor %}
-        </div>
-    </section>
-
-    <style>
-        .project-comments-section {
-            margin: 2rem auto 2rem;
-            max-width: 860px;
-        }
-        .pc-header { margin-bottom: 1.5rem; }
-        .pc-title {
-            font-size: 1.6rem;
-            font-weight: 700;
-            color: #1e293b;
-            margin: 0 0 0.4rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-        .pc-title i { color: #302b63; }
-        .pc-count {
-            background: linear-gradient(135deg, #0f0c29, #302b63 55%, #24243e);
-            color: white;
-            font-size: 0.9rem;
-            font-weight: 700;
-            border-radius: 20px;
-            padding: 0.15rem 0.7rem;
-        }
-        .pc-subtitle { color: #64748b; margin: 0; font-size: 1rem; }
-
-        .pc-form-card {
-            background: white;
-            border-radius: 16px;
-            padding: 1.75rem;
-            box-shadow: 0 1px 4px rgba(0,0,0,.07);
-            border: 1px solid #e2e8f0;
-            margin-bottom: 2rem;
-        }
-        .pc-form-group { margin-bottom: 1rem; }
-        .pc-label {
-            display: flex;
-            align-items: center;
-            gap: 0.6rem;
-            font-weight: 600;
-            color: #1e293b;
-            margin-bottom: 0.75rem;
-            font-size: 1rem;
-        }
-        .pc-avatar-sm {
-            width: 32px; height: 32px;
-            background: linear-gradient(135deg, #0f0c29, #302b63 55%, #24243e);
-            color: white;
-            border-radius: 50%;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 700;
-            font-size: 0.9rem;
-            flex-shrink: 0;
-        }
-        .pc-textarea {
-            width: 100%;
-            padding: 0.875rem 1rem;
-            border: 2px solid #e2e8f0;
-            border-radius: 10px;
-            font-size: 1rem;
-            font-family: inherit;
-            line-height: 1.6;
-            resize: vertical;
-            transition: border-color .2s;
-        }
-        .pc-textarea:focus {
-            outline: none;
-            border-color: #302b63;
-            box-shadow: 0 0 0 3px rgba(102,126,234,.1);
-        }
-        .pc-textarea-sm { font-size: 0.95rem; }
-        .pc-btn-submit {
-            padding: 0.75rem 1.75rem;
-            background: linear-gradient(135deg, #0f0c29, #302b63 55%, #24243e);
-            color: white;
-            border: none;
-            border-radius: 10px;
-            font-weight: 600;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: all .2s;
-        }
-        .pc-btn-submit:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(102,126,234,.3); }
-        .pc-btn-sm { padding: 0.5rem 1.25rem; font-size: 0.9rem; }
-        .pc-btn-cancel {
-            padding: 0.5rem 1.25rem;
-            background: white;
-            color: #64748b;
-            border: 2px solid #e2e8f0;
-            border-radius: 10px;
-            font-weight: 600;
-            font-size: 0.9rem;
-            cursor: pointer;
-            transition: all .2s;
-        }
-        .pc-btn-cancel:hover { border-color: #cbd5e1; color: #1e293b; }
-
-        .pc-login-prompt {
-            text-align: center;
-            padding: 2.5rem;
-            background: #f8fafc;
-            border-radius: 16px;
-            border: 2px dashed #cbd5e1;
-            margin-bottom: 2rem;
-            color: #64748b;
-            font-size: 1rem;
-        }
-        .pc-login-prompt a { color: #302b63; font-weight: 600; text-decoration: none; }
-        .pc-login-prompt a:hover { text-decoration: underline; }
-
-        .pc-message {
-            padding: 0.875rem 1.25rem;
-            border-radius: 10px;
-            margin-bottom: 1rem;
-            font-weight: 500;
-            font-size: 1rem;
-        }
-        .pc-message-success { background: #d1fae5; color: #065f46; }
-        .pc-message-error   { background: #fee2e2; color: #991b1b; }
-
-        .pc-list { display: flex; flex-direction: column; gap: 1.25rem; }
-
-        .pc-comment {
-            display: flex;
-            gap: 1rem;
-            background: white;
-            border-radius: 14px;
-            padding: 1.25rem 1.5rem;
-            border: 1px solid #e2e8f0;
-            box-shadow: 0 1px 3px rgba(0,0,0,.04);
-        }
-        .pc-reply {
-            background: #f8fafc;
-            border: 1px solid #e2e8f0;
-            box-shadow: none;
-            padding: 1rem 1.25rem;
-        }
-        .pc-comment-avatar {
-            width: 44px; height: 44px;
-            background: linear-gradient(135deg, #0f0c29, #302b63 55%, #24243e);
-            color: white;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 700;
-            font-size: 1.1rem;
-            flex-shrink: 0;
-        }
-        .pc-avatar-sm { width: 36px; height: 36px; font-size: 0.9rem; }
-        .pc-comment-body { flex: 1; }
-        .pc-comment-meta {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            margin-bottom: 0.5rem;
-            flex-wrap: wrap;
-        }
-        .pc-comment-author { font-weight: 700; color: #1e293b; font-size: 0.975rem; }
-        .pc-comment-date   { color: #94a3b8; font-size: 0.875rem; }
-        .pc-comment-text   { color: #334155; line-height: 1.65; margin: 0 0 0.75rem; font-size: 1rem; }
-
-        .pc-replies { margin-top: 1rem; display: flex; flex-direction: column; gap: 0.75rem; }
-
-        .pc-reply-toggle {
-            background: none;
-            border: none;
-            color: #302b63;
-            font-weight: 600;
-            font-size: 0.9rem;
-            cursor: pointer;
-            padding: 0.35rem 0.75rem;
-            border-radius: 8px;
-            transition: background .2s;
-        }
-        .pc-reply-toggle:hover { background: #f1f5f9; }
-
-        .pc-reply-form { margin-top: 0.75rem; }
-        .pc-reply-actions { display: flex; gap: 0.75rem; margin-top: 0.5rem; }
-
-        .pc-empty {
-            text-align: center;
-            padding: 3rem 2rem;
-            color: #94a3b8;
-            background: white;
-            border-radius: 14px;
-            border: 1px dashed #e2e8f0;
-            font-size: 1rem;
-        }
-    </style>
-
-    <script>
-        document.querySelectorAll('.pc-reply-toggle').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const id = btn.dataset.comment;
-                const form = document.getElementById('reply-form-' + id);
-                form.style.display = form.style.display === 'none' ? 'block' : 'none';
-            });
-        });
-        document.querySelectorAll('.pc-btn-cancel').forEach(btn => {
-            btn.addEventListener('click', () => {
-                document.getElementById('reply-form-' + btn.dataset.comment).style.display = 'none';
-            });
-        });
-    </script>
-
-    <!-- Related Projects -->
-    {% if related_projects %}
-        <section class="related-projects">
-            <div class="container">
-                <h2 class="section-title" style="text-align: center;">Related ML Models</h2>
-                <div class="related-grid">
-                    {% for related_project in related_projects %}
-                        <a href="{% url 'project_detail' related_project.id %}" class="related-card">
-                            <span class="related-type">{{ related_project.get_project_type_display }}</span>
-                            <h3 class="related-title">{{ related_project.title }}</h3>
-                            <p style="color: #64748b; font-size: 0.9rem;">
-                                {{ related_project.short_description|default:related_project.description|truncatewords:15 }}
-                            </p>
-                        </a>
-                    {% endfor %}
-                </div>
+                {% endif %}
             </div>
-        </section>
+        </div>
+        {% endif %}
+
+        <!-- Experiment tracking -->
+        {% if project.experiment_params or project.experiment_metrics %}
+        <div class="pd-sidebar-card" style="border-color:#fed7aa;">
+            <p class="pd-section-label" style="color:#f97316;">Experiment Tracking</p>
+            {% if project.mlflow_run_id %}
+                <p style="font-size:.75rem; color:#94a3b8; font-family:monospace; margin-bottom:.6rem;">
+                    {{ project.mlflow_run_id|truncatechars:22 }}
+                </p>
+            {% endif %}
+            {% if project.experiment_params %}
+                <p style="font-size:.72rem; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:.05em; margin-bottom:.3rem;">Params</p>
+                {% for k, v in project.experiment_params.items %}
+                <div class="pd-exp-row">
+                    <span style="color:#92400e;">{{ k }}</span>
+                    <span style="font-weight:600; color:#1e293b;">{{ v }}</span>
+                </div>
+                {% endfor %}
+            {% endif %}
+            {% if project.experiment_metrics %}
+                <p style="font-size:.72rem; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:.05em; margin:.6rem 0 .3rem;">Metrics</p>
+                {% for k, v in project.experiment_metrics.items %}
+                <div class="pd-exp-row">
+                    <span style="color:#92400e;">{{ k }}</span>
+                    <span style="font-weight:600; color:#10b981;">
+                        {% if v < 1 %}{{ v|floatformat:3 }}{% else %}{{ v|floatformat:1 }}{% endif %}
+                    </span>
+                </div>
+                {% endfor %}
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- Back -->
+        <a href="{% url 'projects_list' %}"
+           style="display:inline-flex; align-items:center; gap:.4rem; font-size:.83rem;
+                  color:#64748b; text-decoration:none; padding:.4rem 0;">
+            ← Back to all projects
+        </a>
+
+    </aside>
+
+    <!-- ── Right content ──────────────────────────────────────────────────── -->
+    <div class="pd-content">
+
+        <!-- Main body card -->
+        <div class="pd-body">
+
+            <!-- Rich content (Editor.js) or fallback plain text -->
+            {% if project.description_rich and project.description_rich.blocks %}
+                <div class="pd-section-content">
+                    {{ project.description_rich|render_editorjs }}
+                </div>
+
+            {% else %}
+
+                {% if project.description %}
+                <div class="pd-section">
+                    <h2 class="pd-section-title">Overview</h2>
+                    <div class="pd-section-content">{{ project.description|linebreaks }}</div>
+                </div>
+                {% endif %}
+
+                {% if project.business_problem %}
+                <div class="pd-section">
+                    <h2 class="pd-section-title">Business Problem</h2>
+                    <div class="pd-section-content">{{ project.business_problem|linebreaks }}</div>
+                </div>
+                {% endif %}
+
+                {% if project.technical_approach %}
+                <div class="pd-section">
+                    <h2 class="pd-section-title">Technical Approach</h2>
+                    <div class="pd-section-content">{{ project.technical_approach|linebreaks }}</div>
+                </div>
+                {% endif %}
+
+                {% if project.challenges %}
+                <div class="pd-section">
+                    <h2 class="pd-section-title">Challenges & Solutions</h2>
+                    <div class="pd-section-content">{{ project.challenges|linebreaks }}</div>
+                </div>
+                {% endif %}
+
+                {% if project.key_achievements %}
+                <div class="pd-section">
+                    <h2 class="pd-section-title">Key Achievements</h2>
+                    <div class="pd-section-content">{{ project.key_achievements|linebreaks }}</div>
+                </div>
+                {% endif %}
+
+                {% if project.lessons_learned %}
+                <div class="pd-section">
+                    <h2 class="pd-section-title">Lessons Learned</h2>
+                    <div class="pd-section-content">{{ project.lessons_learned|linebreaks }}</div>
+                </div>
+                {% endif %}
+
+            {% endif %}
+
+        </div><!-- /pd-body -->
+
+    </div><!-- /pd-content -->
+
+</div><!-- /pd-layout -->
+
+<!-- ── Comments ────────────────────────────────────────────────────────────── -->
+<section class="project-comments-section" style="margin:2rem auto; max-width:860px;">
+    <div style="margin-bottom:1.25rem;">
+        <h2 style="font-size:1.4rem; font-weight:700; color:#1e293b; margin:0 0 .3rem;
+                   display:flex; align-items:center; gap:.5rem;">
+            <i class="fas fa-comments" style="color:#302b63;"></i>
+            Comments
+            <span style="background:linear-gradient(135deg,#0f0c29,#302b63 55%,#24243e);
+                         color:#fff; font-size:.85rem; font-weight:700; border-radius:20px;
+                         padding:.1rem .65rem;">{{ comment_count }}</span>
+        </h2>
+        <p style="color:#64748b; margin:0; font-size:.95rem;">Share your thoughts or feedback about this project.</p>
+    </div>
+
+    {% if user.is_authenticated %}
+    <div style="background:#fff; border-radius:14px; padding:1.5rem; border:1px solid #e2e8f0;
+                box-shadow:0 1px 4px rgba(0,0,0,.05); margin-bottom:1.5rem;">
+        <form method="post" action="{% url 'add_project_comment' project.id %}">
+            {% csrf_token %}
+            <input type="hidden" name="parent_id" value="">
+            <label style="display:flex; align-items:center; gap:.5rem; font-weight:600;
+                          color:#1e293b; margin-bottom:.65rem; font-size:.95rem;">
+                <span style="width:30px; height:30px; background:linear-gradient(135deg,#0f0c29,#302b63);
+                             color:#fff; border-radius:50%; display:inline-flex; align-items:center;
+                             justify-content:center; font-weight:700; font-size:.85rem; flex-shrink:0;">
+                    {{ user.username|first|upper }}
+                </span>
+                Add a comment
+            </label>
+            <textarea name="content" rows="3" required minlength="5"
+                      placeholder="What do you think about this project?"
+                      style="width:100%; padding:.75rem 1rem; border:2px solid #e2e8f0; border-radius:10px;
+                             font-size:.95rem; font-family:inherit; line-height:1.6; resize:vertical;
+                             transition:border-color .2s; box-sizing:border-box;"></textarea>
+            <button type="submit"
+                    style="margin-top:.65rem; padding:.6rem 1.5rem;
+                           background:linear-gradient(135deg,#0f0c29,#302b63 55%,#24243e);
+                           color:#fff; border:none; border-radius:10px; font-weight:600;
+                           font-size:.9rem; cursor:pointer;">
+                <i class="fas fa-paper-plane" style="margin-right:.4rem;"></i>Post
+            </button>
+        </form>
+    </div>
+    {% else %}
+    <div style="text-align:center; padding:2rem; background:#f8fafc; border-radius:14px;
+                border:2px dashed #cbd5e1; margin-bottom:1.5rem; color:#64748b;">
+        <a href="{% url 'accounts:login' %}" style="color:#302b63; font-weight:600;">Log in</a> to leave a comment.
+    </div>
     {% endif %}
 
-    <!-- Back Button -->
-    <div class="container">
-        <a href="{% url 'projects_list' %}" class="back-button">
-            ← Back to All ML Models
-        </a>
+    {% for message in messages %}
+        <div style="padding:.75rem 1rem; border-radius:10px; margin-bottom:.75rem; font-weight:500;
+                    {% if 'success' in message.tags %}background:#d1fae5; color:#065f46;
+                    {% else %}background:#fee2e2; color:#991b1b;{% endif %}">
+            {{ message }}
+        </div>
+    {% endfor %}
+
+    <div style="display:flex; flex-direction:column; gap:1rem;">
+        {% for comment in comments %}
+        <div id="comment-{{ comment.id }}"
+             style="display:flex; gap:.9rem; background:#fff; border-radius:12px;
+                    padding:1.1rem 1.3rem; border:1px solid #e2e8f0;">
+            <div style="width:40px; height:40px; background:linear-gradient(135deg,#0f0c29,#302b63);
+                        color:#fff; border-radius:50%; display:flex; align-items:center;
+                        justify-content:center; font-weight:700; font-size:1rem; flex-shrink:0;">
+                {{ comment.author.username|first|upper }}
+            </div>
+            <div style="flex:1;">
+                <div style="display:flex; align-items:center; gap:.6rem; margin-bottom:.4rem; flex-wrap:wrap;">
+                    <span style="font-weight:700; color:#1e293b; font-size:.95rem;">{{ comment.author.username }}</span>
+                    <span style="color:#94a3b8; font-size:.82rem;">{{ comment.created_at|date:"M j, Y · g:i a" }}</span>
+                </div>
+                <p style="color:#334155; line-height:1.6; margin:0 0 .6rem; font-size:.95rem;">
+                    {{ comment.content|linebreaksbr }}
+                </p>
+
+                {% if comment.replies.all %}
+                <div style="margin-top:.75rem; display:flex; flex-direction:column; gap:.65rem;">
+                    {% for reply in comment.replies.all %}
+                        {% if reply.is_approved %}
+                        <div style="display:flex; gap:.7rem; background:#f8fafc; border-radius:10px;
+                                    padding:.85rem 1rem; border:1px solid #e2e8f0;">
+                            <div style="width:32px; height:32px; background:linear-gradient(135deg,#0f0c29,#302b63);
+                                        color:#fff; border-radius:50%; display:flex; align-items:center;
+                                        justify-content:center; font-weight:700; font-size:.8rem; flex-shrink:0;">
+                                {{ reply.author.username|first|upper }}
+                            </div>
+                            <div>
+                                <div style="display:flex; align-items:center; gap:.5rem; margin-bottom:.3rem;">
+                                    <span style="font-weight:700; color:#1e293b; font-size:.88rem;">{{ reply.author.username }}</span>
+                                    <span style="color:#94a3b8; font-size:.78rem;">{{ reply.created_at|date:"M j, Y" }}</span>
+                                </div>
+                                <p style="color:#334155; line-height:1.55; margin:0; font-size:.88rem;">{{ reply.content|linebreaksbr }}</p>
+                            </div>
+                        </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                {% if user.is_authenticated %}
+                <button class="pc-reply-toggle" data-comment="{{ comment.id }}"
+                        style="background:none; border:none; color:#302b63; font-weight:600;
+                               font-size:.85rem; cursor:pointer; padding:.25rem .6rem;
+                               border-radius:6px; transition:background .15s;">
+                    <i class="fas fa-reply" style="margin-right:.3rem;"></i>Reply
+                </button>
+                <div id="reply-form-{{ comment.id }}" style="display:none; margin-top:.6rem;">
+                    <form method="post" action="{% url 'add_project_comment' project.id %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="parent_id" value="{{ comment.id }}">
+                        <textarea name="content" rows="2" required minlength="5"
+                                  placeholder="Write a reply…"
+                                  style="width:100%; padding:.6rem .85rem; border:2px solid #e2e8f0;
+                                         border-radius:8px; font-size:.9rem; font-family:inherit;
+                                         resize:vertical; box-sizing:border-box;"></textarea>
+                        <div style="display:flex; gap:.5rem; margin-top:.4rem;">
+                            <button type="submit"
+                                    style="padding:.4rem 1rem; background:#302b63; color:#fff;
+                                           border:none; border-radius:8px; font-weight:600;
+                                           font-size:.85rem; cursor:pointer;">Reply</button>
+                            <button type="button" class="pc-btn-cancel" data-comment="{{ comment.id }}"
+                                    style="padding:.4rem 1rem; background:#fff; color:#64748b;
+                                           border:2px solid #e2e8f0; border-radius:8px;
+                                           font-weight:600; font-size:.85rem; cursor:pointer;">Cancel</button>
+                        </div>
+                    </form>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% empty %}
+        <div style="text-align:center; padding:2.5rem; color:#94a3b8; background:#fff;
+                    border-radius:12px; border:1px dashed #e2e8f0; font-size:.95rem;">
+            No comments yet. Be the first to share your thoughts!
+        </div>
+        {% endfor %}
     </div>
+</section>
+
+<!-- ── Related projects ────────────────────────────────────────────────────── -->
+{% if related_projects %}
+<section style="margin-top:2.5rem;">
+    <h2 style="font-size:1.2rem; font-weight:700; color:#1e293b; margin-bottom:1rem;">Related Projects</h2>
+    <div class="related-grid">
+        {% for rp in related_projects %}
+        <a href="{% url 'project_detail' rp.id %}" class="related-card">
+            <span class="related-type">{{ rp.get_project_type_display }}</span>
+            <h3 class="related-title">{{ rp.title }}</h3>
+            <p style="color:#64748b; font-size:.85rem; margin:0;">
+                {{ rp.short_description|default:rp.description|truncatewords:14 }}
+            </p>
+        </a>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+
+<script>
+document.querySelectorAll('.pc-reply-toggle').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const form = document.getElementById('reply-form-' + btn.dataset.comment);
+        form.style.display = form.style.display === 'none' ? 'block' : 'none';
+    });
+});
+document.querySelectorAll('.pc-btn-cancel').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.getElementById('reply-form-' + btn.dataset.comment).style.display = 'none';
+    });
+});
+</script>
 {% endblock %}

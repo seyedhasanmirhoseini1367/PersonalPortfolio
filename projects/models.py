@@ -168,6 +168,14 @@ class Projects(models.Model):
         default='',
         help_text="Full project description and overview",
     )
+    description_rich = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text=(
+            "Rich block content for the Project Overview section (Editor.js JSON). "
+            "If set, this replaces the plain-text description on the detail page."
+        ),
+    )
     business_problem = models.TextField(
         blank=True,
         help_text="What business or research problem does this solve?",

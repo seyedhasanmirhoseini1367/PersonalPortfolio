@@ -3,6 +3,24 @@
 
 {% block extra_css %}
 <style>
+  /* ── Page header ───────────────────────────────────────────────── */
+  .cmp-header {
+    background: linear-gradient(135deg, #302b63 55%, #a78bfa 100%);
+    border-radius: 12px;
+    padding: 1rem 1.5rem .9rem;
+    margin-bottom: 1rem;
+  }
+  .cmp-header a       { font-size:.82rem; color:rgba(255,255,255,.7); text-decoration:none; display:inline-block; }
+  .cmp-header a:hover { color:#fff; }
+  .cmp-header h1      { font-size:1.05rem; font-weight:700; color:#fff; margin:.4rem 0 .5rem; text-align:center; }
+  .cmp-warning {
+    display: flex; align-items: center; justify-content: center; gap: .45rem;
+    background: rgba(251,191,36,.18); border: 1px solid rgba(251,191,36,.5);
+    border-radius: 8px; padding: .5rem .9rem;
+    font-size: .85rem; color: #fef9c3; line-height: 1.45; text-align: center;
+  }
+  .cmp-warning strong { color: #fde68a; }
+
   /* ── Layout ────────────────────────────────────────────────────── */
   .cmp-wrap { max-width: 1060px; margin: 0 auto; padding-bottom: 2rem; }
 
@@ -134,6 +152,7 @@
     background: #fafafa;
     transition: border-color .2s, background .2s;
     position: relative;
+    text-align: center;
   }
   .model-card.running  { border-color: #a5b4fc; background: #f5f3ff; }
   .model-card.done-lpd { border-color: #f59e0b; background: #fffbeb; }
@@ -168,24 +187,60 @@
     vertical-align: middle; margin-right: .3rem;
   }
 
+  /* ── Upload / result split ──────────────────────────────────────── */
+  .cmp-split {
+    display: grid;
+    grid-template-columns: 3fr 2fr;
+    gap: 1rem;
+    align-items: stretch;
+    margin-bottom: .75rem;
+  }
+  .cmp-upload-col {
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 1px 6px rgba(0,0,0,.06);
+    border: 1px solid #e2e8f0;
+    padding: 1.1rem 1.4rem;
+  }
+  .cmp-result-col {
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 1px 6px rgba(0,0,0,.06);
+    border: 1px solid #e2e8f0;
+    padding: 1.25rem 1rem;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 220px;
+  }
+  .cmp-result-placeholder {
+    color: #94a3b8;
+    font-size: .85rem;
+    line-height: 1.65;
+  }
+  .cmp-result-placeholder span { font-size: 2rem; display: block; margin-bottom: .5rem; }
+  @media(max-width:700px){ .cmp-split { grid-template-columns: 1fr; } }
+
   /* ── Ensemble verdict ──────────────────────────────────────────── */
   .ensemble-box {
     display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: .4rem;
     border-radius: 8px;
-    padding: .9rem 1.25rem;
+    padding: 1rem 1.25rem;
     border: 1.5px solid #0ea5e9;
     background: #f0f9ff;
-    margin-bottom: .75rem;
-    display: none;
-    align-items: center;
-    gap: 1.25rem;
+    width: 100%;
   }
   .ensemble-box.seizure { border-color: #f87171; background: #fff5f5; }
   .ensemble-box.lpd     { border-color: #f59e0b; background: #fffbeb; }
   .ens-eyebrow  { font-size: .68rem; text-transform: uppercase; letter-spacing: .1em;
-                  font-weight: 700; color: #0369a1; margin-bottom: .1rem; }
-  .ens-label    { font-size: 1.5rem; font-weight: 800; color: #0c4a6e; line-height: 1.15; }
-  .ens-votes    { font-size: .78rem; color: #0369a1; margin-top: .1rem; }
+                  font-weight: 700; color: #0369a1; }
+  .ens-label    { font-size: 1.6rem; font-weight: 800; color: #0c4a6e; line-height: 1.2; }
+  .ens-votes    { font-size: .78rem; color: #0369a1; }
 
   /* ── AI Interpretation ─────────────────────────────────────────── */
   .interp-panel {
@@ -225,26 +280,13 @@
 {% block content %}
 <div class="cmp-wrap">
 
-  <!-- ── Health disclaimer ── -->
-  <div style="display:flex;align-items:center;gap:.6rem;padding:.6rem .9rem;
-              border-radius:8px;margin-bottom:.85rem;
-              background:#fefce8;border:1px solid #fbbf24;">
-    <span style="font-size:1rem;">&#9888;&#65039;</span>
-    <span style="font-size:.78rem;color:#78350f;line-height:1.5;">
-      <strong>Portfolio demo only.</strong>
-      These models must not be used to diagnose, treat, or make any health decision.
-      Always consult a qualified medical professional.
-    </span>
-  </div>
-
-  <div style="margin-bottom:.85rem;">
-    <a href="{% url 'projects_list' %}" style="font-size:.8rem;color:#64748b;">&larr; Back to models</a>
-    <h1 style="font-size:1.4rem;font-weight:800;margin:.35rem 0 .2rem;color:#1e293b;">
-      Seizure Detection — Model Comparison
-    </h1>
-    <p style="color:#64748b;font-size:.84rem;margin:0;">
-      Upload one EEG file · all three architectures run side by side · ensemble majority vote
-    </p>
+  <div class="cmp-header">
+    <a href="{% url 'projects_list' %}">&larr; Back to models</a>
+    <h1>Seizure Detection — Model Comparison</h1>
+    <div class="cmp-warning">
+      <span>⚠️</span>
+      <span><strong>For demonstration only.</strong> Not intended for medical diagnosis, treatment, or clinical decision-making.</span>
+    </div>
   </div>
 
   {% if not seizure_projects %}
@@ -254,39 +296,56 @@
   </div>
   {% else %}
 
-  {# ── Upload card ── #}
-  <div class="card-panel">
-    <h5 class="mb-1">Upload EEG File <span style="font-size:.75rem;font-weight:400;color:#94a3b8;">(Parquet only)</span></h5>
-    <p class="text-muted mb-1" style="font-size:.86rem;">
-      Upload a <strong>.parquet</strong> EEG file with 19 channels sampled at 200 Hz.
-      Minimum 10 seconds of signal recommended.
-    </p>
-    <p style="font-size:.82rem;color:#64748b;margin-bottom:1rem;">
-      &#128196; Need test data?
-      <a href="https://www.kaggle.com/competitions/hms-harmful-brain-activity-classification/data"
-         target="_blank" rel="noopener"
-         style="color:#6366f1;font-weight:600;">
-        Download sample .parquet files from the HMS Kaggle competition &#8599;
-      </a>
-      — use any file from the <code>train_eegs/</code> folder.
-    </p>
+  {# ── Upload / result split ── #}
+  <div class="cmp-split">
 
-    <div class="drop-zone" id="drop-zone">
-      <div class="dz-icon" id="dz-icon">&#8679;</div>
-      <div id="dz-label">Drag &amp; drop or <strong>click to browse</strong></div>
-      <div class="dz-filename" id="dz-filename"></div>
-      <div style="font-size:.76rem; color:#94a3b8; margin-top:.3rem;">Accepted: .parquet files only</div>
+    {# Left: upload #}
+    <div class="cmp-upload-col">
+      <h5 class="mb-1">Upload EEG File <span style="font-size:.75rem;font-weight:400;color:#94a3b8;">(Parquet only)</span></h5>
+      <p class="text-muted mb-1" style="font-size:.86rem;">
+        Upload a <strong>.parquet</strong> EEG file with 19 channels sampled at 200 Hz.
+        Minimum 10 seconds of signal recommended.
+      </p>
+      <p style="font-size:.82rem;color:#64748b;margin-bottom:1rem;">
+        &#128196; Need test data?
+        <a href="https://www.kaggle.com/competitions/hms-harmful-brain-activity-classification/data"
+           target="_blank" rel="noopener" style="color:#6366f1;font-weight:600;">
+          HMS Kaggle competition &#8599;
+        </a>
+        — any file from <code>train_eegs or test_eegs</code>.
+      </p>
+
+      <div class="drop-zone" id="drop-zone">
+        <div class="dz-icon" id="dz-icon">&#8679;</div>
+        <div id="dz-label">Drag &amp; drop or <strong>click to browse</strong></div>
+        <div class="dz-filename" id="dz-filename"></div>
+        <div style="font-size:.76rem; color:#94a3b8; margin-top:.3rem;">Accepted: .parquet files only</div>
+      </div>
+      <input type="file" id="file-input" accept=".parquet" style="display:none">
+
+      <div style="text-align:center;">
+        <button class="btn-run" id="run-btn" onclick="runComparison()" disabled>
+          &#9654; Run All Models
+        </button>
+      </div>
+      <div class="error-box" id="error-box"></div>
     </div>
-    <input type="file" id="file-input" accept=".parquet" style="display:none">
 
-    <div style="text-align:center;">
-      <button class="btn-run" id="run-btn" onclick="runComparison()" disabled>
-        &#9654; Run All Models
-      </button>
+    {# Right: ensemble result #}
+    <div class="cmp-result-col">
+      <div id="result-placeholder" class="cmp-result-placeholder">
+        <span>🧠Result</span>
+        Upload a file and run all models to see the ensemble verdict here.
+      </div>
+      <div class="ensemble-box" id="ensemble-box">
+        <div style="font-size:1.8rem; opacity:.4;">&#9878;</div>
+        <div class="ens-eyebrow">Ensemble — majority vote</div>
+        <div class="ens-label" id="ens-label"></div>
+        <div class="ens-votes" id="ens-votes"></div>
+      </div>
     </div>
 
-    <div class="error-box" id="error-box"></div>
-  </div>
+  </div>{# /cmp-split #}
 
   {# ── Progress panel ── #}
   <div class="progress-panel" id="progress-panel">
@@ -329,16 +388,6 @@
 
   {# ── Hidden spinner (kept for JS compat) ── #}
   <div class="spinner-wrap" id="spinner" style="display:none;"></div>
-
-  {# ── Ensemble box ── #}
-  <div class="ensemble-box" id="ensemble-box">
-    <div style="font-size:1.6rem;opacity:.5;">&#9878;</div>
-    <div>
-      <div class="ens-eyebrow">Ensemble — majority vote</div>
-      <div class="ens-label" id="ens-label"></div>
-      <div class="ens-votes" id="ens-votes"></div>
-    </div>
-  </div>
 
   {# ── Model cards ── #}
   <div class="models-grid" id="models-grid">
@@ -512,6 +561,8 @@ function stopProgress(success) {
 function resetUI() {
   document.getElementById('error-box').style.display     = 'none';
   document.getElementById('ensemble-box').style.display  = 'none';
+  const ph = document.getElementById('result-placeholder');
+  if (ph) ph.style.display = 'block';
   document.getElementById('interp-panel').style.display  = 'none';
   document.getElementById('summary-card').style.display  = 'none';
   document.getElementById('progress-panel').style.display = 'none';
@@ -577,13 +628,14 @@ function setCardResult(r) {
 
 /* ── Show ensemble ──────────────────────────────────────────────── */
 function showEnsemble(label, votes) {
-  const box    = document.getElementById('ensemble-box');
-  const lblEl  = document.getElementById('ens-label');
+  const box     = document.getElementById('ensemble-box');
+  const lblEl   = document.getElementById('ens-label');
   const votesEl = document.getElementById('ens-votes');
+  const ph      = document.getElementById('result-placeholder');
 
   box.className = 'ensemble-box';
   const ll = (label || '').toLowerCase();
-  if (ll.includes('seizure'))                      box.classList.add('seizure');
+  if (ll.includes('seizure'))                           box.classList.add('seizure');
   else if (ll.includes('lpd') || ll.includes('periodic')) box.classList.add('lpd');
 
   lblEl.textContent = label || '—';
@@ -592,6 +644,7 @@ function showEnsemble(label, votes) {
   const win   = votes[label] || 0;
   votesEl.textContent = `${win} of ${total} model${total !== 1 ? 's' : ''} agree`;
 
+  if (ph) ph.style.display = 'none';
   box.style.display = 'flex';
 }
 

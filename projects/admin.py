@@ -5,6 +5,7 @@ from django.contrib import admin
 from django.utils.html import format_html
 from django import forms
 from .models import Projects, ProjectComment, ProjectRAGFile
+from .widgets import EditorJsWidget
 
 
 class ProjectRAGFileInline(admin.TabularInline):
@@ -22,6 +23,9 @@ class ProjectsAdminForm(forms.ModelForm):
     class Meta:
         model = Projects
         fields = '__all__'
+        widgets = {
+            'description_rich': EditorJsWidget(),
+        }
 
     def clean_rag_document(self):
         """Validate uploaded RAG document"""
@@ -149,7 +153,13 @@ class ProjectAdmin(admin.ModelAdmin):
         }),
 
         ('Project details', {
+            'description': (
+                'Use "Rich description (Editor.js)" to write content with embedded images, '
+                'videos, headings, lists, etc. If filled, it replaces the plain "Description" '
+                'on the public detail page.'
+            ),
             'fields': (
+                'description_rich',
                 'description',
                 'business_problem',
                 'technical_approach',

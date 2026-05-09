@@ -729,6 +729,36 @@ def seizure_realtime_predict_chunk(request):
         })
 
 
+# ── Editor.js image upload ────────────────────────────────────────────────────
+@csrf_exempt
+def editor_image_upload(request):
+    """
+    Used by the Editor.js Image tool in the admin.
+    Accepts POST with an 'image' file, saves it, returns the URL.
+    Only staff members may upload.
+    """
+    if not request.user.is_authenticated or not request.user.is_staff:
+        return JsonResponse({'success': 0, 'message': 'Unauthorized'}, status=403)
+
+    if request.method != 'POST':
+        return JsonResponse({'success': 0, 'message': 'Method not allowed'}, status=405)
+
+    image = request.FILES.get('image')
+    if not image:
+        return JsonResponse({'success': 0, 'message': 'No image provided'})
+
+    allowed = {'.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg'}
+    ext = os.path.splitext(image.name)[1].lower()
+    if ext not in allowed:
+        return JsonResponse({'success': 0, 'message': f'Unsupported format: {ext}'})
+
+    from django.core.files.storage import default_storage
+    from django.conf import settings
+    path = default_storage.save(f'projects/editor_images/{image.name}', image)
+    url  = request.build_absolute_uri(settings.MEDIA_URL + path)
+    return JsonResponse({'success': 1, 'file': {'url': url}})
+
+
 # ── Error handlers ────────────────────────────────────────────────────────────
 def error_404(request, exception=None):
     return render(request, '404.html', status=404)

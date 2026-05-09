@@ -3,19 +3,37 @@
 
 {% block extra_css %}
 <style>
+  /* ── Page header ───────────────────────────────────────────── */
+  .demo-header {
+    background: linear-gradient(135deg, #302b63 55%, #a78bfa 100%);
+    border-radius: 12px;
+    padding: 1rem 1.5rem .9rem;
+    margin-bottom: 1rem;
+  }
+  .demo-header a        { font-size:.82rem; color:rgba(255,255,255,.7); text-decoration:none; display:inline-block; }
+  .demo-header a:hover  { color:#fff; }
+  .demo-header h1       { font-size:1.05rem; font-weight:700; color:#fff; margin:.4rem 0 .5rem; text-align:center; }
+  .demo-warning {
+    display: flex; align-items: center; justify-content: center; gap: .45rem;
+    background: rgba(251,191,36,.18); border: 1px solid rgba(251,191,36,.5);
+    border-radius: 8px; padding: .5rem .9rem;
+    font-size: .85rem; color: #fef9c3; line-height: 1.45; text-align: center;
+  }
+  .demo-warning strong { color: #fde68a; }
+
   .pred-card {
     background: var(--bs-white, #fff);
     border-radius: 12px;
     box-shadow: 0 4px 20px rgba(0,0,0,.08);
-    padding: 2rem;
-    margin-bottom: 1.5rem;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: .75rem;
   }
 
   /* ── Drop zone ─────────────────────────────────────────────── */
   .drop-zone {
     border: 2px dashed #cbd5e1;
     border-radius: 10px;
-    padding: 2.5rem 2rem;
+    padding: 1.1rem 1rem;
     text-align: center;
     cursor: pointer;
     transition: border-color .2s, background .2s;
@@ -24,7 +42,7 @@
   .drop-zone.dragover { border-color: #6366f1; background: #f5f3ff; }
   .drop-zone.has-file { border-color: #10b981; background: #f0fdf4; }
   .drop-zone.error    { border-color: #f87171; background: #fef2f2; }
-  .dz-icon   { font-size: 2.2rem; color: #94a3b8; margin-bottom: .6rem; }
+  .dz-icon   { font-size: 1.5rem; color: #94a3b8; margin-bottom: .3rem; }
   .drop-zone.has-file .dz-icon { color: #10b981; }
   .drop-zone.error    .dz-icon { color: #ef4444; }
   .dz-label    { font-size: .95rem; color: #64748b; }
@@ -165,10 +183,13 @@
   </div>
   {% endif %}
 
-  <div class="mb-4">
-    <a href="{% url 'project_detail' project.id %}" style="font-size:.87rem; color:#64748b;">&larr; Back to project</a>
-    <h1 class="mt-2 mb-1">{{ project.title }}</h1>
-    <p class="text-muted mb-0">{{ project.short_description }}</p>
+  <div class="demo-header">
+    <a href="{% url 'project_detail' project.id %}">&larr; Back to project</a>
+    <h1>{{ project.title }}</h1>
+    <div class="demo-warning">
+      <span>⚠️</span>
+      <span><strong>For demonstration only.</strong> Not intended for medical diagnosis, treatment, or clinical decision-making.</span>
+    </div>
   </div>
 
   <div class="pred-card">
@@ -216,6 +237,24 @@
         {% endif %}
       </code>
     </details>
+    {% endif %}
+
+    {# Test data hint — shown for seizure EEG handler #}
+    {% if handler_slug == 'seizure_eeg' %}
+    <div style="display:flex; align-items:flex-start; gap:.6rem; margin-top:.85rem;
+                background:#f0f9ff; border:1px solid #bae6fd; border-radius:8px;
+                padding:.65rem .85rem; font-size:.8rem; color:#0369a1;">
+      <span style="font-size:1rem; flex-shrink:0;">📄</span>
+      <div>
+        <strong>Need test data?</strong>
+        <a href="https://www.kaggle.com/competitions/hms-harmful-brain-activity-classification/data"
+           target="_blank" rel="noopener"
+           style="color:#0ea5e9; margin-left:.3rem;">HMS Brain Activity dataset ↗</a>
+        <br>
+        File must have <strong>19 EEG channels</strong> (no EKG), sampled at <strong>200 Hz</strong>.
+        Minimum <strong>10 seconds</strong> of signal recommended.
+      </div>
+    </div>
     {% endif %}
 
     <button class="btn-predict" id="predict-btn" onclick="runFilePrediction()" disabled>
@@ -314,7 +353,7 @@
     </a>
   </div>
   {% endif %}
-
+<!-- 
   <div class="pred-card" style="font-size:.85rem; color:#64748b;">
     <strong style="color:#374151;">Model info</strong>
     &nbsp;&middot;&nbsp; Type: {{ project.get_model_type_display|default:"—" }}
@@ -325,7 +364,7 @@
     {% if handler_slug %}
     &nbsp;&middot;&nbsp; Handler: <code>{{ handler_slug }}</code>
     {% endif %}
-  </div>
+  </div> -->
 
 </div>
 {% endblock %}
