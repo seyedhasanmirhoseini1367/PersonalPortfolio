@@ -632,6 +632,7 @@ def seizure_realtime_predict_chunk(request):
     import time
     from projects.inference import get_handler
     from projects.inference.base import InferenceError
+    from monitoring.utils import log_prediction
 
     try:
         payload = json.loads(request.body)
@@ -691,6 +692,15 @@ def seizure_realtime_predict_chunk(request):
         winner   = max(votes, key=votes.get)
         avg_conf = sum(r['confidence'] for r in good if r['label'] == winner) / votes[winner]
 
+        for entry in good:
+            proj = next((p for p in seizure_projects
+                         if (p.file_input_config or {}).get('model_variant') == entry['variant']), seizure_projects[0])
+            log_prediction(
+                project=proj, input_type='realtime',
+                confidence=entry['confidence'], label=entry['label'],
+                inference_ms=ms, success=True, source='realtime', request=request,
+            )
+
         return JsonResponse({
             'label':        winner,
             'confidence':   round(avg_conf, 4),
@@ -721,6 +731,12 @@ def seizure_realtime_predict_chunk(request):
             return JsonResponse({'error': f'Inference error: {type(e).__name__}: {e}'}, status=500)
 
         ms = int((time.perf_counter() - t0) * 1000)
+        log_prediction(
+            project=project, input_type='realtime',
+            confidence=float(result.get('prediction_proba') or 0),
+            label=result.get('prediction_label', ''),
+            inference_ms=ms, success=True, source='realtime', request=request,
+        )
         return JsonResponse({
             'label':        result.get('prediction_label'),
             'confidence':   round(float(result.get('prediction_proba') or 0), 4),

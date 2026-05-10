@@ -113,10 +113,12 @@ table.mon-tbl tr:hover td { background:#fafbff; }
   display:inline-block; padding:.1rem .5rem; border-radius:10px;
   font-size:.71rem; font-weight:700;
 }
-.badge-real    { background:#e0f2fe; color:#0369a1; }
-.badge-syn     { background:#f3e8ff; color:#7c3aed; }
-.badge-demo    { background:#fef3c7; color:#b45309; }
-.badge-api     { background:#dcfce7; color:#166534; }
+.badge-real     { background:#e0f2fe; color:#0369a1; }
+.badge-syn      { background:#f3e8ff; color:#7c3aed; }
+.badge-demo     { background:#fef3c7; color:#b45309; }
+.badge-api      { background:#dcfce7; color:#166534; }
+.badge-owner    { background:#fce7f3; color:#9d174d; }
+.badge-realtime { background:#fff7ed; color:#c2410c; }
 .badge-ok      { background:#dcfce7; color:#166534; }
 .badge-err     { background:#fee2e2; color:#dc2626; }
 
@@ -491,6 +493,8 @@ table.mon-tbl tr:hover td { background:#fafbff; }
         <button class="tbl-tab active" onclick="filterTable('all',this)">All</button>
         <button class="tbl-tab" onclick="filterTable('web',this)">Web / Demo</button>
         <button class="tbl-tab" onclick="filterTable('synthetic',this)">Synthetic</button>
+        <button class="tbl-tab" onclick="filterTable('realtime',this)">Realtime</button>
+        <button class="tbl-tab" onclick="filterTable('owner',this)">Owner</button>
       </div>
     </div>
     <div style="overflow-x:auto;">
@@ -512,7 +516,7 @@ table.mon-tbl tr:hover td { background:#fafbff; }
         <tbody id="predBody">
           {% for log in combined_recent %}
           <tr class="pred-row"
-              data-source="{% if log.source == 'synthetic' or log.source == 'synthetic_comparison' %}synthetic{% else %}web{% endif %}">
+              data-source="{% if log.source == 'synthetic' or log.source == 'synthetic_comparison' %}synthetic{% elif log.source == 'owner' %}owner{% elif log.source == 'realtime' %}realtime{% else %}web{% endif %}">
             <td style="color:#94a3b8;font-size:.72rem;">{{ forloop.counter }}</td>
             <td style="white-space:nowrap;color:#64748b;">{{ log.created_at|date:"M d H:i:s" }}</td>
             <td style="font-weight:600;">{{ log.project.title|truncatechars:18 }}</td>
@@ -541,7 +545,7 @@ table.mon-tbl tr:hover td { background:#fafbff; }
             </td>
             <td>{% if log.inference_ms %}<span style="font-family:monospace;">{{ log.inference_ms }}ms</span>{% else %}—{% endif %}</td>
             <td>
-              <span class="badge badge-{% if log.source == 'synthetic' or log.source == 'synthetic_comparison' %}syn{% elif log.source == 'demo' %}demo{% elif log.source == 'api' %}api{% else %}real{% endif %}">
+              <span class="badge badge-{% if log.source == 'synthetic' or log.source == 'synthetic_comparison' %}syn{% elif log.source == 'owner' %}owner{% elif log.source == 'realtime' %}realtime{% elif log.source == 'demo' %}demo{% elif log.source == 'api' %}api{% else %}real{% endif %}">
                 {{ log.source }}
               </span>
             </td>

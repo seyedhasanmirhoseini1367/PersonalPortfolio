@@ -12,6 +12,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = config('SECRET_KEY', default='build-time-dummy-not-for-production')
 DEBUG       = config('DEBUG', default=False, cast=bool)
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=Csv())
+OWNER_IPS     = config('OWNER_IPS', default='127.0.0.1', cast=Csv())
 
 # ── Application definition ─────────────────────────────────────────────────────
 INSTALLED_APPS = [

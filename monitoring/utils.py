@@ -23,6 +23,9 @@ def log_prediction(*, project, user=None, input_data=None, input_type='web',
             xff = request.META.get('HTTP_X_FORWARDED_FOR', '')
             ip  = xff.split(',')[0].strip() if xff else request.META.get('REMOTE_ADDR', '')
             ua  = request.META.get('HTTP_USER_AGENT', '')[:500]
+            from django.conf import settings as _s
+            if ip and source not in ('synthetic', 'synthetic_comparison') and ip in getattr(_s, 'OWNER_IPS', []):
+                source = 'owner'
 
         PredictionLog.objects.create(
             project       = project,
