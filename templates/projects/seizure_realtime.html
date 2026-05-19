@@ -402,6 +402,7 @@ let replayTimer   = null;
 let lastPredictTs = -Infinity;
 let history       = [];
 let selectedFiles = [];
+let autoStart     = false;
 
 // ── DOM refs ──────────────────────────────────────────────────────────────────
 const dropZone      = document.getElementById('dropZone');
@@ -614,6 +615,8 @@ loadBtn.addEventListener('click', async () => {
     resetBtn.disabled = false;
     loadBtn.textContent = 'Reload';
     loadBtn.disabled = false;
+
+    if (autoStart) { autoStart = false; startReplay(); }
 
   } catch (err) {
     setLoadError('Network error: ' + err.message);
@@ -860,6 +863,24 @@ window.addEventListener('resize', () => {
   ctx = canvas.getContext('2d');
   drawEEG();
 });
+
+// ── Auto-demo: fetch sample on page open ──────────────────────────────────────
+async function loadSample() {
+  try {
+    const resp = await fetch('/static/demo/eeg_sample.parquet');
+    if (!resp.ok) return;
+    const blob = await resp.blob();
+    const file = new File([blob], 'eeg_demo_sample.parquet', { type: 'application/octet-stream' });
+    selectedFiles = [];
+    addFiles([file]);
+    autoStart = true;
+    loadBtn.click();
+  } catch (e) {
+    console.warn('Demo auto-load skipped:', e);
+  }
+}
+
+window.addEventListener('load', () => setTimeout(loadSample, 400));
 
 })();
 </script>
