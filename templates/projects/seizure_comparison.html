@@ -372,7 +372,7 @@
       </div>
       <div class="stage" id="stage-2">
         <div class="stage-icon">3</div>
-        <span>Running inference — CNN, GRU, and Fusion models in parallel</span>
+        <span>Running inference — CNN, LSTM, and Fusion models in parallel</span>
       </div>
       <div class="stage" id="stage-3">
         <div class="stage-icon">4</div>
@@ -478,7 +478,7 @@ function attachFile(f) {
 
 /* ── Progress tracker ───────────────────────────────────────────── */
 const STAGES = [
-  { title: 'Loading models',       subtitle: 'CNN, GRU-Attention and Fusion weights loading into memory…',       pct: 15, dur: 8  },
+  { title: 'Loading models',       subtitle: 'CNN, LSTM-Attention and Fusion weights loading into memory…',       pct: 15, dur: 8  },
   { title: 'Preprocessing EEG',    subtitle: 'Bandpass filtering · standardisation · window segmentation…',      pct: 35, dur: 10 },
   { title: 'Running inference',    subtitle: 'All three models are analysing the EEG signal — please wait…',     pct: 70, dur: 30 },
   { title: 'Computing ensemble',   subtitle: 'Majority vote · generating AI interpretation…',                    pct: 90, dur: 8  },
