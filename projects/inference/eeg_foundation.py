@@ -29,8 +29,6 @@ import sys
 import numpy as np
 import pandas as pd
 
-import torch
-
 from .registry import register
 from .base import InferenceHandler, InferenceError
 
@@ -43,6 +41,7 @@ def _load_foundation_model(bundle_path: str, task_name: str):
     Load EEGFoundationModel from an inference bundle produced by the trainers.
     Returns (model, bundle_meta).
     """
+    import torch
     bundle = torch.load(bundle_path, map_location='cpu', weights_only=False)
     cfg    = bundle['model_config']
 
@@ -213,6 +212,7 @@ class _EEGFoundationBase(InferenceHandler):
         except Exception as e:
             raise InferenceError(f"Failed to load model: {e}")
 
+        import torch
         x = torch.tensor(self._arr[np.newaxis], dtype=torch.float32)  # (1, 129, 200)
         with torch.no_grad():
             out  = model(x, mode='finetune', task_name=self.task_name)
