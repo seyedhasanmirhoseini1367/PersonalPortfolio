@@ -657,7 +657,8 @@ class SeizureEEGHandler(InferenceHandler):
 
         elif variant == "fusion":
             cnn_permuted = np.transpose(self._tensor, (0, 2, 1, 3))
-            logits = session.run(['logits'], {'cnnx': cnn_permuted, 'lstmx': self._gru_tensor})[0]
+            inp = [i.name for i in session.get_inputs()]
+            logits = session.run(['logits'], {inp[0]: cnn_permuted, inp[1]: self._gru_tensor})[0]
 
         else:  # cnn_simple, cnn_transformer
             logits = session.run(['logits'], {'x': self._tensor})[0]
