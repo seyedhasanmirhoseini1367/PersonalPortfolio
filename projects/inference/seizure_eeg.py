@@ -612,21 +612,19 @@ class SeizureEEGHandler(InferenceHandler):
 
     def run(self, uploaded_file) -> dict:
         """
-        Override base run() — full PyTorch inference with per-variant dispatch.
+        Override base run() — onnxruntime inference with per-variant dispatch.
         Variants: cnn_simple, cnn_transformer, gru_attention, fusion.
         """
-        import torch
-        import torch.nn.functional as F
+        import onnxruntime as ort
 
         filename    = uploaded_file.name.lower()
         variant     = self.cfg.get("model_variant", "cnn_simple")
-        num_classes = len(self.cfg.get("label_map", self.DEFAULT_LABEL_MAP))
 
         # ── Validate + preprocess ─────────────────────────────────────────────
         self.validate_file(uploaded_file, filename)
         feature_df, input_summary = self.load_and_preprocess(uploaded_file, filename)
 
-        # ── Load model ────────────────────────────────────────────────────────
+        # ── Load ONNX session ─────────────────────────────────────────────────
         model_path = self.project.get_model_path()
         if not model_path or not os.path.exists(model_path):
             raise InferenceError(
@@ -634,61 +632,38 @@ class SeizureEEGHandler(InferenceHandler):
                 "Please ask the site owner to upload the trained model via Django admin."
             )
 
-        cache_key = (model_path, variant, num_classes)
-        model = _MODEL_CACHE.get(cache_key)
-        if model is None:
-            try:
-                # Load weights first so auto-builders can inspect shapes
-                state_dict = torch.load(model_path, map_location="cpu",
-                                        weights_only=True)
+        onnx_path = os.path.join(os.path.dirname(model_path), f"{variant}.onnx")
+        if not os.path.exists(onnx_path):
+            raise InferenceError(
+                f"ONNX model not found at {onnx_path}. "
+                "Please run convert_to_onnx.py to generate ONNX models."
+            )
 
-                if variant == "cnn_transformer":
-                    model = _build_cnn_transformer(num_classes=num_classes)
-                elif variant == "gru_attention":
-                    model = _build_gru_attention_from_state_dict(
-                        state_dict, num_classes=num_classes)
-                elif variant == "fusion":
-                    model = _build_fusion_classifier(num_classes=num_classes)
-                else:  # cnn_simple (default)
-                    model = _build_cnn_simple(num_classes=num_classes)
-
-                model.load_state_dict(state_dict)
-            except RuntimeError as e:
-                raise InferenceError(
-                    f"Model weights could not be loaded into the '{variant}' architecture. "
-                    f"Detail: {e}. "
-                    "If you recently changed the model, update 'model_variant' in file_input_config."
-                )
-            except Exception as e:
-                raise InferenceError(f"Failed to load model: {e}")
-
-            model.eval()
-            device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-            model.to(device)
-            _MODEL_CACHE[cache_key] = model
-        else:
-            device = next(model.parameters()).device
+        session = _MODEL_CACHE.get(onnx_path)
+        if session is None:
+            opts = ort.SessionOptions()
+            opts.inter_op_num_threads = 1
+            opts.intra_op_num_threads = 1
+            session = ort.InferenceSession(
+                onnx_path, sess_options=opts, providers=['CPUExecutionProvider']
+            )
+            _MODEL_CACHE[onnx_path] = session
 
         # ── Inference — dispatch by variant ───────────────────────────────────
-        with torch.no_grad():
-            if variant == "gru_attention":
-                x = torch.tensor(self._gru_tensor, dtype=torch.float32).to(device)
-                logits = model(x)
+        if variant == "gru_attention":
+            logits = session.run(['logits'], {'x': self._gru_tensor})[0]
 
-            elif variant == "fusion":
-                # CNN branch: permute (1, n_ch, freq, time) → (1, freq, n_ch, time)
-                cnn_permuted = np.transpose(self._tensor, (0, 2, 1, 3))
-                x_cnn = torch.tensor(cnn_permuted, dtype=torch.float32).to(device)
-                x_gru = torch.tensor(self._gru_tensor, dtype=torch.float32).to(device)
-                logits = model(x_cnn, x_gru)
+        elif variant == "fusion":
+            cnn_permuted = np.transpose(self._tensor, (0, 2, 1, 3))
+            logits = session.run(['logits'], {'cnnx': cnn_permuted, 'lstmx': self._gru_tensor})[0]
 
-            else:  # cnn_simple, cnn_transformer
-                x = torch.tensor(self._tensor, dtype=torch.float32).to(device)
-                logits = model(x)
+        else:  # cnn_simple, cnn_transformer
+            logits = session.run(['logits'], {'x': self._tensor})[0]
 
-            probs      = F.softmax(logits, dim=1)
-            pred_idx   = int(torch.argmax(probs, dim=1).item())
-            confidence = float(probs[0, pred_idx].item())
+        e = np.exp(logits - logits.max(axis=1, keepdims=True))
+        probs      = e / e.sum(axis=1, keepdims=True)
+        pred_idx   = int(np.argmax(probs[0]))
+        confidence = float(probs[0, pred_idx])
 
         self._pred_val = pred_idx
         self._proba    = confidence
