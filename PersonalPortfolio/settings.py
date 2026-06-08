@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'accounts',
     'monitoring',
     'content_generator',
+    'kaggle_archive',
 
     'storages',
 ]
@@ -211,7 +212,7 @@ SYNTHETIC_MONITOR = {
 
 # ── RAG Configuration ─────────────────────────────────────────────────────────
 RAG_CONFIG = {
-    'EMBEDDING_MODEL':  'BAAI/bge-base-en-v1.5',
+    'EMBEDDING_MODEL':  'models/text-embedding-004',
     'VECTOR_STORE_PATH': BASE_DIR / 'rag_system' / 'vector_store',
     'DOCUMENTS_PATH':    BASE_DIR / 'rag_system' / 'documents',
     'CHUNK_SIZE':        300,

@@ -1,69 +1,66 @@
 # rag_system/services/embedding_service.py
 """
-Embedding service — DB is the single source of truth.
-Pkl cache files are no longer used; embeddings are always loaded fresh from
-the DocumentChunk table. This ensures embeddings are never stale after
-auto-sync signals fire.
+Embedding service — uses Gemini text-embedding-004 (free tier: 1,500 req/day).
+Replaces sentence-transformers/BGE to eliminate the ~1 GB PyTorch memory footprint.
 """
 import pickle
 import logging
+import time
 import numpy as np
 from typing import List, Tuple, Dict, Any, Optional
-from sentence_transformers import SentenceTransformer
+
 from django.conf import settings
 from ..models import DocumentChunk
 
 logger = logging.getLogger(__name__)
+
+_EMBED_DIM = 768  # Gemini text-embedding-004 output dimension
 
 
 class EmbeddingService:
 
     def __init__(self):
         self.model_name = settings.RAG_CONFIG['EMBEDDING_MODEL']
-        self._model: Optional[SentenceTransformer] = None   # lazy-loaded
-
-    # ── Model (lazy) ──────────────────────────────────────────────────────────
-
-    @property
-    def model(self) -> Optional[SentenceTransformer]:
-        if self._model is None:
-            try:
-                self._model = SentenceTransformer(self.model_name)
-                logger.debug('EmbeddingService: loaded model "%s"', self.model_name)
-            except Exception as exc:
-                logger.error('EmbeddingService: failed to load model "%s": %s', self.model_name, exc)
-        return self._model
-
-    # ── Encoding ──────────────────────────────────────────────────────────────
-
-    # BGE models are trained with this prefix on the query side (not document side).
-    # Omitting it on documents is intentional — matches the training setup.
-    _BGE_QUERY_PREFIX = 'Represent this sentence for searching relevant passages: '
-
-    def _is_bge(self) -> bool:
-        return 'bge' in self.model_name.lower()
 
     @property
     def _embedding_dim(self) -> int:
-        if self.model is not None:
-            return self.model.get_sentence_embedding_dimension()
-        return 768 if 'base' in self.model_name.lower() or 'large' in self.model_name.lower() else 384
+        return _EMBED_DIM
+
+    # ── Core API call ─────────────────────────────────────────────────────────
+
+    def _embed_texts(self, texts: List[str]) -> np.ndarray:
+        if not texts:
+            return np.zeros((0, _EMBED_DIM), dtype=np.float32)
+        api_key = getattr(settings, 'GEMINI_API_KEY', '')
+        if not api_key:
+            logger.warning('GEMINI_API_KEY not set — returning zero embeddings')
+            return np.zeros((len(texts), _EMBED_DIM), dtype=np.float32)
+        try:
+            from google import genai
+            client  = genai.Client(api_key=api_key)
+            vectors = []
+            for i, text in enumerate(texts):
+                if i > 0 and i % 10 == 0:
+                    time.sleep(1)  # free tier rate limit guard
+                resp = client.models.embed_content(
+                    model    = 'models/text-embedding-004',
+                    contents = text,
+                )
+                vectors.append(resp.embeddings[0].values)
+            return np.array(vectors, dtype=np.float32)
+        except Exception as exc:
+            logger.error('Gemini embedding error: %s', exc)
+            return np.zeros((len(texts), _EMBED_DIM), dtype=np.float32)
+
+    # ── Public encoding API ───────────────────────────────────────────────────
 
     def generate_embedding(self, text: str) -> np.ndarray:
         """Encode a single query string."""
-        if self.model is None:
-            return np.zeros(self._embedding_dim, dtype=np.float32)
-        if self._is_bge():
-            text = self._BGE_QUERY_PREFIX + text
-        return self.model.encode(text, show_progress_bar=False, normalize_embeddings=True)
+        return self._embed_texts([text])[0]
 
     def generate_embeddings(self, texts: List[str]) -> np.ndarray:
-        """Encode document chunks (no query prefix)."""
-        if self.model is None:
-            return np.zeros((len(texts), self._embedding_dim), dtype=np.float32)
-        return self.model.encode(
-            texts, show_progress_bar=False, batch_size=32, normalize_embeddings=True
-        )
+        """Encode document chunks."""
+        return self._embed_texts(texts)
 
     # ── Persist to DB ─────────────────────────────────────────────────────────
 
@@ -84,10 +81,7 @@ class EmbeddingService:
         self,
         document_type: Optional[str] = None,
     ) -> Tuple[List[str], np.ndarray, List[Dict[str, Any]]]:
-        """
-        Load all embeddings from the database.
-        Returns (texts, embeddings_matrix, metadata_list).
-        """
+        """Load all embeddings from the database."""
         qs = DocumentChunk.objects.select_related('document').filter(embedding__isnull=False)
         if document_type:
             qs = qs.filter(document__document_type=document_type)
@@ -112,20 +106,14 @@ class EmbeddingService:
         if not vecs:
             return [], np.array([]), []
 
-        logger.debug(
-            'EmbeddingService: loaded %d embeddings (type=%s)',
-            len(vecs), document_type or 'all',
-        )
         return texts, np.array(vecs, dtype=np.float32), meta
 
-    # ── Backward-compat stubs (pkl no longer used) ────────────────────────────
+    # ── Backward-compat stubs ─────────────────────────────────────────────────
 
     def load_embeddings_from_file(
         self, document_type: str
     ) -> Tuple[List[str], np.ndarray, List[Dict[str, Any]]]:
-        """Deprecated pkl path — now delegates straight to DB."""
         return self.load_embeddings(document_type)
 
     def save_embeddings_to_file(self, document_type: str) -> None:
-        """No-op: pkl cache is removed. DB is the source of truth."""
         pass
