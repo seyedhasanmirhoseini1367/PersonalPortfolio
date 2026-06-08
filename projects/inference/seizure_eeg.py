@@ -632,7 +632,9 @@ class SeizureEEGHandler(InferenceHandler):
                 "Please ask the site owner to upload the trained model via Django admin."
             )
 
-        onnx_path = os.path.join(os.path.dirname(model_path), f"{variant}.onnx")
+        # ONNX models are committed to projects/models/ (media/ is gitignored)
+        _code_models = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'models')
+        onnx_path = os.path.join(_code_models, f"{variant}.onnx")
         if not os.path.exists(onnx_path):
             raise InferenceError(
                 f"ONNX model not found at {onnx_path}. "
