@@ -1,0 +1,914 @@
+{% extends 'base.html' %}
+{% block title %}Kaggle Winners Archive — HasanPortfolio{% endblock %}
+{% block meta_description %}Curated winning solutions from top Kaggle ML competitions — approaches, techniques, and notebooks from gold medal winners.{% endblock %}
+
+{% block content %}
+<div class="kwa-wrapper">
+
+    <!-- ── Header ─────────────────────────────────────────────────────────── -->
+    <div class="kwa-header">
+        <div class="kwa-header-inner">
+            <div class="kwa-header-left">
+                <div class="kwa-eyebrow">
+                    <i class="fas fa-trophy"></i> ML Competition Intelligence
+                </div>
+                <h1 class="kwa-title">Kaggle Winners Archive</h1>
+                <p class="kwa-subtitle">
+                    Curated top solutions from the world's best ML competitions —
+                    approaches, techniques, and code from gold medal winners.
+                </p>
+            </div>
+            <div class="kwa-stats-row">
+                <div class="kwa-stat">
+                    <span class="kwa-stat-num">{{ total_competitions }}</span>
+                    <span class="kwa-stat-label">Competitions</span>
+                </div>
+                <div class="kwa-stat-divider"></div>
+                <div class="kwa-stat">
+                    <span class="kwa-stat-num">{{ total_solutions }}</span>
+                    <span class="kwa-stat-label">Solutions</span>
+                </div>
+                <div class="kwa-stat-divider"></div>
+                <div class="kwa-stat">
+                    <span class="kwa-stat-num">{{ total_techniques }}</span>
+                    <span class="kwa-stat-label">Techniques</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Filter Bar ─────────────────────────────────────────────────────── -->
+    <div class="kwa-filter-bar">
+        <form method="get" class="kwa-filter-form" id="filterForm">
+            <div class="filter-search-wrap">
+                <i class="fas fa-search filter-search-icon"></i>
+                <input
+                    type="text"
+                    name="q"
+                    value="{{ current_filters.q }}"
+                    class="filter-search-input"
+                    placeholder="Search competitions, teams, techniques…"
+                    autocomplete="off"
+                >
+            </div>
+
+            <select name="type" class="filter-select" onchange="this.form.submit()">
+                <option value="">All Types</option>
+                {% for val, label in competition_types %}
+                    <option value="{{ val }}" {% if current_filters.type == val %}selected{% endif %}>
+                        {{ label }}
+                    </option>
+                {% endfor %}
+            </select>
+
+            <select name="domain" class="filter-select" onchange="this.form.submit()">
+                <option value="">All Domains</option>
+                {% for val, label in domains %}
+                    <option value="{{ val }}" {% if current_filters.domain == val %}selected{% endif %}>
+                        {{ label }}
+                    </option>
+                {% endfor %}
+            </select>
+
+            <select name="year" class="filter-select" onchange="this.form.submit()">
+                <option value="">All Years</option>
+                {% for date in years %}
+                    <option value="{{ date.year }}"
+                            {% if current_filters.year == date.year|stringformat:"s" %}selected{% endif %}>
+                        {{ date.year }}
+                    </option>
+                {% endfor %}
+            </select>
+
+            <select name="technique" class="filter-select" onchange="this.form.submit()">
+                <option value="">All Techniques</option>
+                {% for tech in techniques %}
+                    <option value="{{ tech.slug }}"
+                            {% if current_filters.technique == tech.slug %}selected{% endif %}>
+                        {{ tech.name }}
+                    </option>
+                {% endfor %}
+            </select>
+
+            <select name="sort" class="filter-select" onchange="this.form.submit()">
+                <option value="-end_date"  {% if current_filters.sort == '-end_date'  %}selected{% endif %}>Latest First</option>
+                <option value="end_date"   {% if current_filters.sort == 'end_date'   %}selected{% endif %}>Oldest First</option>
+                <option value="-num_teams" {% if current_filters.sort == '-num_teams' %}selected{% endif %}>Most Teams</option>
+                <option value="num_teams"  {% if current_filters.sort == 'num_teams'  %}selected{% endif %}>Fewest Teams</option>
+            </select>
+
+            <button type="submit" class="filter-btn-search">
+                <i class="fas fa-search"></i> Search
+            </button>
+
+            {% if current_filters.q or current_filters.type or current_filters.domain or current_filters.year or current_filters.technique %}
+                <a href="{% url 'kaggle_archive:competition_list' %}" class="filter-btn-clear" title="Clear filters">
+                    <i class="fas fa-times"></i> Clear
+                </a>
+            {% endif %}
+        </form>
+    </div>
+
+    <!-- ── Main Grid ──────────────────────────────────────────────────────── -->
+    <div class="kwa-main">
+
+        {% if competitions %}
+            <div class="kwa-results-info">
+                <span>
+                    <strong>{{ page_obj.paginator.count }}</strong>
+                    competition{{ page_obj.paginator.count|pluralize }} found
+                </span>
+                {% if current_filters.q %}
+                    <span class="results-query">for "<em>{{ current_filters.q }}</em>"</span>
+                {% endif %}
+            </div>
+
+            <div class="kwa-grid">
+                {% for comp in competitions %}
+                    <article class="comp-card">
+
+                        <!-- Card top badges -->
+                        <div class="comp-card-top">
+                            <div class="comp-badges">
+                                <span class="type-badge type-{{ comp.competition_type }}">
+                                    {{ comp.get_competition_type_display }}
+                                </span>
+                                {% if comp.end_date %}
+                                    <span class="year-badge">{{ comp.end_date.year }}</span>
+                                {% endif %}
+                                <span class="domain-badge">{{ comp.get_domain_display }}</span>
+                            </div>
+                            {% if comp.prize_pool %}
+                                <span class="prize-badge">
+                                    <i class="fas fa-dollar-sign"></i> {{ comp.prize_pool }}
+                                </span>
+                            {% endif %}
+                        </div>
+
+                        <!-- Competition name & meta -->
+                        <div class="comp-card-body">
+                            <h3 class="comp-name">
+                                <a href="{{ comp.get_absolute_url }}">{{ comp.name }}</a>
+                            </h3>
+                            <div class="comp-meta">
+                                {% if comp.host %}
+                                    <span class="meta-item">
+                                        <i class="fas fa-building"></i> {{ comp.host }}
+                                    </span>
+                                {% endif %}
+                                {% if comp.num_teams %}
+                                    <span class="meta-item">
+                                        <i class="fas fa-users"></i>
+                                        {{ comp.num_teams|floatformat:"0" }} teams
+                                    </span>
+                                {% endif %}
+                                {% if comp.evaluation_metric %}
+                                    <span class="meta-item">
+                                        <i class="fas fa-chart-line"></i> {{ comp.evaluation_metric }}
+                                    </span>
+                                {% endif %}
+                            </div>
+
+                            <!-- Top 3 solutions -->
+                            <div class="solutions-block">
+                                {% for sol in comp.solutions.all %}
+                                    <div class="sol-row">
+                                        <div class="sol-top-line">
+                                            <div class="sol-identity">
+                                                <span class="sol-medal medal-{{ sol.medal }}">
+                                                    {% if sol.medal == 'gold' %}🥇
+                                                    {% elif sol.medal == 'silver' %}🥈
+                                                    {% elif sol.medal == 'bronze' %}🥉
+                                                    {% else %}#{{ sol.rank }}{% endif %}
+                                                </span>
+                                                <span class="sol-team">{{ sol.team_name }}</span>
+                                            </div>
+                                            {% if sol.score %}
+                                                <span class="sol-score">{{ sol.score }}</span>
+                                            {% endif %}
+                                        </div>
+
+                                        {% if sol.techniques.exists %}
+                                            <div class="tech-pills">
+                                                {% for tech in sol.techniques.all|slice:":6" %}
+                                                    <span class="tech-pill">{{ tech.name }}</span>
+                                                {% endfor %}
+                                            </div>
+                                        {% endif %}
+
+                                        <div class="sol-links">
+                                            {% if sol.notebook_url %}
+                                                <a href="{{ sol.notebook_url }}"
+                                                   target="_blank" rel="noopener"
+                                                   class="sol-link">
+                                                    <i class="fas fa-book-open"></i> Notebook
+                                                </a>
+                                            {% endif %}
+                                            {% if sol.discussion_url %}
+                                                <a href="{{ sol.discussion_url }}"
+                                                   target="_blank" rel="noopener"
+                                                   class="sol-link">
+                                                    <i class="fas fa-comments"></i> Discussion
+                                                </a>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    {% if not forloop.last %}
+                                        <div class="sol-divider"></div>
+                                    {% endif %}
+                                {% empty %}
+                                    <div class="sol-empty">Solutions being extracted…</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <!-- Card footer -->
+                        <div class="comp-card-footer">
+                            <a href="{{ comp.get_absolute_url }}" class="btn-view-solutions">
+                                View Full Solutions <i class="fas fa-arrow-right"></i>
+                            </a>
+                            <div class="comp-footer-right">
+                                {% if comp.kaggle_url %}
+                                    <a href="{{ comp.kaggle_url }}"
+                                       target="_blank" rel="noopener"
+                                       class="kaggle-link" title="Open on Kaggle">
+                                        <i class="fab fa-kaggle"></i>
+                                    </a>
+                                {% endif %}
+                                {% if comp.end_date %}
+                                    <span class="comp-date">{{ comp.end_date|date:"M d, Y" }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                    </article>
+                {% endfor %}
+            </div>
+
+            <!-- Pagination -->
+            {% if is_paginated %}
+                <div class="kwa-pagination">
+                    {% if page_obj.has_previous %}
+                        <a href="?page=1{% if current_filters.q %}&q={{ current_filters.q }}{% endif %}{% if current_filters.type %}&type={{ current_filters.type }}{% endif %}{% if current_filters.domain %}&domain={{ current_filters.domain }}{% endif %}{% if current_filters.year %}&year={{ current_filters.year }}{% endif %}"
+                           class="page-btn"><i class="fas fa-angle-double-left"></i></a>
+                        <a href="?page={{ page_obj.previous_page_number }}{% if current_filters.q %}&q={{ current_filters.q }}{% endif %}{% if current_filters.type %}&type={{ current_filters.type }}{% endif %}{% if current_filters.domain %}&domain={{ current_filters.domain }}{% endif %}{% if current_filters.year %}&year={{ current_filters.year }}{% endif %}"
+                           class="page-btn"><i class="fas fa-angle-left"></i></a>
+                    {% endif %}
+                    <span class="page-info">
+                        Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                    </span>
+                    {% if page_obj.has_next %}
+                        <a href="?page={{ page_obj.next_page_number }}{% if current_filters.q %}&q={{ current_filters.q }}{% endif %}{% if current_filters.type %}&type={{ current_filters.type }}{% endif %}{% if current_filters.domain %}&domain={{ current_filters.domain }}{% endif %}{% if current_filters.year %}&year={{ current_filters.year }}{% endif %}"
+                           class="page-btn"><i class="fas fa-angle-right"></i></a>
+                        <a href="?page={{ page_obj.paginator.num_pages }}{% if current_filters.q %}&q={{ current_filters.q }}{% endif %}{% if current_filters.type %}&type={{ current_filters.type }}{% endif %}{% if current_filters.domain %}&domain={{ current_filters.domain }}{% endif %}{% if current_filters.year %}&year={{ current_filters.year }}{% endif %}"
+                           class="page-btn"><i class="fas fa-angle-double-right"></i></a>
+                    {% endif %}
+                </div>
+            {% endif %}
+
+        {% else %}
+            <!-- Empty state -->
+            <div class="kwa-empty">
+                <div class="kwa-empty-icon"><i class="fas fa-trophy"></i></div>
+                <h3>No competitions found</h3>
+                <p>Try adjusting your filters or check back as we keep adding winning solutions.</p>
+                <a href="{% url 'kaggle_archive:competition_list' %}" class="btn-reset-filters">
+                    <i class="fas fa-redo me-1"></i> Reset Filters
+                </a>
+            </div>
+        {% endif %}
+    </div>
+
+</div>
+
+<style>
+/* ── Layout ─────────────────────────────────────────────────────────────── */
+.kwa-wrapper {
+    background: #f0f4ff;
+    min-height: 100vh;
+}
+
+/* ── Header ─────────────────────────────────────────────────────────────── */
+.kwa-header {
+    background: linear-gradient(135deg, #0f0c29 0%, #302b63 55%, #24243e 100%);
+    color: white;
+    padding: 2rem 0 1.75rem;
+    margin-bottom: 0;
+    border-radius: 0 0 24px 24px;
+    box-shadow: 0 4px 24px rgba(15,12,41,.35);
+}
+
+.kwa-header-inner {
+    max-width: 1300px;
+    margin: 0 auto;
+    padding: 0 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 2rem;
+    flex-wrap: wrap;
+}
+
+.kwa-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    background: rgba(255,255,255,.12);
+    border: 1px solid rgba(255,255,255,.2);
+    border-radius: 20px;
+    padding: .25rem .85rem;
+    font-size: .72rem;
+    font-weight: 600;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: #a78bfa;
+    margin-bottom: .65rem;
+}
+
+.kwa-title {
+    font-size: 1.75rem;
+    font-weight: 800;
+    margin: 0 0 .4rem;
+    letter-spacing: -.02em;
+    line-height: 1.2;
+}
+
+.kwa-subtitle {
+    font-size: .85rem;
+    opacity: .8;
+    margin: 0;
+    max-width: 520px;
+    line-height: 1.55;
+}
+
+.kwa-stats-row {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    flex-shrink: 0;
+}
+
+.kwa-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.kwa-stat-num {
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: #00d4ff;
+    line-height: 1;
+}
+
+.kwa-stat-label {
+    font-size: .68rem;
+    opacity: .7;
+    margin-top: .15rem;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+}
+
+.kwa-stat-divider {
+    width: 1px;
+    height: 40px;
+    background: rgba(255,255,255,.2);
+}
+
+/* ── Filter Bar ─────────────────────────────────────────────────────────── */
+.kwa-filter-bar {
+    background: white;
+    border-bottom: 1px solid #e2e8f0;
+    box-shadow: 0 2px 8px rgba(0,0,0,.06);
+    position: sticky;
+    top: 52px;
+    z-index: 100;
+    padding: .75rem 0;
+}
+
+.kwa-filter-form {
+    max-width: 1300px;
+    margin: 0 auto;
+    padding: 0 20px;
+    display: flex;
+    gap: .55rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.filter-search-wrap {
+    position: relative;
+    flex: 1;
+    min-width: 200px;
+}
+
+.filter-search-icon {
+    position: absolute;
+    left: .7rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #94a3b8;
+    font-size: .78rem;
+    pointer-events: none;
+}
+
+.filter-search-input {
+    width: 100%;
+    padding: .5rem .75rem .5rem 2.1rem;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: .83rem;
+    transition: border-color .2s, box-shadow .2s;
+    background: #f8fafc;
+}
+
+.filter-search-input:focus {
+    outline: none;
+    border-color: #302b63;
+    box-shadow: 0 0 0 3px rgba(48,43,99,.1);
+    background: white;
+}
+
+.filter-select {
+    padding: .5rem .6rem;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: .8rem;
+    background: #f8fafc;
+    cursor: pointer;
+    color: #334155;
+    min-width: 130px;
+    transition: border-color .2s;
+}
+
+.filter-select:focus {
+    outline: none;
+    border-color: #302b63;
+    box-shadow: 0 0 0 3px rgba(48,43,99,.1);
+}
+
+.filter-btn-search {
+    padding: .5rem 1rem;
+    background: linear-gradient(135deg, #0f0c29, #302b63 55%, #24243e);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: .82rem;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: opacity .2s, transform .2s;
+}
+
+.filter-btn-search:hover { opacity: .9; transform: translateY(-1px); }
+
+.filter-btn-clear {
+    padding: .5rem .85rem;
+    background: #f1f5f9;
+    color: #64748b;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: .8rem;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: all .2s;
+    display: flex;
+    align-items: center;
+    gap: .3rem;
+}
+
+.filter-btn-clear:hover {
+    background: #fee2e2;
+    border-color: #fca5a5;
+    color: #dc2626;
+}
+
+/* ── Main ───────────────────────────────────────────────────────────────── */
+.kwa-main {
+    max-width: 1300px;
+    margin: 0 auto;
+    padding: 1.5rem 20px 3rem;
+}
+
+.kwa-results-info {
+    font-size: .82rem;
+    color: #64748b;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+}
+
+.kwa-results-info strong { color: #1e293b; }
+.results-query { color: #302b63; }
+
+/* ── Grid ───────────────────────────────────────────────────────────────── */
+.kwa-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+    gap: 1.25rem;
+}
+
+/* ── Competition Card ───────────────────────────────────────────────────── */
+.comp-card {
+    background: white;
+    border-radius: 14px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 1px 4px rgba(0,0,0,.06);
+    display: flex;
+    flex-direction: column;
+    transition: transform .25s, box-shadow .25s, border-color .25s;
+    overflow: hidden;
+}
+
+.comp-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 28px rgba(48,43,99,.14);
+    border-color: #a78bfa;
+}
+
+/* card top row */
+.comp-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: .85rem 1.1rem .6rem;
+    border-bottom: 1px solid #f1f5f9;
+    flex-wrap: wrap;
+    gap: .4rem;
+}
+
+.comp-badges {
+    display: flex;
+    gap: .35rem;
+    flex-wrap: wrap;
+}
+
+/* Type badge — color per type */
+.type-badge {
+    padding: .2rem .65rem;
+    border-radius: 20px;
+    font-size: .7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+    color: white;
+}
+
+.type-tabular    { background: #3b82f6; }
+.type-cv         { background: #10b981; }
+.type-nlp        { background: #8b5cf6; }
+.type-timeseries { background: #f59e0b; color: #1e293b; }
+.type-audio      { background: #ec4899; }
+.type-multimodal { background: #06b6d4; }
+.type-rl         { background: #ef4444; }
+.type-other      { background: #6b7280; }
+
+.year-badge {
+    padding: .2rem .65rem;
+    border-radius: 20px;
+    font-size: .7rem;
+    font-weight: 700;
+    background: #f1f5f9;
+    color: #475569;
+    border: 1px solid #e2e8f0;
+}
+
+.domain-badge {
+    padding: .2rem .65rem;
+    border-radius: 20px;
+    font-size: .7rem;
+    font-weight: 600;
+    background: #eef2ff;
+    color: #4338ca;
+    border: 1px solid #c7d2fe;
+}
+
+.prize-badge {
+    display: flex;
+    align-items: center;
+    gap: .25rem;
+    padding: .2rem .65rem;
+    border-radius: 20px;
+    font-size: .72rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, #fef3c7, #fde68a);
+    color: #92400e;
+    border: 1px solid #fcd34d;
+    white-space: nowrap;
+}
+
+/* card body */
+.comp-card-body {
+    padding: .9rem 1.1rem;
+    flex: 1;
+}
+
+.comp-name {
+    font-size: .98rem;
+    font-weight: 700;
+    margin: 0 0 .5rem;
+    line-height: 1.35;
+}
+
+.comp-name a {
+    color: #1e293b;
+    text-decoration: none;
+    transition: color .2s;
+}
+
+.comp-name a:hover { color: #302b63; }
+
+.comp-meta {
+    display: flex;
+    gap: .75rem;
+    flex-wrap: wrap;
+    margin-bottom: .85rem;
+}
+
+.meta-item {
+    font-size: .75rem;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    gap: .3rem;
+}
+
+.meta-item i {
+    color: #94a3b8;
+    font-size: .68rem;
+}
+
+/* solutions block */
+.solutions-block {
+    background: #f8fafc;
+    border-radius: 10px;
+    border: 1px solid #e2e8f0;
+    padding: .65rem .85rem;
+}
+
+.sol-row { padding: .4rem 0; }
+
+.sol-top-line {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: .3rem;
+}
+
+.sol-identity {
+    display: flex;
+    align-items: center;
+    gap: .4rem;
+}
+
+.sol-medal {
+    font-size: 1rem;
+    line-height: 1;
+}
+
+.sol-team {
+    font-size: .82rem;
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.sol-score {
+    font-size: .75rem;
+    font-weight: 700;
+    color: #302b63;
+    background: #eef2ff;
+    padding: .12rem .5rem;
+    border-radius: 6px;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+/* technique pills */
+.tech-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .25rem;
+    margin-bottom: .3rem;
+}
+
+.tech-pill {
+    padding: .12rem .5rem;
+    background: #ede9fe;
+    color: #5b21b6;
+    border-radius: 12px;
+    font-size: .68rem;
+    font-weight: 600;
+    border: 1px solid #ddd6fe;
+    white-space: nowrap;
+}
+
+/* solution links */
+.sol-links {
+    display: flex;
+    gap: .5rem;
+    flex-wrap: wrap;
+}
+
+.sol-link {
+    display: inline-flex;
+    align-items: center;
+    gap: .25rem;
+    padding: .12rem .55rem;
+    background: white;
+    color: #302b63;
+    border: 1px solid #c7d2fe;
+    border-radius: 6px;
+    font-size: .68rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all .2s;
+}
+
+.sol-link:hover {
+    background: #302b63;
+    color: white;
+    border-color: #302b63;
+}
+
+.sol-divider {
+    height: 1px;
+    background: #e2e8f0;
+    margin: .4rem 0;
+}
+
+.sol-empty {
+    font-size: .78rem;
+    color: #94a3b8;
+    font-style: italic;
+    text-align: center;
+    padding: .5rem;
+}
+
+/* card footer */
+.comp-card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: .75rem 1.1rem;
+    border-top: 1px solid #f1f5f9;
+    background: #fafbff;
+    flex-wrap: wrap;
+    gap: .5rem;
+}
+
+.btn-view-solutions {
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    padding: .4rem .9rem;
+    background: linear-gradient(135deg, #0f0c29, #302b63 55%, #24243e);
+    color: white;
+    border-radius: 7px;
+    text-decoration: none;
+    font-size: .78rem;
+    font-weight: 600;
+    transition: opacity .2s, transform .2s;
+}
+
+.btn-view-solutions:hover {
+    opacity: .9;
+    transform: translateX(2px);
+    color: white;
+}
+
+.comp-footer-right {
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+}
+
+.kaggle-link {
+    color: #20beff;
+    font-size: 1rem;
+    transition: color .2s;
+    text-decoration: none;
+}
+
+.kaggle-link:hover { color: #302b63; }
+
+.comp-date {
+    font-size: .72rem;
+    color: #94a3b8;
+}
+
+/* ── Pagination ─────────────────────────────────────────────────────────── */
+.kwa-pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: .6rem;
+    margin-top: 2.5rem;
+    padding: 1rem;
+    background: white;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+}
+
+.page-btn {
+    width: 38px;
+    height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f8fafc;
+    color: #302b63;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 8px;
+    text-decoration: none;
+    font-size: .82rem;
+    transition: all .2s;
+}
+
+.page-btn:hover {
+    background: linear-gradient(135deg, #0f0c29, #302b63 55%, #24243e);
+    color: white;
+    border-color: transparent;
+    transform: translateY(-1px);
+}
+
+.page-info {
+    font-size: .82rem;
+    font-weight: 600;
+    color: #1e293b;
+    padding: 0 .75rem;
+}
+
+/* ── Empty State ────────────────────────────────────────────────────────── */
+.kwa-empty {
+    text-align: center;
+    padding: 5rem 2rem;
+    background: white;
+    border-radius: 16px;
+    border: 1px dashed #c7d2fe;
+}
+
+.kwa-empty-icon {
+    width: 72px;
+    height: 72px;
+    margin: 0 auto 1.25rem;
+    background: linear-gradient(135deg, #0f0c29, #302b63 55%, #24243e);
+    border-radius: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fbbf24;
+    font-size: 1.75rem;
+}
+
+.kwa-empty h3 {
+    font-size: 1.1rem;
+    color: #1e293b;
+    margin: 0 0 .5rem;
+}
+
+.kwa-empty p {
+    color: #64748b;
+    font-size: .85rem;
+    margin: 0 0 1.5rem;
+}
+
+.btn-reset-filters {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    padding: .55rem 1.25rem;
+    background: linear-gradient(135deg, #0f0c29, #302b63 55%, #24243e);
+    color: white;
+    border-radius: 8px;
+    text-decoration: none;
+    font-size: .82rem;
+    font-weight: 600;
+    transition: opacity .2s;
+}
+
+.btn-reset-filters:hover { opacity: .88; color: white; }
+
+/* ── Responsive ─────────────────────────────────────────────────────────── */
+@media (max-width: 1024px) {
+    .kwa-grid { grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); }
+}
+
+@media (max-width: 768px) {
+    .kwa-header-inner { flex-direction: column; align-items: flex-start; }
+    .kwa-title { font-size: 1.35rem; }
+    .kwa-stats-row { gap: .85rem; }
+    .kwa-stat-num { font-size: 1.2rem; }
+    .kwa-filter-form { flex-direction: column; align-items: stretch; }
+    .filter-select { min-width: 0; }
+    .kwa-grid { grid-template-columns: 1fr; }
+    .comp-card-footer { flex-direction: column; align-items: flex-start; }
+}
+
+@media (max-width: 480px) {
+    .kwa-filter-bar { position: static; }
+    .kwa-main { padding: 1rem 15px 2rem; }
+}
+</style>
+{% endblock %}

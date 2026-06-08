@@ -1,0 +1,1187 @@
+{% extends 'base.html' %}
+{% load markdown_tags %}
+{% block title %}{{ competition.name }} — Kaggle Winners Archive{% endblock %}
+{% block meta_description %}Top solutions and winning approaches for {{ competition.name }} on Kaggle.{% endblock %}
+
+{% block content %}
+<div class="kwd-wrapper">
+
+    <!-- ── Back breadcrumb ───────────────────────────────────────────────── -->
+    <div class="kwd-breadcrumb">
+        <a href="{% url 'kaggle_archive:competition_list' %}">
+            <i class="fas fa-arrow-left"></i> Kaggle Winners Archive
+        </a>
+        <span class="breadcrumb-sep">/</span>
+        <span>{{ competition.name|truncatechars:60 }}</span>
+    </div>
+
+    <!-- ── Competition Hero ─────────────────────────────────────────────── -->
+    <div class="kwd-hero">
+        <div class="kwd-hero-badges">
+            <span class="type-badge type-{{ competition.competition_type }}">
+                {{ competition.get_competition_type_display }}
+            </span>
+            <span class="domain-badge">{{ competition.get_domain_display }}</span>
+            {% if competition.end_date %}
+                <span class="year-badge">{{ competition.end_date.year }}</span>
+            {% endif %}
+        </div>
+
+        <h1 class="kwd-hero-title">{{ competition.name }}</h1>
+
+        <div class="kwd-hero-meta">
+            {% if competition.host %}
+                <div class="hero-meta-item">
+                    <i class="fas fa-building"></i>
+                    <span>{{ competition.host }}</span>
+                </div>
+            {% endif %}
+            {% if competition.num_teams %}
+                <div class="hero-meta-item">
+                    <i class="fas fa-users"></i>
+                    <span>{{ competition.num_teams|floatformat:"0" }} teams</span>
+                </div>
+            {% endif %}
+            {% if competition.evaluation_metric %}
+                <div class="hero-meta-item">
+                    <i class="fas fa-chart-line"></i>
+                    <span>{{ competition.evaluation_metric }}</span>
+                </div>
+            {% endif %}
+            {% if competition.prize_pool %}
+                <div class="hero-meta-item prize">
+                    <i class="fas fa-dollar-sign"></i>
+                    <span>{{ competition.prize_pool }}</span>
+                </div>
+            {% endif %}
+            {% if competition.end_date %}
+                <div class="hero-meta-item">
+                    <i class="fas fa-calendar-alt"></i>
+                    <span>Ended {{ competition.end_date|date:"F d, Y" }}</span>
+                </div>
+            {% endif %}
+            {% if competition.kaggle_url %}
+                <a href="{{ competition.kaggle_url }}" target="_blank" rel="noopener"
+                   class="hero-kaggle-btn">
+                    <i class="fab fa-kaggle"></i> View on Kaggle
+                </a>
+            {% endif %}
+        </div>
+
+        {% if competition.description %}
+            <p class="kwd-hero-desc">{{ competition.description }}</p>
+        {% endif %}
+    </div>
+
+    <!-- ── Technique Heatmap ────────────────────────────────────────────── -->
+    {% if technique_frequency %}
+        <div class="kwd-section">
+            <div class="section-head">
+                <h2><i class="fas fa-fire"></i> Most Used Techniques</h2>
+                <span class="section-sub">Aggregated across all top solutions</span>
+            </div>
+            <div class="technique-heatmap">
+                {% for name, count in technique_frequency %}
+                    <div class="heatmap-item" style="--pct: {{ count }};">
+                        <span class="heatmap-name">{{ name }}</span>
+                        <span class="heatmap-bar">
+                            <span class="heatmap-fill" style="width: calc({{ count }} / {{ technique_frequency.0.1 }} * 100%)"></span>
+                        </span>
+                        <span class="heatmap-count">{{ count }}</span>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+
+    <!-- ── Top 3 Podium ─────────────────────────────────────────────────── -->
+    {% if top_solutions %}
+        <div class="kwd-section">
+            <div class="section-head">
+                <h2><i class="fas fa-medal"></i> Podium Solutions</h2>
+                <span class="section-sub">Gold, Silver, and Bronze winning approaches</span>
+            </div>
+            <div class="podium-grid">
+                {% for sol in top_solutions %}
+                    <div class="podium-card podium-{{ sol.medal }}">
+                        <div class="podium-rank">
+                            {% if sol.medal == 'gold' %}🥇
+                            {% elif sol.medal == 'silver' %}🥈
+                            {% elif sol.medal == 'bronze' %}🥉
+                            {% else %}#{{ sol.rank }}{% endif %}
+                        </div>
+                        <h3 class="podium-team">{{ sol.team_name }}</h3>
+                        {% if sol.score %}
+                            <div class="podium-score">
+                                <span class="score-label">Score</span>
+                                <span class="score-val">{{ sol.score }}</span>
+                            </div>
+                        {% endif %}
+                        {% if sol.approach_summary %}
+                            <p class="podium-summary">{{ sol.approach_summary }}</p>
+                        {% endif %}
+                        {% if sol.techniques.exists %}
+                            <div class="podium-techs">
+                                {% for tech in sol.techniques.all %}
+                                    <span class="tech-pill">{{ tech.name }}</span>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        {% if sol.writeup_url %}
+                        <div class="podium-links">
+                            <a href="{{ sol.writeup_url }}" target="_blank" rel="noopener"
+                               class="podium-link link-writeup">
+                                <i class="fas fa-file-alt"></i> Write-up
+                            </a>
+                        </div>
+                        {% endif %}
+                        {% if sol.writeup_content %}
+                        <details class="writeup-preview">
+                            <summary><i class="fas fa-eye"></i> Preview solution</summary>
+                            <div class="writeup-preview-body">
+                                {{ sol.writeup_content|truncatechars:500 }}
+                                {% if sol.writeup_url %}
+                                <a href="{{ sol.writeup_url }}" target="_blank" rel="noopener"
+                                   class="read-more-link">Read full write-up →</a>
+                                {% endif %}
+                            </div>
+                        </details>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+
+    <!-- ── Full Leaderboard ─────────────────────────────────────────────── -->
+    {% if solutions %}
+        <div class="kwd-section">
+            <div class="section-head">
+                <h2><i class="fas fa-list-ol"></i> Full Solutions Leaderboard</h2>
+                <span class="section-sub">{{ solutions|length }} solution{{ solutions|length|pluralize }} archived</span>
+            </div>
+            <div class="leaderboard-table-wrap">
+                <table class="leaderboard-table">
+                    <thead>
+                        <tr>
+                            <th>Rank</th>
+                            <th>Team</th>
+                            <th>Score</th>
+                            <th>Techniques</th>
+                            <th>Write-up</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for sol in solutions %}
+                            <tr class="lb-row lb-{{ sol.medal }}">
+                                <td class="lb-rank">
+                                    {% if sol.writeup_url %}
+                                        <a href="{{ sol.writeup_url }}" target="_blank" rel="noopener"
+                                           class="lb-rank-link" title="View write-up">
+                                            {% if sol.medal == 'gold' %}🥇
+                                            {% elif sol.medal == 'silver' %}🥈
+                                            {% elif sol.medal == 'bronze' %}🥉
+                                            {% else %}<span class="lb-num">#{{ sol.rank }}</span>{% endif %}
+                                        </a>
+                                    {% else %}
+                                        <span class="lb-medal">
+                                            {% if sol.medal == 'gold' %}🥇
+                                            {% elif sol.medal == 'silver' %}🥈
+                                            {% elif sol.medal == 'bronze' %}🥉
+                                            {% else %}<span class="lb-num">#{{ sol.rank }}</span>{% endif %}
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td class="lb-team">
+                                    <div class="lb-team-name">{{ sol.team_name }}</div>
+                                    {% if sol.writeup_author %}
+                                        <div class="lb-approach">{{ sol.writeup_author }}</div>
+                                    {% endif %}
+                                </td>
+                                <td class="lb-score-cell">
+                                    {% if sol.score %}<span class="lb-score">{{ sol.score }}</span>
+                                    {% else %}—{% endif %}
+                                </td>
+                                <td class="lb-techs-cell">
+                                    <div class="tech-pills-sm">
+                                        {% for tech in sol.techniques.all %}
+                                            <span class="tech-pill-sm">{{ tech.name }}</span>
+                                        {% empty %}
+                                            <span class="no-tech">—</span>
+                                        {% endfor %}
+                                    </div>
+                                </td>
+                                <td class="lb-writeup-cell">
+                                    {% if sol.writeup_content %}
+                                        <details class="lb-writeup-details">
+                                            <summary class="lb-writeup-toggle">
+                                                <i class="fas fa-file-alt"></i> Read
+                                            </summary>
+                                            <div class="lb-writeup-body">
+                                                {{ sol.writeup_content|render_markdown }}
+                                            </div>
+                                        </details>
+                                    {% elif sol.writeup_url %}
+                                        <a href="{{ sol.writeup_url }}" target="_blank" rel="noopener"
+                                           class="lb-link lb-link-writeup" title="View write-up">
+                                            <i class="fas fa-external-link-alt"></i>
+                                        </a>
+                                    {% else %}
+                                        <span class="no-tech">—</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    {% endif %}
+
+    <!-- ── Related Competitions ─────────────────────────────────────────── -->
+    {% if related_competitions %}
+        <div class="kwd-section">
+            <div class="section-head">
+                <h2><i class="fas fa-layer-group"></i> Related Competitions</h2>
+                <span class="section-sub">Same type: {{ competition.get_competition_type_display }}</span>
+            </div>
+            <div class="related-grid">
+                {% for rel in related_competitions %}
+                    <a href="{{ rel.get_absolute_url }}" class="related-card">
+                        <div class="related-card-top">
+                            <span class="type-badge type-{{ rel.competition_type }}">
+                                {{ rel.get_competition_type_display }}
+                            </span>
+                            {% if rel.end_date %}
+                                <span class="year-badge">{{ rel.end_date.year }}</span>
+                            {% endif %}
+                        </div>
+                        <div class="related-name">{{ rel.name|truncatechars:70 }}</div>
+                        {% if rel.num_teams %}
+                            <div class="related-meta">{{ rel.num_teams|floatformat:"0" }} teams</div>
+                        {% endif %}
+                    </a>
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+
+</div>
+
+<style>
+/* ── Layout ─────────────────────────────────────────────────────────────── */
+.kwd-wrapper {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 20px 3rem;
+}
+
+/* ── Breadcrumb ─────────────────────────────────────────────────────────── */
+.kwd-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    font-size: .8rem;
+    color: #64748b;
+    margin-bottom: 1.25rem;
+    flex-wrap: wrap;
+}
+
+.kwd-breadcrumb a {
+    color: #302b63;
+    text-decoration: none;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: .3rem;
+    transition: opacity .2s;
+}
+
+.kwd-breadcrumb a:hover { opacity: .75; }
+.breadcrumb-sep { color: #cbd5e1; }
+
+/* ── Hero ───────────────────────────────────────────────────────────────── */
+.kwd-hero {
+    background: linear-gradient(135deg, #0f0c29 0%, #302b63 55%, #24243e 100%);
+    color: white;
+    border-radius: 18px;
+    padding: 2rem 2.25rem;
+    margin-bottom: 1.75rem;
+    box-shadow: 0 4px 24px rgba(15,12,41,.3);
+}
+
+.kwd-hero-badges {
+    display: flex;
+    gap: .4rem;
+    flex-wrap: wrap;
+    margin-bottom: .85rem;
+}
+
+.kwd-hero-title {
+    font-size: 1.5rem;
+    font-weight: 800;
+    margin: 0 0 1rem;
+    line-height: 1.3;
+    letter-spacing: -.02em;
+}
+
+.kwd-hero-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .85rem;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.hero-meta-item {
+    display: flex;
+    align-items: center;
+    gap: .35rem;
+    font-size: .8rem;
+    opacity: .85;
+}
+
+.hero-meta-item.prize {
+    background: rgba(251,191,36,.15);
+    border: 1px solid rgba(251,191,36,.3);
+    border-radius: 20px;
+    padding: .15rem .65rem;
+    opacity: 1;
+    color: #fbbf24;
+    font-weight: 700;
+}
+
+.hero-kaggle-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    padding: .35rem .85rem;
+    background: rgba(255,255,255,.15);
+    border: 1px solid rgba(255,255,255,.25);
+    border-radius: 8px;
+    color: white;
+    text-decoration: none;
+    font-size: .78rem;
+    font-weight: 600;
+    transition: background .2s;
+}
+
+.hero-kaggle-btn:hover {
+    background: rgba(255,255,255,.25);
+    color: white;
+}
+
+.kwd-hero-desc {
+    font-size: .83rem;
+    opacity: .8;
+    line-height: 1.6;
+    margin: 0;
+    border-top: 1px solid rgba(255,255,255,.12);
+    padding-top: .85rem;
+}
+
+/* ── Shared badge styles (reused from list) ─────────────────────────────── */
+.type-badge {
+    padding: .2rem .65rem;
+    border-radius: 20px;
+    font-size: .7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+    color: white;
+}
+
+.type-tabular    { background: #3b82f6; }
+.type-cv         { background: #10b981; }
+.type-nlp        { background: #8b5cf6; }
+.type-timeseries { background: #f59e0b; color: #1e293b; }
+.type-audio      { background: #ec4899; }
+.type-multimodal { background: #06b6d4; }
+.type-rl         { background: #ef4444; }
+.type-other      { background: #6b7280; }
+
+.year-badge {
+    padding: .2rem .65rem;
+    border-radius: 20px;
+    font-size: .7rem;
+    font-weight: 700;
+    background: rgba(255,255,255,.15);
+    color: white;
+    border: 1px solid rgba(255,255,255,.2);
+}
+
+.domain-badge {
+    padding: .2rem .65rem;
+    border-radius: 20px;
+    font-size: .7rem;
+    font-weight: 600;
+    background: rgba(167,139,250,.25);
+    color: #c4b5fd;
+    border: 1px solid rgba(167,139,250,.35);
+}
+
+/* ── Section ────────────────────────────────────────────────────────────── */
+.kwd-section {
+    background: white;
+    border-radius: 14px;
+    border: 1px solid #e2e8f0;
+    padding: 1.5rem 1.75rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 1px 4px rgba(0,0,0,.05);
+}
+
+.section-head {
+    display: flex;
+    align-items: baseline;
+    gap: .85rem;
+    margin-bottom: 1.25rem;
+    flex-wrap: wrap;
+}
+
+.section-head h2 {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: .4rem;
+}
+
+.section-head h2 i { color: #302b63; }
+
+.section-sub {
+    font-size: .75rem;
+    color: #94a3b8;
+    font-weight: 500;
+}
+
+/* ── Technique Heatmap ──────────────────────────────────────────────────── */
+.technique-heatmap {
+    display: flex;
+    flex-direction: column;
+    gap: .5rem;
+}
+
+.heatmap-item {
+    display: grid;
+    grid-template-columns: 160px 1fr 30px;
+    align-items: center;
+    gap: .75rem;
+}
+
+.heatmap-name {
+    font-size: .8rem;
+    font-weight: 600;
+    color: #334155;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.heatmap-bar {
+    background: #f1f5f9;
+    border-radius: 4px;
+    height: 8px;
+    overflow: hidden;
+}
+
+.heatmap-fill {
+    display: block;
+    height: 100%;
+    background: linear-gradient(90deg, #302b63, #a78bfa);
+    border-radius: 4px;
+    transition: width .6s ease;
+}
+
+.heatmap-count {
+    font-size: .72rem;
+    font-weight: 700;
+    color: #302b63;
+    text-align: right;
+}
+
+/* ── Podium ─────────────────────────────────────────────────────────────── */
+.podium-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 1rem;
+}
+
+.podium-card {
+    border-radius: 12px;
+    border: 2px solid #e2e8f0;
+    padding: 1.25rem;
+    position: relative;
+    overflow: hidden;
+    transition: transform .25s, box-shadow .25s;
+}
+
+.podium-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 24px rgba(0,0,0,.1);
+}
+
+.podium-gold   { border-color: #fcd34d; background: linear-gradient(135deg, #fffbeb, #fef3c7); }
+.podium-silver { border-color: #cbd5e1; background: linear-gradient(135deg, #f8fafc, #f1f5f9); }
+.podium-bronze { border-color: #d97706; background: linear-gradient(135deg, #fffbeb, #fde68a22); }
+.podium-other  { border-color: #e2e8f0; background: #f8fafc; }
+
+.podium-rank {
+    font-size: 2rem;
+    line-height: 1;
+    margin-bottom: .5rem;
+}
+
+.podium-team {
+    font-size: .95rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0 0 .5rem;
+}
+
+.podium-score {
+    display: flex;
+    align-items: center;
+    gap: .4rem;
+    margin-bottom: .6rem;
+}
+
+.score-label {
+    font-size: .68rem;
+    color: #64748b;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+}
+
+.score-val {
+    font-size: .9rem;
+    font-weight: 800;
+    color: #302b63;
+    font-variant-numeric: tabular-nums;
+}
+
+.podium-summary {
+    font-size: .78rem;
+    color: #475569;
+    line-height: 1.5;
+    margin: 0 0 .75rem;
+}
+
+.podium-techs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .25rem;
+    margin-bottom: .85rem;
+}
+
+.tech-pill {
+    padding: .15rem .55rem;
+    background: #ede9fe;
+    color: #5b21b6;
+    border-radius: 12px;
+    font-size: .68rem;
+    font-weight: 600;
+    border: 1px solid #ddd6fe;
+}
+
+.podium-links {
+    display: flex;
+    gap: .5rem;
+    flex-wrap: wrap;
+}
+
+.podium-link {
+    display: inline-flex;
+    align-items: center;
+    gap: .3rem;
+    padding: .3rem .75rem;
+    border-radius: 7px;
+    font-size: .75rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all .2s;
+}
+
+.link-writeup {
+    background: #302b63;
+    color: white;
+}
+
+.link-writeup:hover {
+    background: #0f0c29;
+    color: white;
+}
+
+/* ── Podium writeup preview ─────────────────────────────────────────────── */
+.writeup-preview {
+    margin-top: .75rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.writeup-preview summary {
+    cursor: pointer;
+    padding: .45rem .75rem;
+    font-size: .75rem;
+    font-weight: 600;
+    color: #302b63;
+    background: #f8fafc;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: .35rem;
+    user-select: none;
+}
+
+.writeup-preview summary::-webkit-details-marker { display: none; }
+.writeup-preview[open] summary { border-bottom: 1px solid #e2e8f0; }
+
+.writeup-preview-body {
+    padding: .75rem;
+    font-size: .78rem;
+    color: #334155;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.read-more-link {
+    display: block;
+    margin-top: .5rem;
+    font-size: .73rem;
+    font-weight: 600;
+    color: #302b63;
+    text-decoration: none;
+}
+
+.read-more-link:hover { text-decoration: underline; }
+
+/* ── Leaderboard Table ──────────────────────────────────────────────────── */
+.leaderboard-table-wrap {
+    overflow-x: auto;
+    border-radius: 10px;
+    border: 1px solid #e2e8f0;
+}
+
+.leaderboard-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .82rem;
+}
+
+.leaderboard-table thead th {
+    background: #f8fafc;
+    padding: .65rem 1rem;
+    text-align: left;
+    font-size: .72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: #475569;
+    border-bottom: 2px solid #e2e8f0;
+    white-space: nowrap;
+}
+
+.lb-row {
+    border-bottom: 1px solid #f1f5f9;
+    transition: background .15s;
+}
+
+.lb-row:last-child { border-bottom: none; }
+.lb-row:hover { background: #fafbff; }
+
+.lb-gold   td:first-child { border-left: 3px solid #fcd34d; }
+.lb-silver td:first-child { border-left: 3px solid #94a3b8; }
+.lb-bronze td:first-child { border-left: 3px solid #d97706; }
+
+.leaderboard-table td {
+    padding: .65rem 1rem;
+    vertical-align: top;
+}
+
+.lb-rank { width: 56px; }
+
+.lb-medal {
+    font-size: 1.1rem;
+    line-height: 1;
+}
+
+.lb-num {
+    font-size: .78rem;
+    font-weight: 700;
+    color: #64748b;
+    background: #f1f5f9;
+    padding: .18rem .45rem;
+    border-radius: 6px;
+}
+
+.lb-team-name {
+    font-weight: 600;
+    color: #1e293b;
+    margin-bottom: .2rem;
+}
+
+.lb-approach {
+    font-size: .72rem;
+    color: #64748b;
+    line-height: 1.4;
+}
+
+.lb-score {
+    font-size: .82rem;
+    font-weight: 700;
+    color: #302b63;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.lb-score-cell { white-space: nowrap; }
+
+.tech-pills-sm {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .2rem;
+}
+
+.tech-pill-sm {
+    padding: .1rem .45rem;
+    background: #ede9fe;
+    color: #5b21b6;
+    border-radius: 10px;
+    font-size: .65rem;
+    font-weight: 600;
+    border: 1px solid #ddd6fe;
+    white-space: nowrap;
+}
+
+.no-tech { color: #cbd5e1; font-size: .78rem; }
+
+.lb-link-group {
+    display: flex;
+    gap: .4rem;
+}
+
+.lb-link {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f1f5f9;
+    color: #302b63;
+    border-radius: 6px;
+    text-decoration: none;
+    font-size: .78rem;
+    transition: all .2s;
+    border: 1px solid #e2e8f0;
+}
+
+.lb-link:hover {
+    background: #302b63;
+    color: white;
+    border-color: transparent;
+}
+
+.lb-link-writeup:hover { background: #302b63; color: white; }
+
+/* ── Leaderboard expandable writeup ─────────────────────────────────────── */
+.lb-writeup-cell { max-width: 520px; }
+
+.lb-writeup-details summary.lb-writeup-toggle {
+    cursor: pointer;
+    list-style: none;
+    display: inline-flex;
+    align-items: center;
+    gap: .3rem;
+    padding: .25rem .65rem;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: .75rem;
+    font-weight: 600;
+    color: #302b63;
+    user-select: none;
+    transition: background .15s;
+}
+
+.lb-writeup-details summary.lb-writeup-toggle::-webkit-details-marker { display: none; }
+.lb-writeup-details summary.lb-writeup-toggle:hover { background: #302b63; color: white; border-color: transparent; }
+
+.lb-writeup-body {
+    margin-top: .6rem;
+    padding: 1rem 1.1rem;
+    background: #fafbff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: .8rem;
+    line-height: 1.7;
+    color: #1e293b;
+    overflow-x: auto;
+}
+
+.lb-writeup-body h1,.lb-writeup-body h2,.lb-writeup-body h3 {
+    font-size: 1em; font-weight: 700; margin: .85rem 0 .3rem; color: #0f0c29;
+}
+
+.lb-writeup-body p  { margin: .4rem 0; }
+.lb-writeup-body ul,.lb-writeup-body ol { padding-left: 1.4rem; margin: .4rem 0; }
+.lb-writeup-body li { margin: .2rem 0; }
+
+.lb-writeup-body pre {
+    background: #1e293b; color: #e2e8f0;
+    border-radius: 6px; padding: .75rem 1rem;
+    overflow-x: auto; font-size: .75rem;
+    margin: .5rem 0;
+}
+
+.lb-writeup-body code {
+    background: #f1f5f9; padding: .1rem .35rem;
+    border-radius: 4px; font-size: .78em;
+}
+
+.lb-writeup-body pre code { background: none; padding: 0; font-size: inherit; }
+
+.lb-writeup-body table {
+    border-collapse: collapse; width: 100%; margin: .5rem 0; font-size: .78rem;
+}
+.lb-writeup-body th,.lb-writeup-body td {
+    border: 1px solid #e2e8f0; padding: .3rem .6rem; text-align: left;
+}
+.lb-writeup-body th { background: #f8fafc; font-weight: 600; }
+
+.lb-rank-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    line-height: 1;
+    text-decoration: none;
+    border-radius: 8px;
+    padding: .15rem .2rem;
+    transition: transform .2s, box-shadow .2s;
+}
+
+.lb-rank-link:hover {
+    transform: scale(1.18);
+    box-shadow: 0 2px 8px rgba(48,43,99,.25);
+}
+
+/* ── Related Competitions ───────────────────────────────────────────────── */
+.related-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: .85rem;
+}
+
+.related-card {
+    background: #f8fafc;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 10px;
+    padding: .85rem 1rem;
+    text-decoration: none;
+    transition: all .25s;
+    display: block;
+}
+
+.related-card:hover {
+    border-color: #a78bfa;
+    background: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(48,43,99,.1);
+}
+
+.related-card-top {
+    display: flex;
+    gap: .35rem;
+    margin-bottom: .5rem;
+    flex-wrap: wrap;
+}
+
+.related-card .year-badge {
+    background: #f1f5f9;
+    color: #475569;
+    border: 1px solid #e2e8f0;
+}
+
+.related-name {
+    font-size: .8rem;
+    font-weight: 600;
+    color: #1e293b;
+    line-height: 1.35;
+    margin-bottom: .3rem;
+}
+
+.related-meta {
+    font-size: .7rem;
+    color: #94a3b8;
+}
+
+/* ── Solution Resources ─────────────────────────────────────────────────── */
+.res-tabs {
+    display: flex;
+    gap: .4rem;
+    margin-bottom: 1.25rem;
+    border-bottom: 2px solid #f1f5f9;
+    padding-bottom: 0;
+}
+
+.res-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    padding: .55rem 1rem;
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-size: .82rem;
+    font-weight: 600;
+    color: #64748b;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    border-radius: 0;
+    transition: color .2s, border-color .2s;
+}
+
+.res-tab:hover {
+    color: #302b63;
+}
+
+.res-tab.active {
+    color: #302b63;
+    border-bottom-color: #302b63;
+}
+
+.tab-count {
+    background: #ede9fe;
+    color: #5b21b6;
+    font-size: .65rem;
+    font-weight: 700;
+    padding: .1rem .4rem;
+    border-radius: 10px;
+    min-width: 18px;
+    text-align: center;
+}
+
+.res-tab.active .tab-count {
+    background: #302b63;
+    color: white;
+}
+
+/* Notebooks grid */
+.res-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: .85rem;
+}
+
+.res-card {
+    display: flex;
+    flex-direction: column;
+    background: #fafbff;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 1rem;
+    text-decoration: none;
+    color: inherit;
+    transition: all .25s;
+    gap: .45rem;
+}
+
+.res-card:hover {
+    border-color: #a78bfa;
+    background: white;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(48,43,99,.1);
+}
+
+.res-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: .4rem;
+}
+
+.res-type-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: .25rem;
+    padding: .18rem .55rem;
+    border-radius: 10px;
+    font-size: .65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+}
+
+.res-notebook {
+    background: #dbeafe;
+    color: #1d4ed8;
+    border: 1px solid #bfdbfe;
+}
+
+.res-discussion {
+    background: #f0fdf4;
+    color: #16a34a;
+    border: 1px solid #bbf7d0;
+}
+
+.res-votes {
+    display: inline-flex;
+    align-items: center;
+    gap: .2rem;
+    font-size: .7rem;
+    font-weight: 700;
+    color: #f59e0b;
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    border-radius: 8px;
+    padding: .15rem .45rem;
+    white-space: nowrap;
+}
+
+.res-title {
+    font-size: .83rem;
+    font-weight: 700;
+    color: #1e293b;
+    line-height: 1.4;
+    flex: 1;
+}
+
+.res-author {
+    font-size: .72rem;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    gap: .25rem;
+}
+
+.res-open {
+    font-size: .72rem;
+    font-weight: 600;
+    color: #302b63;
+    display: flex;
+    align-items: center;
+    gap: .3rem;
+    margin-top: auto;
+    padding-top: .35rem;
+    border-top: 1px solid #f1f5f9;
+    opacity: .7;
+    transition: opacity .2s;
+}
+
+.res-card:hover .res-open { opacity: 1; }
+
+/* Discussions list */
+.res-list {
+    display: flex;
+    flex-direction: column;
+    gap: .5rem;
+}
+
+.res-list-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: .75rem 1rem;
+    background: #fafbff;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 10px;
+    text-decoration: none;
+    color: inherit;
+    transition: all .2s;
+}
+
+.res-list-item:hover {
+    border-color: #a78bfa;
+    background: white;
+    box-shadow: 0 3px 10px rgba(48,43,99,.08);
+}
+
+.res-list-left {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    flex: 1;
+    min-width: 0;
+}
+
+.res-list-left .res-type-badge {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    justify-content: center;
+    padding: 0;
+    font-size: .75rem;
+}
+
+.res-list-title {
+    font-size: .83rem;
+    font-weight: 600;
+    color: #1e293b;
+    line-height: 1.35;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.res-list-meta {
+    font-size: .7rem;
+    color: #94a3b8;
+    display: flex;
+    align-items: center;
+    gap: .2rem;
+    margin-top: .15rem;
+}
+
+.res-list-right {
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+    flex-shrink: 0;
+}
+
+.res-ext-icon {
+    color: #94a3b8;
+    font-size: .72rem;
+    transition: color .2s;
+}
+
+.res-list-item:hover .res-ext-icon { color: #302b63; }
+
+.res-empty {
+    text-align: center;
+    padding: 2rem;
+    color: #94a3b8;
+    font-size: .83rem;
+    font-style: italic;
+    background: #f8fafc;
+    border-radius: 10px;
+    border: 1.5px dashed #e2e8f0;
+}
+
+/* ── Responsive ─────────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+    .kwd-hero { padding: 1.5rem 1.25rem; }
+    .kwd-hero-title { font-size: 1.2rem; }
+    .kwd-section { padding: 1.25rem 1rem; }
+    .podium-grid { grid-template-columns: 1fr; }
+    .heatmap-item { grid-template-columns: 120px 1fr 28px; }
+    .related-grid { grid-template-columns: 1fr 1fr; }
+}
+
+@media (max-width: 480px) {
+    .kwd-wrapper { padding: 0 12px 2rem; }
+    .related-grid { grid-template-columns: 1fr; }
+    .leaderboard-table thead th:nth-child(4),
+    .leaderboard-table td:nth-child(4) { display: none; }
+    .res-grid { grid-template-columns: 1fr; }
+    .res-list-title { font-size: .78rem; }
+}
+</style>
+
+{% endblock %}
