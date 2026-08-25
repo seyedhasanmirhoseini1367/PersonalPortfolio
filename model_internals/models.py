@@ -9,7 +9,14 @@ class Walkthrough(models.Model):
         ('attention',   'Attention Mechanisms'),
         ('cnn',         'Convolutional Networks'),
         ('rnn',         'RNN / LSTM'),
-        ('classical',   'Classical ML'),
+        ('neural',      'Neural Networks'),
+        ('linear',      'Linear Models'),
+        ('svm',         'Support Vector Machines'),
+        ('instance',    'Instance-Based'),
+        ('bayes',       'Probabilistic'),
+        ('clustering',  'Clustering'),
+        ('dimred',      'Dimensionality Reduction'),
+        ('classical',   'Trees & Ensembles'),
         ('other',       'Other'),
     ]
 
