@@ -1,0 +1,295 @@
+{% extends 'base.html' %}
+{% load walkthrough_tags %}
+
+{% block title %}{{ walkthrough.title }} — HasanPortfolio{% endblock %}
+{% block meta_description %}{{ walkthrough.tagline|default:walkthrough.summary|truncatechars:160 }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css"
+      integrity="sha384-nB0miv6/jRmo5UMMR1wu3Gz6NLsoTkbqJghGIsx//Rlm+ZU03BU6SQNC66uf4l5+"
+      crossorigin="anonymous">
+<style>
+.hmw-header {
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 1.5rem 0 1rem;
+    border-bottom: 1px solid #e2e8f0;
+    margin-bottom: 1.5rem;
+}
+.hmw-breadcrumb { font-size: .82rem; margin-bottom: .6rem; }
+.hmw-breadcrumb a { color: #302b63; text-decoration: none; }
+.hmw-breadcrumb a:hover { color: #00d4ff; }
+.hmw-header h1 { font-size: 1.9rem; color: #1e293b; margin-bottom: .4rem; }
+.hmw-header .hmw-tagline { color: #64748b; font-size: 1rem; margin-bottom: .75rem; }
+.hmw-badges { display: flex; gap: .4rem; flex-wrap: wrap; }
+.hmw-badge {
+    padding: .2rem .6rem;
+    border-radius: 20px;
+    font-size: .68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+}
+.hmw-badge-category { background: #eef2ff; color: #4338ca; border: 1px solid #c7d2fe; }
+.hmw-badge-difficulty { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
+
+/* ── Cover image ─────────────────────────────────────────────── */
+.hmw-cover { max-width: 880px; margin: 0 auto 2rem; text-align: center; }
+.hmw-cover img {
+    max-width: 100%;
+    max-height: 420px;
+    width: auto;
+    height: auto;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 4px 16px rgba(0,0,0,.08);
+}
+.hmw-cover-caption { margin-top: .7rem; font-size: .88rem; color: #475569; }
+.hmw-cover-credit { margin-top: .2rem; font-size: .78rem; color: #94a3b8; }
+.hmw-cover-credit a { color: #302b63; text-decoration: none; font-weight: 600; }
+.hmw-cover-credit a:hover { color: #00d4ff; }
+
+/* ── Layout: sticky TOC + content ────────────────────────────── */
+.hmw-layout {
+    max-width: 1180px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 210px minmax(0, 880px);
+    gap: 2.5rem;
+    justify-content: center;
+    align-items: start;
+}
+.hmw-toc {
+    position: sticky;
+    top: 90px;
+    font-size: .82rem;
+    max-height: calc(100vh - 110px);
+    overflow-y: auto;
+}
+.hmw-toc-title {
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    font-size: .68rem;
+    color: #94a3b8;
+    margin-bottom: .6rem;
+}
+.hmw-toc ul { display: block; list-style: none; }
+.hmw-toc li { margin-bottom: .3rem; }
+.hmw-toc a {
+    display: block;
+    color: #64748b;
+    text-decoration: none;
+    padding: .1rem 0 .1rem .6rem;
+    border-left: 2px solid transparent;
+    line-height: 1.4;
+}
+.hmw-toc a:hover { color: #302b63; border-left-color: #a78bfa; }
+.hmw-toc li.toc-h3 a { padding-left: 1.3rem; font-size: .92em; }
+
+.hmw-blocks { min-width: 0; margin-bottom: 3rem; }
+
+.hmw-block { margin-bottom: 1.5rem; }
+
+.hmw-block-text {
+    color: #1e293b;
+    line-height: 1.7;
+    font-size: .98rem;
+}
+.hmw-block-text h1, .hmw-block-text h2, .hmw-block-text h3 {
+    color: #1e293b;
+    margin: 1.4rem 0 .7rem;
+    scroll-margin-top: 90px;
+}
+.hmw-block-text h1 { font-size: 1.5rem; border-bottom: 2px solid #a78bfa33; padding-bottom: .4rem; }
+.hmw-block-text h2 { font-size: 1.25rem; }
+.hmw-block-text h3 { font-size: 1.05rem; }
+.hmw-block-text p { margin-bottom: .8rem; }
+.hmw-block-text table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 1rem 0;
+    font-size: .88rem;
+}
+.hmw-block-text th, .hmw-block-text td {
+    border: 1px solid #e2e8f0;
+    padding: .4rem .6rem;
+    text-align: left;
+}
+.hmw-block-text th { background: #f8fafc; }
+.hmw-block-text strong { color: #302b63; }
+.hmw-block-text ul, .hmw-block-text ol { margin: 0 0 .8rem 1.4rem; }
+.hmw-block-text hr { border: none; border-top: 1px solid #e2e8f0; margin: 1.75rem 0; }
+
+.hmw-panel {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    overflow: hidden;
+}
+.hmw-panel-caption {
+    padding: .55rem .9rem;
+    font-size: .78rem;
+    font-weight: 700;
+    color: #475569;
+    background: #eef2ff;
+    border-bottom: 1px solid #e2e8f0;
+}
+.hmw-output {
+    margin: 0;
+    padding: 1rem;
+    font-family: 'Cascadia Code', 'Consolas', 'SFMono-Regular', Menlo, monospace;
+    font-size: .82rem;
+    line-height: 1.55;
+    color: #1e293b;
+    overflow-x: auto;
+    white-space: pre;
+}
+.hmw-image-panel { text-align: center; padding: 1rem; }
+.hmw-image-panel img { max-width: 100%; border-radius: 6px; }
+
+/* ── References ──────────────────────────────────────────────── */
+.hmw-references {
+    margin-top: 2.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid #e2e8f0;
+}
+.hmw-references h2 { font-size: 1.15rem; color: #1e293b; margin-bottom: .9rem; }
+.hmw-references ol { margin-left: 1.3rem; }
+.hmw-references li { margin-bottom: .55rem; font-size: .9rem; color: #334155; }
+.hmw-references a { color: #302b63; text-decoration: none; font-weight: 600; }
+.hmw-references a:hover { color: #00d4ff; }
+.hmw-references .ref-authors { color: #64748b; }
+
+.hmw-footer-nav {
+    max-width: 880px;
+    margin: 0 auto 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid #e2e8f0;
+}
+.hmw-footer-nav a { color: #302b63; text-decoration: none; font-weight: 600; }
+.hmw-footer-nav a:hover { color: #00d4ff; }
+
+@media (max-width: 900px) {
+    .hmw-layout { grid-template-columns: 1fr; }
+    .hmw-toc { display: none; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="hmw-header">
+    <div class="hmw-breadcrumb"><a href="{% url 'model_internals:walkthrough_list' %}">← How Models Work</a></div>
+    <h1>{{ walkthrough.icon|default:"🧠" }} {{ walkthrough.title }}</h1>
+    {% if walkthrough.tagline %}<div class="hmw-tagline">{{ walkthrough.tagline }}</div>{% endif %}
+    <div class="hmw-badges">
+        <span class="hmw-badge hmw-badge-category">{{ walkthrough.get_category_display }}</span>
+        <span class="hmw-badge hmw-badge-difficulty">{{ walkthrough.get_difficulty_display }}</span>
+    </div>
+</div>
+
+{% if walkthrough.cover_image %}
+<div class="hmw-cover">
+    <img src="{{ walkthrough.cover_image.url }}" alt="{{ walkthrough.cover_image_caption|default:walkthrough.title }}">
+    {% if walkthrough.cover_image_caption %}<div class="hmw-cover-caption">{{ walkthrough.cover_image_caption }}</div>{% endif %}
+    {% if walkthrough.cover_image_credit %}
+    <div class="hmw-cover-credit">
+        {% if walkthrough.cover_image_credit_url %}
+            <a href="{{ walkthrough.cover_image_credit_url }}" target="_blank" rel="noopener">{{ walkthrough.cover_image_credit }}</a>
+        {% else %}
+            {{ walkthrough.cover_image_credit }}
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+
+<div class="hmw-layout">
+    <div class="hmw-toc" id="hmw-toc">
+        <div class="hmw-toc-title">Contents</div>
+        <ul id="hmw-toc-list"></ul>
+    </div>
+
+    <div class="hmw-blocks" id="hmw-content">
+        {% for block in walkthrough.blocks.all %}
+            {% if block.block_type == 'text' %}
+                <div class="hmw-block hmw-block-text">{{ block.content|render_walkthrough_markdown }}</div>
+
+            {% elif block.block_type == 'output' %}
+                <div class="hmw-block hmw-panel">
+                    {% if block.caption %}<div class="hmw-panel-caption">{{ block.caption }}</div>{% endif %}
+                    <pre class="hmw-output">{{ block.content }}</pre>
+                </div>
+
+            {% elif block.block_type == 'image' %}
+                <div class="hmw-block hmw-panel hmw-image-panel">
+                    {% if block.image %}<img src="{{ block.image.url }}" alt="{{ block.caption }}">{% endif %}
+                    {% if block.caption %}<div class="hmw-panel-caption" style="border-bottom:none;border-top:1px solid #e2e8f0;">{{ block.caption }}</div>{% endif %}
+                </div>
+            {% endif %}
+        {% endfor %}
+
+        {% if walkthrough.references.all %}
+        <div class="hmw-references">
+            <h2>References</h2>
+            <ol>
+                {% for ref in walkthrough.references.all %}
+                <li>
+                    {% if ref.url %}<a href="{{ ref.url }}" target="_blank" rel="noopener">{{ ref.title }}</a>{% else %}{{ ref.title }}{% endif %}
+                    {% if ref.authors %}<span class="ref-authors"> — {{ ref.authors }}</span>{% endif %}
+                </li>
+                {% endfor %}
+            </ol>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="hmw-footer-nav">
+    <a href="{% url 'model_internals:walkthrough_list' %}">← Back to How Models Work</a>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"
+        integrity="sha384-7zkQWkzuo3B5mTepMUcHkMB5jZaolc2xDwL6VFqjFALcbeS9Ggm/Yr2r3Dy4lfFg"
+        crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+        integrity="sha384-43gviWU0YVjaDtb/GhzOouOXtZMP/7XUzwPTstBeZFe/+rCMvRwr4yROQP43s0Xk"
+        crossorigin="anonymous"
+        onload="renderMathInElement(document.getElementById('hmw-content'), {
+            delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false}
+            ],
+            throwOnError: false
+        });"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var toc = document.getElementById('hmw-toc');
+    var list = document.getElementById('hmw-toc-list');
+    var headings = document.querySelectorAll('#hmw-content h1, #hmw-content h2, #hmw-content h3');
+    if (!toc || !list || headings.length === 0) {
+        if (toc) toc.style.display = 'none';
+        return;
+    }
+    var seen = {};
+    headings.forEach(function (h) {
+        var text = h.textContent.trim();
+        var slug = text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'section';
+        var id = slug, n = 1;
+        while (seen[id]) { id = slug + '-' + (++n); }
+        seen[id] = true;
+        h.id = id;
+
+        var li = document.createElement('li');
+        li.className = 'toc-' + h.tagName.toLowerCase();
+        var a = document.createElement('a');
+        a.href = '#' + id;
+        a.textContent = text;
+        li.appendChild(a);
+        list.appendChild(li);
+    });
+});
+</script>
+{% endblock %}

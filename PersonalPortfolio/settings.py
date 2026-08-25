@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'monitoring',
     'content_generator',
     'kaggle_archive',
+    'model_internals',
 
     'storages',
 ]

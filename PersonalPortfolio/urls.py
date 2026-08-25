@@ -23,6 +23,8 @@ urlpatterns = [
     path('auth/',     include('allauth.urls')),
     path('stories/', include('stories.urls')),
     path('monitoring/', include('monitoring.urls')),
+    path('kaggle-winners-archive/', include('kaggle_archive.urls')),
+    path('how-models-work/', include('model_internals.urls')),
     path('ai-content-generator/', include('content_generator.urls')),
     path('sitemap.xml', sitemap, {'sitemaps': sitemaps}, name='django.contrib.sitemaps.views.sitemap'),
     path('robots.txt', include('projects.robots_urls')),

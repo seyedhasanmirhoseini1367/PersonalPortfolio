@@ -1,0 +1,124 @@
+{% extends 'base.html' %}
+
+{% block title %}How Models Work — HasanPortfolio{% endblock %}
+{% block meta_description %}Step-by-step walkthroughs of how ML models actually compute their outputs — formulas and manual numeric calculations, no code.{% endblock %}
+
+{% block extra_css %}
+<style>
+.hmw-hero {
+    padding: 1.5rem 0 .5rem;
+}
+.hmw-hero h1 {
+    font-size: 1.9rem;
+    color: #1e293b;
+    margin-bottom: .4rem;
+}
+.hmw-hero p {
+    color: #64748b;
+    max-width: 720px;
+}
+.hmw-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1.25rem;
+    padding: 1.5rem 0 3rem;
+}
+.hmw-card {
+    background: white;
+    border-radius: 14px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 1px 4px rgba(0,0,0,.06);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: transform .25s, box-shadow .25s, border-color .25s;
+}
+.hmw-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 28px rgba(48,43,99,.14);
+    border-color: #a78bfa;
+}
+.hmw-card-top {
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+    padding: 1rem 1.1rem .6rem;
+}
+.hmw-icon {
+    font-size: 1.8rem;
+    line-height: 1;
+}
+.hmw-card-body { padding: 0 1.1rem 1rem; flex: 1; }
+.hmw-card-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    margin: 0 0 .35rem;
+}
+.hmw-card-title a { color: #1e293b; text-decoration: none; }
+.hmw-card-title a:hover { color: #302b63; }
+.hmw-tagline { color: #64748b; font-size: .85rem; margin-bottom: .6rem; }
+.hmw-summary { color: #475569; font-size: .85rem; line-height: 1.5; }
+.hmw-badges { display: flex; gap: .4rem; flex-wrap: wrap; margin-top: .75rem; }
+.hmw-badge {
+    padding: .2rem .6rem;
+    border-radius: 20px;
+    font-size: .68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+}
+.hmw-badge-category { background: #eef2ff; color: #4338ca; border: 1px solid #c7d2fe; }
+.hmw-badge-difficulty { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
+.hmw-card-footer {
+    padding: .75rem 1.1rem;
+    border-top: 1px solid #f1f5f9;
+}
+.hmw-card-footer a {
+    color: #302b63;
+    font-weight: 600;
+    font-size: .85rem;
+    text-decoration: none;
+}
+.hmw-card-footer a:hover { color: #00d4ff; }
+.hmw-empty {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: #64748b;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="hmw-hero">
+    <h1>🧮 How Models Work</h1>
+    <p>Step-by-step walkthroughs of how these models actually compute their outputs — the formulas, the shapes, and the numbers worked out by hand, with no code shown.</p>
+</div>
+
+{% if walkthroughs %}
+<div class="hmw-grid">
+    {% for w in walkthroughs %}
+    <div class="hmw-card">
+        <div class="hmw-card-top">
+            <span class="hmw-icon">{{ w.icon|default:"🧠" }}</span>
+        </div>
+        <div class="hmw-card-body">
+            <h2 class="hmw-card-title"><a href="{{ w.get_absolute_url }}">{{ w.title }}</a></h2>
+            {% if w.tagline %}<div class="hmw-tagline">{{ w.tagline }}</div>{% endif %}
+            <p class="hmw-summary">{{ w.summary }}</p>
+            <div class="hmw-badges">
+                <span class="hmw-badge hmw-badge-category">{{ w.get_category_display }}</span>
+                <span class="hmw-badge hmw-badge-difficulty">{{ w.get_difficulty_display }}</span>
+            </div>
+        </div>
+        <div class="hmw-card-footer">
+            <a href="{{ w.get_absolute_url }}">Walk through it →</a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="hmw-empty">
+    <p>No walkthroughs published yet — check back soon.</p>
+</div>
+{% endif %}
+{% endblock %}
