@@ -22,6 +22,25 @@ from model_internals.models import Walkthrough, WalkthroughReference
 # margin methods, unsupervised, and finally neural networks and transformers.
 WALKTHROUGHS = [
     dict(
+        notebook='how_models_work_learning_concepts.ipynb',
+        title='How Models Learn: The Concepts',
+        tagline='Loss, gradient, learning rate, bias, variance, overfitting - defined with '
+                'numbers you can check',
+        summary='The ideas every algorithm shares, before any specific algorithm. The learning '
+                'loop drawn, derivatives computed by hand, the bias-variance decomposition '
+                'verified numerically against measured error, and the overfitting U-curve built '
+                'from real numbers. Read this one first.',
+        category='other', difficulty='beginner', icon='\U0001f9ed',
+        references=[
+            dict(title='The Elements of Statistical Learning, ch. 2 & 7',
+                 authors='Hastie, Tibshirani & Friedman, 2009',
+                 url='https://hastie.su.domains/ElemStatLearn/'),
+            dict(title='Understanding the Bias-Variance Tradeoff',
+                 authors='Fortmann-Roe, 2012',
+                 url='http://scott.fortmann-roe.com/docs/BiasVariance.html'),
+        ],
+    ),
+    dict(
         notebook='how_models_work_linear_regression.ipynb',
         title='Linear Regression',
         tagline='The normal equation solved by hand, and why least squares is a projection',
