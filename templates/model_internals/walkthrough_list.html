@@ -21,8 +21,52 @@
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
     gap: 1.25rem;
-    padding: 1.5rem 0 3rem;
 }
+
+/* ── Jump bar ─────────────────────────────────────────────── */
+.hmw-jump {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .45rem;
+    padding: .9rem 0 .2rem;
+    border-bottom: 1px solid #e2e8f0;
+    margin-bottom: .5rem;
+}
+.hmw-jump-label { font-size: .82rem; color: #64748b; margin-right: .35rem; }
+.hmw-jump a {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    font-size: .8rem;
+    font-weight: 600;
+    color: #302b63;
+    text-decoration: none;
+    padding: .28rem .6rem;
+    border: 1px solid #c7d2fe;
+    border-radius: 20px;
+    background: #eef2ff;
+    transition: background .2s, border-color .2s;
+}
+.hmw-jump a:hover { background: #302b63; color: #fff; border-color: #302b63; }
+.hmw-jump-n {
+    font-size: .7rem;
+    opacity: .75;
+    font-weight: 700;
+}
+
+/* ── Group section ────────────────────────────────────────── */
+.hmw-group { padding: 1.6rem 0 .4rem; scroll-margin-top: 80px; }
+.hmw-group-head { margin-bottom: 1rem; }
+.hmw-group-head h2 {
+    font-size: 1.3rem;
+    color: #1e293b;
+    margin: 0 0 .2rem;
+    padding-bottom: .35rem;
+    border-bottom: 2px solid #a78bfa55;
+}
+.hmw-group-head p { color: #64748b; font-size: .87rem; margin: 0; }
+.hmw-group:last-of-type { padding-bottom: 2.5rem; }
 .hmw-card {
     background: white;
     border-radius: 14px;
@@ -94,28 +138,42 @@
     <p>Step-by-step walkthroughs of how these models actually compute their outputs — the formulas, the shapes, and the numbers worked out by hand, with no code shown.</p>
 </div>
 
-{% if walkthroughs %}
-<div class="hmw-grid">
-    {% for w in walkthroughs %}
-    <div class="hmw-card">
-        <div class="hmw-card-top">
-            <span class="hmw-icon">{{ w.icon|default:"🧠" }}</span>
-        </div>
-        <div class="hmw-card-body">
-            <h2 class="hmw-card-title"><a href="{{ w.get_absolute_url }}">{{ w.title }}</a></h2>
-            {% if w.tagline %}<div class="hmw-tagline">{{ w.tagline }}</div>{% endif %}
-            <p class="hmw-summary">{{ w.summary }}</p>
-            <div class="hmw-badges">
-                <span class="hmw-badge hmw-badge-category">{{ w.get_category_display }}</span>
-                <span class="hmw-badge hmw-badge-difficulty">{{ w.get_difficulty_display }}</span>
+{% if groups %}
+<nav class="hmw-jump">
+    <span class="hmw-jump-label">{{ total }} walkthrough{{ total|pluralize }} in {{ groups|length }} group{{ groups|length|pluralize }}:</span>
+    {% for g in groups %}
+        <a href="#{{ g.code }}">{{ g.label }} <span class="hmw-jump-n">{{ g.items|length }}</span></a>
+    {% endfor %}
+</nav>
+
+{% for g in groups %}
+<section class="hmw-group" id="{{ g.code }}">
+    <div class="hmw-group-head">
+        <h2>{{ forloop.counter }}. {{ g.label }}</h2>
+        {% if g.blurb %}<p>{{ g.blurb }}</p>{% endif %}
+    </div>
+    <div class="hmw-grid">
+        {% for w in g.items %}
+        <div class="hmw-card">
+            <div class="hmw-card-top">
+                <span class="hmw-icon">{{ w.icon|default:"🧠" }}</span>
+            </div>
+            <div class="hmw-card-body">
+                <h3 class="hmw-card-title"><a href="{{ w.get_absolute_url }}">{{ w.title }}</a></h3>
+                {% if w.tagline %}<div class="hmw-tagline">{{ w.tagline }}</div>{% endif %}
+                <p class="hmw-summary">{{ w.summary }}</p>
+                <div class="hmw-badges">
+                    <span class="hmw-badge hmw-badge-difficulty">{{ w.get_difficulty_display }}</span>
+                </div>
+            </div>
+            <div class="hmw-card-footer">
+                <a href="{{ w.get_absolute_url }}">Walk through it →</a>
             </div>
         </div>
-        <div class="hmw-card-footer">
-            <a href="{{ w.get_absolute_url }}">Walk through it →</a>
-        </div>
+        {% endfor %}
     </div>
-    {% endfor %}
-</div>
+</section>
+{% endfor %}
 {% else %}
 <div class="hmw-empty">
     <p>No walkthroughs published yet — check back soon.</p>

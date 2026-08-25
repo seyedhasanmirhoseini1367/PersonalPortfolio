@@ -4,21 +4,28 @@ from django.utils.text import slugify
 
 
 class Walkthrough(models.Model):
+    # Seven groups, listed in reading order: the list page renders one heading
+    # per group in exactly this sequence, so the section reads as a curriculum.
     CATEGORY_CHOICES = [
-        ('transformer', 'Transformer'),
-        ('attention',   'Attention Mechanisms'),
-        ('cnn',         'Convolutional Networks'),
-        ('rnn',         'RNN / LSTM'),
-        ('neural',      'Neural Networks'),
-        ('linear',      'Linear Models'),
-        ('svm',         'Support Vector Machines'),
-        ('instance',    'Instance-Based'),
-        ('bayes',       'Probabilistic'),
-        ('clustering',  'Clustering'),
-        ('dimred',      'Dimensionality Reduction'),
-        ('classical',   'Trees & Ensembles'),
-        ('other',       'Other'),
+        ('foundations',  'Foundations'),
+        ('linear',       'Linear Models'),
+        ('instance',     'Instance & Probabilistic'),
+        ('trees',        'Trees & Ensembles'),
+        ('kernel',       'Kernel Methods'),
+        ('unsupervised', 'Unsupervised Learning'),
+        ('deep',         'Deep Learning'),
     ]
+
+    # One-line description shown under each group heading.
+    CATEGORY_BLURBS = {
+        'foundations':  'What learning is, how to measure it, and how the step is taken',
+        'linear':       'A weighted sum, and what changes when you squash it',
+        'instance':     'Learn nothing in advance; compare, or count',
+        'trees':        'Ask questions, then combine many answers',
+        'kernel':       'Widest margin, and inner products in disguise',
+        'unsupervised': 'No labels: find structure, or compress',
+        'deep':         'Layers, weight sharing, memory, attention',
+    }
 
     DIFFICULTY_CHOICES = [
         ('beginner',     'Beginner'),

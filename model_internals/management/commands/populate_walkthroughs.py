@@ -30,7 +30,7 @@ WALKTHROUGHS = [
                 'loop drawn, derivatives computed by hand, the bias-variance decomposition '
                 'verified numerically against measured error, and the overfitting U-curve built '
                 'from real numbers. Read this one first.',
-        category='other', difficulty='beginner', icon='\U0001f9ed',
+        category='foundations', difficulty='beginner', icon='\U0001f9ed',
         references=[
             dict(title='The Elements of Statistical Learning, ch. 2 & 7',
                  authors='Hastie, Tibshirani & Friedman, 2009',
@@ -45,7 +45,7 @@ WALKTHROUGHS = [
         title='Evaluation Metrics',
         tagline='Why accuracy lies on imbalanced data, and what to read instead',
         summary='A 5%-positive problem where predicting no scores 95%. Confusion matrix, precision/recall/F1 by hand, the threshold as a policy choice, and ROC/AUC built point by point then verified two independent ways.',
-        category='other', difficulty='beginner', icon='\U0001f3af',
+        category='foundations', difficulty='beginner', icon='\U0001f3af',
         references=[dict(
             title='An Introduction to ROC Analysis',
             authors='Fawcett, 2006 (Pattern Recognition Letters)',
@@ -71,7 +71,7 @@ WALKTHROUGHS = [
         title='Optimisers: SGD to Adam',
         tagline='Momentum, RMSProp and Adam built up one fix at a time',
         summary='Each optimiser added to solve a specific failure of the last, every update computed by hand, bias correction explained, and all four matched against torch.optim to machine precision.',
-        category='neural', difficulty='intermediate', icon='\U0001f680',
+        category='foundations', difficulty='intermediate', icon='\U0001f680',
         references=[dict(
             title='Adam: A Method for Stochastic Optimization',
             authors='Kingma & Ba, 2015 (ICLR)',
@@ -111,7 +111,7 @@ WALKTHROUGHS = [
         summary='Priors and per-feature likelihoods fitted by hand, one point classified in log '
                 'space step by step, Laplace smoothing, and a duplicated-feature experiment that '
                 'exposes the over-confidence.',
-        category='bayes', difficulty='beginner', icon='\U0001f3b2',
+        category='instance', difficulty='beginner', icon='\U0001f3b2',
         references=[dict(
             title='On the Optimality of the Simple Bayesian Classifier under Zero-One Loss',
             authors='Domingos & Pazzani, 1997 (Machine Learning 29)',
@@ -125,7 +125,7 @@ WALKTHROUGHS = [
         summary='Gini impurity, all 33 candidate splits ranked, a gain curve per feature, the '
                 'tree drawn stage by stage with its criteria inside each node, and a check '
                 'against scikit-learn.',
-        category='classical', difficulty='beginner', icon='\U0001f333',
+        category='trees', difficulty='beginner', icon='\U0001f333',
         references=[dict(
             title='Classification and Regression Trees',
             authors='Breiman, Friedman, Olshen & Stone, 1984', url='',
@@ -138,7 +138,7 @@ WALKTHROUGHS = [
         summary='Every bootstrap draw and OOB set printed, all five trees drawn, votes counted by '
                 'hand, the variance formula verified by simulation, and MDI importance matched '
                 'against scikit-learn exactly.',
-        category='classical', difficulty='beginner', icon='\U0001f332',
+        category='trees', difficulty='beginner', icon='\U0001f332',
         references=[dict(
             title='Random Forests',
             authors='Breiman, 2001 (Machine Learning 45)',
@@ -150,7 +150,7 @@ WALKTHROUGHS = [
         title='AdaBoost',
         tagline='Boosting by reweighting the data, not by fitting gradients',
         summary='Three rounds with every sample weight, alpha and reweighting written out, the alpha formula verified as the exponential-loss minimiser, and the label-noise weakness demonstrated.',
-        category='classical', difficulty='intermediate', icon='\U0001f4ca',
+        category='trees', difficulty='intermediate', icon='\U0001f4ca',
         references=[dict(
             title='A Decision-Theoretic Generalization of On-Line Learning and an Application to Boosting',
             authors='Freund & Schapire, 1997 (JCSS)',
@@ -164,7 +164,7 @@ WALKTHROUGHS = [
         summary='Gradients and Hessians for all 12 rows, the leaf-weight derivation, every split '
                 'gain ranked, the tree drawn with G/H/similarity/gain inside each node, and both '
                 'trees matched leaf-for-leaf against the real xgboost.',
-        category='classical', difficulty='advanced', icon='⚡',
+        category='trees', difficulty='advanced', icon='⚡',
         references=[dict(
             title='XGBoost: A Scalable Tree Boosting System',
             authors='Chen & Guestrin, 2016 (KDD)',
@@ -178,7 +178,7 @@ WALKTHROUGHS = [
         summary='Feature binning and prefix-sum scans step by step, the histogram subtraction '
                 'trick verified, leaf-wise vs level-wise drawn side by side, GOSS tested on 5000 '
                 'rows, and the tree matched against real lightgbm.',
-        category='classical', difficulty='advanced', icon='\U0001f4a1',
+        category='trees', difficulty='advanced', icon='\U0001f4a1',
         references=[dict(
             title='LightGBM: A Highly Efficient Gradient Boosting Decision Tree',
             authors='Ke et al., 2017 (NeurIPS)',
@@ -193,7 +193,7 @@ WALKTHROUGHS = [
         summary='The target-encoding leak demonstrated then closed row by row, ordered boosting '
                 'contrasted with plain residuals, the oblivious tree drawn, and every leaf value '
                 'matched against real catboost.',
-        category='classical', difficulty='advanced', icon='\U0001f431',
+        category='trees', difficulty='advanced', icon='\U0001f431',
         references=[dict(
             title='CatBoost: unbiased boosting with categorical features',
             authors='Prokhorenkova et al., 2018 (NeurIPS)',
@@ -207,7 +207,7 @@ WALKTHROUGHS = [
         summary='The margin derived, non-support vectors deleted to prove they do not matter, w '
                 'recovered from the dual by hand, and the polynomial kernel checked against its '
                 'explicit feature map.',
-        category='svm', difficulty='advanced', icon='\U0001f6e1',
+        category='kernel', difficulty='advanced', icon='\U0001f6e1',
         references=[dict(
             title='Support-Vector Networks',
             authors='Cortes & Vapnik, 1995 (Machine Learning 20)',
@@ -221,7 +221,7 @@ WALKTHROUGHS = [
         summary='The three loss shapes compared, the tube drawn with its support vectors, an '
                 'outlier experiment against OLS, and the KKT structure (alpha = 0 inside, alpha = '
                 'C outside) shown in a table.',
-        category='svm', difficulty='advanced', icon='\U0001f4cf',
+        category='kernel', difficulty='advanced', icon='\U0001f4cf',
         references=[dict(
             title='A Tutorial on Support Vector Regression',
             authors='Smola & Scholkopf, 2004 (Statistics and Computing 14)',
@@ -235,7 +235,7 @@ WALKTHROUGHS = [
         summary='k-means++ initialisation sampled by hand, every assign/update step printed with '
                 'the distances and means, the monotone decrease verified, local minima counted '
                 'over 200 restarts, and the shapes it cannot find.',
-        category='clustering', difficulty='beginner', icon='\U0001f3af',
+        category='unsupervised', difficulty='beginner', icon='\U0001f3af',
         references=[dict(
             title='k-means++: The Advantages of Careful Seeding',
             authors='Arthur & Vassilvitskii, 2007 (SODA)',
@@ -247,7 +247,7 @@ WALKTHROUGHS = [
         title='Gaussian Mixtures & EM',
         tagline='Soft assignment, real covariance, and k-means as the limiting case',
         summary='Responsibilities and the M-step computed by hand, the log-likelihood shown never to decrease, k-means recovered as sigma goes to zero, and every parameter matched against scikit-learn.',
-        category='clustering', difficulty='advanced', icon='\U0001f52e',
+        category='unsupervised', difficulty='advanced', icon='\U0001f52e',
         references=[dict(
             title='Maximum Likelihood from Incomplete Data via the EM Algorithm',
             authors='Dempster, Laird & Rubin, 1977 (JRSS-B)',
@@ -261,7 +261,7 @@ WALKTHROUGHS = [
         summary='The covariance matrix built entry by entry, eigenvectors verified against 20000 '
                 'random directions, reconstruction error shown to equal the discarded '
                 'eigenvalues, and the SVD route compared.',
-        category='dimred', difficulty='intermediate', icon='\U0001f300',
+        category='unsupervised', difficulty='intermediate', icon='\U0001f300',
         references=[dict(
             title='Principal Component Analysis',
             authors='Jolliffe, 2002 (2nd ed.)', url='',
@@ -272,7 +272,7 @@ WALKTHROUGHS = [
         title='Autoencoders',
         tagline='Compress through a bottleneck - and a linear one is exactly PCA',
         summary='A linear autoencoder trained by gradient descent shown to recover the PCA subspace exactly (principal angles of zero), then the non-linear case following a curve PCA cannot.',
-        category='dimred', difficulty='intermediate', icon='\U0001f5dc',
+        category='unsupervised', difficulty='intermediate', icon='\U0001f5dc',
         references=[dict(
             title='Reducing the Dimensionality of Data with Neural Networks',
             authors='Hinton & Salakhutdinov, 2006 (Science)',
@@ -286,7 +286,7 @@ WALKTHROUGHS = [
         summary='Forward pass with every matrix printed, backpropagation derived and computed by '
                 'hand, all 17 gradients verified against central differences, and a deliberately '
                 'buggy version shown failing the same check.',
-        category='neural', difficulty='intermediate', icon='\U0001f578',
+        category='deep', difficulty='intermediate', icon='\U0001f578',
         references=[
             dict(title='Learning representations by back-propagating errors',
                  authors='Rumelhart, Hinton & Williams, 1986 (Nature 323)',
@@ -301,7 +301,7 @@ WALKTHROUGHS = [
         title='Convolutional Networks',
         tagline='Slide a small set of weights everywhere - parameter sharing and its prior',
         summary='Convolution worked out position by position, kernels as feature detectors, stride/padding/pooling, translation equivariance demonstrated, and the backward pass gradient-checked and matched against PyTorch.',
-        category='cnn', difficulty='intermediate', icon='\U0001f5bc',
+        category='deep', difficulty='intermediate', icon='\U0001f5bc',
         references=[dict(
             title='Gradient-Based Learning Applied to Document Recognition',
             authors='LeCun, Bottou, Bengio & Haffner, 1998 (Proc. IEEE)',
@@ -313,7 +313,7 @@ WALKTHROUGHS = [
         title='RNN & LSTM',
         tagline='Memory across time, why its gradient dies, and how gates rescue it',
         summary='The hidden state unrolled step by step, BPTT gradient-checked, vanishing gradients measured over 200 steps, every LSTM gate computed by hand, and both cells matched against PyTorch.',
-        category='rnn', difficulty='advanced', icon='\U0001f504',
+        category='deep', difficulty='advanced', icon='\U0001f504',
         references=[dict(
             title='Long Short-Term Memory',
             authors='Hochreiter & Schmidhuber, 1997 (Neural Computation)',
@@ -328,7 +328,7 @@ WALKTHROUGHS = [
         summary='Raw EEG cut into patches, projected, masked, and reconstructed. Every matrix '
                 'printed, the bidirectional attention matrix contrasted with the causal one, '
                 'and MSE computed on masked positions only.',
-        category='transformer', difficulty='intermediate', icon='\U0001f9e0',
+        category='deep', difficulty='intermediate', icon='\U0001f9e0',
         references=[
             dict(title='BERT: Pre-training of Deep Bidirectional Transformers for Language '
                        'Understanding',
@@ -347,7 +347,7 @@ WALKTHROUGHS = [
         summary='Follow one sentence through embeddings, positional encoding, multi-head '
                 'attention, masked decoding, cross-attention, and the final softmax - with '
                 'every shape and number worked out by hand.',
-        category='transformer', difficulty='intermediate', icon='\U0001f9ee',
+        category='deep', difficulty='intermediate', icon='\U0001f9ee',
         references=[dict(
             title='Attention Is All You Need',
             authors='Vaswani et al., 2017 (NeurIPS)',
@@ -397,10 +397,18 @@ class Command(BaseCommand):
 
             w = Walkthrough.objects.filter(title=spec['title']).first()
             if w:
-                # order is authoritative here even when the import was skipped
-                if w.order != order:
-                    w.order = order
-                    w.save(update_fields=['order'])
+                # Metadata below lives in THIS file, not in the notebook, so it
+                # must sync even when the content import was skipped -- otherwise
+                # editing a category or tagline here would never reach the site.
+                meta = dict(order=order, category=spec['category'],
+                            difficulty=spec['difficulty'], icon=spec['icon'],
+                            tagline=spec['tagline'], summary=spec['summary'])
+                stale = [f for f, v in meta.items() if getattr(w, f) != v]
+                if stale:
+                    for f, v in meta.items():
+                        setattr(w, f, v)
+                    w.save(update_fields=list(meta))
+                    self.stdout.write(f'   metadata updated ({", ".join(stale)})')
                 for i, ref in enumerate(spec.get('references', []), start=1):
                     WalkthroughReference.objects.get_or_create(
                         walkthrough=w, title=ref['title'],
