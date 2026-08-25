@@ -4,8 +4,13 @@ The walkthrough content lives in the database and the plot images live in
 MEDIA_ROOT, and neither is committed to git. This command regenerates both from
 the notebooks, so a fresh deploy reproduces the section without any manual step.
 
-Run on every startup with --if-empty; it is a no-op once the content is there.
+Run on every startup with --if-empty. Each walkthrough stores the sha256 of the
+notebook it came from, so an unchanged notebook is skipped but an edited one is
+re-imported -- otherwise the content would be frozen at whatever the first
+deploy happened to create.
 """
+import hashlib
+
 from django.conf import settings
 from django.core.management import call_command
 from django.core.management.base import BaseCommand
@@ -128,7 +133,8 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument(
             '--if-empty', action='store_true',
-            help='Skip walkthroughs that already have blocks (safe to run on every startup).')
+            help='Skip walkthroughs whose notebook is unchanged since the last import. '
+                 'Safe to run on every startup, and still picks up edited notebooks.')
 
     def handle(self, *args, **options):
         nb_dir = settings.BASE_DIR / 'ml_training'
@@ -141,8 +147,10 @@ class Command(BaseCommand):
                 missing += 1
                 continue
 
+            fingerprint = hashlib.sha256(path.read_bytes()).hexdigest()
             before = Walkthrough.objects.filter(title=spec['title']).first()
-            had_blocks = bool(before and before.blocks.exists())
+            up_to_date = bool(before and before.blocks.exists()
+                              and before.source_fingerprint == fingerprint)
 
             call_command(
                 'import_walkthrough_notebook', str(path),
@@ -152,7 +160,7 @@ class Command(BaseCommand):
                 if_empty=options['if_empty'],
             )
 
-            if options['if_empty'] and had_blocks:
+            if options['if_empty'] and up_to_date:
                 skipped += 1
             else:
                 done += 1
@@ -170,4 +178,4 @@ class Command(BaseCommand):
                     )
 
         self.stdout.write(self.style.SUCCESS(
-            f'walkthroughs: {done} imported, {skipped} already present, {missing} missing'))
+            f'walkthroughs: {done} imported/updated, {skipped} unchanged, {missing} missing'))

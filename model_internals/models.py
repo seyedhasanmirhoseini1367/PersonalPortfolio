@@ -39,6 +39,11 @@ class Walkthrough(models.Model):
     order        = models.PositiveIntegerField(default=0)
     created_at   = models.DateTimeField(auto_now_add=True)
 
+    # sha256 of the notebook this was imported from. Lets a deploy tell
+    # "already imported" apart from "imported, but the notebook has changed
+    # since" - without it, --if-empty would freeze the content forever.
+    source_fingerprint = models.CharField(max_length=64, blank=True, editable=False)
+
     class Meta:
         ordering = ['order', '-created_at']
 

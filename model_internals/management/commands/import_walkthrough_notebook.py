@@ -1,4 +1,5 @@
 import base64
+import hashlib
 import json
 import re
 
@@ -60,8 +61,10 @@ class Command(BaseCommand):
         parser.add_argument('--unpublish', action='store_true',
                              help='Import as a draft (is_published=False)')
         parser.add_argument('--if-empty', action='store_true',
-                             help='Skip entirely if this walkthrough already has blocks. '
-                                  'Used on deploy so restarts do not re-import.')
+                             help='Skip only if this walkthrough already has blocks AND the '
+                                  'notebook is unchanged since it was imported. Used on '
+                                  'deploy: restarts are a no-op, but an edited notebook is '
+                                  'picked up.')
 
     def handle(self, *args, **options):
         path = options['notebook_path']
@@ -73,12 +76,20 @@ class Command(BaseCommand):
 
         slug = options['slug'] or slugify(options['title'])
 
+        with open(path, 'rb') as fb:
+            fingerprint = hashlib.sha256(fb.read()).hexdigest()
+
         if options['if_empty']:
             existing = Walkthrough.objects.filter(slug=slug).first()
             if existing and existing.blocks.exists():
+                if existing.source_fingerprint == fingerprint:
+                    self.stdout.write(
+                        f'"{existing.title}" is up to date '
+                        f'({existing.blocks.count()} blocks) - skipping.')
+                    return
                 self.stdout.write(
-                    f'"{existing.title}" already has {existing.blocks.count()} blocks - skipping.')
-                return
+                    f'"{existing.title}" exists but the notebook has changed '
+                    f'- re-importing.')
 
         with transaction.atomic():
             walkthrough, _ = Walkthrough.objects.update_or_create(
@@ -92,6 +103,7 @@ class Command(BaseCommand):
                     icon=options['icon'],
                     order=options['order'],
                     is_published=not options['unpublish'],
+                    source_fingerprint=fingerprint,
                 ),
             )
             # Idempotent re-import: wipe existing blocks and rebuild.
