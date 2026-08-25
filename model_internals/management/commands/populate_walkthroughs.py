@@ -41,6 +41,18 @@ WALKTHROUGHS = [
         ],
     ),
     dict(
+        notebook='how_models_work_evaluation_metrics.ipynb',
+        title='Evaluation Metrics',
+        tagline='Why accuracy lies on imbalanced data, and what to read instead',
+        summary='A 5%-positive problem where predicting no scores 95%. Confusion matrix, precision/recall/F1 by hand, the threshold as a policy choice, and ROC/AUC built point by point then verified two independent ways.',
+        category='other', difficulty='beginner', icon='\U0001f3af',
+        references=[dict(
+            title='An Introduction to ROC Analysis',
+            authors='Fawcett, 2006 (Pattern Recognition Letters)',
+            url='https://www.sciencedirect.com/science/article/pii/S016786550500303X',
+        )],
+    ),
+    dict(
         notebook='how_models_work_linear_regression.ipynb',
         title='Linear Regression',
         tagline='The normal equation solved by hand, and why least squares is a projection',
@@ -52,6 +64,18 @@ WALKTHROUGHS = [
             title='The Elements of Statistical Learning, ch. 3',
             authors='Hastie, Tibshirani & Friedman, 2009',
             url='https://hastie.su.domains/ElemStatLearn/',
+        )],
+    ),
+    dict(
+        notebook='how_models_work_optimizers.ipynb',
+        title='Optimisers: SGD to Adam',
+        tagline='Momentum, RMSProp and Adam built up one fix at a time',
+        summary='Each optimiser added to solve a specific failure of the last, every update computed by hand, bias correction explained, and all four matched against torch.optim to machine precision.',
+        category='neural', difficulty='intermediate', icon='\U0001f680',
+        references=[dict(
+            title='Adam: A Method for Stochastic Optimization',
+            authors='Kingma & Ba, 2015 (ICLR)',
+            url='https://arxiv.org/abs/1412.6980',
         )],
     ),
     dict(
@@ -119,6 +143,18 @@ WALKTHROUGHS = [
             title='Random Forests',
             authors='Breiman, 2001 (Machine Learning 45)',
             url='https://link.springer.com/article/10.1023/A:1010933404324',
+        )],
+    ),
+    dict(
+        notebook='how_models_work_adaboost.ipynb',
+        title='AdaBoost',
+        tagline='Boosting by reweighting the data, not by fitting gradients',
+        summary='Three rounds with every sample weight, alpha and reweighting written out, the alpha formula verified as the exponential-loss minimiser, and the label-noise weakness demonstrated.',
+        category='classical', difficulty='intermediate', icon='\U0001f4ca',
+        references=[dict(
+            title='A Decision-Theoretic Generalization of On-Line Learning and an Application to Boosting',
+            authors='Freund & Schapire, 1997 (JCSS)',
+            url='https://www.sciencedirect.com/science/article/pii/S002200009791504X',
         )],
     ),
     dict(
@@ -207,6 +243,18 @@ WALKTHROUGHS = [
         )],
     ),
     dict(
+        notebook='how_models_work_gmm_em.ipynb',
+        title='Gaussian Mixtures & EM',
+        tagline='Soft assignment, real covariance, and k-means as the limiting case',
+        summary='Responsibilities and the M-step computed by hand, the log-likelihood shown never to decrease, k-means recovered as sigma goes to zero, and every parameter matched against scikit-learn.',
+        category='clustering', difficulty='advanced', icon='\U0001f52e',
+        references=[dict(
+            title='Maximum Likelihood from Incomplete Data via the EM Algorithm',
+            authors='Dempster, Laird & Rubin, 1977 (JRSS-B)',
+            url='https://www.jstor.org/stable/2984875',
+        )],
+    ),
+    dict(
         notebook='how_models_work_pca.ipynb',
         title='Principal Component Analysis',
         tagline='Rotate the axes onto the directions of greatest variance',
@@ -217,6 +265,18 @@ WALKTHROUGHS = [
         references=[dict(
             title='Principal Component Analysis',
             authors='Jolliffe, 2002 (2nd ed.)', url='',
+        )],
+    ),
+    dict(
+        notebook='how_models_work_autoencoder.ipynb',
+        title='Autoencoders',
+        tagline='Compress through a bottleneck - and a linear one is exactly PCA',
+        summary='A linear autoencoder trained by gradient descent shown to recover the PCA subspace exactly (principal angles of zero), then the non-linear case following a curve PCA cannot.',
+        category='dimred', difficulty='intermediate', icon='\U0001f5dc',
+        references=[dict(
+            title='Reducing the Dimensionality of Data with Neural Networks',
+            authors='Hinton & Salakhutdinov, 2006 (Science)',
+            url='https://www.science.org/doi/10.1126/science.1127647',
         )],
     ),
     dict(
@@ -235,6 +295,30 @@ WALKTHROUGHS = [
                  authors='Goodfellow, Bengio & Courville, 2016',
                  url='https://www.deeplearningbook.org/'),
         ],
+    ),
+    dict(
+        notebook='how_models_work_cnn.ipynb',
+        title='Convolutional Networks',
+        tagline='Slide a small set of weights everywhere - parameter sharing and its prior',
+        summary='Convolution worked out position by position, kernels as feature detectors, stride/padding/pooling, translation equivariance demonstrated, and the backward pass gradient-checked and matched against PyTorch.',
+        category='cnn', difficulty='intermediate', icon='\U0001f5bc',
+        references=[dict(
+            title='Gradient-Based Learning Applied to Document Recognition',
+            authors='LeCun, Bottou, Bengio & Haffner, 1998 (Proc. IEEE)',
+            url='http://yann.lecun.com/exdb/publis/pdf/lecun-98.pdf',
+        )],
+    ),
+    dict(
+        notebook='how_models_work_rnn_lstm.ipynb',
+        title='RNN & LSTM',
+        tagline='Memory across time, why its gradient dies, and how gates rescue it',
+        summary='The hidden state unrolled step by step, BPTT gradient-checked, vanishing gradients measured over 200 steps, every LSTM gate computed by hand, and both cells matched against PyTorch.',
+        category='rnn', difficulty='advanced', icon='\U0001f504',
+        references=[dict(
+            title='Long Short-Term Memory',
+            authors='Hochreiter & Schmidhuber, 1997 (Neural Computation)',
+            url='https://www.bioinf.jku.at/publications/older/2604.pdf',
+        )],
     ),
     dict(
         notebook='how_models_work_bert_eeg.ipynb',
