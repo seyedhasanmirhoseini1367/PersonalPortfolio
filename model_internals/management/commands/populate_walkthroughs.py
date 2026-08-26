@@ -354,6 +354,34 @@ WALKTHROUGHS = [
             url='https://arxiv.org/abs/1706.03762',
         )],
     ),
+    dict(
+        notebook='how_models_work_kimi_k3.ipynb',
+        title='Kimi K3: Delta Attention, Attention Residuals, LatentMoE',
+        tagline='A 2026 frontier architecture taken apart equation by equation - linear '
+                'attention with a bounded forget gate, and a routed MoE that stays stable',
+        summary='Every equation of the K3 report worked through on an 8-token sentence: the '
+                'Kimi Delta Attention recurrence and its chunkwise form, the lower-bounded '
+                'decay gate that replaced Kimi Linear’s unbounded one, gated MLA with NoPE, '
+                'attention residuals across blocks, Stable LatentMoE, SiTU-GLU, and quantile '
+                'load balancing - each checked against the equation it claims to implement.',
+        category='deep', difficulty='advanced', icon='\U0001f52c',
+        references=[
+            dict(title='Kimi K3: Open Frontier Intelligence',
+                 authors='Kimi Team, Moonshot AI, 2026 (technical report)',
+                 url='https://arxiv.org/abs/2607.24653'),
+            # Cited by the report as the direct predecessors of KDA, gated MLA and
+            # the routed-MoE design. Listed without URLs deliberately: the K3 report
+            # is the only one of these I read here, so I am not vouching for an
+            # arXiv id from memory on a public page.
+            dict(title='Kimi Linear: An Expressive, Efficient Attention Architecture',
+                 authors='Moonshot AI, 2025'),
+            dict(title='Gated Delta Networks: Improving Mamba2 with Delta Rule',
+                 authors='Yang et al., 2024'),
+            dict(title='DeepSeek-V2: A Strong, Economical, and Efficient '
+                       'Mixture-of-Experts Language Model (Multi-head Latent Attention)',
+                 authors='DeepSeek-AI, 2024'),
+        ],
+    ),
 ]
 
 
@@ -412,7 +440,9 @@ class Command(BaseCommand):
                 for i, ref in enumerate(spec.get('references', []), start=1):
                     WalkthroughReference.objects.get_or_create(
                         walkthrough=w, title=ref['title'],
-                        defaults=dict(order=i, authors=ref['authors'], url=ref['url']),
+                        # url is optional: a reference may be worth listing even when
+                    # I have no link I have actually verified.
+                    defaults=dict(order=i, authors=ref['authors'], url=ref.get('url', '')),
                     )
 
         self.stdout.write(self.style.SUCCESS(
