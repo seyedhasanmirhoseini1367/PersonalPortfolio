@@ -382,6 +382,36 @@ WALKTHROUGHS = [
                  authors='DeepSeek-AI, 2024'),
         ],
     ),
+    dict(
+        notebook='how_models_work_deepseek_v4.ipynb',
+        title='DeepSeek-V4: Compressed Sparse Attention and Muon',
+        tagline='How a million-token context is made to fit - compression, sparse '
+                'selection, and a residual stream that cannot amplify',
+        summary='Every equation of the V4 report worked on an eight-token sentence: '
+                'Compressed Sparse Attention and its lightning indexer, Heavily '
+                'Compressed Attention, Manifold-Constrained Hyper-Connections projected '
+                'onto the Birkhoff polytope by Sinkhorn-Knopp, and Muon with hybrid '
+                'Newton-Schulz - each checked, and the paper’s KV-cache claim rebuilt '
+                'from scratch.',
+        category='transformers', difficulty='advanced', icon='\U0001f5dc',
+        references=[
+            dict(title='DeepSeek-V4: Towards Highly Efficient Million-Token Context '
+                       'Intelligence',
+                 authors='DeepSeek-AI, 2026 (technical report)',
+                 url='https://arxiv.org/abs/2606.19348'),
+            # Cited by the V4 report as the sources of the mechanisms above. Listed
+            # without URLs on purpose: the V4 report is the one I read here, so I am
+            # not vouching for arXiv ids from memory on a public page.
+            dict(title='Hyper-Connections', authors='Zhu et al., 2025'),
+            dict(title='Manifold-Constrained Hyper-Connections', authors='Xie et al., 2026'),
+            dict(title='Muon: An optimizer for the hidden layers of neural networks',
+                 authors='Jordan et al., 2024; Liu et al., 2025'),
+            dict(title='DeepSeekMoE: Towards Ultimate Expert Specialization',
+                 authors='Dai et al., 2024'),
+            dict(title='Efficient Streaming Language Models with Attention Sinks',
+                 authors='Xiao et al., 2024'),
+        ],
+    ),
 ]
 
 
