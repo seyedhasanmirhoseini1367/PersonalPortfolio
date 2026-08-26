@@ -328,7 +328,7 @@ WALKTHROUGHS = [
         summary='Raw EEG cut into patches, projected, masked, and reconstructed. Every matrix '
                 'printed, the bidirectional attention matrix contrasted with the causal one, '
                 'and MSE computed on masked positions only.',
-        category='deep', difficulty='intermediate', icon='\U0001f9e0',
+        category='transformers', difficulty='intermediate', icon='\U0001f9e0',
         references=[
             dict(title='BERT: Pre-training of Deep Bidirectional Transformers for Language '
                        'Understanding',
@@ -347,7 +347,7 @@ WALKTHROUGHS = [
         summary='Follow one sentence through embeddings, positional encoding, multi-head '
                 'attention, masked decoding, cross-attention, and the final softmax - with '
                 'every shape and number worked out by hand.',
-        category='deep', difficulty='intermediate', icon='\U0001f9ee',
+        category='transformers', difficulty='intermediate', icon='\U0001f9ee',
         references=[dict(
             title='Attention Is All You Need',
             authors='Vaswani et al., 2017 (NeurIPS)',
@@ -364,7 +364,7 @@ WALKTHROUGHS = [
                 'decay gate that replaced Kimi Linear’s unbounded one, gated MLA with NoPE, '
                 'attention residuals across blocks, Stable LatentMoE, SiTU-GLU, and quantile '
                 'load balancing - each checked against the equation it claims to implement.',
-        category='deep', difficulty='advanced', icon='\U0001f52c',
+        category='transformers', difficulty='advanced', icon='\U0001f52c',
         references=[
             dict(title='Kimi K3: Open Frontier Intelligence',
                  authors='Kimi Team, Moonshot AI, 2026 (technical report)',

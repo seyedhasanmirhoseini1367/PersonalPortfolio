@@ -13,7 +13,13 @@ class Walkthrough(models.Model):
         ('trees',        'Trees & Ensembles'),
         ('kernel',       'Kernel Methods'),
         ('unsupervised', 'Unsupervised Learning'),
-        ('deep',         'Deep Learning'),
+        # The code stays 'deep' though the label reads "Neural Networks": it
+        # keeps the existing rows and the #deep anchor valid. Transformers are
+        # of course neural networks too - they are split out because the jump
+        # from recurrence to attention is the sharpest break in the sequence,
+        # not because they are a different kind of thing.
+        ('deep',         'Neural Networks'),
+        ('transformers', 'Transformers & Attention'),
     ]
 
     # One-line description shown under each group heading.
@@ -24,7 +30,8 @@ class Walkthrough(models.Model):
         'trees':        'Ask questions, then combine many answers',
         'kernel':       'Widest margin, and inner products in disguise',
         'unsupervised': 'No labels: find structure, or compress',
-        'deep':         'Layers, weight sharing, memory, attention',
+        'deep':         'Layers, weight sharing, memory',
+        'transformers': 'Drop recurrence, attend to everything at once',
     }
 
     DIFFICULTY_CHOICES = [
