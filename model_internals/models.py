@@ -8,6 +8,7 @@ class Walkthrough(models.Model):
     # per group in exactly this sequence, so the section reads as a curriculum.
     CATEGORY_CHOICES = [
         ('foundations',  'Foundations'),
+        ('validation',   'Validation & Model Selection'),
         ('linear',       'Linear Models'),
         ('instance',     'Instance & Probabilistic'),
         ('trees',        'Trees & Ensembles'),
@@ -25,6 +26,7 @@ class Walkthrough(models.Model):
     # One-line description shown under each group heading.
     CATEGORY_BLURBS = {
         'foundations':  'What learning is, how to measure it, and how the step is taken',
+        'validation':   'Knowing whether it works, and not fooling yourself',
         'linear':       'A weighted sum, and what changes when you squash it',
         'instance':     'Learn nothing in advance; compare, or count',
         'trees':        'Ask questions, then combine many answers',

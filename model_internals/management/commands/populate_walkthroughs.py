@@ -79,6 +79,83 @@ WALKTHROUGHS = [
         )],
     ),
     dict(
+        notebook='how_models_work_cross_validation.ipynb',
+        title='Cross-Validation & Model Selection',
+        tagline='One split is a sample, not a measurement - and choosing between '
+                'models spends the folds you chose on',
+        summary='Folds written out by hand and checked against scikit-learn, the '
+                'standard error nobody prints, stratified/group/time-series '
+                'splitters, and the selection bias that makes a flat search report '
+                '62% accuracy on data containing no signal at all.',
+        category='validation', difficulty='beginner', icon='\U0001f501',
+        references=[
+            dict(title='A Study of Cross-Validation and Bootstrap for Accuracy '
+                       'Estimation and Model Selection',
+                 authors='Kohavi, 1995 (IJCAI)'),
+            dict(title='On Over-fitting in Model Selection and Subsequent Selection '
+                       'Bias in Performance Evaluation',
+                 authors='Cawley & Talbot, 2010 (JMLR)'),
+        ],
+    ),
+    dict(
+        notebook='how_models_work_data_leakage.ipynb',
+        title='Data Leakage',
+        tagline='Five ways a validation score stops measuring what you think, each '
+                'one built and then measured',
+        summary='Every leak demonstrated on data with no signal in it, so the true '
+                'answer is 0.50 and the optimism is exactly the size of the lie - '
+                'from the harmless scaler-before-split to group leakage that turns '
+                'pure noise into 94% accuracy.',
+        category='validation', difficulty='beginner', icon='\U0001f4a7',
+        references=[
+            dict(title='Leakage in Data Mining: Formulation, Detection, and Avoidance',
+                 authors='Kaufman, Rosset & Perlich, 2012 (ACM TKDD)'),
+            dict(title='Leakage and the Reproducibility Crisis in ML-based Science',
+                 authors='Kapoor & Narayanan, 2023 (Patterns)'),
+        ],
+    ),
+    dict(
+        notebook='how_models_work_hyperparameter_search.ipynb',
+        title='Hyperparameter Search',
+        tagline='Why random search beats grid search, and what Expected Improvement '
+                'is actually computing',
+        summary='Grid search written out cell by cell, the dimension-free '
+                'random-search guarantee verified against simulation, Expected '
+                'Improvement decomposed into exploitation and exploration, and '
+                'successive halving costed out rung by rung.',
+        category='validation', difficulty='intermediate', icon='\U0001f50e',
+        references=[
+            dict(title='Random Search for Hyper-Parameter Optimization',
+                 authors='Bergstra & Bengio, 2012 (JMLR)'),
+            dict(title='Practical Bayesian Optimization of Machine Learning Algorithms',
+                 authors='Snoek, Larochelle & Adams, 2012 (NeurIPS)'),
+            dict(title='Hyperband: A Novel Bandit-Based Approach to Hyperparameter '
+                       'Optimization',
+                 authors='Li et al., 2018 (JMLR)'),
+        ],
+    ),
+    dict(
+        notebook='how_models_work_calibration.ipynb',
+        title='Probability Calibration',
+        tagline='When the model says 0.70, does it happen 70% of the time? AUC '
+                'cannot tell you',
+        summary='Reliability diagrams and ECE computed bin by bin, proof that '
+                'monotone transforms leave AUC untouched while destroying '
+                'calibration, and both repairs - Platt scaling by hand and the PAVA '
+                'algorithm for isotonic regression, step by step.',
+        category='validation', difficulty='intermediate', icon='\U0001f3af',
+        references=[
+            dict(title='Predicting Good Probabilities With Supervised Learning',
+                 authors='Niculescu-Mizil & Caruana, 2005 (ICML)'),
+            dict(title='Probabilistic Outputs for Support Vector Machines and '
+                       'Comparisons to Regularized Likelihood Methods',
+                 authors='Platt, 1999'),
+            dict(title='Transforming Classifier Scores into Accurate Multiclass '
+                       'Probability Estimates',
+                 authors='Zadrozny & Elkan, 2002 (KDD)'),
+        ],
+    ),
+    dict(
         notebook='how_models_work_logistic_regression.ipynb',
         title='Logistic Regression',
         tagline='Why the sigmoid and log-loss belong together, and where the gradient comes from',
