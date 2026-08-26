@@ -154,6 +154,15 @@ SOCIALACCOUNT_PROVIDERS = {
     },
 }
 
+# ── Form field limits ─────────────────────────────────────────────────────────
+# Django's default is 1000, which is a guard against a POST with a huge number of
+# fields exhausting CPU in the parser. The "How Models Work" admin page posts one
+# inline form per content block, ~9 fields each, and the Transformer walkthrough
+# has 136 blocks (~1220 fields) - so saving it failed with TooManyFieldsSent even
+# when the only edit was a cover image. 5000 clears the longest walkthrough with
+# room to roughly triple, and still bounds the parser.
+DATA_UPLOAD_MAX_NUMBER_FIELDS = 5000
+
 STATIC_URL  = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_DIRS = [BASE_DIR / 'static']
