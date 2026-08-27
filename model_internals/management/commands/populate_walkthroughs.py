@@ -79,6 +79,31 @@ WALKTHROUGHS = [
         )],
     ),
     dict(
+        notebook='how_models_work_reinforcement_learning.ipynb',
+        title='Reinforcement Learning',
+        tagline='No labels, delayed reward, and a policy that decides its own '
+                'training data',
+        summary='MDPs, returns and discounting worked by hand on a gridworld small '
+                'enough to print; policy evaluation checked against the exact linear '
+                'solve; value iteration and its contraction bound; Q-learning '
+                'reconstructing the optimal policy with no model at all; SARSA and '
+                'Q-learning taking visibly different routes along a cliff; and the '
+                'REINFORCE baseline that GRPO turns into a group mean.',
+        category='foundations', difficulty='intermediate', icon='\U0001f579',
+        references=[
+            dict(title='Reinforcement Learning: An Introduction (2nd ed.)',
+                 authors='Sutton & Barto, 2018'),
+            dict(title='Learning from Delayed Rewards (Q-learning)',
+                 authors='Watkins, 1989'),
+            dict(title='Simple Statistical Gradient-Following Algorithms for '
+                       'Connectionist Reinforcement Learning (REINFORCE)',
+                 authors='Williams, 1992 (Machine Learning)'),
+            dict(title='Policy Gradient Methods for Reinforcement Learning with '
+                       'Function Approximation',
+                 authors='Sutton, McAllester, Singh & Mansour, 2000 (NeurIPS)'),
+        ],
+    ),
+    dict(
         notebook='how_models_work_cross_validation.ipynb',
         title='Cross-Validation & Model Selection',
         tagline='One split is a sample, not a measurement - and choosing between '
