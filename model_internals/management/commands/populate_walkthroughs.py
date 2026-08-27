@@ -607,6 +607,38 @@ WALKTHROUGHS = [
         ],
     ),
     dict(
+        notebook='how_models_work_glm5.ipynb',
+        title='GLM-5 & GLM-5.3-Flash',
+        tagline='The frontier architecture that publishes its failures - and '
+                'retrofits sparse attention instead of pre-training it',
+        summary='The efficient-attention ablation that explains the design: fixed '
+                'sliding windows collapsing to 6.51 on RULER@128K while a searched '
+                'layer pattern on the same budget holds 53.95. Plus Muon Split '
+                'orthogonalising each attention head separately, the MLA-256 head '
+                'shape trade, MTP parameter sharing inverted into acceptance rates, '
+                'and DSA retrofitted for 40x less compute than training it in.',
+        category='transformers', difficulty='advanced', icon='\U0001f9ff',
+        references=[
+            dict(title='GLM-5: from Vibe Coding to Agentic Engineering',
+                 authors='GLM-5 Team, Z.ai / Zhipu AI, 2026 (technical report)',
+                 url='https://arxiv.org/abs/2602.15763'),
+            dict(title='GLM-5.3-Flash documentation (product page - no paper exists '
+                       'for this model)',
+                 authors='Z.ai, 2026',
+                 url='https://docs.z.ai/guides/vlm/glm-5.3-flash'),
+            # Cited by the report as the mechanisms GLM-5 adopts or compares against.
+            # No URLs: the GLM-5 report is the only one I read here.
+            dict(title='DeepSeek-V3.2 / DeepSeek Sparse Attention',
+                 authors='DeepSeek-AI, 2025'),
+            dict(title='Gated Delta Networks: Improving Mamba2 with Delta Rule',
+                 authors='Yang et al., 2024'),
+            dict(title='Jet-Nemotron / PostNAS (search-based attention layer '
+                       'selection)', authors='NVIDIA, 2025'),
+            dict(title='RULER: What is the Real Context Size of Your Long-Context '
+                       'Language Models?', authors='Hsieh et al., 2024'),
+        ],
+    ),
+    dict(
         notebook='how_models_work_self_improving_llms.ipynb',
         title='Self-Improving LLMs',
         tagline='A model generating its own training data - and the four ways that '
