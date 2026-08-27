@@ -32,8 +32,10 @@ import pandas as pd
 from .registry import register
 from .base import InferenceHandler, InferenceError
 
-# ── shared path to the pretrain_model.py (so we can reconstruct EEGFoundationModel) ──
-_ML_DIR = os.path.join(os.path.dirname(__file__), '..', '..', 'ml_training', 'FoundationModel')
+# ── shared path to pretrain_model.py (so we can reconstruct EEGFoundationModel) ──
+# NOTE: this is a RUNTIME import, not archived training code. Moving or renaming
+# ml_projects/FoundationModel/pretrain_model.py breaks seizure inference.
+_ML_DIR = os.path.join(os.path.dirname(__file__), '..', '..', 'ml_projects', 'FoundationModel')
 
 
 def _load_foundation_model(bundle_path: str, task_name: str):
@@ -45,7 +47,7 @@ def _load_foundation_model(bundle_path: str, task_name: str):
     bundle = torch.load(bundle_path, map_location='cpu', weights_only=False)
     cfg    = bundle['model_config']
 
-    # Import pretrain_model from the ml_training directory
+    # Import pretrain_model from ml_projects/FoundationModel
     if _ML_DIR not in sys.path:
         sys.path.insert(0, _ML_DIR)
     from pretrain_model import EEGFoundationModel  # noqa: E402

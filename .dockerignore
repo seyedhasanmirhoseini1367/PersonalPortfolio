@@ -1,12 +1,38 @@
+# Secrets
 .env
 .env.*
 !.env.example
+
+# Python
 __pycache__/
 *.pyc
 *.pyo
+
+# VCS & tooling
 .git/
 .github/
+.idea/
+.vscode/
+
+# Environments
 .venv/
 venv/
-*.md
+
+# Local database and runtime data - the container gets its own
+db.sqlite3
+*.sqlite3
+data/
+media/
+staticfiles/
+
+# Archived ML project work. NOT ml_projects/FoundationModel, which
+# projects/inference/eeg_foundation.py imports at runtime.
+ml_projects/customer_churn/
+ml_projects/f1_pit_stops/
+ml_projects/FoundationModel/homedir/
+catboost_info/
+
+# Docs (README is kept: it is the image's only in-place documentation)
+docs/
+DUMMY_USERS.md
 .DS_Store

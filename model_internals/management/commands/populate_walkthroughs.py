@@ -1,4 +1,4 @@
-"""Rebuild the "How Models Work" section from the notebooks in ml_training/.
+"""Rebuild the "How Models Work" section from the notebooks in content/walkthroughs/.
 
 The walkthrough content lives in the database and the plot images live in
 MEDIA_ROOT, and neither is committed to git. This command regenerates both from
@@ -683,7 +683,7 @@ WALKTHROUGHS = [
 
 
 class Command(BaseCommand):
-    help = 'Import every "How Models Work" notebook from ml_training/.'
+    help = 'Import every "How Models Work" notebook from content/walkthroughs/.'
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -692,7 +692,7 @@ class Command(BaseCommand):
                  'Safe to run on every startup, and still picks up edited notebooks.')
 
     def handle(self, *args, **options):
-        nb_dir = settings.BASE_DIR / 'ml_training'
+        nb_dir = settings.BASE_DIR / 'content' / 'walkthroughs'
         done = skipped = missing = 0
 
         for order, spec in enumerate(WALKTHROUGHS, start=1):

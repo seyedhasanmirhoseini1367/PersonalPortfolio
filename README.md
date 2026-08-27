@@ -178,6 +178,34 @@ Both streaming (Server-Sent Events) and non-streaming modes supported.
 
 ---
 
+## Repository Layout
+
+```
+PersonalPortfolio/          Django settings, URLs, WSGI
+accounts/  contact/  projects/  resume/  stories/
+content_generator/  kaggle_archive/  monitoring/  rag_system/
+model_internals/            "How Models Work" — models, views, import command
+
+content/
+└── walkthroughs/           38 notebooks. APPLICATION DATA, not scratch work:
+                            populate_walkthroughs imports them on every deploy
+
+ml_projects/
+├── FoundationModel/        EEG foundation model. pretrain_model.py is imported
+│                           at RUNTIME by projects/inference/eeg_foundation.py
+├── customer_churn/         Azure ML training job
+└── f1_pit_stops/           Kaggle playground work
+
+docs/                       reference notes
+scripts/                    maintenance utilities (ONNX export)
+static/  templates/  media/ assets, templates, uploads (media is gitignored)
+```
+
+Two directories are load-bearing despite looking like archives:
+`content/walkthroughs/` is read at deploy time to rebuild the How Models Work
+section, and `ml_projects/FoundationModel/pretrain_model.py` is imported by the
+seizure-inference handler to reconstruct the model from a checkpoint.
+
 ## Local Development
 
 ```bash

@@ -638,7 +638,7 @@ class SeizureEEGHandler(InferenceHandler):
         if not os.path.exists(onnx_path):
             raise InferenceError(
                 f"ONNX model not found at {onnx_path}. "
-                "Please run convert_to_onnx.py to generate ONNX models."
+                "Please run scripts/convert_to_onnx.py to generate ONNX models."
             )
 
         session = _MODEL_CACHE.get(onnx_path)

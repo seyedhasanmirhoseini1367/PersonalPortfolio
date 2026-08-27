@@ -44,7 +44,7 @@ catboost_info/
 *.pt
 *.pkl
 *.joblib
-ml_training/FoundationModel/homedir/
+ml_projects/FoundationModel/homedir/
 
 # Runtime data (ChromaDB, datasets) — generated at runtime, not source
 data/
@@ -52,9 +52,13 @@ data/
 # Archives
 personalportfolio.zip
 kaggle_archive.zip
+
+# Legacy upload paths. MEDIA_ROOT is BASE_DIR/media now, but earlier versions
+# wrote uploads straight into the source tree, so these can still appear.
 profile_pics/
 projects/images/
 projects/rag_documents/
+stories/[0-9][0-9][0-9][0-9]/
 rag_system/vector_store/
 rag_system/documents/
 
