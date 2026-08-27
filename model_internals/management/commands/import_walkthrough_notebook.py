@@ -107,6 +107,15 @@ class Command(BaseCommand):
                 ),
             )
             # Idempotent re-import: wipe existing blocks and rebuild.
+            #
+            # Delete the image FILES too, not just the rows. Django never
+            # removes the file behind an ImageField, and every re-import writes
+            # fresh copies under new suffixed names -- so without this each run
+            # leaves its entire set of plots behind for good. Left unchecked
+            # this reached 1,443 orphaned files and 80 MB against 116 live ones.
+            for _blk in walkthrough.blocks.exclude(image=''):
+                if _blk.image:
+                    _blk.image.delete(save=False)
             walkthrough.blocks.all().delete()
 
             order = 0
