@@ -155,12 +155,19 @@ SOCIALACCOUNT_PROVIDERS = {
 }
 
 # ── Form field limits ─────────────────────────────────────────────────────────
-# Django's default is 1000, which is a guard against a POST with a huge number of
-# fields exhausting CPU in the parser. The "How Models Work" admin page posts one
-# inline form per content block, ~9 fields each, and the Transformer walkthrough
-# has 136 blocks (~1220 fields) - so saving it failed with TooManyFieldsSent even
-# when the only edit was a cover image. 5000 clears the longest walkthrough with
-# room to roughly triple, and still bounds the parser.
+# Django's default is 1000, a guard against a POST with a huge number of fields
+# exhausting CPU in the parser.
+#
+# This was raised because the "How Models Work" admin page posted one editable
+# inline form per content block -- 1,133 controls on the 136-block Transformer
+# walkthrough -- so saving it failed with TooManyFieldsSent even when the only
+# edit was a cover image. That inline is now read-only (the blocks are rebuilt
+# from the notebooks on every deploy, so editing them was futile anyway), which
+# brought the same form down to 312 controls.
+#
+# So the original trigger is gone and the default would now suffice. Kept as
+# headroom: the section keeps growing, and a walkthrough three times longer than
+# the current worst case should not fail to save.
 DATA_UPLOAD_MAX_NUMBER_FIELDS = 5000
 
 STATIC_URL  = '/static/'

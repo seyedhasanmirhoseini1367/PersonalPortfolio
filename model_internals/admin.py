@@ -3,16 +3,28 @@ from .models import Walkthrough, WalkthroughBlock, WalkthroughReference
 
 
 class WalkthroughBlockInline(admin.StackedInline):
+    """Read-only view of a walkthrough's content.
+
+    Blocks are generated from the notebook, and every populate_walkthroughs run
+    deletes and rebuilds all of them (and, since the image-orphan fix, deletes
+    their image files too). So anything edited or added here is destroyed on the
+    next deploy -- the form is shown for inspection, not for editing.
+
+    Making it read-only also removes ~1,100 inputs from the change form on the
+    longest walkthrough, which is what pushed it past DATA_UPLOAD_MAX_NUMBER_FIELDS.
+    """
     model  = WalkthroughBlock
-    # extra=0: the long walkthroughs already run to 136 blocks, and every form
-    # rendered here is ~9 more POST fields on save (see
-    # DATA_UPLOAD_MAX_NUMBER_FIELDS in settings). Add blocks deliberately.
     extra  = 0
     fields = ['order', 'block_type', 'content', 'image', 'caption']
+    readonly_fields = fields
     classes = ['collapse']
+    can_delete = False
     verbose_name_plural = (
-        'Content blocks - WARNING: rebuilt from the notebook, edits here are temporary'
+        'Content blocks (read-only - regenerated from the notebook on every deploy)'
     )
+
+    def has_add_permission(self, request, obj=None):
+        return False
 
 
 class WalkthroughReferenceInline(admin.TabularInline):
@@ -58,5 +70,27 @@ class WalkthroughAdmin(admin.ModelAdmin):
 
 @admin.register(WalkthroughBlock)
 class WalkthroughBlockAdmin(admin.ModelAdmin):
-    list_display  = ['walkthrough', 'order', 'block_type', 'caption']
-    list_filter   = ['block_type', 'walkthrough']
+    """Read-only, and registered only for cross-walkthrough inspection.
+
+    Blocks are machine-generated: populate_walkthroughs wipes and rebuilds all
+    of them on every deploy. Editing one here is overwritten and adding one is
+    deleted outright, so the add/change/delete affordances would only ever cost
+    someone their work. What the flat list IS good for is questions the
+    per-walkthrough inline cannot answer -- searching content across all
+    walkthroughs at once, or filtering every image block in the section.
+    """
+    list_display    = ['walkthrough', 'order', 'block_type', 'caption']
+    list_filter     = ['block_type', 'walkthrough']
+    search_fields   = ['content', 'caption']
+    list_select_related = ['walkthrough']
+    readonly_fields = ['walkthrough', 'order', 'block_type', 'content',
+                       'image', 'caption']
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
