@@ -581,6 +581,47 @@ WALKTHROUGHS = [
                  authors='Schulman et al., 2017'),
         ],
     ),
+    dict(
+        notebook='how_models_work_self_improving_llms.ipynb',
+        title='Self-Improving LLMs',
+        tagline='A model generating its own training data - and the four ways that '
+                'loop quietly breaks',
+        summary='Pass@k inversion computed exactly, so a "better" model provably '
+                'solves fewer problems; entropy collapse starving the loop of the '
+                'diversity it runs on; the arithmetic of why a self-judge gets hacked; '
+                'and Gaussian model collapse matching its (1-1/n)^t prediction under '
+                'replacement but not under accumulation.',
+        category='transformers', difficulty='advanced', icon='\U0001f504',
+        references=[
+            dict(title='Self-Improvement of Large Language Models: A Technical '
+                       'Overview and Future Outlook',
+                 authors='Yang et al., 2026',
+                 url='https://arxiv.org/abs/2603.25681'),
+            dict(title='More Convincing, Not More Correct: Self-Play Reward Hacking '
+                       'of Reference-Free LLM Judges',
+                 authors='Zhou, 2026',
+                 url='https://arxiv.org/abs/2607.05904'),
+            dict(title='When RLVR Shrinks the Reasoning Boundary: Diagnosing Pass@k '
+                       'Inversion',
+                 authors='Zhou, 2026',
+                 url='https://arxiv.org/abs/2607.20543'),
+            dict(title='Curriculum Reinforcement Learning Can Incentivize Reasoning '
+                       'Capacity in LLMs Beyond the Base Model',
+                 authors='Cai et al., 2026',
+                 url='https://arxiv.org/abs/2606.22317'),
+            # Cited by the above and by the notebook text; listed without URLs
+            # because I did not open these, only the four above.
+            dict(title='STaR: Bootstrapping Reasoning With Reasoning',
+                 authors='Zelikman et al., 2022'),
+            dict(title='Large Language Models Cannot Self-Correct Reasoning Yet',
+                 authors='Huang et al., 2023'),
+            dict(title='The Curse of Recursion: Training on Generated Data Makes '
+                       'Models Forget', authors='Shumailov et al., 2024 (Nature)'),
+            dict(title='Is Model Collapse Inevitable? Breaking the Curse of Recursion '
+                       'by Accumulating Real and Synthetic Data',
+                 authors='Gerstgrasser et al., 2024'),
+        ],
+    ),
 ]
 
 
