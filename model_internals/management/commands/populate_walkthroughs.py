@@ -235,6 +235,57 @@ WALKTHROUGHS = [
         )],
     ),
     dict(
+        notebook='how_models_work_gradient_boosting.ipynb',
+        title='Gradient Boosting from Scratch',
+        tagline='Fit the negative gradient - and why "fit the residual" is only the '
+                'squared-error special case',
+        summary='Three rounds built by hand and matched to scikit-learn exactly, the '
+                'learning rate shown to trade against the number of rounds, the loss '
+                'swapped to show where robustness comes from, and the second-order '
+                'leaf value that turns this into XGBoost.',
+        category='trees', difficulty='intermediate', icon='\U0001f4c9',
+        references=[
+            dict(title='Greedy Function Approximation: A Gradient Boosting Machine',
+                 authors='Friedman, 2001 (Annals of Statistics)'),
+            dict(title='Stochastic Gradient Boosting',
+                 authors='Friedman, 2002 (Computational Statistics & Data Analysis)'),
+        ],
+    ),
+    dict(
+        notebook='how_models_work_stacking.ipynb',
+        title='Stacking & Blending',
+        tagline='Train a model to combine models - and why out-of-fold predictions '
+                'are the whole method',
+        summary='The third way to ensemble, after bagging and boosting. Out-of-fold '
+                'meta-features built by hand and contrasted with the in-sample '
+                'version that quietly hands all the weight to whichever model '
+                'memorised best, plus what the meta-learner does that averaging '
+                'cannot.',
+        category='trees', difficulty='intermediate', icon='\U0001f9f1',
+        references=[
+            dict(title='Stacked Generalization', authors='Wolpert, 1992 (Neural Networks)'),
+            dict(title='Stacked Regressions', authors='Breiman, 1996 (Machine Learning)'),
+        ],
+    ),
+    dict(
+        notebook='how_models_work_feature_importance.ipynb',
+        title='Feature Importance & SHAP',
+        tagline='Three methods, three different questions - and the default one is '
+                'measurably biased',
+        summary='Impurity importance shown ranking pure noise by cardinality, '
+                'permutation importance and its blind spot with correlated features, '
+                'and exact Shapley values enumerated over every coalition with the '
+                'efficiency, dummy and symmetry axioms checked directly.',
+        category='trees', difficulty='intermediate', icon='\U0001f50d',
+        references=[
+            dict(title='A Unified Approach to Interpreting Model Predictions',
+                 authors='Lundberg & Lee, 2017 (NeurIPS)'),
+            dict(title='A Value for n-Person Games', authors='Shapley, 1953'),
+            dict(title='Conditional Variable Importance for Random Forests',
+                 authors='Strobl et al., 2008 (BMC Bioinformatics)'),
+        ],
+    ),
+    dict(
         notebook='how_models_work_xgboost.ipynb',
         title='XGBoost',
         tagline='Second-order Taylor expansion, similarity scores, and the closed-form gain',
@@ -398,6 +449,24 @@ WALKTHROUGHS = [
         )],
     ),
     dict(
+        notebook='how_models_work_tokenization.ipynb',
+        title='Tokenization: Byte-Pair Encoding',
+        tagline='How text becomes the integers every transformer page starts from',
+        summary='BPE trained by hand, merge by merge, with the pair counts that drove '
+                'each one - then applied to unseen words to show why there is no '
+                'unknown token, and why counting letters, doing arithmetic and '
+                'writing non-English text are all harder than they look.',
+        category='transformers', difficulty='beginner', icon='\U0001f524',
+        references=[
+            dict(title='Neural Machine Translation of Rare Words with Subword Units',
+                 authors='Sennrich, Haddow & Birch, 2016 (ACL)'),
+            dict(title='A New Algorithm for Data Compression',
+                 authors='Gage, 1994 (C Users Journal)'),
+            dict(title='SentencePiece: A simple and language independent subword '
+                       'tokenizer', authors='Kudo & Richardson, 2018 (EMNLP)'),
+        ],
+    ),
+    dict(
         notebook='how_models_work_bert_eeg.ipynb',
         title='BERT on EEG',
         tagline='Bidirectional masked reconstruction - the same encoder, no causal mask, '
@@ -487,6 +556,29 @@ WALKTHROUGHS = [
                  authors='Dai et al., 2024'),
             dict(title='Efficient Streaming Language Models with Attention Sinks',
                  authors='Xiao et al., 2024'),
+        ],
+    ),
+    dict(
+        notebook='how_models_work_rlhf_grpo.ipynb',
+        title='RLHF, GRPO & Constitutional AI',
+        tagline='What happens after pretraining - the stage that turns a text '
+                'continuer into an assistant',
+        summary='Reward models fitted from pairwise comparisons, the KL penalty shown '
+                'stopping reward hacking as beta falls, GRPO advantages computed by '
+                'hand for a group of eight, the clipped objective term by term, and '
+                'the critique-revise loop of Constitutional AI.',
+        category='transformers', difficulty='advanced', icon='\U0001f9ed',
+        references=[
+            dict(title='DeepSeekMath: Pushing the Limits of Mathematical Reasoning in '
+                       'Open Language Models (introduces GRPO)',
+                 authors='Shao et al., 2024'),
+            dict(title='Constitutional AI: Harmlessness from AI Feedback',
+                 authors='Bai et al., 2022',
+                 url='https://arxiv.org/abs/2212.08073'),
+            dict(title='Training language models to follow instructions with human '
+                       'feedback', authors='Ouyang et al., 2022 (NeurIPS)'),
+            dict(title='Proximal Policy Optimization Algorithms',
+                 authors='Schulman et al., 2017'),
         ],
     ),
 ]
