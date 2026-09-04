@@ -22,6 +22,27 @@ from model_internals.models import Walkthrough, WalkthroughReference
 # margin methods, unsupervised, and finally neural networks and transformers.
 WALKTHROUGHS = [
     dict(
+        notebook='how_models_work_eda.ipynb',
+        title='Exploratory Data Analysis',
+        tagline='The four assumptions under every statistic you will compute, and '
+                'the one figure that checks all of them',
+        summary='Following the NIST/SEMATECH handbook: the four assumptions that '
+                'make a mean and a standard error mean anything, the 4-plot built '
+                'panel by panel, five series where four are broken and no summary '
+                'statistic notices, and the measured cost of skipping the check - a '
+                '95% confidence interval that contains the truth 47% of the time.',
+        category='foundations', difficulty='beginner', icon='🔎',
+        references=[
+            dict(title='NIST/SEMATECH e-Handbook of Statistical Methods, ch. 1: '
+                       'Exploratory Data Analysis',
+                 authors='NIST/SEMATECH',
+                 url='https://www.itl.nist.gov/div898/handbook/eda/eda.htm'),
+            dict(title='Exploratory Data Analysis', authors='Tukey, 1977'),
+            dict(title="Graphs in Statistical Analysis (Anscombe's quartet)",
+                 authors='Anscombe, 1973 (The American Statistician)'),
+        ],
+    ),
+    dict(
         notebook='how_models_work_learning_concepts.ipynb',
         title='How Models Learn: The Concepts',
         tagline='Loss, gradient, learning rate, bias, variance, overfitting - defined with '
