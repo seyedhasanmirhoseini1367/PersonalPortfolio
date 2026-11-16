@@ -21,6 +21,9 @@ class Walkthrough(models.Model):
         # not because they are a different kind of thing.
         ('deep',         'Neural Networks'),
         ('transformers', 'Transformers & Attention'),
+        # Paper-by-paper pages: each one follows a single landmark paper
+        # rather than a topic, so they sit together at the end.
+        ('papers',       'Ten Landmark Papers'),
     ]
 
     # One-line description shown under each group heading.
@@ -34,6 +37,7 @@ class Walkthrough(models.Model):
         'unsupervised': 'No labels: find structure, or compress',
         'deep':         'Layers, weight sharing, memory',
         'transformers': 'Drop recurrence, attend to everything at once',
+        'papers':       'The ten papers an AI engineering interview assumes you have read',
     }
 
     DIFFICULTY_CHOICES = [
@@ -86,10 +90,14 @@ class WalkthroughBlock(models.Model):
     TEXT   = 'text'
     OUTPUT = 'output'
     IMAGE  = 'image'
+    # An animated scene: JSON from content/walkthroughs/hmw_motion.py, drawn
+    # in the browser by static/js/hmw-motion.js.
+    MOTION = 'motion'
     BLOCK_TYPE_CHOICES = [
         (TEXT,   'Explanation (markdown)'),
         (OUTPUT, 'Computed output (numbers)'),
         (IMAGE,  'Image / plot'),
+        (MOTION, 'Motion graphic (scene JSON)'),
     ]
 
     walkthrough = models.ForeignKey(Walkthrough, on_delete=models.CASCADE, related_name='blocks')

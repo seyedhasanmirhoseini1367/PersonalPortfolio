@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load walkthrough_tags %}
+{% load static walkthrough_tags %}
 
 {% block title %}{{ walkthrough.title }} — HasanPortfolio{% endblock %}
 {% block meta_description %}{{ walkthrough.tagline|default:walkthrough.summary|truncatechars:160 }}{% endblock %}
@@ -148,6 +148,59 @@
 .hmw-image-panel { text-align: center; padding: 1rem; }
 .hmw-image-panel img { max-width: 100%; border-radius: 6px; }
 
+/* ── Motion graphics (static/js/hmw-motion.js) ───────────────── */
+.hmw-motion {
+    background: #0f1226;
+    border: 1px solid #262b4d;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 6px 24px rgba(15, 18, 38, .18);
+}
+.hmw-motion-stage svg { display: block; width: 100%; height: auto; cursor: pointer; }
+.hmw-motion-beat {
+    min-height: 2.6em;
+    padding: .55rem 1rem .2rem;
+    color: #e6e9ff;
+    font-size: .9rem;
+    line-height: 1.45;
+    text-align: center;
+}
+.hmw-motion-bar {
+    display: flex;
+    align-items: center;
+    gap: .7rem;
+    padding: .35rem .9rem .6rem;
+}
+.hmw-motion-btn {
+    flex: none;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    border: 1px solid #3b4275;
+    background: #171b36;
+    color: #22d3ee;
+    font-size: .75rem;
+    cursor: pointer;
+}
+.hmw-motion-btn:hover { background: #262b4d; }
+.hmw-motion-btn:focus-visible, .hmw-motion-range:focus-visible { outline: 2px solid #22d3ee; outline-offset: 2px; }
+.hmw-motion-range { flex: 1; min-width: 0; accent-color: #22d3ee; }
+.hmw-motion-clock {
+    flex: none;
+    font-family: 'Cascadia Code', Consolas, monospace;
+    font-size: .72rem;
+    color: #7c84b0;
+}
+.hmw-motion-caption {
+    padding: .5rem .9rem;
+    font-size: .78rem;
+    font-weight: 700;
+    color: #c7cbf0;
+    background: #171b36;
+    border-top: 1px solid #262b4d;
+}
+@media (max-width: 560px) { .hmw-motion-clock { display: none; } }
+
 /* ── References ──────────────────────────────────────────────── */
 .hmw-references {
     margin-top: 2.5rem;
@@ -226,6 +279,9 @@
                     {% if block.image %}<img src="{{ block.image.url }}" alt="{{ block.caption }}">{% endif %}
                     {% if block.caption %}<div class="hmw-panel-caption" style="border-bottom:none;border-top:1px solid #e2e8f0;">{{ block.caption }}</div>{% endif %}
                 </div>
+
+            {% elif block.block_type == 'motion' %}
+                <div class="hmw-block hmw-motion" data-spec="{{ block.content }}"></div>
             {% endif %}
         {% endfor %}
 
@@ -251,6 +307,7 @@
 {% endblock %}
 
 {% block extra_js %}
+<script defer src="{% static 'js/hmw-motion.js' %}"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"
         integrity="sha384-7zkQWkzuo3B5mTepMUcHkMB5jZaolc2xDwL6VFqjFALcbeS9Ggm/Yr2r3Dy4lfFg"
         crossorigin="anonymous"></script>

@@ -547,6 +547,40 @@ WALKTHROUGHS = [
         )],
     ),
     dict(
+        notebook='how_models_work_positional_embeddings.ipynb',
+        title='Positional Embeddings: From Sinusoids to RoPE',
+        tagline='Attention cannot see word order - how every model since 2017 has '
+                'told it, and why rotating q and k won',
+        summary='The shuffle test that shows attention is order-blind, learned and '
+                'sinusoidal tables, RoPE worked by hand in 2-D and checked in 128-D, '
+                'its long-range decay, the split-half vs interleaved trap, ALiBi, '
+                'NoPE and position interpolation - with three animated scenes.',
+        category='transformers', difficulty='intermediate', icon='\U0001f9ed',
+        references=[
+            dict(title='Understanding Positional Embeddings in Modern LLMs',
+                 authors='Raschka, 2026 (Ahead of AI)',
+                 url='https://magazine.sebastianraschka.com/p/understanding-positional-embeddings'),
+            dict(title='RoFormer: Enhanced Transformer with Rotary Position Embedding',
+                 authors='Su et al., 2021', url='https://arxiv.org/abs/2104.09864'),
+            dict(title='Attention Is All You Need', authors='Vaswani et al., 2017 (NeurIPS)',
+                 url='https://arxiv.org/abs/1706.03762'),
+            dict(title='Train Short, Test Long: Attention with Linear Biases Enables Input '
+                       'Length Extrapolation', authors='Press et al., 2022 (ICLR)',
+                 url='https://arxiv.org/abs/2108.12409'),
+            dict(title='Extending Context Window of Large Language Models via Positional '
+                       'Interpolation', authors='Chen et al., 2023',
+                 url='https://arxiv.org/abs/2306.15595'),
+            dict(title='YaRN: Efficient Context Window Extension of Large Language Models',
+                 authors='Peng et al., 2023', url='https://arxiv.org/abs/2309.00071'),
+            dict(title='The Impact of Positional Encoding on Length Generalization in '
+                       'Transformers', authors='Kazemnejad et al., 2023 (NeurIPS)',
+                 url='https://arxiv.org/abs/2305.19466'),
+            dict(title='Exploring the Limits of Transfer Learning with a Unified '
+                       'Text-to-Text Transformer (T5)', authors='Raffel et al., 2020 (JMLR)',
+                 url='https://arxiv.org/abs/1910.10683'),
+        ],
+    ),
+    dict(
         notebook='how_models_work_kimi_k3.ipynb',
         title='Kimi K3: Delta Attention, Attention Residuals, LatentMoE',
         tagline='A 2026 frontier architecture taken apart equation by equation - linear '
@@ -699,6 +733,176 @@ WALKTHROUGHS = [
                        'by Accumulating Real and Synthetic Data',
                  authors='Gerstgrasser et al., 2024'),
         ],
+    ),
+
+    # ── Ten Landmark Papers ─────────────────────────────────────────────
+    # One page per paper, in the order an interview reading list puts them.
+    # Every URL below was opened and its title checked against arXiv.
+    dict(
+        notebook='how_models_work_paper_attention.ipynb',
+        title='Attention Is All You Need',
+        tagline='Drop recurrence, keep attention: the paper behind every model since',
+        summary='Why recurrence is slow and forgetful, scaled dot-product attention as a soft '
+                'lookup worked by hand, the sqrt(d_k) scaling measured, multi-head cost, '
+                'masking, and the paper\'s own numbers - 65M/213M parameters counted, the '
+                'warm-up schedule, 28.4 BLEU.',
+        category='papers', difficulty='intermediate', icon='\U0001f4dc',
+        references=[dict(title='Attention Is All You Need', authors='Vaswani et al., 2017 (NeurIPS)',
+                         url='https://arxiv.org/abs/1706.03762')],
+    ),
+    dict(
+        notebook='how_models_work_paper_gpt.ipynb',
+        title='GPT: Generative Pre-Training',
+        tagline='Predict the next token on unlabelled books, then fine-tune - the recipe '
+                'every GPT kept',
+        summary='A tiny GPT trained for real, its causal mask verified, generation animated '
+                'with the model\'s own probabilities, GPT-1\'s 117M parameters counted, the '
+                'task input formats, and a transfer test: zero-shot LM scoring picks the '
+                'grammatical sentence every time.',
+        category='papers', difficulty='intermediate', icon='✍️',
+        references=[
+            dict(title='Improving Language Understanding by Generative Pre-Training',
+                 authors='Radford et al., 2018 (OpenAI)',
+                 url='https://cdn.openai.com/research-covers/language-unsupervised/'
+                     'language_understanding_paper.pdf'),
+            dict(title='Attention Is All You Need', authors='Vaswani et al., 2017 (NeurIPS)',
+                 url='https://arxiv.org/abs/1706.03762'),
+        ],
+    ),
+    dict(
+        notebook='how_models_work_paper_bert.ipynb',
+        title='BERT: Pre-training of Deep Bidirectional Transformers',
+        tagline='Hide 15% of the tokens and recover them from both sides',
+        summary='Why a bidirectional LM would cheat, the 80/10/10 masking rule simulated on 2M '
+                'tokens, a task only a bidirectional model can solve (100% vs 10% for causal), '
+                'and BERT-base/large counted to 110M and 340M.',
+        category='papers', difficulty='intermediate', icon='\U0001f3ad',
+        references=[
+            dict(title='BERT: Pre-training of Deep Bidirectional Transformers for Language '
+                       'Understanding', authors='Devlin et al., 2019 (NAACL)',
+                 url='https://arxiv.org/abs/1810.04805'),
+            dict(title='RoBERTa: A Robustly Optimized BERT Pretraining Approach',
+                 authors='Liu et al., 2019', url='https://arxiv.org/abs/1907.11692'),
+        ],
+    ),
+    dict(
+        notebook='how_models_work_paper_lora.ipynb',
+        title='LoRA: Low-Rank Adaptation',
+        tagline='Freeze the model, learn a rank-r update: 10,000x fewer trainable parameters',
+        summary='The parameter arithmetic up to GPT-3, a rank-4 update learned at ranks 1-16, '
+                'full fine-tuning\'s singular values animated as they concentrate, LoRA vs '
+                'head-only vs full on unseen digit classes, and merging verified.',
+        category='papers', difficulty='intermediate', icon='\U0001f9e9',
+        references=[
+            dict(title='LoRA: Low-Rank Adaptation of Large Language Models',
+                 authors='Hu et al., 2021 (ICLR 2022)', url='https://arxiv.org/abs/2106.09685'),
+            dict(title='QLoRA: Efficient Finetuning of Quantized LLMs',
+                 authors='Dettmers et al., 2023', url='https://arxiv.org/abs/2305.14314'),
+        ],
+    ),
+    dict(
+        notebook='how_models_work_paper_peft.ipynb',
+        title='PEFT: Parameter-Efficient Fine-Tuning',
+        tagline='Adapters, prefix and prompt tuning, BitFit, (IA)^3 and LoRA - one frozen '
+                'model, six ways in',
+        summary='All six methods implemented in one small transformer and compared on the '
+                'same new task, each verified to start as a no-op, plus what each would '
+                'train on a 7B model - from 0.001% to 0.5%.',
+        category='papers', difficulty='intermediate', icon='\U0001f527',
+        references=[
+            dict(title='Parameter-Efficient Transfer Learning for NLP',
+                 authors='Houlsby et al., 2019 (ICML)', url='https://arxiv.org/abs/1902.00751'),
+            dict(title='Prefix-Tuning: Optimizing Continuous Prompts for Generation',
+                 authors='Li & Liang, 2021 (ACL)', url='https://arxiv.org/abs/2101.00190'),
+            dict(title='The Power of Scale for Parameter-Efficient Prompt Tuning',
+                 authors='Lester et al., 2021 (EMNLP)', url='https://arxiv.org/abs/2104.08691'),
+            dict(title='BitFit: Simple Parameter-efficient Fine-tuning for Transformer-based '
+                       'Masked Language-models', authors='Ben Zaken et al., 2022 (ACL)',
+                 url='https://arxiv.org/abs/2106.10199'),
+            dict(title='Few-Shot Parameter-Efficient Fine-Tuning is Better and Cheaper than '
+                       'In-Context Learning ((IA)^3)', authors='Liu et al., 2022 (NeurIPS)',
+                 url='https://arxiv.org/abs/2205.05638'),
+            dict(title='LoRA: Low-Rank Adaptation of Large Language Models',
+                 authors='Hu et al., 2021', url='https://arxiv.org/abs/2106.09685'),
+        ],
+    ),
+    dict(
+        notebook='how_models_work_paper_rag.ipynb',
+        title='RAG: Retrieval-Augmented Generation',
+        tagline='Give the model an index it can search, and train it to use what it finds',
+        summary='Retrieval as inner-product search worked by hand, recall@k and where '
+                'term matching fails, RAG-Sequence vs RAG-Token enumerated and checked, '
+                'and hot-swapping the index without retraining.',
+        category='papers', difficulty='intermediate', icon='\U0001f4da',
+        references=[
+            dict(title='Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks',
+                 authors='Lewis et al., 2020 (NeurIPS)', url='https://arxiv.org/abs/2005.11401'),
+            dict(title='Dense Passage Retrieval for Open-Domain Question Answering',
+                 authors='Karpukhin et al., 2020 (EMNLP)', url='https://arxiv.org/abs/2004.04906'),
+        ],
+    ),
+    dict(
+        notebook='how_models_work_paper_vae.ipynb',
+        title='VAE: Auto-Encoding Variational Bayes',
+        tagline='A latent space you can sample from: the ELBO and the reparameterisation trick',
+        summary='log p(x) = ELBO + KL verified exactly, the gap closing in motion, '
+                'reparameterisation measured at 7x lower variance than REINFORCE, and a 2-D '
+                'VAE on digits whose latent space is walked and decoded.',
+        category='papers', difficulty='advanced', icon='\U0001f300',
+        references=[dict(title='Auto-Encoding Variational Bayes', authors='Kingma & Welling, 2013 (ICLR 2014)',
+                         url='https://arxiv.org/abs/1312.6114')],
+    ),
+    dict(
+        notebook='how_models_work_paper_gan.ipynb',
+        title='GANs: Generative Adversarial Networks',
+        tagline='A generator and a discriminator in a minimax game - no likelihood required',
+        summary='The optimal discriminator found by optimisation, max V = -log 4 + 2 JSD '
+                'checked, the non-saturating loss, and a 1-D GAN trained frame by frame from '
+                'a narrow lump to both modes.',
+        category='papers', difficulty='advanced', icon='⚔️',
+        references=[
+            dict(title='Generative Adversarial Networks', authors='Goodfellow et al., 2014 (NeurIPS)',
+                 url='https://arxiv.org/abs/1406.2661'),
+            dict(title='Unsupervised Representation Learning with Deep Convolutional Generative '
+                       'Adversarial Networks (DCGAN)', authors='Radford et al., 2015',
+                 url='https://arxiv.org/abs/1511.06434'),
+            dict(title='Wasserstein GAN', authors='Arjovsky et al., 2017',
+                 url='https://arxiv.org/abs/1701.07875'),
+        ],
+    ),
+    dict(
+        notebook='how_models_work_paper_diffusion.ipynb',
+        title='Diffusion Models: DDPM and Stable Diffusion',
+        tagline='Learn to remove noise, then start from pure noise',
+        summary='The 1000-step forward chain checked against its closed form, a denoiser '
+                'trained to predict noise, sampling animated from noise to data, '
+                'classifier-free guidance from too little to too much, and what latent '
+                'diffusion saves.',
+        category='papers', difficulty='advanced', icon='\U0001f32b️',
+        references=[
+            dict(title='Denoising Diffusion Probabilistic Models', authors='Ho et al., 2020 (NeurIPS)',
+                 url='https://arxiv.org/abs/2006.11239'),
+            dict(title='High-Resolution Image Synthesis with Latent Diffusion Models',
+                 authors='Rombach et al., 2022 (CVPR)', url='https://arxiv.org/abs/2112.10752'),
+            dict(title='Classifier-Free Diffusion Guidance', authors='Ho & Salimans, 2022',
+                 url='https://arxiv.org/abs/2207.12598'),
+            dict(title='Deep Unsupervised Learning using Nonequilibrium Thermodynamics',
+                 authors='Sohl-Dickstein et al., 2015 (ICML)', url='https://arxiv.org/abs/1503.03585'),
+            dict(title='Denoising Diffusion Implicit Models', authors='Song et al., 2021 (ICLR)',
+                 url='https://arxiv.org/abs/2010.02502'),
+        ],
+    ),
+    dict(
+        notebook='how_models_work_paper_vit.ipynb',
+        title='ViT: An Image is Worth 16x16 Words',
+        tagline='Cut the image into patches and hand them to a plain Transformer',
+        summary='Patchify checked, ViT-B/L/H counted to within 1% of the paper, the '
+                'data-hunger result reproduced (a CNN\'s lead shrinks from 32 to 6 points as '
+                'data grows), learned positions that rediscover the grid, and [class] attention.',
+        category='papers', difficulty='intermediate', icon='\U0001f5bc️',
+        references=[dict(title='An Image is Worth 16x16 Words: Transformers for Image Recognition '
+                               'at Scale', authors='Dosovitskiy et al., 2020 (ICLR 2021)',
+                         url='https://arxiv.org/abs/2010.11929')],
     ),
 ]
 
