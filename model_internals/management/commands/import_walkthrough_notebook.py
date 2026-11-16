@@ -27,22 +27,32 @@ def _stream_text(outputs):
     return ''.join(parts).strip()
 
 
-def _png_outputs(outputs):
-    images = []
+MOTION_MIME = 'application/vnd.hmw.motion+json'
+
+
+def _visual_outputs(outputs):
+    """PNG plots and motion scenes, in the order the cell produced them.
+
+    Yields ('png', base64_str) or ('motion', spec_dict).
+    """
     for out in outputs:
         if out.get('output_type') in ('display_data', 'execute_result'):
             data = out.get('data', {})
+            spec = data.get(MOTION_MIME)
+            if spec:
+                if isinstance(spec, str):
+                    spec = json.loads(spec)
+                yield 'motion', spec
+                continue
             png = data.get('image/png')
             if png:
-                png_str = ''.join(png) if isinstance(png, list) else png
-                images.append(png_str)
-    return images
+                yield 'png', ''.join(png) if isinstance(png, list) else png
 
 
 class Command(BaseCommand):
     help = (
         'Import a Jupyter notebook into a Walkthrough for the "How Models Work" section. '
-        'Only markdown text and cell OUTPUTS (printed numbers, plots) are imported — '
+        'Only markdown text and cell OUTPUTS (printed numbers, plots, motion scenes) are imported — '
         'no source code is ever stored.'
     )
 
@@ -137,7 +147,7 @@ class Command(BaseCommand):
                 elif cell_type == 'code':
                     outputs = cell.get('outputs', [])
                     text = _stream_text(outputs)
-                    images = _png_outputs(outputs)
+                    visuals = list(_visual_outputs(outputs))
 
                     if text:
                         order += 1
@@ -147,8 +157,18 @@ class Command(BaseCommand):
                         )
                         created += 1
 
-                    for i, png_b64 in enumerate(images):
+                    for kind, payload in visuals:
                         order += 1
+                        if kind == 'motion':
+                            WalkthroughBlock.objects.create(
+                                walkthrough=walkthrough, order=order,
+                                block_type=WalkthroughBlock.MOTION,
+                                content=json.dumps(payload, separators=(',', ':')),
+                                caption=str(payload.get('caption', ''))[:300],
+                            )
+                            created += 1
+                            continue
+                        png_b64 = payload
                         block = WalkthroughBlock(
                             walkthrough=walkthrough, order=order,
                             block_type=WalkthroughBlock.IMAGE,
