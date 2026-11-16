@@ -135,6 +135,9 @@ LOGOUT_REDIRECT_URL = '/'
 SESSION_COOKIE_AGE     = 60 * 60 * 24 * 30   # 30 days
 SESSION_SAVE_EVERY_REQUEST = True              # refresh expiry on each request
 
+# Logs the real reason when a Google/GitHub login fails (see accounts/adapters.py).
+SOCIALACCOUNT_ADAPTER = 'accounts.adapters.LoggingSocialAccountAdapter'
+
 SOCIALACCOUNT_PROVIDERS = {
     'google': {
         'APP': {
