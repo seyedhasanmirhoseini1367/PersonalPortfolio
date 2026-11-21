@@ -47,6 +47,9 @@
             box-sizing: border-box;
         }
 
+        /* Base size for the whole site: rem-based sizes scale from this. */
+        html { font-size: 15px; }
+
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             line-height: 1.6;
@@ -80,7 +83,7 @@
         }
 
         .logo {
-            font-size: 1.35rem;
+            font-size: 1.25rem;
             font-weight: bold;
             white-space: nowrap;
             flex-shrink: 0;
@@ -110,7 +113,7 @@
             color: white;
             text-decoration: none;
             font-weight: 500;
-            font-size: 0.85rem;
+            font-size: 0.8rem;
             white-space: nowrap;
             transition: opacity 0.3s;
             padding: 0.4rem 0.1rem;
@@ -560,7 +563,8 @@
                             <div class="user-dropdown" onclick="toggleDropdown()">
                                 <div class="user-avatar">
                                     {% if user.profile_picture %}
-                                        <img src="{{ user.profile_picture.url }}" alt="{{ user.username }}"
+                                        <img src="{{ user.profile_picture.url }}" alt=""
+                                             onerror="this.replaceWith(document.createTextNode('{{ user.username|first|upper|escapejs }}'))"
                                              style="width:32px;height:32px;border-radius:50%;object-fit:cover;">
                                     {% else %}
                                         {{ user.username|first|upper }}
