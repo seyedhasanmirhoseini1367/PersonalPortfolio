@@ -241,7 +241,7 @@ def grade_relevance(question: str, chunks: list, groq_api_key: str = '') -> list
 
         llm = ChatGroq(
             api_key=key,
-            model='llama-3.1-8b-instant',
+            model=django_settings.RAG_CONFIG.get('GROQ_MODEL', 'qwen/qwen3.8-27b'),
             temperature=0,
             max_tokens=10,   # only need {"relevant": true/false}
         )

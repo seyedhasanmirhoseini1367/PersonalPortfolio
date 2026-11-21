@@ -483,6 +483,8 @@ def _run_pipeline_now(job_id: str, seo_params: dict = None):
             client_id            = f"company_{job.company_profile_id}"
             client_documents     = []
             profile              = job.company_profile
+            from .pipeline.agents.ingestion import ensure_company_indexed
+            ensure_company_indexed(profile)
             structured_competitors = list(profile.competitors.values_list('description', flat=True))
             competitor_documents = structured_competitors or (
                 [profile.competitor_info] if profile.competitor_info else []

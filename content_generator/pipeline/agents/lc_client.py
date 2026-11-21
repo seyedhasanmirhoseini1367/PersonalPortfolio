@@ -47,22 +47,12 @@ def lc_generate(prompt: str, model: str = None) -> str:
                 raise
 
 
-# ── RAG retriever (direct ChromaDB — no LangChain wrapper) ───
+# ── RAG retriever (database chunks ranked with BM25) ─────────
 
 def lc_retrieve(client_id: str, query: str, scope_ids: list[str] = None, k: int = 4) -> list[str]:
-    """Query the client's ChromaDB collection directly."""
+    """The k most relevant stored chunks for this client."""
     try:
-        from .ingestion import _get_collection, embed_query
-        collection = _get_collection(client_id)
-        where = None
-        if scope_ids:
-            where = {"scope_id": scope_ids[0]} if len(scope_ids) == 1 \
-                else {"scope_id": {"$in": scope_ids}}
-        results = collection.query(
-            query_embeddings=[embed_query(query)],
-            n_results=min(k, collection.count() or 1),
-            where=where,
-        )
-        return results["documents"][0] if results.get("documents") else []
+        from .ingestion import query_collection
+        return query_collection(client_id, query, n_results=k, scope_ids=scope_ids)
     except Exception:
         return []

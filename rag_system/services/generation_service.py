@@ -30,7 +30,7 @@ class GenerationService:
         self.openai_model      = cfg.get('OPENAI_MODEL', 'gpt-4o-mini')
         self.anthropic_model   = cfg.get('ANTHROPIC_MODEL', 'claude-haiku-4-5-20251001')
         self.gemini_model      = cfg.get('GEMINI_MODEL', 'gemini-2.5-flash')
-        self.groq_model        = cfg.get('GROQ_MODEL', 'llama-3.1-8b-instant')
+        self.groq_model        = cfg.get('GROQ_MODEL', 'qwen/qwen3.8-27b')
         self.max_tokens        = cfg.get('MAX_TOKENS', 800)
 
     # ── Public: non-streaming ─────────────────────────────────────────────────

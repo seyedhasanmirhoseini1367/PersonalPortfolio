@@ -1,6 +1,6 @@
 # rag_system/services/embedding_service.py
 """
-Embedding service — uses Gemini text-embedding-004 (free tier: 1,500 req/day).
+Embedding service — Gemini embeddings (RAG_CONFIG["EMBEDDING_MODEL"], 768 dims).
 Replaces sentence-transformers/BGE to eliminate the ~1 GB PyTorch memory footprint.
 """
 import pickle
@@ -14,7 +14,8 @@ from ..models import DocumentChunk
 
 logger = logging.getLogger(__name__)
 
-_EMBED_DIM = 768  # Gemini text-embedding-004 output dimension
+_EMBED_DIM = 768  # requested from the model (output_dimensionality)
+_BATCH = 50       # texts per embedding request
 
 
 class EmbeddingService:
@@ -37,16 +38,29 @@ class EmbeddingService:
             return np.zeros((len(texts), _EMBED_DIM), dtype=np.float32)
         try:
             from google import genai
+            from google.genai import types
             client  = genai.Client(api_key=api_key)
+            cfg     = types.EmbedContentConfig(output_dimensionality=_EMBED_DIM)
             vectors = []
-            for i, text in enumerate(texts):
-                if i > 0 and i % 10 == 0:
-                    time.sleep(1)  # free tier rate limit guard
-                resp = client.models.embed_content(
-                    model    = 'models/text-embedding-004',
-                    contents = text,
-                )
-                vectors.append(resp.embeddings[0].values)
+            # Many texts per request (the free tier limits requests per
+            # minute), with a pause and retry when the limit is hit.
+            for start in range(0, len(texts), _BATCH):
+                part = texts[start:start + _BATCH]
+                for attempt in range(4):
+                    try:
+                        resp = client.models.embed_content(
+                            model    = self.model_name,
+                            contents = part,
+                            config   = cfg,
+                        )
+                        break
+                    except Exception as exc:
+                        if attempt < 3 and ('429' in str(exc) or 'RESOURCE_EXHAUSTED' in str(exc)
+                                            or '503' in str(exc)):
+                            time.sleep(15 * (attempt + 1))
+                            continue
+                        raise
+                vectors.extend(e.values for e in resp.embeddings)
             return np.array(vectors, dtype=np.float32)
         except Exception as exc:
             logger.error('Gemini embedding error: %s', exc)
@@ -72,7 +86,12 @@ class EmbeddingService:
         embeddings = self.generate_embeddings(texts)
         for chunk, vec in zip(chunks, embeddings):
             chunk.embedding = pickle.dumps(vec.astype(np.float32))
-            chunk.save(update_fields=['embedding'])
+            # Vectors from different models are not comparable; remember which
+            # one made this vector so a model change triggers re-embedding.
+            meta = dict(chunk.metadata or {})
+            meta['embedding_model'] = self.model_name if np.any(vec) else ''
+            chunk.metadata = meta
+            chunk.save(update_fields=['embedding', 'metadata'])
         logger.debug('EmbeddingService: stored %d chunk embeddings', len(chunks))
 
     # ── Load from DB ──────────────────────────────────────────────────────────
