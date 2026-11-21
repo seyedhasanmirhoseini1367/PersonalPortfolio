@@ -3,18 +3,78 @@
 Auto-sync: whenever a Project or any Resume model is saved in the admin / shell,
 its RAG embeddings are automatically rebuilt in a daemon background thread.
 No manual `ingest_from_db` needed after the first setup.
+
+Rebuilds are debounced per document: many saves in a row (e.g. the populate
+commands on start-up) lead to one rebuild a moment after the last save, and
+the same document is never rebuilt by two threads at once.
 """
 import threading
 import logging
+
+from django.conf import settings
+from django.db import connection
 
 logger = logging.getLogger(__name__)
 
 
 # ── Background helpers ────────────────────────────────────────────────────────
 
+_lock = threading.Lock()
+_jobs = {}  # key -> {'timer': Timer | None, 'running': bool, 'again': bool}
+
+
+def _delay() -> float:
+    return getattr(settings, 'RAG_SYNC_DELAY', 3.0)
+
+
+def _schedule(key, fn, *args) -> None:
+    """Run fn(*args) in the background once things go quiet for `key`.
+
+    A new request restarts the wait. If a run for `key` is in progress, one
+    more run is queued for when it finishes (so the latest data is used).
+    """
+    with _lock:
+        job = _jobs.setdefault(key, {'timer': None, 'running': False, 'again': False})
+        if job['running']:
+            job['again'] = True
+            return
+        if job['timer'] is not None:
+            job['timer'].cancel()
+        timer = threading.Timer(_delay(), _run, args=(key, fn, args))
+        timer.daemon = True
+        job['timer'] = timer
+        timer.start()
+
+
+def _run(key, fn, args) -> None:
+    with _lock:
+        job = _jobs[key]
+        job['timer'] = None
+        job['running'] = True
+    try:
+        fn(*args)
+    finally:
+        connection.close()  # this thread's own DB connection
+        with _lock:
+            job['running'] = False
+            again, job['again'] = job['again'], False
+        if again:
+            _schedule(key, fn, *args)
+
+
 def _bg(fn, *args) -> None:
-    """Fire-and-forget: run fn(*args) in a daemon thread."""
-    threading.Thread(target=fn, args=args, daemon=True).start()
+    """Debounced background run, one queue per function + arguments."""
+    _schedule((fn.__name__,) + args, fn, *args)
+
+
+# Saves that only record processing state must not start another rebuild.
+_STATE_FIELDS_FILE = {'status', 'error_message', 'processed_at'}
+_STATE_FIELDS_PROJECT = {'rag_document_processed'}
+
+
+def _state_only(kwargs, fields) -> bool:
+    update_fields = kwargs.get('update_fields')
+    return bool(update_fields) and set(update_fields) <= fields
 
 
 def _embed_project(project_id: int) -> None:
@@ -221,11 +281,15 @@ try:
 
     @receiver(post_save, sender=Projects, dispatch_uid='rag_auto_sync_project')
     def on_project_saved(sender, instance, **kwargs):
+        if _state_only(kwargs, _STATE_FIELDS_PROJECT):
+            return
         _bg(_embed_project, instance.pk)
 
     @receiver(post_save, sender=ProjectRAGFile, dispatch_uid='rag_auto_sync_rag_file')
     def on_rag_file_saved(sender, instance, **kwargs):
-        """Re-ingest just this file when it's uploaded or re-saved."""
+        """Re-ingest the project when a file is uploaded or re-saved."""
+        if _state_only(kwargs, _STATE_FIELDS_FILE):
+            return
         _bg(_embed_project, instance.project_id)
 
 except ImportError:
