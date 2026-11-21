@@ -451,46 +451,18 @@
                             <span>{{ ev.geo.score }}/100</span>
                         </div>
                         <div class="judge-bar-bg"><div class="judge-bar" style="width:{{ ev.geo.score }}%"></div></div>
-                        <!-- GEO actionable checklist -->
-                        {% if ev.geo.details.checks %}
+                        <!-- GEO checklist (the checks that apply to this format) -->
+                        {% if ev.geo.details.items %}
                         <div style="margin-top:.6rem;">
-                            {% with ev.geo.details.checks as chk %}
+                            {% for item in ev.geo.details.items %}
                             <div class="geo-check-item">
-                                <span class="geo-icon">{% if chk.has_statistics %}✅{% else %}❌{% endif %}</span>
+                                <span class="geo-icon">{% if item.ok %}✅{% else %}❌{% endif %}</span>
                                 <div>
-                                    <div class="geo-label">Statistics</div>
-                                    {% if not chk.has_statistics %}<div class="geo-tip">Add percentages, multipliers, or comparative figures.</div>{% endif %}
+                                    <div class="geo-label">{{ item.label }}</div>
+                                    {% if item.tip %}<div class="geo-tip">{{ item.tip }}</div>{% endif %}
                                 </div>
                             </div>
-                            <div class="geo-check-item">
-                                <span class="geo-icon">{% if chk.has_citations %}✅{% else %}❌{% endif %}</span>
-                                <div>
-                                    <div class="geo-label">Citations</div>
-                                    {% if not chk.has_citations %}<div class="geo-tip">Reference a study, report, or use "according to …".</div>{% endif %}
-                                </div>
-                            </div>
-                            <div class="geo-check-item">
-                                <span class="geo-icon">{% if chk.has_expert_quote %}✅{% else %}❌{% endif %}</span>
-                                <div>
-                                    <div class="geo-label">Expert Quote</div>
-                                    {% if not chk.has_expert_quote %}<div class="geo-tip">Add an attributed quote from a named person or role.</div>{% endif %}
-                                </div>
-                            </div>
-                            <div class="geo-check-item">
-                                <span class="geo-icon">{% if chk.has_definition_block %}✅{% else %}❌{% endif %}</span>
-                                <div>
-                                    <div class="geo-label">Definition Block</div>
-                                    {% if not chk.has_definition_block %}<div class="geo-tip">Add a "What is X?" sentence to help AI engines extract definitions.</div>{% endif %}
-                                </div>
-                            </div>
-                            <div class="geo-check-item">
-                                <span class="geo-icon">{% if chk.has_unique_data %}✅{% else %}❌{% endif %}</span>
-                                <div>
-                                    <div class="geo-label">Unique Data</div>
-                                    {% if not chk.has_unique_data %}<div class="geo-tip">Add specific numbers tied to real entities (e.g. "over 200 clients").</div>{% endif %}
-                                </div>
-                            </div>
-                            {% endwith %}
+                            {% endfor %}
                         </div>
                         {% else %}
                         <div class="judge-feedback">{{ ev.geo.feedback }}</div>

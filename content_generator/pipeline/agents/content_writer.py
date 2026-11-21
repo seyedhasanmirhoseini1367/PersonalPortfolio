@@ -39,6 +39,29 @@ Return ONLY valid JSON."""
     return ContentBrief(**data)
 
 
+# Formats with word-count / section / data-point controls; the rest have fixed shapes.
+LONG_FORMATS = {"blog_post", "landing_page"}
+
+
+def _content_json(raw: str):
+    """Parsed content dict, or None when the reply is not usable content."""
+    try:
+        data = json.loads(raw)
+    except (TypeError, ValueError):
+        return None
+    if isinstance(data, list):   # LLM sometimes wraps response in [...]
+        data = data[0] if data else {}
+    if not isinstance(data, dict):
+        return None
+    for wrapper in ("content", "output", "result"):
+        if "title" not in data and isinstance(data.get(wrapper), dict):
+            data = data[wrapper]
+    if not str(data.get("title", "")).strip() and not str(data.get("headline", "")).strip():
+        return None
+    data.setdefault("title", data.get("headline", ""))
+    return data
+
+
 FORMAT_PROMPTS = {
     "motto": {
         "role": "brand copywriter",
@@ -141,17 +164,23 @@ def write_content(
     angle_line  = f"- Content angle: frame the entire piece as a {angle}\n" if angle else ""
     cta_line    = f"- CTA text: use exactly this CTA string: \"{cta_override}\"\n" if cta_override else ""
 
-    seo_block = (
-        f"\n⚠ HARD STRUCTURAL CONSTRAINTS — FOLLOW EXACTLY:\n"
-        f"- Word count: write {word_min}–{word_max} words total across all sections combined\n"
-        f"- H2 sections: create exactly {h2_count} items in the sections array\n"
-        f"- Figures: include up to {stats_req} concrete data points ONLY if they appear in COMPANY FACTS; "
-        f"for any missing ones write the placeholder [ADD STAT] (never invent a number)\n"
-        f"{faq_line}"
-        f"{angle_line}"
-        f"{cta_line}"
-        f"- Reading level: {level} — {level_desc}"
-    )
+    if content_format in LONG_FORMATS:
+        seo_block = (
+            f"\n⚠ HARD STRUCTURAL CONSTRAINTS — FOLLOW EXACTLY:\n"
+            f"- Word count: write {word_min}–{word_max} words total across all sections combined\n"
+            f"- H2 sections: create exactly {h2_count} items in the sections array\n"
+            f"- Figures: include up to {stats_req} concrete data points ONLY if they appear in COMPANY FACTS; "
+            f"for any missing ones write the placeholder [ADD STAT] (never invent a number)\n"
+            f"{faq_line}"
+            f"{angle_line}"
+            f"{cta_line}"
+            f"- Reading level: {level} — {level_desc}"
+        )
+    else:
+        # Short formats (tagline, post, ad, email): their FORMAT RULES fix the
+        # length and structure. Long-form limits here contradicted them, and
+        # the model answered with an error object instead of content.
+        seo_block = f"\n{angle_line}{cta_line}- Reading level: {level} — {level_desc}"
 
     fmt = FORMAT_PROMPTS.get(content_format, FORMAT_PROMPTS["landing_page"])
     structure = " → ".join(content_type["structure"])
@@ -186,11 +215,18 @@ Return JSON with these exact keys:
 - seo_title (string, 50-60 chars, keyword-rich meta title)
 - seo_description (string, 120-160 chars, compelling meta description with primary keyword)
 
+If any instructions seem to conflict, follow FORMAT RULES and FACTS RULES and still write the content.
+Never return an error, a refusal or anything other than this JSON object.
 Return ONLY valid JSON."""
 
-    data = json.loads(generate(prompt))
-    if isinstance(data, list):   # LLM sometimes wraps response in [...]
-        data = data[0] if data else {}
+    data = _content_json(generate(prompt))
+    if data is None:
+        # The model answered with something other than content (e.g. an
+        # {"errors": [...]} object); ask once more, then give a clear error.
+        data = _content_json(generate(prompt + "\n\nYour previous reply was not the content JSON. "
+                                      "Write the content now as the JSON object described above."))
+    if data is None:
+        raise ValueError("The AI model did not return any content for this format. Please try again.")
     piece = ContentPiece(**data)
     if cta_override:
         piece.cta = cta_override
@@ -206,10 +242,11 @@ RETRY INSTRUCTION: The previous output was REJECTED because these keywords were 
 {', '.join(missing)}
 
 You MUST include every missing keyword verbatim in the output. Rewrite and return ONLY valid JSON."""
-            data = json.loads(generate(retry_prompt))
-            if isinstance(data, list):
-                data = data[0] if data else {}
-            piece = ContentPiece(**data)
+            retried = _content_json(generate(retry_prompt))
+            if retried is not None:   # keep the first version if the retry is unusable
+                piece = ContentPiece(**retried)
+                if cta_override:
+                    piece.cta = cta_override
 
     # Generate image/video prompts for formats that benefit from visuals
     if content_format not in ('motto',):

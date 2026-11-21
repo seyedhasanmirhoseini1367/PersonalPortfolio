@@ -12,6 +12,7 @@ from .agents.geo_optimizer import optimize_for_geo
 from .agents.localizer import localize_content
 from .agents.evaluator import evaluate_loop, evaluate_competitor_edge
 from .agents.grounding import check_and_clean, merge_reports
+from .agents.content_writer import LONG_FORMATS
 from .config import MAX_RETRIES
 
 
@@ -143,7 +144,11 @@ def node_write(state: PipelineState) -> dict:
 
 def node_geo(state: PipelineState) -> dict:
     print("[Node 7] GEO optimization...")
-    content_en, _ = optimize_for_geo(state["content_en"])
+    content_en = state["content_en"]
+    # GEO restructuring (definition blocks, headings, paragraphs) is for web
+    # pages; on a tagline, post, ad or email it added sections the format forbids.
+    if state["content_format"] in LONG_FORMATS:
+        content_en, _ = optimize_for_geo(content_en)
     # Replace unsupported figures before the judges see the text, so a
     # made-up number can never be what makes the content "pass".
     content_en, _ = check_and_clean(content_en, state.get("sources", ""))
@@ -159,6 +164,7 @@ def node_evaluate(state: PipelineState) -> dict:
         goal=state["goal"],
         content_piece=state["content_en"],
         seo_params=state.get("seo_params") or {},
+        content_format=state["content_format"],
     )
     print(f"  Customer: {loop_result['customer']['score']} | GEO: {loop_result['geo']['score']} | Naturalness: {loop_result['naturalness']['score']} | Overall: {loop_result['overall_score']} | Passed: {loop_result['passed']}")
 
@@ -235,6 +241,7 @@ def node_finalize(state: PipelineState) -> dict:
             feedback=loop_result["geo"]["feedback"],
             details={
                 "checks": loop_result["geo"]["checks"],
+                "items": loop_result["geo"].get("items", []),
                 "missing": loop_result["geo"]["missing"],
             }
         ),
