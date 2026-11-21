@@ -64,137 +64,6 @@
             padding: 0 20px;
         }
 
-        /* Header Styles */
-        header {
-            background: linear-gradient(135deg, #302b63 55%, #a78bfa 100%);
-            color: white;
-            padding: 0.4rem 0;
-            box-shadow: 0 2px 20px rgba(0, 212, 255, 0.08);
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-            border-bottom: 1px solid rgba(0, 212, 255, 0.15);
-        }
-
-        .header-content {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .logo {
-            font-size: 1.25rem;
-            font-weight: bold;
-            white-space: nowrap;
-            flex-shrink: 0;
-            line-height: 1.15;
-        }
-
-        .logo a {
-            color: white;
-            text-decoration: none;
-        }
-
-        .logo .tagline {
-            display: block;
-            font-size: 0.7rem;
-            opacity: 0.8;
-            font-weight: normal;
-        }
-
-        nav ul {
-            list-style: none;
-            display: flex;
-            gap: 0.85rem;
-            align-items: center;
-        }
-
-        nav a {
-            color: white;
-            text-decoration: none;
-            font-weight: 500;
-            font-size: 0.8rem;
-            white-space: nowrap;
-            transition: opacity 0.3s;
-            padding: 0.4rem 0.1rem;
-            border-radius: 5px;
-        }
-
-        nav a:hover, nav a.active {
-            background: rgba(0, 212, 255, 0.12);
-            color: #00d4ff;
-        }
-
-        /* User Dropdown */
-        .user-menu {
-            position: relative;
-        }
-
-        .user-dropdown {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            cursor: pointer;
-            padding: 0.5rem;
-            border-radius: 5px;
-            transition: background 0.3s;
-        }
-
-        .user-dropdown:hover {
-            background: rgba(255, 255, 255, 0.1);
-        }
-
-        .user-avatar {
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.2);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-        }
-
-        .user-name {
-            font-size: .85rem;
-        }
-
-        .dropdown-content {
-            position: absolute;
-            top: 100%;
-            right: 0;
-            background: var(--dropdown-bg);
-            min-width: 200px;
-            box-shadow: 0 8px 16px var(--shadow);
-            border-radius: 8px;
-            padding: 0.5rem 0;
-            display: none;
-            z-index: 1001;
-            border: 1px solid var(--border);
-        }
-
-        .dropdown-content.show {
-            display: block;
-        }
-
-        .dropdown-content a {
-            display: block;
-            padding: 0.75rem 1rem;
-            color: var(--dropdown-text);
-            text-decoration: none;
-            transition: background 0.3s;
-        }
-
-        .dropdown-content a:hover {
-            background: var(--dropdown-hover);
-        }
-
-.dropdown-divider {
-            height: 1px;
-            background: var(--border);
-            margin: 0.5rem 0;
-        }
-
         /* Alert Messages */
         .alert-container {
             position: fixed;
@@ -375,98 +244,6 @@
             box-shadow: 0 0 10px rgba(167,139,250,.25);
         }
 
-        /* ── Hamburger button ───────────────────────────────────────────── */
-        .nav-toggle {
-            display: none;
-            flex-direction: column;
-            justify-content: center;
-            gap: 5px;
-            background: none;
-            border: none;
-            cursor: pointer;
-            padding: .4rem;
-            border-radius: 6px;
-        }
-        .nav-toggle span {
-            display: block;
-            width: 24px;
-            height: 2px;
-            background: white;
-            border-radius: 2px;
-            transition: transform .25s, opacity .25s;
-        }
-        .nav-toggle.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
-        .nav-toggle.open span:nth-child(2) { opacity: 0; }
-        .nav-toggle.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
-
-        /* ── Responsive ─────────────────────────────────────────────────── */
-        /* Medium screens: keep every link on one line */
-        @media (min-width: 1025px) and (max-width: 1200px) {
-            nav ul { gap: 0.45rem; }
-            nav a { font-size: 0.76rem; }
-            nav a > i { display: none; }
-            .user-name { display: none; }
-            .logo { font-size: 1.2rem; }
-            .header-content { gap: 0.75rem; }
-        }
-        /* Up to tablet width the full menu doesn't fit: use the hamburger */
-        @media (max-width: 1024px) {
-            .nav-toggle { display: flex; }
-
-            .header-content { position: relative; }
-
-            nav {
-                display: none;
-                position: absolute;
-                top: 100%;
-                left: 0; right: 0;
-                background: linear-gradient(135deg, #302b63 55%, #24243e 100%);
-                z-index: 999;
-                padding: .75rem 1rem 1rem;
-                border-top: 1px solid rgba(0,212,255,.15);
-                box-shadow: 0 8px 24px rgba(0,0,0,.3);
-            }
-            nav.open { display: block; }
-
-            nav ul {
-                flex-direction: column;
-                gap: .25rem;
-                width: 100%;
-            }
-            nav ul li { width: 100%; }
-            nav a {
-                display: block;
-                padding: .55rem .75rem;
-                border-radius: 8px;
-                font-size: .95rem;
-            }
-            nav a:hover, nav a.active {
-                background: rgba(0,212,255,.12);
-            }
-
-            .auth-buttons {
-                display: flex;
-                flex-direction: row;
-                gap: .5rem;
-                width: 100%;
-                margin-top: .25rem;
-            }
-            .auth-buttons .btn { flex: 1; text-align: center; }
-
-            .user-menu { width: 100%; }
-            .user-dropdown { width: 100%; }
-            .dropdown-content {
-                position: static;
-                width: 100%;
-                box-shadow: none;
-                border: 1px solid rgba(255,255,255,.1);
-                background: rgba(255,255,255,.05);
-                margin-top: .25rem;
-            }
-            .dropdown-content a { color: rgba(255,255,255,.85); }
-            .dropdown-content a:hover { background: rgba(0,212,255,.1); color: #00d4ff; }
-            .dropdown-divider { background: rgba(255,255,255,.1); }
-        }
         @media (max-width: 768px) {
             .container { padding: 0 15px; }
             .alert-container { left: 15px; right: 15px; max-width: none; }
@@ -483,129 +260,323 @@
             }
         }
 
-        /* Neural accent on logo */
-        .logo a { background: linear-gradient(90deg, #00d4ff, #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-        .logo .tagline { -webkit-text-fill-color: rgba(255,255,255,.65); }
-
-        /* Glow on active nav link */
-        nav a.active { color: #00d4ff !important; text-shadow: 0 0 8px rgba(0,212,255,.4); }
-
-        /* Accent-coloured link in dropdown for Staff items */
-        .dropdown-content a:hover { color: #00d4ff; }
-
         /* Light mode card lift */
         [data-theme="light"] .btn-outline { border-color: #302b63; color: #302b63; }
 
         /* Footer neural glow */
         footer { border-top: 1px solid rgba(0,212,255,.12); }
 
+        /* ── Navigation: side rail + top band (hx-*) ─────────────────────────
+           Desktop: a slim icon rail on the left that expands on hover/focus,
+           a top band with the current path and the account menu.
+           Up to 1024px: the rail becomes a drawer opened from the top bar. */
+        :root {
+            --hx-rail: 68px;
+            --hx-rail-open: 248px;
+            --hx-top: 58px;
+            --hx-ink: #0f0d24;
+            --hx-ink-2: #1a1640;
+            --hx-line: rgba(0, 212, 255, .16);
+            --hx-text: rgba(226, 232, 255, .74);
+            --hx-cyan: #00d4ff;
+            --hx-violet: #a78bfa;
+        }
+        body { padding-left: var(--hx-rail); }
+
+        .hx-skip { position: absolute; left: -999px; top: 8px; z-index: 2000; background: #fff; color: #111; padding: .5rem .8rem; border-radius: 8px; }
+        .hx-skip:focus { left: 8px; }
+
+        .hx-rail {
+            position: fixed; inset: 0 auto 0 0; z-index: 1000;
+            width: var(--hx-rail);
+            display: flex; flex-direction: column; gap: 6px;
+            padding: 12px 10px 14px;
+            background:
+                radial-gradient(circle at 1px 1px, rgba(167,139,250,.14) 1px, transparent 0) 0 0 / 16px 16px,
+                linear-gradient(180deg, var(--hx-ink-2) 0%, var(--hx-ink) 70%);
+            border-right: 1px solid var(--hx-line);
+            box-shadow: 0 0 0 rgba(0,0,0,0);
+            overflow: hidden;
+            transition: width .22s cubic-bezier(.2,.8,.2,1), box-shadow .22s;
+        }
+        .hx-rail::after {   /* thin glowing edge */
+            content: ""; position: absolute; top: 0; right: -1px; width: 1px; height: 100%;
+            background: linear-gradient(180deg, transparent, var(--hx-cyan), var(--hx-violet), transparent);
+            opacity: .55;
+        }
+        @media (min-width: 1025px) {
+            .hx-rail:hover, .hx-rail:focus-within {
+                width: var(--hx-rail-open);
+                box-shadow: 12px 0 40px rgba(10, 8, 30, .35);
+            }
+        }
+
+        .hx-brand { display: flex; align-items: center; gap: 12px; text-decoration: none; padding: 4px 4px 14px; margin-bottom: 4px; border-bottom: 1px solid rgba(255,255,255,.06); }
+        .hx-mark {
+            position: relative; flex: 0 0 40px; width: 40px; height: 40px; border-radius: 12px;
+            display: grid; place-items: center;
+            font: 800 1.15rem/1 'Segoe UI', system-ui, sans-serif; color: #fff;
+            background: linear-gradient(135deg, var(--hx-cyan), #6d5dfc 55%, var(--hx-violet));
+            box-shadow: 0 0 18px rgba(0, 212, 255, .35), inset 0 0 0 1px rgba(255,255,255,.25);
+        }
+        .hx-mark i {  /* live status dot */
+            position: absolute; right: -2px; bottom: -2px; width: 10px; height: 10px; border-radius: 50%;
+            background: #34d399; border: 2px solid var(--hx-ink); animation: hxPulse 2.4s ease-in-out infinite;
+        }
+        @keyframes hxPulse { 0%,100% { box-shadow: 0 0 0 0 rgba(52,211,153,.6); } 50% { box-shadow: 0 0 0 5px rgba(52,211,153,0); } }
+        .hx-brand-text { display: flex; flex-direction: column; line-height: 1.15; white-space: nowrap; }
+        .hx-brand-text b { font-size: 1.05rem; background: linear-gradient(90deg, var(--hx-cyan), var(--hx-violet)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+        .hx-brand-text small { font-size: .68rem; color: rgba(226,232,255,.55); }
+
+        .hx-nav { display: flex; flex-direction: column; gap: 3px; flex: 1; overflow-y: auto; overflow-x: hidden; scrollbar-width: none; }
+        .hx-nav::-webkit-scrollbar { display: none; }
+        .hx-item {
+            position: relative; display: flex; align-items: center; gap: 14px;
+            height: 42px; padding: 0 13px; border-radius: 11px;
+            color: var(--hx-text); text-decoration: none; white-space: nowrap;
+            font: 500 .86rem/1 'Segoe UI', system-ui, sans-serif;
+            background: none; border: 0; cursor: pointer; width: 100%; text-align: left;
+            transition: background .15s, color .15s;
+        }
+        .hx-item i { flex: 0 0 20px; text-align: center; font-size: 1rem; }
+        .hx-brand-text, .hx-item span, .hx-item kbd { opacity: 0; transform: translateX(-6px); transition: opacity .15s, transform .15s; }
+        .hx-rail:hover .hx-brand-text, .hx-rail:hover .hx-item span, .hx-rail:hover .hx-item kbd,
+        .hx-rail:focus-within .hx-brand-text, .hx-rail:focus-within .hx-item span, .hx-rail:focus-within .hx-item kbd,
+        .hx-rail.open .hx-brand-text, .hx-rail.open .hx-item span, .hx-rail.open .hx-item kbd { opacity: 1; transform: none; transition-delay: .06s; }
+        .hx-item:hover, .hx-item:focus-visible { background: rgba(0, 212, 255, .09); color: #fff; outline: none; }
+        .hx-item.is-active { color: var(--hx-cyan); background: linear-gradient(90deg, rgba(0,212,255,.16), rgba(167,139,250,.06)); }
+        .hx-item.is-active::before {
+            content: ""; position: absolute; left: -10px; top: 9px; bottom: 9px; width: 3px; border-radius: 0 3px 3px 0;
+            background: var(--hx-cyan); box-shadow: 0 0 10px var(--hx-cyan);
+        }
+        .hx-item kbd, .hx-cmd kbd {
+            margin-left: auto; font: 600 .66rem/1 ui-monospace, SFMono-Regular, Consolas, monospace;
+            color: rgba(226,232,255,.6); border: 1px solid rgba(255,255,255,.14); border-bottom-width: 2px;
+            border-radius: 5px; padding: 3px 5px;
+        }
+        .hx-cmd-open { margin-top: 6px; border-top: 1px solid rgba(255,255,255,.06); border-radius: 0 0 11px 11px; padding-top: 2px; }
+
+        .hx-scrim { position: fixed; inset: 0; z-index: 999; background: rgba(8, 6, 24, .5); backdrop-filter: blur(2px); }
+
+        /* Top band: path on the left, account on the right */
+        .hx-top {
+            height: var(--hx-top); display: flex; align-items: center; gap: 12px;
+            padding: 0 22px; border-bottom: 1px solid var(--border);
+            background: color-mix(in srgb, var(--bg) 88%, #ffffff);
+        }
+        .hx-path {
+            font: 500 .8rem/1 ui-monospace, SFMono-Regular, Consolas, monospace; color: var(--text-muted);
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;
+        }
+        .hx-path span { color: #6d5dfc; font-weight: 700; }
+        .hx-caret { display: inline-block; width: 7px; height: 1em; margin-left: 2px; vertical-align: -2px; background: var(--hx-cyan); animation: hxBlink 1.1s steps(1) infinite; }
+        @keyframes hxBlink { 50% { opacity: 0; } }
+        .hx-burger, .hx-top-brand { display: none; }
+
+        .hx-account { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+        .hx-icon-btn {
+            width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--border); background: var(--bg-card);
+            color: var(--text-muted); cursor: pointer; display: grid; place-items: center; transition: color .15s, border-color .15s;
+        }
+        .hx-icon-btn:hover { color: #6d5dfc; border-color: #a78bfa; }
+        .hx-pill {
+            display: inline-flex; align-items: center; height: 36px; padding: 0 16px; border-radius: 999px;
+            font: 600 .82rem/1 'Segoe UI', system-ui, sans-serif; text-decoration: none;
+            color: #302b63; border: 1px solid var(--border); background: var(--bg-card);
+        }
+        .hx-pill:hover { border-color: #a78bfa; color: #6d5dfc; }
+        .hx-pill-solid { color: #fff; border: 0; background: linear-gradient(135deg, #6d5dfc, #00b8e6); box-shadow: 0 4px 14px rgba(109,93,252,.3); }
+        .hx-pill-solid:hover { color: #fff; filter: brightness(1.08); }
+
+        .hx-user { position: relative; }
+        .hx-user-btn {
+            display: flex; align-items: center; gap: 9px; height: 42px; padding: 0 12px 0 4px; border-radius: 999px;
+            border: 1px solid var(--border); background: var(--bg-card); color: var(--text); cursor: pointer;
+            font: 600 .84rem/1 'Segoe UI', system-ui, sans-serif; transition: border-color .15s, box-shadow .15s;
+        }
+        .hx-user:hover .hx-user-btn, .hx-user-btn[aria-expanded="true"] { border-color: #a78bfa; box-shadow: 0 0 0 3px rgba(167,139,250,.15); }
+        .hx-avatar {
+            position: relative; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center;
+            color: #fff; font-weight: 700; background: linear-gradient(135deg, #6d5dfc, #00b8e6);
+        }
+        .hx-avatar img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
+        .hx-dot { position: absolute; right: -1px; bottom: -1px; width: 10px; height: 10px; border-radius: 50%; background: #34d399; border: 2px solid var(--bg-card); }
+        .hx-chev { font-size: .7rem; color: var(--text-muted); transition: transform .2s; }
+        .hx-user-btn[aria-expanded="true"] .hx-chev, .hx-user:hover .hx-chev { transform: rotate(180deg); }
+
+        .hx-menu {
+            position: absolute; right: 0; top: calc(100% + 10px); z-index: 1001; min-width: 240px; padding: 6px;
+            border-radius: 14px; background: var(--dropdown-bg); border: 1px solid var(--border);
+            box-shadow: 0 18px 40px var(--shadow);
+            opacity: 0; visibility: hidden; transform: translateY(-6px) scale(.98); transform-origin: top right;
+            transition: opacity .15s, transform .15s, visibility .15s;
+        }
+        .hx-menu::before { content: ""; position: absolute; left: 0; right: 0; top: -12px; height: 12px; } /* hover bridge */
+        .hx-menu.open { opacity: 1; visibility: visible; transform: none; }
+        @media (hover: hover) and (min-width: 1025px) {
+            .hx-user:hover .hx-menu { opacity: 1; visibility: visible; transform: none; }
+        }
+        .hx-menu-head { padding: 10px 12px 12px; margin-bottom: 4px; border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 2px; }
+        .hx-menu-head b { font-size: .92rem; color: var(--dropdown-text); }
+        .hx-menu-head small { font-size: .72rem; color: var(--text-muted); }
+        .hx-menu a {
+            display: flex; align-items: center; gap: 11px; padding: 9px 12px; border-radius: 9px;
+            color: var(--dropdown-text); text-decoration: none; font-size: .86rem;
+        }
+        .hx-menu a i { width: 16px; text-align: center; color: #6d5dfc; }
+        .hx-menu a:hover, .hx-menu a:focus-visible { background: var(--dropdown-hover); outline: none; }
+        .hx-menu a.hx-danger i, .hx-menu a.hx-danger:hover { color: #e11d48; }
+        .hx-menu-sep { margin: 6px 12px; padding-top: 6px; border-top: 1px solid var(--border); font: 700 .64rem/1 'Segoe UI', sans-serif; letter-spacing: .08em; text-transform: uppercase; color: var(--text-muted); }
+        .hx-menu-sep:empty { padding-top: 0; }
+
+        /* Ctrl+K command palette */
+        .hx-cmd { position: fixed; inset: 0; z-index: 3000; display: grid; place-items: start center; padding-top: 12vh; background: rgba(8,6,24,.55); backdrop-filter: blur(3px); }
+        .hx-cmd[hidden] { display: none; }
+        .hx-cmd-box { width: min(560px, calc(100vw - 32px)); border-radius: 16px; overflow: hidden; background: #13102e; border: 1px solid var(--hx-line); box-shadow: 0 30px 80px rgba(0,0,0,.45), 0 0 0 1px rgba(167,139,250,.08); color: #e2e8ff; }
+        .hx-cmd-input { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-bottom: 1px solid rgba(255,255,255,.07); }
+        .hx-cmd-input i { color: var(--hx-cyan); }
+        .hx-cmd-input input { flex: 1; background: none; border: 0; outline: none; color: #fff; font-size: 1rem; }
+        .hx-cmd-list { list-style: none; max-height: 52vh; overflow-y: auto; padding: 6px; }
+        .hx-cmd-list li { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px; cursor: pointer; font-size: .9rem; color: rgba(226,232,255,.82); }
+        .hx-cmd-list li i { width: 18px; text-align: center; color: var(--hx-violet); }
+        .hx-cmd-list li small { margin-left: auto; font: .7rem ui-monospace, Consolas, monospace; color: rgba(226,232,255,.4); }
+        .hx-cmd-list li.on { background: linear-gradient(90deg, rgba(0,212,255,.16), rgba(167,139,250,.08)); color: #fff; }
+        .hx-cmd-list li.empty { cursor: default; color: rgba(226,232,255,.45); }
+        .hx-cmd-foot { display: flex; gap: 16px; padding: 9px 14px; border-top: 1px solid rgba(255,255,255,.07); font-size: .72rem; color: rgba(226,232,255,.5); }
+        .hx-cmd-foot kbd { margin: 0 3px 0 0; }
+
+        /* Tablet and phone: drawer + sticky top bar */
+        @media (max-width: 1024px) {
+            body { padding-left: 0; }
+            .hx-rail { width: var(--hx-rail-open); transform: translateX(-102%); transition: transform .25s cubic-bezier(.2,.8,.2,1); }
+            .hx-rail.open { transform: none; box-shadow: 18px 0 50px rgba(0,0,0,.4); }
+            .hx-top { position: sticky; top: 0; z-index: 998; padding: 0 12px; color: #fff; border-bottom: 1px solid var(--hx-line);
+                      background: linear-gradient(90deg, var(--hx-ink-2), var(--hx-ink)); }
+            .hx-burger { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 10px; border: 1px solid rgba(255,255,255,.12); background: rgba(255,255,255,.04); color: #fff; font-size: 1.05rem; cursor: pointer; }
+            .hx-top-brand { display: flex; align-items: center; gap: 9px; color: #fff; text-decoration: none; font-weight: 700; }
+            .hx-top-brand .hx-mark { flex-basis: 30px; width: 30px; height: 30px; border-radius: 9px; font-size: .9rem; }
+            .hx-top-brand .hx-mark i { display: none; }
+            .hx-path { display: none; }
+            .hx-icon-btn { background: rgba(255,255,255,.05); border-color: rgba(255,255,255,.14); color: #e2e8ff; }
+            .hx-user-btn { background: rgba(255,255,255,.05); border-color: rgba(255,255,255,.14); color: #fff; padding-right: 8px; }
+            .hx-user-name { display: none; }
+            .hx-chev { color: rgba(255,255,255,.7); }
+            .hx-pill { height: 34px; padding: 0 12px; background: rgba(255,255,255,.05); color: #fff; border-color: rgba(255,255,255,.16); }
+            .hx-item kbd { display: none; }
+        }
+        @media (max-width: 420px) {
+            .hx-top-brand { font-size: 0; gap: 0; }
+            .hx-pill:not(.hx-pill-solid) { display: none; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .hx-rail, .hx-menu, .hx-item span, .hx-brand-text { transition: none; }
+            .hx-mark i, .hx-caret { animation: none; }
+        }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
 <body>
 
 
-<header>
-    <div class="container">
-        <div class="header-content">
-            <div class="logo">
-                <a href="{% url 'home' %}">
-                    HasanAI
-                    <span class="tagline">ML Engineer · Data Scientist</span>
-                </a>
-            </div>
-            <button class="nav-toggle" id="navToggle" aria-label="Toggle menu">
-                <span></span><span></span><span></span>
+<a class="hx-skip" href="#main">Skip to content</a>
+
+{% with rm=request.resolver_match %}
+<aside class="hx-rail" id="hxRail" aria-label="Site navigation">
+    <a class="hx-brand" href="{% url 'home' %}" aria-label="HasanAI home">
+        <span class="hx-mark" aria-hidden="true">H<i></i></span>
+        <span class="hx-brand-text"><b>HasanAI</b><small>ML Engineer · Data Scientist</small></span>
+    </a>
+
+    <nav class="hx-nav">
+        <a href="{% url 'home' %}" class="hx-item{% if rm.url_name == 'home' %} is-active{% endif %}">
+            <i class="fas fa-house" aria-hidden="true"></i><span>Home</span></a>
+        <a href="{% url 'projects_list' %}" class="hx-item{% if rm.url_name == 'projects_list' or rm.url_name == 'project_detail' %} is-active{% endif %}">
+            <i class="fas fa-cubes" aria-hidden="true"></i><span>ML Models</span></a>
+        <a href="{% url 'model_internals:walkthrough_list' %}" class="hx-item{% if rm.app_name == 'model_internals' %} is-active{% endif %}">
+            <i class="fas fa-square-root-variable" aria-hidden="true"></i><span>How Models Work</span></a>
+        <a href="{% url 'kaggle_archive:competition_list' %}" class="hx-item{% if rm.app_name == 'kaggle_archive' %} is-active{% endif %}">
+            <i class="fas fa-trophy" aria-hidden="true"></i><span>Winners Archive</span></a>
+        <a href="{% url 'rag_system:chat' %}" class="hx-item{% if rm.url_name == 'chat' %} is-active{% endif %}">
+            <i class="fas fa-robot" aria-hidden="true"></i><span>AI Assistant</span></a>
+        <a href="{% url 'sports:page' %}" class="hx-item">
+            <i class="fas fa-futbol" aria-hidden="true"></i><span>Sports App</span></a>
+        {% if user.is_authenticated %}
+        <a href="{% url 'content_generator:form' %}" class="hx-item{% if rm.app_name == 'content_generator' %} is-active{% endif %}">
+            <i class="fas fa-wand-magic-sparkles" aria-hidden="true"></i><span>Content Generator</span></a>
+        {% endif %}
+        <a href="{% url 'stories:story_list' %}" class="hx-item{% if rm.app_name == 'stories' %} is-active{% endif %}">
+            <i class="fas fa-feather" aria-hidden="true"></i><span>Stories</span></a>
+        <a href="{% url 'resume:resume_page' %}" class="hx-item{% if rm.app_name == 'resume' %} is-active{% endif %}">
+            <i class="fas fa-file-lines" aria-hidden="true"></i><span>Resume</span></a>
+        <a href="{% url 'contact:contact_page' %}" class="hx-item{% if rm.app_name == 'contact' %} is-active{% endif %}">
+            <i class="fas fa-paper-plane" aria-hidden="true"></i><span>Contact</span></a>
+    </nav>
+
+    <button class="hx-item hx-cmd-open" type="button" data-cmd-open>
+        <i class="fas fa-magnifying-glass" aria-hidden="true"></i><span>Jump to…</span><kbd>Ctrl K</kbd>
+    </button>
+</aside>
+{% endwith %}
+<div class="hx-scrim" id="hxScrim" hidden></div>
+
+<div class="hx-top">
+    <button class="hx-burger" id="hxBurger" type="button" aria-controls="hxRail" aria-expanded="false" aria-label="Open menu">
+        <i class="fas fa-bars" aria-hidden="true"></i>
+    </button>
+    <a class="hx-top-brand" href="{% url 'home' %}"><span class="hx-mark" aria-hidden="true">H<i></i></span>HasanAI</a>
+    <div class="hx-path" aria-hidden="true"><span>hasanai.net</span>{{ request.path|truncatechars:60 }}<em class="hx-caret"></em></div>
+
+    <div class="hx-account">
+        <button class="hx-icon-btn" type="button" data-cmd-open aria-label="Search pages"><i class="fas fa-magnifying-glass" aria-hidden="true"></i></button>
+        {% if user.is_authenticated %}
+        <div class="hx-user" id="hxUser">
+            <button class="hx-user-btn" id="hxUserBtn" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="hxMenu">
+                <span class="hx-avatar">
+                    {% if user.profile_picture %}
+                        <img src="{{ user.profile_picture.url }}" alt=""
+                             onerror="this.replaceWith(document.createTextNode('{{ user.username|first|upper|escapejs }}'))">
+                    {% else %}{{ user.username|first|upper }}{% endif %}
+                    <i class="hx-dot" aria-hidden="true"></i>
+                </span>
+                <span class="hx-user-name">{{ user.username }}</span>
+                <i class="fas fa-chevron-down hx-chev" aria-hidden="true"></i>
             </button>
-            <nav id="mainNav">
-                <ul>
-                    <!-- Public Navigation -->
-                    <li><a href="{% url 'home' %}"
-                           {% if request.resolver_match.url_name == 'home' %}class="active"{% endif %}>Home</a></li>
-
-                    <li><a href="{% url 'projects_list' %}"
-                           {% if request.resolver_match.url_name == 'projects_list' %}class="active"{% endif %}>ML Models</a></li>
-
-                    <li><a href="{% url 'model_internals:walkthrough_list' %}"
-                           {% if request.resolver_match.app_name == 'model_internals' %}class="active"{% endif %}>
-                        <i class="fas fa-square-root-variable" style="font-size:.75rem;opacity:.8;"></i> How Models Work
-                    </a></li>
-
-                    <li><a href="{% url 'kaggle_archive:competition_list' %}"
-                           {% if request.resolver_match.app_name == 'kaggle_archive' %}class="active"{% endif %}>
-                        <i class="fas fa-trophy" style="font-size:.75rem;opacity:.8;"></i> Winners Archive
-                    </a></li>
-
-                    <li><a href="{% url 'rag_system:chat' %}"
-                           {% if request.resolver_match.url_name == 'chat' %}class="active"{% endif %}>AI Assistant</a></li>
-
-                    <li><a href="{% url 'sports:page' %}">
-                        <i class="fas fa-futbol" style="font-size:.75rem;opacity:.8;"></i> Sports App
-                    </a></li>
-
-                    {% if user.is_authenticated %}
-                    <li><a href="{% url 'content_generator:form' %}"
-                           {% if request.resolver_match.app_name == 'content_generator' %}class="active"{% endif %}>Content Generator</a></li>
-                    {% endif %}
-
-                    <li><a href="{% url 'resume:resume_page' %}"
-                           {% if request.resolver_match.url_name == 'resume_page' %}class="active"{% endif %}>Resume</a></li>
-
-                    <!-- <li><a href="https://healthcompass.hasanai.net" target="_blank" rel="noopener">HealthCompass</a></li> -->
-
-                    <li><a href="{% url 'contact:contact_page' %}"
-                           {% if request.resolver_match.url_name == 'contact_page' %}class="active"{% endif %}>Contact</a></li>
-
-                    <!-- Authenticated extras -->
-                    {% if user.is_authenticated %}
-                       
-                        <li class="user-menu">
-                            <div class="user-dropdown" onclick="toggleDropdown()">
-                                <div class="user-avatar">
-                                    {% if user.profile_picture %}
-                                        <img src="{{ user.profile_picture.url }}" alt=""
-                                             onerror="this.replaceWith(document.createTextNode('{{ user.username|first|upper|escapejs }}'))"
-                                             style="width:32px;height:32px;border-radius:50%;object-fit:cover;">
-                                    {% else %}
-                                        {{ user.username|first|upper }}
-                                    {% endif %}
-                                </div>
-                                <span class="user-name">{{ user.username }}</span>
-                                <span>▼</span>
-                            </div>
-                            <div class="dropdown-content" id="userDropdown">
-                                <a href="{% url 'accounts:profile' username=user.username %}"><span>👤</span> My Profile</a>
-                                <a href="{% url 'accounts:dashboard' %}"><span>📊</span> Dashboard</a>
-                                <a href="{% url 'kaggle_archive:competition_list' %}"><span>🏆</span> Winners Archive</a>
-                                {% if user.is_staff %}
-                                <div class="dropdown-divider"></div>
-                                <a href="{% url 'kaggle_archive:manage' %}"><span>⚙️</span> Manage Archive</a>
-                                <a href="{% url 'roadmap' %}"><span>🗺️</span> Roadmap</a>
-                                <a href="{% url 'monitoring:dashboard' %}"><span>📈</span> Model Monitoring</a>
-                                <a href="/admin/" target="_blank"><span>🛠️</span> Admin Panel</a>
-                                {% endif %}
-                                <div class="dropdown-divider"></div>
-                                <a href="{% url 'accounts:profile_update' %}"><span>⚙️</span> Settings</a>
-                                <a href="{% url 'accounts:logout' %}"><span>🚪</span> Logout</a>
-                            </div>
-                        </li>
-
-                    {% else %}
-                        <!-- Guest: login / register -->
-                        <li class="auth-buttons">
-                            <a href="{% url 'accounts:login' %}?next={{ request.path }}" class="btn btn-login"
-                               style="font-size:.82rem;padding:.4rem .9rem;">Login</a>
-                            <a href="{% url 'accounts:register' %}?next={{ request.path }}" class="btn btn-success"
-                               style="font-size:.82rem;padding:.4rem .9rem;">Sign Up</a>
-                        </li>
-                    {% endif %}
-
-
-                </ul>
-            </nav>
+            <div class="hx-menu" id="hxMenu" role="menu">
+                <div class="hx-menu-head">
+                    <b>{{ user.get_full_name|default:user.username }}</b>
+                    <small>{% if user.is_staff %}Admin{% elif user.is_client %}Client{% else %}Member{% endif %} · signed in</small>
+                </div>
+                <a role="menuitem" href="{% url 'accounts:profile' username=user.username %}"><i class="fas fa-user"></i> My Profile</a>
+                <a role="menuitem" href="{% url 'accounts:dashboard' %}"><i class="fas fa-gauge-high"></i> Dashboard</a>
+                <a role="menuitem" href="{% url 'content_generator:history' %}"><i class="fas fa-clock-rotate-left"></i> Content History</a>
+                {% if user.is_staff %}
+                <div class="hx-menu-sep">Admin</div>
+                <a role="menuitem" href="{% url 'kaggle_archive:manage' %}"><i class="fas fa-sliders"></i> Manage Archive</a>
+                <a role="menuitem" href="{% url 'roadmap' %}"><i class="fas fa-route"></i> Roadmap</a>
+                <a role="menuitem" href="{% url 'monitoring:dashboard' %}"><i class="fas fa-chart-line"></i> Model Monitoring</a>
+                <a role="menuitem" href="/admin/" target="_blank" rel="noopener"><i class="fas fa-screwdriver-wrench"></i> Admin Panel</a>
+                {% endif %}
+                <div class="hx-menu-sep"></div>
+                <a role="menuitem" href="{% url 'accounts:profile_update' %}"><i class="fas fa-gear"></i> Settings</a>
+                <a role="menuitem" href="{% url 'accounts:logout' %}" class="hx-danger"><i class="fas fa-arrow-right-from-bracket"></i> Logout</a>
+            </div>
         </div>
+        {% else %}
+        <a class="hx-pill" href="{% url 'accounts:login' %}?next={{ request.path|urlencode }}">Log in</a>
+        <a class="hx-pill hx-pill-solid" href="{% url 'accounts:register' %}?next={{ request.path|urlencode }}">Sign up</a>
+        {% endif %}
     </div>
-</header>
+</div>
+
+<div class="hx-cmd" id="hxCmd" role="dialog" aria-modal="true" aria-label="Jump to a page" hidden>
+    <div class="hx-cmd-box">
+        <div class="hx-cmd-input"><i class="fas fa-magnifying-glass" aria-hidden="true"></i>
+            <input id="hxCmdInput" type="text" placeholder="Jump to a page…" autocomplete="off" spellcheck="false" aria-controls="hxCmdList">
+            <kbd>Esc</kbd></div>
+        <ul class="hx-cmd-list" id="hxCmdList" role="listbox"></ul>
+        <div class="hx-cmd-foot"><span><kbd>↑</kbd><kbd>↓</kbd> move</span><span><kbd>Enter</kbd> open</span></div>
+    </div>
+</div>
 
 <!-- Alert Messages Display -->
 <div class="alert-container">
@@ -621,7 +592,7 @@
     {% endif %}
 </div>
 
-<main class="{% block main_class %}{% endblock %}">
+<main id="main" class="{% block main_class %}{% endblock %}">
     <div class="container {% block container_class %}{% endblock %}">
         {% block content %}
             <!-- Main content will be injected here -->
@@ -660,38 +631,76 @@
 {% endblock footer %}
 
 <script>
-    // Hamburger nav toggle
-    const navToggle = document.getElementById('navToggle');
-    const mainNav   = document.getElementById('mainNav');
-    if (navToggle) {
-        navToggle.addEventListener('click', () => {
-            navToggle.classList.toggle('open');
-            mainNav.classList.toggle('open');
-        });
-        // Close nav when a link inside is clicked
-        mainNav.querySelectorAll('a').forEach(link => {
-            link.addEventListener('click', () => {
-                navToggle.classList.remove('open');
-                mainNav.classList.remove('open');
-            });
-        });
-    }
+    // ── Navigation: rail drawer, account menu, Ctrl+K palette ──────────────
+    (function () {
+        const rail = document.getElementById('hxRail');
+        const scrim = document.getElementById('hxScrim');
+        const burger = document.getElementById('hxBurger');
+        const setDrawer = (open) => {
+            rail.classList.toggle('open', open);
+            scrim.hidden = !open;
+            if (burger) burger.setAttribute('aria-expanded', String(open));
+            document.body.style.overflow = open ? 'hidden' : '';
+        };
+        if (burger) burger.addEventListener('click', () => setDrawer(!rail.classList.contains('open')));
+        scrim.addEventListener('click', () => setDrawer(false));
 
-    // User dropdown toggle
-    function toggleDropdown() {
-        const dropdown = document.getElementById('userDropdown');
-        dropdown.classList.toggle('show');
-    }
-
-    // Close dropdown when clicking outside
-    document.addEventListener('click', function (event) {
-        const dropdown = document.getElementById('userDropdown');
-        const userMenu = document.querySelector('.user-menu');
-
-        if (userMenu && !userMenu.contains(event.target)) {
-            dropdown.classList.remove('show');
+        // Account menu: hover on desktop (CSS), click/tap and keyboard everywhere.
+        const userBtn = document.getElementById('hxUserBtn');
+        const menu = document.getElementById('hxMenu');
+        const setMenu = (open) => {
+            if (!menu) return;
+            menu.classList.toggle('open', open);
+            userBtn.setAttribute('aria-expanded', String(open));
+        };
+        if (userBtn) {
+            userBtn.addEventListener('click', (e) => { e.stopPropagation(); setMenu(!menu.classList.contains('open')); });
+            document.addEventListener('click', (e) => { if (!document.getElementById('hxUser').contains(e.target)) setMenu(false); });
         }
-    });
+
+        // Command palette: every link in the rail and the account menu.
+        const cmd = document.getElementById('hxCmd');
+        const input = document.getElementById('hxCmdInput');
+        const list = document.getElementById('hxCmdList');
+        const entries = [...document.querySelectorAll('.hx-nav a, .hx-menu a')].map((a) => ({
+            label: a.textContent.trim().replace(/\s+/g, ' '),
+            href: a.getAttribute('href'),
+            icon: (a.querySelector('i') || {}).className || 'fas fa-arrow-right',
+            blank: a.target === '_blank',
+        })).filter((e, i, all) => all.findIndex((x) => x.href === e.href) === i);
+        let shown = [], sel = 0, lastFocus = null;
+        const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+        const render = () => {
+            const q = input.value.trim().toLowerCase();
+            shown = entries.filter((e) => !q || e.label.toLowerCase().includes(q) || e.href.toLowerCase().includes(q));
+            sel = Math.min(sel, Math.max(0, shown.length - 1));
+            list.innerHTML = shown.length
+                ? shown.map((e, i) => `<li role="option" data-i="${i}" class="${i === sel ? 'on' : ''}" aria-selected="${i === sel}"><i class="${esc(e.icon)}"></i>${esc(e.label)}<small>${esc(e.href)}</small></li>`).join('')
+                : '<li class="empty">No page matches</li>';
+        };
+        const go = (e) => { if (!e) return; if (e.blank) window.open(e.href, '_blank', 'noopener'); else location.href = e.href; };
+        const openCmd = () => {
+            lastFocus = document.activeElement; setDrawer(false); setMenu(false);
+            cmd.hidden = false; input.value = ''; sel = 0; render(); input.focus();
+        };
+        const closeCmd = () => { cmd.hidden = true; if (lastFocus) lastFocus.focus(); };
+        document.querySelectorAll('[data-cmd-open]').forEach((b) => b.addEventListener('click', openCmd));
+        input.addEventListener('input', () => { sel = 0; render(); });
+        list.addEventListener('click', (e) => { const li = e.target.closest('li[data-i]'); if (li) go(shown[+li.dataset.i]); });
+        cmd.addEventListener('click', (e) => { if (e.target === cmd) closeCmd(); });
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                if (shown.length) sel = (sel + (e.key === 'ArrowDown' ? 1 : -1) + shown.length) % shown.length;
+                render();
+                const on = list.querySelector('.on'); if (on) on.scrollIntoView({ block: 'nearest' });
+            } else if (e.key === 'Enter') { e.preventDefault(); go(shown[sel]); }
+        });
+        document.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); cmd.hidden ? openCmd() : closeCmd(); }
+            else if (e.key === 'Escape') { if (!cmd.hidden) closeCmd(); else { setDrawer(false); setMenu(false); } }
+        });
+    })();
 
     // Auto-hide alerts after 5 seconds
     document.addEventListener('DOMContentLoaded', function () {
@@ -705,21 +714,6 @@
         }, 5000);
     });
 
-    // Check if user is authenticated and show appropriate content
-    {% if user.is_authenticated %}
-        console.log('User is authenticated:', '{{ user.username }}');
-    {% else %}
-        console.log('User is not authenticated');
-        // Optional: Redirect protected pages
-        const protectedPages = ['/accounts/dashboard/', '/accounts/profile/', '/stories/create/'];
-        const currentPath = window.location.pathname;
-
-        if (protectedPages.some(page => currentPath.includes(page))) {
-            // If user tries to access protected pages while not logged in
-            // They will be redirected by Django's @login_required decorator
-            // But we can add client-side handling if needed
-        }
-    {% endif %}
 </script>
 
 {% block extra_js %}{% endblock %}
