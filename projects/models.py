@@ -1,5 +1,6 @@
 # projects/models.py
 from django.db import models
+from PersonalPortfolio.storage import image_storage
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.utils import timezone
@@ -249,6 +250,7 @@ class Projects(models.Model):
 
     featured_image = models.ImageField(
         upload_to='projects/images/',
+        storage=image_storage,
         blank=True, null=True,
         help_text="Thumbnail image shown on project cards",
     )
