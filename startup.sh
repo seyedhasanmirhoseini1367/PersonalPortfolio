@@ -25,6 +25,9 @@ python manage.py populate_resume --if-empty || echo "populate_resume skipped or 
 echo "Populating 'How Models Work' walkthroughs (skips if already present)..."
 python manage.py populate_walkthroughs --if-empty || echo "populate_walkthroughs skipped or errored (non-fatal)"
 
+echo "Loading public projects, stories and Kaggle archive (skips sections already present)..."
+python manage.py populate_content --if-empty || echo "populate_content skipped or errored (non-fatal)"
+
 if [ "${REINDEX_ON_STARTUP}" = "1" ]; then
     echo "REINDEX_ON_STARTUP=1 — rebuilding RAG index with current embedding model..."
     python manage.py ingest_from_db --clear || echo "ingest_from_db failed (non-fatal)"

@@ -86,7 +86,9 @@ def _embed_project(project_id: int) -> None:
         from rag_system.models import Document
         import os
 
-        project = Projects.objects.get(pk=project_id)
+        project = Projects.objects.filter(pk=project_id).first()
+        if project is None:  # deleted before the (debounced) rebuild ran
+            return
         proc = DocumentProcessor()
         emb  = EmbeddingService()
 
