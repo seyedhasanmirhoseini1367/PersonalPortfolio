@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load story_html %}
 
 {% block extra_css %}
 <style>
@@ -70,7 +71,7 @@
 
                     <div class="story-content ql-content">
                         {% if story.content|slice:":1" == "<" %}
-                            {{ story.content|safe }}
+                            {{ story.content|clean_story_html }}
                         {% else %}
                             {{ story.content|linebreaks }}
                         {% endif %}
