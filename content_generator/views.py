@@ -436,7 +436,31 @@ def _publish_notion(api_url: str, token: str, title: str, content: dict):
     return {'url': result.get('url', '')}
 
 
+# One pipeline at a time: each run loads models and calls the LLM APIs, and the
+# free instance has little memory. Jobs wait (status "pending") for their turn.
+_PIPELINE_SLOT = threading.Semaphore(1)
+_IMPORT_LOCK = threading.Lock()
+
+
+def _load_pipeline():
+    """Import the (heavy) pipeline once. Two threads importing it at the same
+    time could get a half-initialised module ("cannot import name
+    'run_pipeline'"), so the import happens under a lock."""
+    with _IMPORT_LOCK:
+        from .pipeline.pipeline import run_pipeline
+    return run_pipeline
+
+
 def _run_pipeline(job_id: str, seo_params: dict = None):
+    from django.db import connection
+    try:
+        with _PIPELINE_SLOT:
+            _run_pipeline_now(job_id, seo_params)
+    finally:
+        connection.close()  # this thread's own DB connection
+
+
+def _run_pipeline_now(job_id: str, seo_params: dict = None):
     from .models import GenerationJob
 
     job = GenerationJob.objects.get(pk=job_id)
@@ -444,7 +468,7 @@ def _run_pipeline(job_id: str, seo_params: dict = None):
     job.save(update_fields=['status'])
 
     try:
-        from .pipeline.pipeline import run_pipeline
+        run_pipeline = _load_pipeline()
 
         keywords = [k.strip() for k in job.keywords.split(',') if k.strip()]
 
