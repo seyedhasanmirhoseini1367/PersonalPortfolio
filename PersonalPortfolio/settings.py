@@ -239,6 +239,10 @@ SYNTHETIC_MONITOR = {
 # Generations per user per 24 hours; 0 = unlimited (this is a test site and the
 # AI keys are on free plans, which stop at their quota rather than charge).
 CONTENT_GENERATOR_DAILY_LIMIT = config('CONTENT_GENERATOR_DAILY_LIMIT', default=0, cast=int)
+# Kaggle Winners Archive monthly auto-update (kaggle_archive/auto.py); needs
+# KAGGLE_USERNAME / KAGGLE_KEY. Runs from the worker thread above.
+KAGGLE_AUTO_SYNC = config('KAGGLE_AUTO_SYNC', default=True, cast=bool)
+KAGGLE_AUTO_SYNC_LIMIT = config('KAGGLE_AUTO_SYNC_LIMIT', default=3, cast=int)
 # Run the queue worker thread inside the web process (content_generator/worker.py).
 CONTENT_GENERATOR_RUN_WORKER = config('CONTENT_GENERATOR_RUN_WORKER', default=True, cast=bool)
 

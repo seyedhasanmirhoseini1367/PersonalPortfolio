@@ -1,3 +1,5 @@
+from django.conf import settings
+from django.utils import timezone
 from django.views.generic import ListView, DetailView
 from django.db.models import Q, Prefetch
 from django.contrib.admin.views.decorators import staff_member_required
@@ -133,6 +135,13 @@ class CompetitionDetailView(DetailView):
 
 @staff_member_required
 def manage_view(request):
+    from . import auto
+    from .models import KaggleSyncItem, KaggleSyncRun
+    if request.method == 'POST' and request.POST.get('action') == 'sync':
+        if auto.enabled():
+            import threading
+            threading.Thread(target=auto.run_sync, args=('manual',), daemon=True).start()
+        return redirect(request.path)
     if request.method == 'POST':
         url   = request.POST.get('url', '').strip()
         top_n = int(request.POST.get('top_n', 10))
@@ -144,9 +153,19 @@ def manage_view(request):
 
     active_job_id = request.GET.get('job')
     jobs          = ExtractionJob.objects.select_related('competition')[:30]
+    last_done = KaggleSyncRun.objects.filter(status='done').first()
+    days_left = 0
+    if last_done:
+        days_left = max(0, (last_done.started_at + auto.RUN_EVERY - timezone.now()).days)
     return render(request, 'kaggle_archive/manage.html', {
-        'jobs':          jobs,
-        'active_job_id': active_job_id,
+        'jobs':             jobs,
+        'active_job_id':    active_job_id,
+        'sync_enabled':     auto.enabled(),
+        'sync_limit':       getattr(settings, 'KAGGLE_AUTO_SYNC_LIMIT', 3),
+        'sync_runs':        KaggleSyncRun.objects.all()[:5],
+        'sync_items':       KaggleSyncItem.objects.all()[:60],
+        'next_run_due':     auto.enabled() and auto.is_due(),
+        'next_run_in_days': days_left,
     })
 
 
