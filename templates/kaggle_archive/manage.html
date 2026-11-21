@@ -57,6 +57,49 @@
         </form>
     </div>
 
+    <!-- ── Monthly auto-update ───────────────────────────────────────────── -->
+    <div class="mgr-card">
+        <div class="mgr-card-head" style="display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;">
+            <div>
+                <b><i class="fas fa-calendar-check"></i> Monthly auto-update</b>
+                <div style="font-size:.85rem;color:#64748b;">
+                    Featured &amp; Research competitions that ended 2–26 weeks ago; up to {{ sync_limit }} per run.
+                    {% if not sync_enabled %}<b style="color:#b45309;">Off — set KAGGLE_USERNAME and KAGGLE_KEY.</b>
+                    {% elif next_run_due %}Next run: due now (starts when the server is idle).
+                    {% else %}Next run: in about {{ next_run_in_days }} day{{ next_run_in_days|pluralize }}.{% endif %}
+                </div>
+            </div>
+            <form method="post" style="margin:0;">{% csrf_token %}
+                <input type="hidden" name="action" value="sync">
+                <button type="submit" class="btn-extract" {% if not sync_enabled %}disabled{% endif %}>
+                    <i class="fas fa-rotate"></i> Run now</button>
+            </form>
+        </div>
+        {% if sync_runs %}
+        <table style="width:100%;font-size:.85rem;border-collapse:collapse;margin-top:.5rem;">
+            <tr style="text-align:left;color:#64748b;"><th>Started</th><th>Trigger</th><th>Status</th><th>Processed</th><th>Log</th></tr>
+            {% for r in sync_runs %}
+            <tr style="border-top:1px solid #f1f5f9;vertical-align:top;">
+                <td>{{ r.started_at|date:"Y-m-d H:i" }}</td><td>{{ r.trigger }}</td><td>{{ r.status }}</td><td>{{ r.processed }}</td>
+                <td><details><summary>show</summary><pre style="white-space:pre-wrap;font-size:.78rem;">{{ r.log }}</pre></details></td>
+            </tr>
+            {% endfor %}
+        </table>
+        {% endif %}
+        {% if sync_items %}
+        <details style="margin-top:.75rem;"><summary>Competitions seen ({{ sync_items|length }})</summary>
+        <table style="width:100%;font-size:.85rem;border-collapse:collapse;margin-top:.5rem;">
+            <tr style="text-align:left;color:#64748b;"><th>Competition</th><th>Ended</th><th>Status</th><th>Write-ups</th><th>Note</th></tr>
+            {% for i in sync_items %}
+            <tr style="border-top:1px solid #f1f5f9;vertical-align:top;">
+                <td>{{ i.title|default:i.slug }}</td><td>{{ i.deadline|date:"Y-m-d" }}</td><td>{{ i.status }}</td>
+                <td>{{ i.writeups }}</td><td style="color:#64748b;">{{ i.reason|truncatechars:120 }}</td>
+            </tr>
+            {% endfor %}
+        </table></details>
+        {% endif %}
+    </div>
+
     <!-- ── Live Log (shown when a job is active) ──────────────────────────── -->
     <div class="mgr-card" id="logCard" style="display:none;">
         <div class="mgr-card-head">
