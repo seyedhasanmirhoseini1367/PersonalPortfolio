@@ -104,7 +104,9 @@ class KaggleExtractor:
             self.api = kaggle_api
             self.log('Kaggle API authenticated')
         except Exception as exc:
-            raise RuntimeError(f'Kaggle auth failed: {exc}')
+            raise RuntimeError(
+                f'Kaggle auth failed: {exc}. Set KAGGLE_USERNAME and KAGGLE_KEY '
+                '(Kaggle -> Settings -> API -> Create New Token) in the environment.')
 
         self.log('Fetching competition metadata...')
         meta = self._fetch_meta()
@@ -133,6 +135,14 @@ class KaggleExtractor:
         self.log('Saving leaderboard solutions with writeup content...')
         saved = self._save_solutions(comp, leaderboard, writeups)
         self.log(f'Saved {saved} leaderboard entries')
+
+        self.log('Building learning cards from the write-ups...')
+        try:
+            from .summarizer import summarize
+            made, refreshed = summarize(comp, only_missing=False, log=self.log)
+            self.log(f'{made} card(s); comparison {"updated" if refreshed else "not changed"}')
+        except Exception as exc:   # cards can be rebuilt later; keep the extraction
+            self.log(f'  [warn] learning cards failed: {exc}')
 
         self.log('Done')
         return {'competition': comp, 'saved': saved}

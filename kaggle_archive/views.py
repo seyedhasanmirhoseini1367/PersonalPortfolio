@@ -99,6 +99,27 @@ class CompetitionDetailView(DetailView):
             for tech in sol.techniques.all():
                 technique_counts[tech.name] = technique_counts.get(tech.name, 0) + 1
 
+        # Learning cards, prepared for the template (fixed section order).
+        from .summarizer import CARD_SECTIONS
+        compare_columns = [('validation', 'Validation'), ('models', 'Models'),
+                           ('ensembling', 'Ensembling & post-processing'),
+                           ('didnt_work', "Didn't work")]
+        cards = []
+        for sol in solutions:
+            if not sol.card:
+                continue
+            cards.append({
+                'solution': sol,
+                'headline': sol.card.get('headline', ''),
+                'sections': [(label, sol.card.get(key) or []) for key, label, _ in CARD_SECTIONS
+                             if sol.card.get(key)],
+                'cells': [sol.card.get(key) or [] for key, _ in compare_columns],
+            })
+        ctx['cards']    = cards
+        ctx['insights'] = competition.insights or {}
+        ctx['compare_columns'] = [label for _, label in compare_columns]
+        ctx['without_writeup'] = [s for s in solutions if not s.card]
+
         ctx['top_solutions']        = solutions[:3]
         ctx['solutions']            = solutions
         ctx['technique_frequency']  = sorted(technique_counts.items(), key=lambda x: -x[1])
