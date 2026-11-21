@@ -180,6 +180,17 @@ class GenerationJob(models.Model):
     status          = models.CharField(max_length=10, choices=STATUS_CHOICES, default=STATUS_PENDING)
     error_message   = models.TextField(blank=True)
 
+    # Queue bookkeeping (content_generator/worker.py)
+    seo_params      = models.JSONField(default=dict, blank=True,
+                                       help_text="Structure controls from the form, kept for the worker")
+    progress_step   = models.PositiveSmallIntegerField(default=0)
+    progress_label  = models.CharField(max_length=120, blank=True)
+    attempts        = models.PositiveSmallIntegerField(default=0)
+    claimed_by      = models.CharField(max_length=80, blank=True, help_text="Worker (host:pid) running it")
+    started_at      = models.DateTimeField(null=True, blank=True)
+    heartbeat_at    = models.DateTimeField(null=True, blank=True,
+                                           help_text="Updated at every pipeline step; stale = interrupted")
+
     content_en      = models.JSONField(null=True, blank=True)
     content_fi      = models.JSONField(null=True, blank=True)
     evaluation      = models.JSONField(null=True, blank=True)

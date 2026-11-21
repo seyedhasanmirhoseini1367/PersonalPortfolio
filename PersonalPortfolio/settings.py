@@ -239,6 +239,8 @@ SYNTHETIC_MONITOR = {
 # Generations per user per 24 hours; 0 = unlimited (this is a test site and the
 # AI keys are on free plans, which stop at their quota rather than charge).
 CONTENT_GENERATOR_DAILY_LIMIT = config('CONTENT_GENERATOR_DAILY_LIMIT', default=0, cast=int)
+# Run the queue worker thread inside the web process (content_generator/worker.py).
+CONTENT_GENERATOR_RUN_WORKER = config('CONTENT_GENERATOR_RUN_WORKER', default=True, cast=bool)
 
 # ── RAG Configuration ─────────────────────────────────────────────────────────
 RAG_CONFIG = {

@@ -39,7 +39,7 @@ class AccessTests(TestCase):
         self.client.force_login(self.ana)
         for _ in range(DAILY_JOB_LIMIT):
             self.assertEqual(self.submit().status_code, 200)
-        self.assertEqual(thread.call_count, DAILY_JOB_LIMIT)
+        self.assertEqual(GenerationJob.objects.filter(status=GenerationJob.STATUS_PENDING).count(), DAILY_JOB_LIMIT)
         self.assertEqual(self.submit().status_code, 302)
         self.assertEqual(GenerationJob.objects.filter(owner=self.ana).count(), DAILY_JOB_LIMIT)
 
@@ -154,3 +154,83 @@ class ShortFormatTests(TestCase):
         tagline = judge_geo('Tagline\n\nYour lab results, finally clear', 'motto')
         self.assertEqual((tagline['score'], [i['label'] for i in tagline['items']]), (100, ['No unsourced claims']))
         self.assertEqual(len(judge_geo('Some text.', 'blog_post')['items']), 5)
+
+
+class JobQueueTests(TestCase):
+    """Jobs wait in the database and the worker runs them in order."""
+
+    def setUp(self):
+        self.user = User.objects.create_user('queue_user', 'q@example.test', 'pw-queue-123!')
+
+    def make_job(self, **kw):
+        return GenerationJob.objects.create(owner=self.user, company_name='Acme', goal='g',
+                                            content_format='motto', **kw)
+
+    def test_submit_queues_instead_of_starting_a_thread(self):
+        self.client.force_login(self.user)
+        with mock.patch('content_generator.worker.wake') as wake:
+            r = self.client.post(reverse('content_generator:submit'),
+                                 {'content_formats': ['motto', 'social_post'], 'goal': 'g', 'ab_variants': '1',
+                                  'word_count_min': '100'})
+        self.assertEqual(r.status_code, 200)
+        jobs = GenerationJob.objects.filter(owner=self.user)
+        self.assertEqual(sorted(jobs.values_list('status', flat=True)), ['pending', 'pending'])
+        self.assertEqual(jobs.first().seo_params['word_count_min'], 100)
+        self.assertEqual(wake.call_count, 2)
+
+    def test_worker_runs_oldest_first_and_reports_progress(self):
+        from . import worker
+        first, second = self.make_job(), self.make_job()
+        seen = []
+
+        def fake_run(job_id, seo_params, progress=None):
+            progress(3, 'Writing')
+            seen.append((job_id, GenerationJob.objects.get(pk=job_id).progress_label))
+            GenerationJob.objects.filter(pk=job_id).update(status=GenerationJob.STATUS_DONE)
+
+        with mock.patch('content_generator.views._run_pipeline_now', side_effect=fake_run):
+            self.assertEqual(worker.run_pending(), 2)
+        self.assertEqual(seen, [(str(first.pk), 'Writing'), (str(second.pk), 'Writing')])
+        first.refresh_from_db()
+        self.assertEqual((first.status, first.attempts, first.progress_step), ('done', 1, 3))
+        self.assertIsNotNone(first.heartbeat_at)
+
+    def test_interrupted_jobs_are_requeued_once_then_failed(self):
+        from datetime import timedelta
+        from django.utils import timezone
+        from . import worker
+        old = timezone.now() - timedelta(minutes=30)
+        retry = self.make_job(status='running', attempts=1, heartbeat_at=old)
+        give_up = self.make_job(status='running', attempts=2, heartbeat_at=old)
+        alive = self.make_job(status='running', attempts=1, heartbeat_at=timezone.now())
+        self.assertEqual(worker.recover_stale(), 2)
+        for job in (retry, give_up, alive):
+            job.refresh_from_db()
+        self.assertEqual((retry.status, give_up.status, alive.status), ('pending', 'failed', 'running'))
+        self.assertIn('interrupted', give_up.error_message)
+
+    def test_jobs_of_a_dead_process_are_requeued_sooner(self):
+        from datetime import timedelta
+        from django.utils import timezone
+        from . import worker
+        five_min = timezone.now() - timedelta(minutes=5)
+        orphan = self.make_job(status='running', attempts=1, heartbeat_at=five_min, claimed_by='old-host:1')
+        mine = self.make_job(status='running', attempts=1, heartbeat_at=five_min, claimed_by=worker.WORKER_ID)
+        worker.recover_stale()
+        orphan.refresh_from_db(); mine.refresh_from_db()
+        self.assertEqual((orphan.status, mine.status), ('pending', 'running'))
+
+    def test_status_shows_queue_position_and_step(self):
+        import uuid
+        group = uuid.uuid4()
+        from datetime import timedelta
+        earlier = self.make_job(status='running', progress_step=4, progress_label='Checking facts')
+        GenerationJob.objects.filter(pk=earlier.pk).update(created_at=earlier.created_at - timedelta(seconds=5))
+        mine = self.make_job(job_group_id=group)
+        self.client.force_login(self.user)
+        data = self.client.get(reverse('content_generator:group_status', args=[group])).json()
+        self.assertEqual(data['jobs'][0]['status'], 'pending')
+        self.assertEqual(data['jobs'][0]['ahead'], 1)
+        GenerationJob.objects.filter(pk=mine.pk).update(status='running', progress_step=3, progress_label='Writing')
+        data = self.client.get(reverse('content_generator:group_status', args=[group])).json()
+        self.assertEqual((data['jobs'][0]['step'], data['jobs'][0]['label']), (3, 'Writing'))
