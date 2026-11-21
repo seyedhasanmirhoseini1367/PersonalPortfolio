@@ -520,6 +520,10 @@
                     <li><a href="{% url 'rag_system:chat' %}"
                            {% if request.resolver_match.url_name == 'chat' %}class="active"{% endif %}>AI Assistant</a></li>
 
+                    <li><a href="{% url 'sports:page' %}">
+                        <i class="fas fa-futbol" style="font-size:.75rem;opacity:.8;"></i> Sports App
+                    </a></li>
+
                     {% if user.is_staff or user.is_client %}
                     <li><a href="{% url 'content_generator:form' %}"
                            {% if request.resolver_match.app_name == 'content_generator' %}class="active"{% endif %}>Content Generator</a></li>

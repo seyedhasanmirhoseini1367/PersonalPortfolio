@@ -18,6 +18,12 @@ body{display:flex;align-items:center;justify-content:center;min-height:100vh}
 .scroll{flex:1;overflow-y:auto;min-height:0;padding-bottom:16px}
 .scroll::-webkit-scrollbar{display:none}
 .phone *{scrollbar-width:none}.phone *::-webkit-scrollbar{display:none}
+.demo{font-size:10px;font-weight:600;padding:2px 6px;border-radius:6px;background:var(--s2);color:var(--mu);vertical-align:2px}
+.field{width:100%;box-sizing:border-box;background:var(--s2);border:1px solid var(--line);border-radius:14px;color:var(--tx);font:inherit;font-size:14px;padding:10px 12px;resize:none}
+.field:focus{outline:none;border-color:var(--lime)}
+.sheet-bg{position:absolute;inset:0;background:rgba(0,0,0,.5);z-index:20;display:none}
+.sheet{position:absolute;left:0;right:0;bottom:0;max-height:70%;background:var(--s1);border-radius:22px 22px 0 0;z-index:21;display:none;flex-direction:column;padding:14px 16px 18px;gap:10px}
+.sheet.on,.sheet-bg.on{display:flex}
 h1,.sg{font-family:'Space Grotesk',sans-serif}
 button{font-family:inherit;cursor:pointer}
 .ico{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
@@ -85,7 +91,7 @@ nav button.on{color:var(--lime)}
     <div class="htabs" id="htabs">
       <button class="on" data-p="feed">Feed</button><button data-p="ch">Challenges</button><button data-p="tr">Training</button><button data-p="ev">Events</button>
     </div>
-    <div id="p-feed" class="hp" style="display:flex;flex-direction:column;gap:16px"><div id="feed" style="display:flex;flex-direction:column;gap:16px"></div></div>
+    <div id="p-feed" class="hp" style="display:flex;flex-direction:column;gap:16px"><div id="compose" class="pad" style="display:none"></div><div id="feed" style="display:flex;flex-direction:column;gap:16px"></div></div>
     <div id="p-ch" class="hp pad" style="display:none;flex-direction:column;gap:10px"></div>
     <div id="p-tr" class="hp pad" style="display:none;flex-direction:column;gap:12px"></div>
     <div id="p-ev" class="hp pad" style="display:none;flex-direction:column;gap:10px"></div>
@@ -232,14 +238,14 @@ nav button.on{color:var(--lime)}
   <div class="scroll">
     <div style="height:110px;background:#0F2E33;position:relative"><svg viewBox="0 0 390 110" width="100%" height="110" preserveAspectRatio="none" aria-hidden="true"><line x1="195" y1="0" x2="195" y2="110" stroke="#1C4A50" stroke-width="2"/><circle cx="195" cy="55" r="34" fill="none" stroke="#1C4A50" stroke-width="2"/></svg></div>
     <div class="pad" style="margin-top:-38px;display:flex;align-items:flex-end;gap:12px">
-      <div class="av sg" style="width:84px;height:84px;border:4px solid var(--bg);font-size:28px">AK</div>
+      <div class="av sg" id="meAv" style="width:84px;height:84px;border:4px solid var(--bg);font-size:28px">AK</div>
       <div style="flex:1;display:flex;gap:6px;justify-content:flex-end;padding-bottom:6px">
-        <button class="btn" data-toggle="Fan ✓|Become a Fan">Become a Fan</button>
+        <button class="btn" id="meBtn" data-toggle="Fan ✓|Become a Fan">Become a Fan</button>
         <button class="round" style="width:38px;height:38px;border:1px solid var(--line);background:none" aria-label="Message" onclick="go('locker')"><svg class="ico" viewBox="0 0 24 24" style="width:18px;height:18px"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></button>
       </div>
     </div>
     <div class="pad" style="padding-top:10px;display:flex;flex-direction:column;gap:6px">
-      <div style="display:flex;align-items:center;gap:6px"><h1 style="margin:0;font-family:Inter;font-size:20px">Aino Korhonen</h1><svg viewBox="0 0 24 24" width="18" height="18" role="img" aria-label="Verified"><circle cx="12" cy="12" r="10" fill="#2DD4BF"/><path d="M7 12l3 3 7-7" stroke="#0A1220" stroke-width="2.4" fill="none" stroke-linecap="round"/></svg></div>
+      <div style="display:flex;align-items:center;gap:6px"><h1 id="meName" style="margin:0;font-family:Inter;font-size:20px">Aino Korhonen</h1><svg viewBox="0 0 24 24" width="18" height="18" role="img" aria-label="Verified"><circle cx="12" cy="12" r="10" fill="#2DD4BF"/><path d="M7 12l3 3 7-7" stroke="#0A1220" stroke-width="2.4" fill="none" stroke-linecap="round"/></svg></div>
       <div class="mu" style="font-size:13px">Tampere · Football · Padel · <button onclick="go('team')" style="background:none;border:0;padding:0;color:var(--lime);font-size:13px;font-weight:600">FC Hervanta ›</button></div>
       <div style="display:flex;gap:18px;font-size:13px;margin-top:4px"><span><b class="sg" style="font-size:16px">1,284</b> <span class="mu">Fans</span></span><span><b class="sg" style="font-size:16px">312</b> <span class="mu">Squad</span></span><span><b class="sg" style="font-size:16px">4.1k</b> <span class="mu">Hype</span></span></div>
     </div>
@@ -310,6 +316,8 @@ nav button.on{color:var(--lime)}
   <button data-go="locker" aria-label="Locker Room"><svg class="ico" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Chat</button>
   <button data-go="profile" aria-label="Profile"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/></svg>Me</button>
 </nav>
+<div class="sheet-bg" id="sheetBg" onclick="closeComments()"></div>
+<div class="sheet" id="sheet" role="dialog" aria-label="Comments"></div>
 <div class="toast" id="toast"></div>
 </div>
 
@@ -360,7 +368,7 @@ const G={fire:['Fire','#FF6B3D','M12 21c3.5 0 6-2.6 6-6 0-3.5-2.5-5-3.5-9-1.8 1.
 const SPORT_STK={Football:['net','fire','glove','card','crown'],Drill:['respect','note','fire'],Padel:['racket','fire','crown'],Running:['watch','fire','crown']};
 const stk=(k,sz)=>`<span class="stk" style="width:${sz}px;height:${sz}px;background:${G[k][1]}"><svg viewBox="0 0 24 24" width="${sz*.6}" height="${sz*.6}" fill="none" stroke="#fff" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="${G[k][2]}"/></svg></span>`;
 const LEVELS=[['Quiet','#5B6B80'],['Warming up','#14B8A6'],['Loud','#2DD4BF'],['Rocking','#FFC53D'],['Stadium erupts','#FF6B3D']];
-const POSTS=[
+let POSTS=[
  {ini:'AK',name:'Aino Korhonen',tag:'Football',bg:'#0F2E33',txt:'54th minute curler — Round 9',heat:0.62,cheers:2140,top:['net','fire'],cm:48,
   art:'<rect x="20" y="20" width="314" height="230" fill="none" stroke="#1C4A50" stroke-width="2"/><line x1="177" y1="20" x2="177" y2="250" stroke="#1C4A50" stroke-width="2"/><circle cx="177" cy="135" r="40" fill="none" stroke="#1C4A50" stroke-width="2"/><path d="M90 200 Q170 60 290 115" fill="none" stroke="#2DD4BF" stroke-width="3" stroke-dasharray="6 6"/><circle cx="290" cy="115" r="8" fill="#fff"/>'},
  {ini:'MR',name:'Coach Mika',tag:'Drill',bg:'#1A2440',txt:'Rondo 4v2 for a quicker first touch',heat:0.34,cheers:610,top:['respect','note'],cm:19,
@@ -387,9 +395,11 @@ function cheer(i,ev){const n=claps[i]||0;if(n>=10){toast('Max 10 cheers per post
   claps[i]=n+1;const L=lvl(heatOf(i));crowdSound(L);try{navigator.vibrate&&navigator.vibrate(12+L*6)}catch(e){}
   renderFeed();const b=document.querySelector(`#cheer-${i}`);if(b){const f=document.createElement('span');f.className='burst';f.textContent='+'+claps[i];b.appendChild(f);setTimeout(()=>f.remove(),700)}}
 /* sticker mode: picking toggles the sticker; a picked sticker adds 1 to the post's count */
-function pickSticker(i,k){picked[i]=picked[i]===k?null:k;tray=null;renderFeed()}
+function pickSticker(i,k){if(POSTS[i].real){tray=null;sendSticker(i,k);return}
+  picked[i]=picked[i]===k?null:k;tray=null;renderFeed()}
 function dblReact(i){if(REACTION_MODE==='meter'){cheer(i);return}
-  const k=SPORT_STK[POSTS[i].tag][0];if(picked[i]!==k){picked[i]=k}tray=null;renderFeed()}
+  const k=SPORT_STK[POSTS[i].tag][0];if(POSTS[i].real){if(picked[i]!==k)sendSticker(i,k);return}
+  if(picked[i]!==k){picked[i]=k}tray=null;renderFeed()}
 const SMILE=`<span class="stk" style="width:28px;height:28px;background:var(--s2)"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="#C9D6E0" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M9 10h.01M15 10h.01M8.5 14.5a4.5 4.5 0 0 0 7 0"/></svg></span>`;
 function stickerRow(p,i,pk,tops){const total=p.cheers+(pk?1:0);return `
  <div style="display:flex;align-items:center;gap:8px;padding:12px 2px 4px">
@@ -398,7 +408,7 @@ function stickerRow(p,i,pk,tops){const total=p.cheers+(pk?1:0);return `
    ${tops.length?`<span style="display:flex">${tops.map((k,j)=>`<span title="${G[k][0]}" style="margin-left:${j?-8:0}px;border:2px solid var(--bg);border-radius:50%;display:flex">${stk(k,24)}</span>`).join('')}</span>`:''}
    <span style="font-size:13px;font-weight:600;color:#C9D6E0">${total.toLocaleString()}</span>
   </div>
-  <button class="ib" aria-label="Comments" onclick="go('match')" style="min-width:0;padding:0 2px">${svg('M21 12a8 8 0 0 1-11.5 7.2L4 20l1-4.5A8 8 0 1 1 21 12z')}<span style="font-size:13px">${p.cm}</span></button>
+  <button class="ib" aria-label="Comments" onclick="${p.real?`openComments(${i})`:`go('match')`}" style="min-width:0;padding:0 2px">${svg('M21 12a8 8 0 0 1-11.5 7.2L4 20l1-4.5A8 8 0 1 1 21 12z')}<span style="font-size:13px">${p.cm}</span></button>
   <button class="ib" aria-label="Pass" title="Pass" onclick="toast('Pass to a teammate')" style="min-width:40px;padding:0 2px">${svg('M22 2L11 13M22 2l-7 20-4-9-9-4z')}</button>
   <button class="ib" aria-label="Save" onclick="saved[${i}]=!saved[${i}];renderFeed()" style="min-width:40px;padding:0 2px;${saved[i]?'color:var(--lime)':''}"><svg class="ico" viewBox="0 0 24 24" style="${saved[i]?'fill:currentColor':''}"><path d="M6 3h12v18l-6-4-6 4z"/></svg></button>
  </div>`}
@@ -406,12 +416,12 @@ function renderFeed(){$('#feed').innerHTML=POSTS.map((p,i)=>{const h=heatOf(i),L
 <article style="margin:0 14px;position:relative">
  <div style="display:flex;align-items:center;gap:10px;padding:0 4px 10px">
   <div class="av" style="width:36px;height:36px;font-size:13px">${p.ini}</div>
-  <div style="flex:1;font-weight:600;font-size:14px">${p.name} <span class="mu" style="font-weight:400;font-size:12px">· ${p.tag}</span></div>
-  <button class="round" style="width:36px;height:36px;background:none" aria-label="More" onclick="toast('Follow · Pass · Report')">${svg('M5 12h.01M12 12h.01M19 12h.01')}</button>
+  <div style="flex:1;font-weight:600;font-size:14px">${p.name} <span class="mu" style="font-weight:400;font-size:12px">· ${p.tag}${p.real?` · ${ago(p.at)}`:''}</span>${p.demo&&window.LIVE_ON?` <span class="demo">Demo</span>`:''}</div>
+  <button class="round" style="width:36px;height:36px;background:none" aria-label="More" onclick="${p.canDelete?`deletePost(${i})`:`toast('Follow · Pass · Report')`}">${p.canDelete?svg('M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3'):svg('M5 12h.01M12 12h.01M19 12h.01')}</button>
  </div>
- <div style="position:relative;height:270px;border-radius:22px;background:${p.bg};overflow:hidden" ondblclick="dblReact(${i})">
-  <svg viewBox="0 0 354 270" width="100%" height="270" preserveAspectRatio="none" aria-hidden="true">${p.art}</svg>
-  <button aria-label="Play" onclick="go('studio')" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:56px;height:56px;border-radius:28px;border:0;background:rgba(255,255,255,.92);color:#0A1220;display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M8 5v14l11-7z" fill="currentColor"/></svg></button>
+ <div style="position:relative;height:${p.real?200:270}px;border-radius:22px;background:${p.bg};overflow:hidden" ondblclick="dblReact(${i})">
+  <svg viewBox="0 0 354 270" width="100%" height="${p.real?200:270}" preserveAspectRatio="none" aria-hidden="true">${p.art}</svg>
+  ${p.real?'':`<button aria-label="Play" onclick="go('studio')" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:56px;height:56px;border-radius:28px;border:0;background:rgba(255,255,255,.92);color:#0A1220;display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M8 5v14l11-7z" fill="currentColor"/></svg></button>`}
   ${REACTION_MODE==='meter'&&tops.length?`<div style="position:absolute;right:10px;top:10px;display:flex">${tops.map((k,j)=>`<span style="margin-left:${j?-8:0}px;border:2px solid ${p.bg};border-radius:50%;display:flex">${stk(k,26)}</span>`).join('')}</div>`:''}
  </div>
  ${tray===i?`<div class="tray" role="group" aria-label="Pick a sticker">${SPORT_STK[p.tag].map(k=>`<button aria-label="${G[k][0]}" title="${G[k][0]}" onclick="pickSticker(${i},'${k}')" class="${pk===k?'picked':''}">${stk(k,42)}</button>`).join('')}</div>`:''}
@@ -431,6 +441,65 @@ function renderFeed(){$('#feed').innerHTML=POSTS.map((p,i)=>{const h=heatOf(i),L
  <p style="margin:0;padding:2px 4px 0;font-size:14px;color:#D5DEE6">${p.txt}</p>
 </article>`}).join('')}
 renderFeed();
+
+/* ===== LIVE MODE: real accounts, posts, stickers and comments =====
+   When the page is served by the portfolio (hasanai.net/sports/) the API below
+   answers and real posts appear above the demo posts. Anywhere else (e.g. the
+   standalone static copy) the calls fail and the page stays a demo. */
+const API={on:false,me:null,base:'/sports/api/'};
+const DEMO=POSTS.map(p=>({...p,demo:true}));
+const ART={},BG={};DEMO.forEach(p=>{if(!ART[p.tag]){ART[p.tag]=p.art.replace(/<text[^>]*>.*?<\/text>/g,'');BG[p.tag]=p.bg}});
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function ago(t){const s=Math.max(1,(Date.now()-new Date(t))/1000);if(s<60)return 'now';if(s<3600)return Math.floor(s/60)+'m';if(s<86400)return Math.floor(s/3600)+'h';return Math.floor(s/86400)+'d'}
+function csrf(){const m=document.cookie.match(/(?:^|; )csrftoken=([^;]+)/);return m?decodeURIComponent(m[1]):''}
+async function api(path,opt={}){
+  const r=await fetch(API.base+path,{credentials:'same-origin',...opt,headers:{'Content-Type':'application/json','X-CSRFToken':csrf(),...(opt.headers||{})}});
+  const ct=r.headers.get('content-type')||'';const data=ct.includes('json')?await r.json():{};
+  if(!r.ok){const e=new Error(data.error||'Something went wrong');e.status=r.status;throw e}return data}
+function fromServer(s){return {real:true,id:s.id,ini:esc(s.author.ini),name:esc(s.author.name),tag:s.sport,bg:BG[s.sport]||'#13293A',
+  txt:esc(s.text),heat:0,cheers:s.stickers-(s.mine?1:0),top:s.top.filter(k=>k!==s.mine),mine:s.mine,cm:s.comments,at:s.created_at,canDelete:s.can_delete,art:ART[s.sport]||''}}
+function setPosts(real){POSTS=[...real.map(fromServer),...DEMO];
+  for(const o of [claps,picked,saved])for(const k in o)delete o[k];
+  POSTS.forEach((p,i)=>{if(p.real&&p.mine)picked[i]=p.mine});tray=null;renderFeed()}
+function needLogin(){toast('Log in to join in');const c=$('#compose');if(c)c.scrollIntoView({behavior:'smooth',block:'center'})}
+async function loadFeed(){try{const d=await api('posts/');setPosts(d.posts)}catch(e){}}
+async function sendSticker(i,k){if(!API.me){needLogin();return}
+  const p=POSTS[i];try{const d=await api(`posts/${p.id}/sticker/`,{method:'POST',body:JSON.stringify({sticker:k})});
+  POSTS[i]=fromServer(d.post);picked[i]=POSTS[i].mine||null;renderFeed()}catch(e){toast(e.message)}}
+async function deletePost(i){if(!confirm('Delete this post?'))return;
+  try{await api(`posts/${POSTS[i].id}/`,{method:'DELETE'});toast('Post deleted');loadFeed()}catch(e){toast(e.message)}}
+let draftSport='Football';
+function renderCompose(){const c=$('#compose');if(!API.on){c.style.display='none';return}c.style.display='block';
+  if(!API.me){c.innerHTML=`<div class="card" style="padding:16px;display:flex;flex-direction:column;gap:10px">
+    <div class="sg" style="font-size:17px;font-weight:700">Join arena<span style="color:var(--lime)">.</span></div>
+    <div class="mu" style="font-size:13px">Sign up to post, react with stickers and comment with your friends.</div>
+    <div style="display:flex;gap:8px"><a class="btn" style="display:flex;align-items:center;text-decoration:none" href="${API.reg}">Sign up</a><a class="btn ghost" style="display:flex;align-items:center;text-decoration:none" href="${API.login}">Log in</a></div></div>`;return}
+  c.innerHTML=`<div class="card" style="padding:12px;display:flex;flex-direction:column;gap:10px">
+    <div style="display:flex;gap:10px;align-items:flex-start"><div class="av" style="width:36px;height:36px;font-size:13px">${esc(API.me.ini)}</div>
+    <textarea id="draft" class="field" rows="2" maxlength="280" placeholder="Share a moment, ${esc(API.me.name.split(' ')[0])}…"></textarea></div>
+    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">${Object.keys(SPORT_STK).map(s=>`<button class="chip ${s===draftSport?'sel':''}" onclick="pickDraftSport('${s}')">${s}</button>`).join('')}
+    <button class="btn" style="margin-left:auto" onclick="submitPost()">Post</button></div></div>`}
+function pickDraftSport(s){const t=$('#draft').value;draftSport=s;renderCompose();$('#draft').value=t}
+async function submitPost(){const t=$('#draft').value.trim();if(!t){toast('Write something first');return}
+  try{await api('posts/',{method:'POST',body:JSON.stringify({sport:draftSport,text:t})});$('#draft').value='';toast('Posted');loadFeed()}catch(e){toast(e.message)}}
+let sheetPost=null;
+async function openComments(i){sheetPost=i;$('#sheet').classList.add('on');$('#sheetBg').classList.add('on');
+  $('#sheet').innerHTML='<div class="mu" style="font-size:13px">Loading…</div>';
+  try{const d=await api(`posts/${POSTS[i].id}/comments/`);renderComments(d.comments)}catch(e){$('#sheet').innerHTML=`<div class="mu">${esc(e.message)}</div>`}}
+function renderComments(list){const p=POSTS[sheetPost];
+  $('#sheet').innerHTML=`<div style="display:flex;align-items:center"><b style="flex:1">Comments</b><button class="round" style="width:34px;height:34px" aria-label="Close" onclick="closeComments()">${svg('M6 6l12 12M18 6L6 18')}</button></div>
+  <div style="overflow-y:auto;display:flex;flex-direction:column;gap:10px;min-height:40px">${list.length?list.map(c=>`<div style="display:flex;gap:10px"><div class="av" style="width:30px;height:30px;font-size:11px">${esc(c.author.ini)}</div><div style="font-size:13px"><b>${esc(c.author.name)}</b> <span class="mu" style="font-size:11px">${ago(c.created_at)}</span><div style="margin-top:2px;color:#D5DEE6">${esc(c.text)}</div></div></div>`).join(''):'<div class="mu" style="font-size:13px">No comments yet. Start the chat.</div>'}</div>
+  ${API.me?`<div style="display:flex;gap:8px"><input id="cmt" class="field" maxlength="500" placeholder="Add a comment…" onkeydown="if(event.key==='Enter')sendComment()"><button class="btn" onclick="sendComment()">Send</button></div>`
+  :`<a class="btn" style="display:flex;align-items:center;justify-content:center;text-decoration:none" href="${API.login}">Log in to comment</a>`}`;
+  p.cm=list.length;renderFeed()}
+async function sendComment(){const t=$('#cmt').value.trim();if(!t)return;
+  try{const d=await api(`posts/${POSTS[sheetPost].id}/comments/`,{method:'POST',body:JSON.stringify({text:t})});renderComments(d.comments)}catch(e){toast(e.message)}}
+function closeComments(){$('#sheet').classList.remove('on');$('#sheetBg').classList.remove('on');sheetPost=null}
+function renderMe(){if(!API.me)return;$('#meAv').textContent=API.me.ini;$('#meName').textContent=API.me.name;
+  const b=$('#meBtn');b.removeAttribute('data-toggle');b.textContent='Log out';b.onclick=e=>{e.stopPropagation();location.href=API.logout}}
+(async function initLive(){try{const m=await api('me/');API.on=true;window.LIVE_ON=true;
+  if(m.authenticated){API.me=m.user;API.logout=m.logout_url}else{API.login=m.login_url;API.reg=m.register_url}
+  renderCompose();renderMe();await loadFeed()}catch(e){/* no backend here: demo only */}})();
 
 /* MATCH */
 let pa=58;function pulse(d){pa=Math.max(5,Math.min(95,pa+d*3));$('#pulseA').style.flex=pa;$('#pulseB').style.flex=100-pa;$('#pulseTxt').textContent=pa+'% Hervanta · '+(100-pa)+'% Kaleva';toast(d>0?'Reaction sent':'Robbed! noted')}
