@@ -221,6 +221,106 @@ class SocialTests(ApiTestCase):
         self.assertEqual(self.client.get('/sports/api/me/').json()['unread'], 0)
 
 
+class GameManagementTests(ApiTestCase):
+    def game(self, capacity=2, days=2):
+        return SportPost.objects.create(author=self.alice, sport='Padel', kind='event', text='Doubles',
+                                        event_at=timezone.now() + timedelta(days=days), capacity=capacity)
+
+    def join(self, user, post, going=True):
+        self.login(user)
+        return self.send('post', f'/sports/api/posts/{post.id}/rsvp/', {'going': going})
+
+    def notice_types(self, user):
+        self.login(user)
+        return [i['type'] for i in self.client.get('/sports/api/notifications/').json()['items']]
+
+    def test_promotion_from_waitlist_is_notified_and_position_shown(self):
+        post = self.game(capacity=1)
+        EventRSVP.objects.create(post=post, user=self.alice)
+        carol = make_user('carol@example.com', 'Carol')
+        data = self.join(self.bob, post).json()['post']['event']
+        self.assertEqual((data['me'], data['waitlist_position']), ('waitlist', 1))
+        data = self.join(carol, post).json()['post']['event']
+        self.assertEqual(data['waitlist_position'], 2)
+        self.assertEqual(self.join(self.alice, post, going=False).status_code, 400)  # organiser can't leave
+        post.capacity = 2
+        post.save()  # simulate a spot freeing without an edit: Bob is in now
+        self.join(carol, post, going=False)
+        self.assertIn('waitlisted', self.notice_types(self.alice))
+        self.assertIn('left', self.notice_types(self.alice))
+
+    def test_leaving_promotes_next_person_with_notice(self):
+        post = self.game(capacity=2)
+        EventRSVP.objects.create(post=post, user=self.alice)
+        carol = make_user('carol@example.com', 'Carol')
+        self.join(self.bob, post)
+        self.join(carol, post)  # waitlisted
+        self.join(self.bob, post, going=False)
+        self.assertIn('promoted', self.notice_types(carol))
+
+    def test_cancel_notifies_and_blocks_rsvps(self):
+        post = self.game()
+        EventRSVP.objects.create(post=post, user=self.alice)
+        self.join(self.bob, post)
+        self.login(self.bob)
+        self.assertEqual(self.send('post', f'/sports/api/posts/{post.id}/cancel/').status_code, 403)
+        self.login(self.alice)
+        data = self.send('post', f'/sports/api/posts/{post.id}/cancel/').json()['post']
+        self.assertTrue(data['event']['cancelled'])
+        self.assertIn('cancelled', self.notice_types(self.bob))
+        self.assertEqual(self.join(self.bob, post).status_code, 400)
+        self.assertEqual(self.client.get('/sports/api/posts/?upcoming=1').json()['posts'], [])
+
+    def test_edit_game_notifies_and_guards_capacity(self):
+        post = self.game(capacity=3)
+        EventRSVP.objects.create(post=post, user=self.alice)
+        self.join(self.bob, post)
+        self.login(self.bob)
+        self.assertEqual(self.send('patch', f'/sports/api/posts/{post.id}/', {'text': 'mine now'}).status_code, 403)
+        self.login(self.alice)
+        self.assertEqual(self.send('patch', f'/sports/api/posts/{post.id}/', {'capacity': 1}).status_code, 400)
+        new_at = (timezone.now() + timedelta(days=3)).isoformat()
+        data = self.send('patch', f'/sports/api/posts/{post.id}/', {'event_at': new_at, 'place': 'Court 9'}).json()['post']
+        self.assertEqual((data['event']['place'], data['edited']), ('Court 9', True))
+        self.assertIn('changed', self.notice_types(self.bob))
+
+    def test_no_leaving_after_start_and_no_games_in_the_past(self):
+        post = self.game()
+        self.join(self.bob, post)
+        SportPost.objects.filter(pk=post.pk).update(event_at=timezone.now() - timedelta(minutes=10))
+        self.assertEqual(self.join(self.bob, post, going=False).status_code, 400)
+        self.login(self.alice)
+        past = (timezone.now() - timedelta(minutes=30)).isoformat()
+        r = self.send('post', '/sports/api/posts/', {'sport': 'Padel', 'kind': 'event', 'text': 'x', 'event_at': past})
+        self.assertEqual(r.status_code, 400)
+
+    def test_upcoming_is_soonest_first_and_single_post_is_shareable(self):
+        later, sooner = self.game(days=5), self.game(days=1)
+        ids = [p['id'] for p in self.client.get('/sports/api/posts/?upcoming=1').json()['posts']]
+        self.assertEqual(ids, [sooner.id, later.id])
+        self.assertEqual(self.client.get(f'/sports/api/posts/{later.id}/').json()['post']['id'], later.id)
+
+    def test_impossible_dates_and_odd_numbers_are_400_not_500(self):
+        self.login(self.alice)
+        for at in ('2026-13-45T10:00', '2026-02-30T10:00:00', '2026-05-01T25:00', '2026-05-01T10:00+99:00'):
+            body = {'sport': 'Padel', 'kind': 'event', 'text': 'x', 'event_at': at}
+            self.assertEqual(self.send('post', '/sports/api/posts/', body).status_code, 400, at)
+        for q in ('?author=%C2%B2', '?before=%C2%B2', '?author=99999999999999999999999'):
+            self.assertEqual(self.client.get('/sports/api/posts/' + q).status_code, 200, q)
+
+    def test_deleted_cursor_does_not_repeat_page_one(self):
+        posts = [SportPost.objects.create(author=self.alice, sport='Padel', text=f'p{i}') for i in range(3)]
+        cursor = posts[1].id
+        posts[1].delete()
+        ids = [p['id'] for p in self.client.get(f'/sports/api/posts/?before={cursor}').json()['posts']]
+        self.assertEqual(ids, [posts[0].id])
+
+    def test_names_never_come_from_email(self):
+        nameless = get_user_model().objects.create_user(username='zed@secret.example', email='zed@secret.example',
+                                                        password='pw-for-tests-only')
+        self.assertEqual(self.client.get(f'/sports/api/users/{nameless.id}/').json()['user']['name'], 'Player')
+
+
 class SafeRedirectTests(TestCase):
     def test_login_ignores_offsite_next(self):
         make_user('dana@example.com')

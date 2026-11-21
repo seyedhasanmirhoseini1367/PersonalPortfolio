@@ -21,7 +21,7 @@ from django.views.decorators.http import require_GET, require_http_methods
 
 from django.contrib.auth import get_user_model
 
-from .models import (SPORT_STICKERS, EventRSVP, Follow, PostComment, PostSticker,
+from .models import (SPORT_STICKERS, EventRSVP, Follow, Notice, PostComment, PostSticker,
                      SavedPost, SportPost, SportsProfile)
 
 User = get_user_model()
@@ -49,12 +49,20 @@ def page(request):
 
 
 def display_name(user):
+    """Full name, else a non-email username. Never derived from the email address."""
     name = (user.get_full_name() or '').strip()
     if name:
-        return name
+        return name[:60]
     if user.username and '@' not in user.username:
-        return user.username
-    return (user.email or 'Player').split('@')[0]
+        return user.username[:60]
+    return 'Player'
+
+
+def small_int(value):
+    """A positive integer that fits a database id, or None."""
+    if isinstance(value, str) and value.isascii() and value.isdigit() and len(value) <= 10:
+        return int(value)
+    return None
 
 
 def initials(name):
@@ -140,26 +148,41 @@ def viewer_context(user, posts):
     }
 
 
-def event_json(post, user):
-    rsvps = list(post.rsvps.all())  # prefetched, in join order
+def split_rsvps(post, rsvps=None):
+    """(going, waitlist) lists of RSVPs, in join order."""
+    rsvps = list(post.rsvps.all()) if rsvps is None else rsvps
     cap = post.capacity
-    going = rsvps if cap is None else rsvps[:cap]
-    waiting = [] if cap is None else rsvps[cap:]
-    me = None
+    return (rsvps, []) if cap is None else (rsvps[:cap], rsvps[cap:])
+
+
+def going_ids(post):
+    going, _ = split_rsvps(post, list(EventRSVP.objects.filter(post=post).order_by('created_at', 'id')))
+    return [r.user_id for r in going]
+
+
+def event_json(post, user):
+    going, waiting = split_rsvps(post)  # rsvps are prefetched, in join order
+    cap = post.capacity
+    me, position = None, None
     if user.is_authenticated:
         if any(r.user_id == user.id for r in going):
             me = 'in'
-        elif any(r.user_id == user.id for r in waiting):
-            me = 'waitlist'
+        else:
+            position = next((n for n, r in enumerate(waiting, 1) if r.user_id == user.id), None)
+            me = 'waitlist' if position else None
     return {
         'at': post.event_at.isoformat() if post.event_at else None,
         'place': post.place,
         'capacity': cap,
         'going_count': len(going),
         'waitlist_count': len(waiting),
+        'spots_left': None if cap is None else max(0, cap - len(going)),
         'going': [user_json(r.user) for r in going[:GOING_SHOWN]],
+        'waitlist': [user_json(r.user) for r in waiting[:GOING_SHOWN]],
         'me': me,
+        'waitlist_position': position,
         'past': bool(post.event_at and post.event_at < timezone.now()),
+        'cancelled': post.cancelled_at is not None,
     }
 
 
@@ -179,6 +202,7 @@ def post_json(post, user, ctx):
         'mine': mine,
         'comments': post.n_comments,
         'can_delete': user.is_authenticated and post.author_id == user.id,
+        'edited': post.edited_at is not None,
         'saved': post.id in ctx['saved'],
         'author_followed': post.author_id in ctx['following'],
     }
@@ -206,10 +230,9 @@ def notifications_for(user):
               .select_related('author', 'post').order_by('-created_at')[:30]):
         items.append({'type': 'comment', 'user': user_json(c.author), 'post_id': c.post_id,
                       'post_text': c.post.text[:60], 'text': c.text[:80], 'at': c.created_at})
-    for r in (EventRSVP.objects.filter(post__in=mine).exclude(user=user)
-              .select_related('user', 'post').order_by('-created_at')[:30]):
-        items.append({'type': 'rsvp', 'user': user_json(r.user), 'post_id': r.post_id,
-                      'post_text': r.post.text[:60], 'at': r.created_at})
+    for n in Notice.objects.filter(recipient=user).select_related('actor', 'post')[:30]:
+        items.append({'type': n.type, 'user': user_json(n.actor) if n.actor else None,
+                      'post_id': n.post_id, 'post_text': n.post.text[:60] if n.post else '', 'at': n.created_at})
     for f in Follow.objects.filter(following=user).select_related('follower').order_by('-created_at')[:30]:
         items.append({'type': 'follow', 'user': user_json(f.follower), 'at': f.created_at})
     items.sort(key=lambda i: i['at'], reverse=True)
@@ -247,9 +270,17 @@ def posts(request):
         qs = qs.filter(sport=sport)
     if request.GET.get('kind') == 'event':
         qs = qs.filter(kind=SportPost.KIND_EVENT)
-    author = request.GET.get('author', '')
-    if author.isdigit():
-        qs = qs.filter(author_id=int(author))
+    if request.GET.get('upcoming') == '1':
+        # Games still to be played, soonest first. Small list, so no paging.
+        qs = (qs.filter(kind=SportPost.KIND_EVENT, cancelled_at__isnull=True,
+                        event_at__gte=timezone.now() - timedelta(hours=2))
+              .order_by('event_at', 'id'))
+        items = list(qs[:50])
+        ctx = viewer_context(request.user, items)
+        return JsonResponse({'posts': [post_json(p, request.user, ctx) for p in items], 'next': None})
+    author = small_int(request.GET.get('author', ''))
+    if author is not None:
+        qs = qs.filter(author_id=author)
     if request.GET.get('following') == '1':
         if not request.user.is_authenticated:
             return error('Log in to see who you follow.', 401)
@@ -258,11 +289,14 @@ def posts(request):
         if not request.user.is_authenticated:
             return error('Log in to see your saved posts.', 401)
         qs = qs.filter(saves__user=request.user)
-    before = request.GET.get('before', '')
-    if before.isdigit():
-        pivot = SportPost.objects.filter(pk=int(before)).values_list('created_at', flat=True).first()
-        if pivot:
-            qs = qs.filter(created_at__lte=pivot).exclude(pk__gte=int(before), created_at=pivot)
+    before = small_int(request.GET.get('before', ''))
+    if before is not None:
+        pivot = SportPost.objects.filter(pk=before).values_list('created_at', flat=True).first()
+        if pivot is None:
+            # The cursor post was deleted; fall back to ids, which grow with time.
+            qs = qs.filter(pk__lt=before)
+        else:
+            qs = qs.filter(created_at__lte=pivot).exclude(pk__gte=before, created_at=pivot)
     page_posts = list(qs[:PAGE_SIZE + 1])
     more = len(page_posts) > PAGE_SIZE
     page_posts = page_posts[:PAGE_SIZE]
@@ -271,6 +305,49 @@ def posts(request):
         'posts': [post_json(p, request.user, ctx) for p in page_posts],
         'next': page_posts[-1].id if more else None,
     })
+
+
+def event_fields(data, partial=False):
+    """Validated event fields from a request body: (fields, error message or None).
+    With partial=True only the keys present are checked (for edits)."""
+    fields = {}
+    if not partial or 'event_at' in data:
+        try:
+            at = parse_datetime(text_field(data, 'event_at'))
+        except ValueError:  # well-formed but impossible, e.g. 2026-02-30 or +99:00
+            at = None
+        if at is None:
+            return {}, 'Pick a date and time for the game.'
+        if timezone.is_naive(at):
+            at = timezone.make_aware(at)
+        now = timezone.now()
+        if at < now - timedelta(minutes=5) or at > now + timedelta(days=366):
+            return {}, 'Pick a time between now and a year from now.'
+        fields['event_at'] = at
+    if not partial or 'place' in data:
+        place = text_field(data, 'place')
+        if len(place) > 80:
+            return {}, 'Keep the place under 80 characters.'
+        fields['place'] = place
+    if not partial or 'capacity' in data:
+        capacity = data.get('capacity')
+        if capacity in (None, '', 0):
+            capacity = None
+        elif not isinstance(capacity, int) or isinstance(capacity, bool) or not 2 <= capacity <= 200:
+            return {}, 'Spots must be a number from 2 to 200.'
+        fields['capacity'] = capacity
+    return fields, None
+
+
+def notify(recipients, type_, post, actor=None):
+    Notice.objects.bulk_create([Notice(recipient_id=r, actor=actor, type=type_, post=post)
+                                for r in set(recipients) if not actor or r != actor.id])
+
+
+def notify_promotions(post, before, actor=None):
+    """Tell people who just moved off the waitlist that they have a spot."""
+    now_in = going_ids(post)
+    notify([u for u in now_in if u not in before], Notice.PROMOTED, post, actor)
 
 
 @login_required_json
@@ -291,23 +368,9 @@ def create_post(request):
         return error('Keep it under 280 characters.', 400)
     fields = {}
     if kind == SportPost.KIND_EVENT:
-        at = parse_datetime(text_field(data, 'event_at'))
-        if at is None:
-            return error('Pick a date and time for the event.', 400)
-        if timezone.is_naive(at):
-            at = timezone.make_aware(at)
-        now = timezone.now()
-        if at < now - timedelta(hours=1) or at > now + timedelta(days=366):
-            return error('Pick a time between now and a year from now.', 400)
-        place = text_field(data, 'place')
-        if len(place) > 80:
-            return error('Keep the place under 80 characters.', 400)
-        capacity = data.get('capacity')
-        if capacity in (None, '', 0):
-            capacity = None
-        elif not isinstance(capacity, int) or isinstance(capacity, bool) or not 2 <= capacity <= 200:
-            return error('Spots must be a number from 2 to 200.', 400)
-        fields = {'event_at': at, 'place': place, 'capacity': capacity}
+        fields, problem = event_fields(data)
+        if problem:
+            return error(problem, 400)
     if throttled(request.user, 'post'):
         return slow_down()
     post = SportPost.objects.create(author=request.user, sport=sport, text=text, kind=kind, **fields)
@@ -316,16 +379,81 @@ def create_post(request):
     return JsonResponse({'post': one_post(post.pk, request.user)}, status=201)
 
 
-@require_http_methods(['DELETE'])
+@require_http_methods(['GET', 'PATCH', 'DELETE'])
+def post_detail(request, post_id):
+    """One post (for shared links), editing it, or deleting it."""
+    post = get_post(post_id)
+    if post is None:
+        return not_found()
+    if request.method == 'GET':
+        return JsonResponse({'post': one_post(post.pk, request.user)})
+    if not request.user.is_authenticated:
+        return error('Log in to do that.', 401)
+    if post.author_id != request.user.id:
+        return error('You can only change your own posts.', 403)
+    if request.method == 'DELETE':
+        if post.kind == SportPost.KIND_EVENT and post.cancelled_at is None:
+            notify(EventRSVP.objects.filter(post=post).values_list('user_id', flat=True),
+                   Notice.CANCELLED, None, request.user)
+        post.delete()
+        return JsonResponse({'deleted': post_id})
+    return edit_post(request, post)
+
+
+def edit_post(request, post):
+    data = read_json(request)
+    if data is None:
+        return error('Bad request.', 400)
+    changes = {}
+    if 'text' in data:
+        text = text_field(data, 'text')
+        if not text:
+            return error('Write something first.', 400)
+        if len(text) > 280:
+            return error('Keep it under 280 characters.', 400)
+        changes['text'] = text
+    if post.kind == SportPost.KIND_EVENT:
+        if post.cancelled_at:
+            return error('This game was cancelled.', 400)
+        fields, problem = event_fields(data, partial=True)
+        if problem:
+            return error(problem, 400)
+        changes.update(fields)
+    if not changes:
+        return error('Nothing to change.', 400)
+    before = going_ids(post) if post.kind == SportPost.KIND_EVENT else []
+    if changes.get('capacity') is not None and changes['capacity'] < len(before):
+        return error(f'{len(before)} people are already in. Set at least {len(before)} spots.', 400)
+    details_changed = any(k in changes and changes[k] != getattr(post, k) for k in ('event_at', 'place'))
+    for k, v in changes.items():
+        setattr(post, k, v)
+    post.edited_at = timezone.now()
+    post.save()
+    if post.kind == SportPost.KIND_EVENT:
+        if details_changed:
+            notify(EventRSVP.objects.filter(post=post).values_list('user_id', flat=True),
+                   Notice.CHANGED, post, request.user)
+        notify_promotions(post, before, request.user)  # if spots were added
+    return JsonResponse({'post': one_post(post.pk, request.user)})
+
+
+@require_http_methods(['POST'])
 @login_required_json
-def delete_post(request, post_id):
+def cancel(request, post_id):
+    """Cancel a game: it stays visible as cancelled and everyone who was in hears about it."""
     post = get_post(post_id)
     if post is None:
         return not_found()
     if post.author_id != request.user.id:
-        return error('You can only delete your own posts.', 403)
-    post.delete()
-    return JsonResponse({'deleted': post_id})
+        return error('Only the organiser can cancel this game.', 403)
+    if post.kind != SportPost.KIND_EVENT:
+        return error('This post is not a game.', 400)
+    if post.cancelled_at is None:
+        post.cancelled_at = timezone.now()
+        post.save(update_fields=['cancelled_at'])
+        notify(EventRSVP.objects.filter(post=post).values_list('user_id', flat=True),
+               Notice.CANCELLED, post, request.user)
+    return JsonResponse({'post': one_post(post.pk, request.user)})
 
 
 @require_http_methods(['POST'])
@@ -365,21 +493,32 @@ def rsvp(request, post_id):
     if post is None:
         return not_found()
     if post.kind != SportPost.KIND_EVENT:
-        return error('This post is not an event.', 400)
+        return error('This post is not a game.', 400)
     data = read_json(request)
     if data is None or not isinstance(data.get('going'), bool):
         return error('Bad request.', 400)
+    if post.cancelled_at:
+        return error('This game was cancelled.', 400)
+    if post.event_at and post.event_at < timezone.now():
+        return error('This game has already started.', 400)
+    if not data['going'] and post.author_id == request.user.id:
+        return error("You're organising this game. Cancel it instead of leaving.", 400)
     if throttled(request.user, 'react'):
         return slow_down()
+    before = going_ids(post)
     if data['going']:
-        if post.event_at and post.event_at < timezone.now():
-            return error('This event has already happened.', 400)
         try:
-            EventRSVP.objects.get_or_create(post=post, user=request.user)
+            _, created = EventRSVP.objects.get_or_create(post=post, user=request.user)
         except IntegrityError:
-            pass
+            created = False
+        if created:
+            got_spot = request.user.id in going_ids(post)
+            notify([post.author_id], Notice.JOINED if got_spot else Notice.WAITLISTED, post, request.user)
     else:
-        EventRSVP.objects.filter(post=post, user=request.user).delete()
+        deleted, _ = EventRSVP.objects.filter(post=post, user=request.user).delete()
+        if deleted:
+            notify([post.author_id], Notice.LEFT, post, request.user)
+            notify_promotions(post, before)
     return JsonResponse({'post': one_post(post.pk, request.user)})
 
 
@@ -389,6 +528,8 @@ def save(request, post_id):
     post = get_post(post_id)
     if post is None:
         return not_found()
+    if throttled(request.user, 'react'):
+        return slow_down()
     deleted, _ = SavedPost.objects.filter(user=request.user, post=post).delete()
     if not deleted:
         try:
