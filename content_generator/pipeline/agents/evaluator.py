@@ -50,7 +50,7 @@ Return ONLY valid JSON."""
 
 # ── JUDGE 2: GEO COMPLIANCE (checklist — objective) ──────────────────────────
 
-def judge_geo(content: str) -> dict:
+def judge_geo(content: str, content_format: str = None) -> dict:
     """Structure and clarity signals that do not require inventing facts.
 
     Statistics, citations and expert quotes used to be scored here, which
@@ -82,23 +82,38 @@ def judge_geo(content: str) -> dict:
         "no_unsourced_claims": not ATTRIBUTION_RE.search(content),
     }
 
-    score = sum(checks.values()) * 20  # each check = 20pts
+    # Only the checks that make sense for the format count (a tagline has no
+    # headings or paragraphs, and must not be pushed to include figures).
+    applicable = GEO_CHECKS_BY_FORMAT.get(content_format, list(checks))
+    checks = {k: checks[k] for k in applicable}
+    score = round(100 * sum(checks.values()) / len(checks)) if checks else 100
 
-    label_map = {
-        "has_definition_block": "definition / direct-answer sentence (what it is, who it helps)",
-        "has_concrete_facts": "concrete facts (use figures from the company material, or an [ADD STAT] placeholder — never invent)",
-        "has_question_headings": "question-style headings (What / How / Why ...)",
-        "has_short_paragraphs": "short paragraphs (under ~90 words)",
-        "no_unsourced_claims": "remove 'studies show' / 'according to' claims that have no real source",
-    }
-    missing = [label_map[k] for k, v in checks.items() if not v]
+    missing = [GEO_LABELS[k][1] for k, v in checks.items() if not v]
+    items = [{"label": GEO_LABELS[k][0], "ok": v, "tip": "" if v else GEO_LABELS[k][1]}
+             for k, v in checks.items()]
 
     return {
         "score": score,
         "checks": checks,
+        "items": items,
         "missing": missing,
         "feedback": f"Missing GEO signals: {', '.join(missing)}" if missing else "All GEO signals present.",
     }
+
+
+GEO_LABELS = {
+    "has_definition_block": ("Direct answer", "Add a sentence that says plainly what it is and who it helps."),
+    "has_concrete_facts": ("Concrete facts", "Use figures from your company material, or leave an [ADD STAT] placeholder — never invent."),
+    "has_question_headings": ("Question headings", "Phrase headings as the questions people ask (What / How / Why …)."),
+    "has_short_paragraphs": ("Short paragraphs", "Keep paragraphs under ~90 words."),
+    "no_unsourced_claims": ("No unsourced claims", "Remove 'studies show' / 'according to' claims that have no real source."),
+}
+GEO_CHECKS_BY_FORMAT = {
+    "motto": ["no_unsourced_claims"],
+    "ad_copy": ["has_short_paragraphs", "no_unsourced_claims"],
+    "social_post": ["has_definition_block", "has_short_paragraphs", "no_unsourced_claims"],
+    "email": ["has_definition_block", "has_short_paragraphs", "no_unsourced_claims"],
+}
 
 
 # ── JUDGE 3: COMPETITOR EDGE ─────────────────────────────────────────────────
@@ -247,20 +262,22 @@ def evaluate_loop(
     goal: str,
     content_piece=None,
     seo_params: dict = None,
+    content_format: str = None,
 ) -> dict:
     """Runs inside the retry loop. Judges content quality, GEO signals, and naturalness."""
     print("    [Judge 1] Customer fit...")
     customer = judge_customer(content_text, audience, goal)
 
     print("    [Judge 2] GEO compliance...")
-    geo = judge_geo(content_text)
+    geo = judge_geo(content_text, content_format)
 
     print("    [Judge 4] Human naturalness...")
     naturalness = judge_naturalness(content_text)
 
     structure_issues   = []
     structure_feedback = ""
-    if content_piece is not None and seo_params:
+    # Word count / sections only apply to long formats; a tagline is short by design.
+    if content_piece is not None and seo_params and content_format in (None, "blog_post", "landing_page"):
         print("    [Judge 5] Structure validation...")
         structure        = judge_structure(content_text, content_piece, seo_params)
         structure_issues = structure["issues"]

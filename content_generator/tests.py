@@ -129,3 +129,20 @@ class GroundingTests(TestCase):
                              'results. Studies show it cut waiting by 40%.')
         self.assertGreater(honest['score'], invented['score'])
         self.assertNotIn('statistic', ' '.join(honest['missing']).lower())
+
+
+class ShortFormatTests(TestCase):
+    def test_error_reply_is_not_content(self):
+        from .pipeline.agents.content_writer import _content_json
+        self.assertIsNone(_content_json('{"errors": ["Conflicting instructions"]}'))
+        self.assertIsNone(_content_json('not json'))
+        self.assertEqual(_content_json('[{"headline": "Clear lab results", "sections": []}]')['title'],
+                         'Clear lab results')
+        self.assertEqual(_content_json('{"content": {"title": "Tagline", "headline": "Know your results"}}')['headline'],
+                         'Know your results')
+
+    def test_geo_checks_follow_the_format(self):
+        from .pipeline.agents.evaluator import judge_geo
+        tagline = judge_geo('Tagline\n\nYour lab results, finally clear', 'motto')
+        self.assertEqual((tagline['score'], [i['label'] for i in tagline['items']]), (100, ['No unsourced claims']))
+        self.assertEqual(len(judge_geo('Some text.', 'blog_post')['items']), 5)
