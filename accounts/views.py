@@ -213,47 +213,42 @@ def profile_update_view(request):
 
 def password_reset_request_view(request):
     """
-    Handle password reset requests
+    Email a one-time reset link. The link carries a signed token
+    (Django's default_token_generator), so only someone who can read that
+    inbox can set a new password. The reply is the same whether or not the
+    email belongs to an account.
     """
+    from django.contrib.auth.tokens import default_token_generator
+    from django.utils.encoding import force_bytes
+    from django.utils.http import urlsafe_base64_encode
+
     if request.method == 'POST':
         form = PasswordResetRequestForm(request.POST)
         if form.is_valid():
             email = form.cleaned_data['email']
-            try:
-                user = CustomUser.objects.get(email=email)
-
-                # Generate reset token (in production, use a proper token system)
-                reset_token = get_random_string(32)
-                request.session['reset_token'] = reset_token
-                request.session['reset_user_id'] = user.id
-                request.session['reset_expiry'] = (timezone.now() + timedelta(hours=1)).isoformat()
-
-                # Send email (in production)
+            for user in CustomUser.objects.filter(email__iexact=email, is_active=True):
+                uid = urlsafe_base64_encode(force_bytes(user.pk))
+                token = default_token_generator.make_token(user)
                 reset_url = request.build_absolute_uri(
-                    reverse_lazy('accounts:password_reset_confirm')
+                    reverse_lazy('accounts:password_reset_confirm', args=[uid, token])
                 )
-
-                send_mail(
-                    'Password Reset Request',
-                    f'Click this link to reset your password: {reset_url}',
-                    settings.DEFAULT_FROM_EMAIL,
-                    [user.email],
-                    fail_silently=False,
-                )
-
-                messages.success(
-                    request,
-                    'Password reset instructions have been sent to your email.'
-                )
-                return redirect('accounts:login')
-
-            except CustomUser.DoesNotExist:
-                # Don't reveal that the user doesn't exist
-                messages.success(
-                    request,
-                    'If an account exists with that email, you will receive reset instructions.'
-                )
-                return redirect('accounts:login')
+                try:
+                    send_mail(
+                        'Reset your HasanAI password',
+                        f'Someone asked to reset the password for {user.username}.\n\n'
+                        f'Open this link to choose a new password (it works once and expires):\n'
+                        f'{reset_url}\n\nIf it was not you, ignore this email.',
+                        settings.DEFAULT_FROM_EMAIL,
+                        [user.email],
+                        fail_silently=False,
+                    )
+                except Exception:
+                    logging.getLogger(__name__).exception('Password reset email failed')
+            messages.success(
+                request,
+                'If an account exists with that email, a reset link is on its way.'
+            )
+            return redirect('accounts:login')
     else:
         form = PasswordResetRequestForm()
 
@@ -261,47 +256,41 @@ def password_reset_request_view(request):
     return render(request, 'accounts/password_reset.html', context)
 
 
-def password_reset_confirm_view(request):
+def password_reset_confirm_view(request, uidb64, token):
     """
-    Confirm password reset
+    Set a new password from an emailed link. The token is checked on every
+    request and stops working once the password changes.
     """
-    # Check token validity
-    reset_token = request.session.get('reset_token')
-    user_id = request.session.get('reset_user_id')
-    expiry_str = request.session.get('reset_expiry')
-
-    if not all([reset_token, user_id, expiry_str]):
-        messages.error(request, 'Invalid or expired reset link.')
-        return redirect('accounts:password_reset')
-
-    expiry = timezone.datetime.fromisoformat(expiry_str)
-    if timezone.now() > expiry:
-        messages.error(request, 'Reset link has expired.')
-        return redirect('accounts:password_reset')
+    from django.contrib.auth.password_validation import validate_password
+    from django.contrib.auth.tokens import default_token_generator
+    from django.core.exceptions import ValidationError
+    from django.utils.encoding import force_str
+    from django.utils.http import urlsafe_base64_decode
 
     try:
-        user = CustomUser.objects.get(id=user_id)
-    except CustomUser.DoesNotExist:
-        messages.error(request, 'Invalid reset link.')
+        user = CustomUser.objects.get(pk=force_str(urlsafe_base64_decode(uidb64)), is_active=True)
+    except (TypeError, ValueError, OverflowError, CustomUser.DoesNotExist):
+        user = None
+    if user is None or not default_token_generator.check_token(user, token):
+        messages.error(request, 'This reset link is invalid or has expired. Please ask for a new one.')
         return redirect('accounts:password_reset')
 
     if request.method == 'POST':
         form = SetNewPasswordForm(request.POST)
         if form.is_valid():
             new_password = form.cleaned_data['new_password1']
-            user.set_password(new_password)
-            user.save()
-
-            # Clear reset session data
-            del request.session['reset_token']
-            del request.session['reset_user_id']
-            del request.session['reset_expiry']
-
-            messages.success(
-                request,
-                'Your password has been reset successfully. Please login with your new password.'
-            )
-            return redirect('accounts:login')
+            try:
+                validate_password(new_password, user)
+            except ValidationError as exc:
+                form.add_error('new_password1', exc)
+            else:
+                user.set_password(new_password)
+                user.save()
+                messages.success(
+                    request,
+                    'Your password has been reset successfully. Please login with your new password.'
+                )
+                return redirect('accounts:login')
     else:
         form = SetNewPasswordForm()
 
