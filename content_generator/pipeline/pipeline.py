@@ -11,6 +11,7 @@ from .agents.content_classifier import classify_content
 from .agents.geo_optimizer import optimize_for_geo
 from .agents.localizer import localize_content
 from .agents.evaluator import evaluate_loop, evaluate_competitor_edge
+from .agents.grounding import check_and_clean, merge_reports
 from .config import MAX_RETRIES
 
 
@@ -42,6 +43,9 @@ class PipelineState(TypedDict):
     # Output
     evaluation: Optional[Any]
     content_fi: Optional[Any]
+    # Grounding: text the content may cite as fact, and the final check report
+    sources: str
+    fact_check: dict
 
 
 # ── Helpers ───────────────────────────────────────────────────
@@ -63,10 +67,19 @@ def content_to_text(content) -> str:
 
 # ── Nodes ─────────────────────────────────────────────────────
 
+def _sources(state: PipelineState) -> str:
+    """Everything the content may state as fact: the client's own material,
+    the goal and the keywords. Competitor material is not a source for our claims."""
+    from content_generator.models import KnowledgeChunk
+    stored = KnowledgeChunk.objects.filter(client_id=state["client_id"]).values_list("text", flat=True)
+    return "\n".join([*stored, *(state.get("client_documents") or []),
+                      state.get("goal") or "", " ".join(state.get("keywords") or [])])
+
+
 def node_ingest(state: PipelineState) -> dict:
     print("[Node 1] Ingesting client data...")
     ingest_client_data(state["client_id"], state["client_documents"])
-    return {}
+    return {"sources": _sources(state)}
 
 
 def node_classify(state: PipelineState) -> dict:
@@ -131,6 +144,9 @@ def node_write(state: PipelineState) -> dict:
 def node_geo(state: PipelineState) -> dict:
     print("[Node 7] GEO optimization...")
     content_en, _ = optimize_for_geo(state["content_en"])
+    # Replace unsupported figures before the judges see the text, so a
+    # made-up number can never be what makes the content "pass".
+    content_en, _ = check_and_clean(content_en, state.get("sources", ""))
     return {"content_en": content_en}
 
 
@@ -186,10 +202,14 @@ def node_localize(state: PipelineState) -> dict:
         localized[lang] = localize_content(
             state["client_id"], state["content_en"], lang, state["brand"]
         )
-    return {"content_fi": localized.get("Finnish", state["content_en"])}
+    content_fi = localized.get("Finnish", state["content_en"])
+    content_fi, _ = check_and_clean(content_fi, state.get("sources", ""))
+    return {"content_fi": content_fi}
 
 
 def node_finalize(state: PipelineState) -> dict:
+    content_en, report_en = check_and_clean(state["content_en"], state.get("sources", ""))
+    content_fi, report_fi = check_and_clean(state["content_fi"], state.get("sources", ""))
     loop_result = state["loop_result"]
     competitor_result = state["competitor_result"]
 
@@ -244,7 +264,11 @@ def node_finalize(state: PipelineState) -> dict:
     print(f"PIPELINE COMPLETE — Customer: {evaluation.customer.score} | GEO: {evaluation.geo.score} | Competitor: {evaluation.competitor.score} | Naturalness: {evaluation.naturalness.score} | Overall: {evaluation.overall_score}")
     print(f"{'='*60}\n")
 
-    return {"evaluation": evaluation}
+    fact_check = merge_reports(report_en, report_fi)
+    print(f"  Fact check: {fact_check['placeholders']} placeholder(s), "
+          f"{len(fact_check['flagged'])} item(s) to review")
+    return {"evaluation": evaluation, "content_en": content_en, "content_fi": content_fi,
+            "fact_check": fact_check}
 
 
 # ── Build graph ───────────────────────────────────────────────
@@ -337,6 +361,8 @@ def run_pipeline(
         "competitor_result": None,
         "evaluation": None,
         "content_fi": None,
+        "sources": "",
+        "fact_check": {},
     }
 
     final_state = _graph.invoke(initial_state)
@@ -346,6 +372,7 @@ def run_pipeline(
         content_fi=final_state["content_fi"],
         evaluation=final_state["evaluation"],
         content_type=final_state["content_type"],
+        fact_check=final_state.get("fact_check") or {},
     )
 
 

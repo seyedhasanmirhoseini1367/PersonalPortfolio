@@ -27,6 +27,7 @@ def localize_content(
 
 ⚠ YOUR ONLY TASK: Translate and culturally adapt the EXACT content provided below into {target_language}.
 DO NOT generate new content. DO NOT add new sections. DO NOT change the structure.
+DO NOT add or change any number, statistic, name or claim. Keep "[ADD STAT]" placeholders exactly as written.
 If sections is an empty list, return an empty list for sections.
 
 TARGET LANGUAGE: {target_language}

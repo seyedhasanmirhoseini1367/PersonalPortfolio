@@ -10,7 +10,7 @@ CONTENT_TEMPLATES = {
     "why": {
         "structure": ["The Problem", "Evidence & Data", "Our Solution", "Results"],
         "geo_priority": "statistics",
-        "opening": "Start with the pain point backed by a statistic.",
+        "opening": "Start with the pain point, backed by a concrete fact from the company material (or an [ADD STAT] placeholder).",
     },
     "how": {
         "structure": ["Overview", "Step-by-Step Process", "What You Need", "Get Started"],

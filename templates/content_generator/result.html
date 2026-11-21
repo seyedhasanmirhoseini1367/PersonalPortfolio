@@ -194,6 +194,15 @@
     .approval-badge.rejected { background: #fee2e2; color: #dc2626; }
 
     @media (max-width: 768px) { .result-grid { grid-template-columns: 1fr; } }
+
+    /* Fact check (grounding report) */
+    .fact-check { border: 1px solid #fcd34d; background: #fffbeb; color: #78350f; border-radius: 12px; padding: .85rem 1rem; margin-bottom: 1rem; font-size: .86rem; }
+    .fact-check.ok { border-color: #86efac; background: #f0fdf4; color: #14532d; }
+    .fact-check-head { font-weight: 700; display: flex; gap: .5rem; align-items: center; margin-bottom: .35rem; }
+    .fact-check p { margin: .35rem 0; }
+    .fact-check ul { margin: .2rem 0 .4rem 1.2rem; }
+    .fact-check li span { opacity: .75; }
+    .fact-check code { background: rgba(0,0,0,.06); padding: 1px 5px; border-radius: 4px; }
 </style>
 {% endblock %}
 
@@ -283,6 +292,31 @@
                 {% endif %}
 
                 {% else %}
+                {% with fc=job.evaluation.fact_check %}
+                {% if fc %}
+                <div class="fact-check{% if not fc.removed and not fc.flagged and not fc.placeholders %} ok{% endif %}">
+                    <div class="fact-check-head">
+                        <i class="fas fa-shield-halved"></i>
+                        {% if fc.removed or fc.flagged or fc.placeholders %}
+                        Fact check: review before publishing
+                        {% else %}
+                        Fact check: no unsupported figures found
+                        {% endif %}
+                    </div>
+                    {% if fc.placeholders %}
+                    <p><b>{{ fc.placeholders }}</b> place{{ fc.placeholders|pluralize:"holder,holders" }} <code>[ADD STAT]</code> — put in a real figure you can stand behind, or delete the phrase.</p>
+                    {% endif %}
+                    {% if fc.removed %}
+                    <p>Figures the AI wrote that are <b>not in your company material</b> were removed:</p>
+                    <ul>{% for r in fc.removed|slice:":8" %}<li><s>{{ r.claim }}</s> <span>— “…{{ r.context|truncatechars:90 }}…”</span></li>{% endfor %}</ul>
+                    {% endif %}
+                    {% if fc.flagged %}
+                    <p>Check these — a source or quote that may not exist:</p>
+                    <ul>{% for f in fc.flagged|slice:":6" %}<li>{{ f.text|truncatechars:140 }}</li>{% endfor %}</ul>
+                    {% endif %}
+                </div>
+                {% endif %}
+                {% endwith %}
                 <div class="edit-bar">
                     <span class="edit-saved-msg" id="saved-{{ job.id }}">Saved</span>
                     <button class="edit-btn" onclick="copyContent('{{ job.id }}', this)">Copy</button>

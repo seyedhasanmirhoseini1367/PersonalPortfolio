@@ -5,8 +5,8 @@ from .gemini_client import generate
 
 def optimize_for_geo(content: ContentPiece) -> tuple[ContentPiece, float]:
     """
-    Inject GEO signals: statistics, citations, expert quotes, AI-retrievable structure.
-    Based on Princeton GEO research (+37-41% AI visibility boost).
+    Improve structure and clarity for AI engines without adding any new facts.
+    (Statistics/quotes are only kept when the writer already took them from the sources.)
     """
     sections_text = json.dumps(content.sections)
 
@@ -20,17 +20,17 @@ Sections: {sections_text}
 CTA: {content.cta}
 Language: {content.language}
 
-Apply these GEO techniques — based ONLY on what is already in the content above, do NOT invent sources, companies, or citations:
-1. Add specific numbers or statistics that are implied by the content (e.g. "up to 40% faster", "3x more efficient") — only if naturally supported
-2. Add a clear definition block: a direct-answer sentence AI engines can lift verbatim
-3. Restructure for scannability: short paragraphs, clear headings, direct answers first
-4. Make claims concrete and specific (avoid vague adjectives like "great" or "amazing")
-5. DO NOT add "(Source: ...)" citations, references, or footnotes — the content must stand on its own brand voice
+Apply these GEO techniques using ONLY what is already in the content above:
+1. Add a clear definition block: a direct-answer sentence AI engines can lift verbatim
+2. Restructure for scannability: short paragraphs, clear headings, direct answers first
+3. Make wording concrete (say what the product does) instead of vague adjectives like "great"
+4. NEVER add a number, percentage, statistic, study, survey, quote, customer name, award or
+   "(Source: ...)" that is not already in the content. Keep every [ADD STAT] placeholder exactly as it is.
 
 Return JSON. Keep sections SHORT (2 sentences each max):
 - title: (keep or improve)
 - headline: (keep or improve)
-- sections: enhanced sections with {{"heading": str, "body": str}} — inject GEO signals but stay concise
+- sections: enhanced sections with {{"heading": str, "body": str}} — clearer, same facts, concise
 - cta: (keep)
 - language: "{content.language}"
 - geo_score: float 0.0-1.0

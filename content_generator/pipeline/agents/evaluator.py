@@ -51,65 +51,45 @@ Return ONLY valid JSON."""
 # ── JUDGE 2: GEO COMPLIANCE (checklist — objective) ──────────────────────────
 
 def judge_geo(content: str) -> dict:
+    """Structure and clarity signals that do not require inventing facts.
+
+    Statistics, citations and expert quotes used to be scored here, which
+    pushed the writer (through the retry feedback) to make them up. Figures
+    now count when present OR when the writer left an [ADD STAT] placeholder,
+    and unsourced attributions lower the score instead of raising it.
+    """
+    from .grounding import ATTRIBUTION_RE, PLACEHOLDER
+
+    blocks = [p.strip() for p in re.split(r'\n\s*\n', content) if p.strip()]
+    # Headings: short lines that do not end like a sentence
+    headings = [p for p in blocks if len(p.split()) <= 12 and not p.endswith(('.', '!'))]
+    paragraphs = [p for p in blocks if p not in headings]
+    avg_words = (sum(len(p.split()) for p in paragraphs) / len(paragraphs)) if paragraphs else 0
     checks = {
-        # Quantitative data: percentages, decimals, large numbers, fractions
-        "has_statistics": bool(re.search(
-            r'\d+\.?\d*\s*%'                        # 37%, 4.5%
-            r'|\d+\s*(million|billion|thousand)'    # 2 million
-            r'|\d+\s*out\s*of\s*\d+'               # 3 out of 4
-            r'|\d+x\s*(faster|more|better|cheaper)',# 3x faster
-            content, re.I
-        )),
-        # References to external sources
-        "has_citations": bool(re.search(
-            r'\(.*?\d{4}.*?\)'                      # (Smith 2023) or (Harvard, 2022)
-            r'|\[.*?\]'                             # [1] or [source]
-            r'|according to'
-            r'|study by|research (by|from|shows|found)'
-            r'|report (by|from)|survey (by|from|of)'
-            r'|data from|published (by|in)',
-            content, re.I
-        )),
-        # Attributed quote from a named person or expert
-        "has_expert_quote": bool(re.search(
-            r'["\u201c][^"\u201d]{15,}["\u201d]'   # quoted string 15+ chars
-            r'|says\s+[A-Z][a-z]+'                 # says John / says Dr.
-            r'|[A-Z][a-z]+\s+[A-Z][a-z]+\s*,'     # "Name Surname," attribution
-            r'|(CEO|CTO|founder|director|expert|analyst|professor|researcher)\s+\w+',
-            content, re.I
-        )),
-        # Definitional sentence explaining what something is
+        # A sentence that defines or directly answers (AI engines lift these verbatim)
         "has_definition_block": bool(re.search(
-            r'is defined as'
-            r'|refers to'
-            r'|means that'
-            r'|is the process of'
-            r'|can be described as'
-            r'|is a (type|form|kind|method|approach|way) of'
-            r'|is when\b'
-            r'|\bwhat is\b.*?\?'                   # "What is X?" heading
-            r'|\bknown as\b',
-            content, re.I
-        )),
-        # Specific numbers tied to real-world entities (not generic)
-        "has_unique_data": bool(re.search(
-            r'\d+\s*(companies|businesses|firms|clients|customers|users|employees|teams|projects|organisations|organizations)'
-            r'|\d+\s*(countries|cities|markets|industries|sectors)'
-            r'|\d+\s*(years|months|weeks)\s*(of\s*)?(experience|operation|results)'
-            r'|over\s*\d+\s*\w+'                   # "over 200 clients"
-            r'|more than\s*\d+\s*\w+',             # "more than 50 companies"
-            content, re.I
-        )),
+            r'is defined as|refers to|means that|is the process of|can be described as'
+            r'|is an? (type|form|kind|method|approach|way|tool|app|service|platform) (of|for|that)'
+            r'|is when\b|\bwhat is\b.*?\?|\bknown as\b|\bhelps\b', content, re.I)),
+        # Concrete figures — from the sources, or a placeholder for a human to fill
+        "has_concrete_facts": bool(re.search(r'\d', content)) or PLACEHOLDER in content,
+        # Headings phrased as the questions people ask
+        "has_question_headings": any(h.strip().endswith('?') or re.match(r'(what|how|why|who|when|which)\b', h.strip(), re.I)
+                                     for h in headings),
+        # Short, scannable paragraphs
+        "has_short_paragraphs": 0 < avg_words <= 90,
+        # No "studies show" / "according to" without a real source
+        "no_unsourced_claims": not ATTRIBUTION_RE.search(content),
     }
 
     score = sum(checks.values()) * 20  # each check = 20pts
 
     label_map = {
-        "has_statistics": "statistics (percentages / numbers)",
-        "has_citations": "citations (sources / references)",
-        "has_expert_quote": "expert quote (attributed person or role)",
-        "has_definition_block": "definition block (what X is)",
-        "has_unique_data": "unique data (specific entities with numbers)",
+        "has_definition_block": "definition / direct-answer sentence (what it is, who it helps)",
+        "has_concrete_facts": "concrete facts (use figures from the company material, or an [ADD STAT] placeholder — never invent)",
+        "has_question_headings": "question-style headings (What / How / Why ...)",
+        "has_short_paragraphs": "short paragraphs (under ~90 words)",
+        "no_unsourced_claims": "remove 'studies show' / 'according to' claims that have no real source",
     }
     missing = [label_map[k] for k, v in checks.items() if not v]
 

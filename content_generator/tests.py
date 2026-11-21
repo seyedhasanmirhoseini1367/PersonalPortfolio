@@ -84,3 +84,48 @@ class KnowledgeSearchTests(TestCase):
         KnowledgeChunk.objects.filter(client_id=f'company_{profile.pk}').delete()
         ensure_company_indexed(profile)
         self.assertEqual(query_collection(f'company_{profile.pk}', 'rockets', 1), ['Acme makes rockets.'])
+
+
+class GroundingTests(TestCase):
+    """Figures that are not in the source material are replaced with [ADD STAT]."""
+
+    SOURCES = ('HealthCompass explains lab results in plain language. Used by 1,200 patients in '
+               'Tampere since 2024. Rated 4.8/5.')
+
+    def piece(self, **kw):
+        from .pipeline.pydantic_models import ContentPiece
+        return ContentPiece(title=kw.get('title', 'HealthCompass'), headline=kw.get('headline', ''),
+                            sections=kw.get('sections', []), cta=kw.get('cta', ''))
+
+    def test_invented_figures_removed_real_ones_kept(self):
+        from .pipeline.agents.grounding import check_and_clean
+        p = self.piece(
+            headline='Reduces stress by 40% and helps 1,200 patients',
+            sections=[{'heading': 'Why it works', 'body': 'Doctors save 3x time. Trusted by 500 clinics '
+                       'for 10 years. Rated 4.8/5. Costs €29 a month. Since 2015.'}])
+        clean, report = check_and_clean(p, self.SOURCES)
+        text = clean.headline + ' ' + clean.sections[0]['body']
+        for fake in ('40%', '3x', '500 clinics', '10 years', '€29', 'Since 2015'):
+            self.assertNotIn(fake, text, fake)
+        for real in ('1,200 patients', '4.8/5'):
+            self.assertIn(real, text, real)
+        self.assertEqual(report['placeholders'], 6)
+        self.assertEqual({r['claim'] for r in report['removed']},
+                         {'40%', '3x', '500 clinics', '10 years', '€29', 'Since 2015'})
+        self.assertEqual(p.headline, 'Reduces stress by 40% and helps 1,200 patients')  # input untouched
+
+    def test_attributions_and_unknown_quotes_flagged(self):
+        from .pipeline.agents.grounding import check_and_clean
+        p = self.piece(sections=[{'heading': 'Proof', 'body': 'Studies show patients feel calmer. '
+                                  '“HealthCompass changed how I talk to my doctor,” says Anna.'}])
+        _, report = check_and_clean(p, self.SOURCES)
+        self.assertEqual(sorted(f['type'] for f in report['flagged']), ['quote', 'source'])
+
+    def test_geo_judge_does_not_reward_invention(self):
+        from .pipeline.agents.evaluator import judge_geo
+        honest = judge_geo('What is HealthCompass?\n\nHealthCompass is an app that helps patients read lab '
+                           'results. It cut waiting by [ADD STAT].')
+        invented = judge_geo('What is HealthCompass?\n\nHealthCompass is an app that helps patients read lab '
+                             'results. Studies show it cut waiting by 40%.')
+        self.assertGreater(honest['score'], invented['score'])
+        self.assertNotIn('statistic', ' '.join(honest['missing']).lower())

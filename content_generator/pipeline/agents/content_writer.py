@@ -2,6 +2,7 @@ import json
 from ..pydantic_models import BrandProfile, ContentBrief, CompetitorGapMap, ContentPiece, ImageAsset, VideoAsset
 from .ingestion import query_collection
 from .gemini_client import generate
+from .grounding import GROUNDING_RULES
 
 
 def build_content_brief(
@@ -24,6 +25,8 @@ Build a content brief as JSON:
 - target_audience: specific description (one sentence)
 - key_messages: list of 3 short messages
 - gap_opportunities: list of 2-3 gaps this content will fill
+
+Key messages must not contain numbers, results, awards or claims that are not stated above.
 
 Return ONLY valid JSON."""
 
@@ -142,8 +145,8 @@ def write_content(
         f"\n⚠ HARD STRUCTURAL CONSTRAINTS — FOLLOW EXACTLY:\n"
         f"- Word count: write {word_min}–{word_max} words total across all sections combined\n"
         f"- H2 sections: create exactly {h2_count} items in the sections array\n"
-        f"- Statistics: include at least {stats_req} specific data points "
-        f"(percentages, counts, benchmarks, or year-over-year figures)\n"
+        f"- Figures: include up to {stats_req} concrete data points ONLY if they appear in COMPANY FACTS; "
+        f"for any missing ones write the placeholder [ADD STAT] (never invent a number)\n"
         f"{faq_line}"
         f"{angle_line}"
         f"{cta_line}"
@@ -168,8 +171,10 @@ KEY MESSAGES: {', '.join(brief.key_messages)}
 LANGUAGE: {language}
 CONTENT STRUCTURE HINT: {structure}
 
-COMPANY CONTENT (match this voice):
-{rag_context}
+{GROUNDING_RULES}
+
+COMPANY FACTS (the only source of facts; also match this voice):
+{rag_context or "(no company material provided — make no factual claims beyond the goal and keywords)"}
 {feedback_block}
 
 Return JSON with these exact keys:
