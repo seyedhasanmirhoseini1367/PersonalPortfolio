@@ -154,3 +154,38 @@ class ExtractionJob(models.Model):
         if self.finished_at and self.created_at:
             return int((self.finished_at - self.created_at).total_seconds())
         return None
+
+
+class KaggleSyncRun(models.Model):
+    """One monthly (or manual) update of the archive (kaggle_archive/auto.py)."""
+    trigger     = models.CharField(max_length=10, default="auto")
+    status      = models.CharField(max_length=10, default="running")
+    log         = models.TextField(blank=True)
+    processed   = models.PositiveIntegerField(default=0)
+    started_at  = models.DateTimeField(auto_now_add=True)
+    finished_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-started_at"]
+
+
+class KaggleSyncItem(models.Model):
+    """What the auto-update decided about one Kaggle competition."""
+    STATUS_ARCHIVED = "archived"
+    STATUS_SKIPPED  = "skipped"
+    STATUS_FAILED   = "failed"
+    slug         = models.CharField(max_length=200, unique=True)
+    title        = models.CharField(max_length=300, blank=True)
+    category     = models.CharField(max_length=30, blank=True)
+    deadline     = models.DateTimeField(null=True, blank=True)
+    status       = models.CharField(max_length=10, blank=True)
+    writeups     = models.PositiveIntegerField(default=0)
+    attempts     = models.PositiveIntegerField(default=0)
+    reason       = models.TextField(blank=True)
+    last_checked = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-deadline"]
+
+    def __str__(self):
+        return f"{self.slug} ({self.status})"

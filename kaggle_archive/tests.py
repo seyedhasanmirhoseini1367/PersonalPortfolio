@@ -30,3 +30,73 @@ class LearningCardTests(TestCase):
         self.assertIn('<strong>bold</strong>', out)
         self.assertNotIn('onerror', out)
         self.assertNotIn('<script', out)
+
+
+class AutoSyncTests(TestCase):
+    """Monthly archive update: which competitions get picked, and when."""
+
+    def fake_api(self, comps):
+        from types import SimpleNamespace
+        listing = SimpleNamespace(competitions=[SimpleNamespace(**c) for c in comps])
+        return SimpleNamespace(competitions_list=lambda **kw: listing)
+
+    def test_candidates_window(self):
+        from datetime import timedelta
+        from django.utils import timezone
+        from .auto import candidates
+        now = timezone.now()
+        api = self.fake_api([
+            {'ref': 'https://www.kaggle.com/competitions/too-recent', 'title': 'A', 'deadline': now - timedelta(days=3), 'category': 'Featured'},
+            {'ref': 'https://www.kaggle.com/competitions/good-one', 'title': 'B', 'deadline': now - timedelta(days=40), 'category': 'Featured'},
+            {'ref': 'https://www.kaggle.com/competitions/too-old', 'title': 'C', 'deadline': now - timedelta(days=400), 'category': 'Research'},
+            {'ref': 'https://www.kaggle.com/competitions/running', 'title': 'D', 'deadline': now + timedelta(days=30), 'category': 'Featured'},
+        ])
+        self.assertEqual([c['slug'] for c in candidates(api, now)], ['good-one'])
+
+    def test_due_and_recheck_rules(self):
+        from datetime import timedelta
+        from django.utils import timezone
+        from .auto import _needs_work, is_due
+        from .models import KaggleSyncItem, KaggleSyncRun
+        now = timezone.now()
+        self.assertTrue(is_due(now))
+        run = KaggleSyncRun.objects.create(status='done')
+        self.assertFalse(is_due(now))
+        KaggleSyncRun.objects.filter(pk=run.pk).update(started_at=now - timedelta(days=31))
+        self.assertTrue(is_due(now))
+        self.assertTrue(_needs_work(None, now))
+        skipped = KaggleSyncItem(slug='s', status='skipped')
+        few = KaggleSyncItem(slug='f', status='archived', writeups=1, last_checked=now - timedelta(days=40))
+        fresh = KaggleSyncItem(slug='g', status='archived', writeups=1, last_checked=now - timedelta(days=5))
+        plenty = KaggleSyncItem(slug='p', status='archived', writeups=5, last_checked=now - timedelta(days=90))
+        self.assertEqual([_needs_work(i, now) for i in (skipped, few, fresh, plenty)], [False, True, False, False])
+
+    def test_run_respects_limit_and_records_outcomes(self):
+        from datetime import timedelta
+        from unittest import mock
+        from django.utils import timezone
+        from .auto import run_sync
+        from .models import Competition, KaggleSyncItem
+        now = timezone.now()
+        api = self.fake_api([
+            {'ref': f'https://www.kaggle.com/competitions/c{i}', 'title': f'C{i}', 'deadline': now - timedelta(days=20 + i), 'category': 'Featured'}
+            for i in range(4)])
+
+        class FakeExtractor:
+            def __init__(self, url, top_n, log_fn):
+                self.url = url
+
+            def run(self):
+                if self.url == 'c1':
+                    raise RuntimeError('Could not fetch leaderboard.')
+                comp = Competition.objects.create(name=self.url, slug=self.url)
+                return {'competition': comp, 'saved': 10}
+
+        import kaggle
+        with mock.patch.object(kaggle, 'api', api, create=True), \
+             mock.patch.object(api, 'authenticate', lambda: None, create=True), \
+             mock.patch('kaggle_archive.extractor.KaggleExtractor', FakeExtractor):
+            run = run_sync('manual', limit=3)
+        self.assertEqual((run.status, run.processed), ('done', 3))
+        self.assertEqual(dict(KaggleSyncItem.objects.values_list('slug', 'status')),
+                         {'c3': 'archived', 'c2': 'archived', 'c1': 'skipped'})

@@ -140,6 +140,15 @@ def run_pending(limit=None) -> int:
     return done
 
 
+def _idle_tasks() -> None:
+    """Scheduled work that runs while no generation job is waiting."""
+    try:
+        from kaggle_archive.auto import maybe_run
+        maybe_run()   # monthly Kaggle archive update (checks at most hourly)
+    except Exception:
+        logger.exception('Kaggle archive auto-update check failed')
+
+
 def _loop() -> None:
     time.sleep(3)   # let the server finish starting
     while True:
@@ -148,6 +157,7 @@ def _loop() -> None:
             recover_stale()
             job_id = claim_next()
             if job_id is None:
+                _idle_tasks()
                 _wake.wait(timeout=POLL_SECONDS)
                 _wake.clear()
                 continue
