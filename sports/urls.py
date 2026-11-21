@@ -15,6 +15,7 @@ urlpatterns = [
     path('api/posts/<int:post_id>/save/', views.save, name='save'),
     path('api/posts/<int:post_id>/comments/', views.comments, name='comments'),
     path('api/comments/<int:comment_id>/', views.delete_comment, name='delete_comment'),
+    path('api/users/suggested/', views.suggested, name='suggested'),
     path('api/users/<int:user_id>/', views.profile, name='profile'),
     path('api/users/<int:user_id>/follow/', views.follow, name='follow'),
     path('api/notifications/', views.notifications, name='notifications'),

@@ -481,19 +481,38 @@ function fromServer(s){NAMES[s.author.id]=s.author.name;return {real:true,edited
   txt:esc(s.text),heat:0,cheers:s.stickers-(s.mine?1:0),top:s.top.filter(k=>k!==s.mine),mine:s.mine,cm:s.comments,at:s.created_at,
   canDelete:s.can_delete,saved:s.saved,followed:s.author_followed,event:s.event||null,art:ART[s.sport]||''}}
 const FEED={filter:'all',next:null,loading:false,topId:null,real:[]};
+const HOME=()=>API.me?'following':'all';
+const SUGGEST={users:[],following:0};
+async function loadSuggest(){if(!API.me)return;try{const d=await api('users/suggested/');SUGGEST.users=d.users;SUGGEST.following=d.following}catch(e){}}
 function filterQuery(){const f=FEED.filter;if(f==='all')return '';if(f==='following')return 'following=1';if(f==='saved')return 'saved=1';
   if(f==='events')return 'upcoming=1';if(f.startsWith('author:'))return 'author='+f.slice(7);return 'sport='+encodeURIComponent(f)}
 function setPosts(real){FEED.real=real;const showDemo=FEED.filter==='all';POSTS=[...real.map(fromServer),...(showDemo?DEMO:[])];
   for(const o of [claps,picked,saved])for(const k in o)delete o[k];
   POSTS.forEach((p,i)=>{if(p.real){if(p.mine)picked[i]=p.mine;if(p.saved)saved[i]=true}});tray=null;renderFeed()}
-function needLogin(){toast('Log in or sign up to join in');go('arena');const c=$('#compose');if(c)c.scrollIntoView({behavior:'smooth',block:'center'})}
-async function loadFeed(){if(!API.on)return;const q=filterQuery();
+function needLogin(){toast('Log in or sign up to join in');go('arena');if(FEED.filter!==HOME())setFilter(HOME());const c=$('#compose');if(c)c.scrollIntoView({behavior:'smooth',block:'center'})}
+async function loadFeed(){if(!API.on)return;const q=filterQuery();if(FEED.filter==='following')await loadSuggest();
   try{const d=await api('posts/'+(q?'?'+q:''));FEED.next=d.next;FEED.topId=d.posts[0]?d.posts[0].id:null;setPosts(d.posts);$('#newPill').classList.remove('on')}catch(e){if(e.status)toast(e.message)}}
 async function loadMore(){if(FEED.loading||!FEED.next)return;FEED.loading=true;const q=filterQuery();
   try{const d=await api('posts/?'+(q?q+'&':'')+'before='+FEED.next);FEED.next=d.next;const have=new Set(FEED.real.map(p=>p.id));
     setPosts([...FEED.real,...d.posts.filter(p=>!have.has(p.id))])}catch(e){toast(e.message)}FEED.loading=false}
-function feedEmpty(){if(!window.LIVE_ON||POSTS.some(p=>p.real))return '';
-  const msg={all:'No posts yet. Be the first to share something!',following:'Nothing from people you follow yet. Tap a name on any post to follow them.',
+const sugRow=s=>`<div style="display:flex;align-items:center;gap:10px"><div class="av" style="width:34px;height:34px;font-size:12px;cursor:pointer" onclick="openProfile(${s.user.id})">${esc(s.user.ini)}</div>
+      <div style="flex:1;min-width:0;cursor:pointer" onclick="openProfile(${s.user.id})"><div style="font-size:13px;font-weight:600">${esc(s.user.name)}</div><div class="mu" style="font-size:11px">${s.sports.map(esc).join(' · ')} · ${s.posts} post${s.posts===1?'':'s'}</div></div>
+      <button class="chip sel" onclick="followSuggested(${s.user.id})">Follow</button></div>`;
+function suggestCard(){const u=SUGGEST.users.slice(0,5);if(!u.length)return '';
+  return `<div class="card" style="margin:0 14px;padding:14px;display:flex;flex-direction:column;gap:10px">
+    <div style="font-size:14px;font-weight:700">People to follow</div><div class="mu" style="font-size:12px;margin-top:-6px">Your feed shows posts from people you follow.</div>
+    ${u.map(sugRow).join('')}
+    ${SUGGEST.users.length>5?'<button class="btn ghost" onclick="openSuggestions()">See more</button>':''}</div>`}
+async function followSuggested(uid){try{const d=await api(`users/${uid}/follow/`,{method:'POST'});const s=SUGGEST.users.find(x=>x.user.id===uid);if(s)NAMES[uid]=s.user.name;
+  SUGGEST.users=SUGGEST.users.filter(x=>x.user.id!==uid);SUGGEST.following++;toast(d.following?`Following ${NAMES[uid]||''}`:'Unfollowed');
+  if($('#sugList'))renderSuggestSheet();if(FEED.filter===HOME())loadFeed()}catch(e){fail(e)}}
+async function openSuggestions(){if(!API.me){needLogin();return}openSheet(sheetHead('Find people')+'<div class="mu" style="font-size:13px">Loading…</div>');await loadSuggest();renderSuggestSheet()}
+function renderSuggestSheet(){openSheet(sheetHead('Find people')+`<div class="sheet-list" id="sugList">${SUGGEST.users.length?SUGGEST.users.map(sugRow).join(''):'<div class="mu" style="font-size:13px">You already follow everyone who has posted. Invite your friends to join!</div>'}</div>`)}
+function feedEmpty(){if(!window.LIVE_ON)return '';const home=API.me&&FEED.filter==='following';
+  const top=home&&(SUGGEST.following<3||!POSTS.some(p=>p.real&&p.authorId!==API.me.id))?suggestCard():'';
+  if(POSTS.some(p=>p.real))return top;
+  if(home)return top+`<div class="card mu" style="margin:0 14px;padding:18px;font-size:13px;text-align:center">${SUGGEST.following?'No posts from people you follow yet.':'Follow people to fill your feed.'} Tap + to share something yourself.</div>`;
+  const msg={all:'No posts yet. Be the first to share something!',following:'',
     saved:'No saved posts yet. Tap the bookmark on a post to keep it here.',events:'No upcoming games yet. Tap + and choose 📅 Game to organise one.'}[FEED.filter]||'No posts here yet.';
   return FEED.filter==='all'?'':`<div class="card mu" style="margin:0 14px;padding:18px;font-size:13px;text-align:center">${msg}</div>`}
 function feedFooter(){return window.LIVE_ON&&FEED.next?`<button class="btn ghost" style="margin:0 14px" onclick="loadMore()">Load more</button>`:''}
@@ -554,16 +573,16 @@ async function sharePost(i){const p=POSTS[i];if(!p.real){toast('Pass to a teamma
   const url=`${location.origin}/sports/?post=${p.id}`;const title=p.event?`${p.tag} game on arena`:`${NAMES[p.authorId]||'A post'} on arena`;
   try{if(navigator.share){await navigator.share({title,url});return}await navigator.clipboard.writeText(url);toast('Link copied')}
   catch(e){if(e&&e.name==='AbortError')return;prompt('Copy this link:',url)}}
-async function openShared(id){try{const d=await api(`posts/${id}/`);if(idx(id)<0){FEED.real=[d.post,...FEED.real];setPosts(FEED.real)}jumpTo(id)}
-  catch(e){toast('That post is no longer available')}}
+const openShared=id=>jumpTo(id);
 async function quickFollow(uid){if(!API.me){needLogin();return}
-  try{const d=await api(`users/${uid}/follow/`,{method:'POST'});POSTS.forEach(p=>{if(p.real&&p.authorId===uid)p.followed=d.following});renderFeed();toast(d.following?`Following ${NAMES[uid]||''}`:'Unfollowed')}catch(e){fail(e)}}
+  try{const d=await api(`users/${uid}/follow/`,{method:'POST'});POSTS.forEach(p=>{if(p.real&&p.authorId===uid)p.followed=d.following});renderFeed();toast(d.following?`Following ${NAMES[uid]||''}`:'Unfollowed');if(API.me&&FEED.filter===HOME())loadFeed()}catch(e){fail(e)}}
 
 /* ---- composer ---- */
 let draft={sport:null,kind:'post'},posting=false;
 function localInput(d){const z=n=>String(n).padStart(2,'0');return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}T${z(d.getHours())}:${z(d.getMinutes())}`}
-function renderCompose(){const c=$('#compose');if(!API.on){c.style.display='none';return}c.style.display='block';
-  if(!API.me){c.innerHTML=`<div class="card" style="padding:16px;display:flex;flex-direction:column;gap:10px">
+function renderCompose(){const slot=$('#compose');if(!API.on||API.me)slot.style.display='none';if(!API.on)return;
+  const c=API.me?$('#composeBox'):slot;if(!c)return;
+  if(!API.me){c.style.display='block';c.innerHTML=`<div class="card" style="padding:16px;display:flex;flex-direction:column;gap:10px">
     <div class="sg" style="font-size:17px;font-weight:700">Join arena<span style="color:var(--lime)">.</span></div>
     <div style="font-size:13px;color:#D5DEE6">A sports feed for you and your friends: share match moments, set up games people can join with one tap, and cheer each other on with stickers.</div>
     <div class="mu" style="font-size:12px">Posts marked <span class="demo">Demo</span> and the Explore, Chat and Studio screens are examples only.</div>
@@ -587,6 +606,7 @@ function draftInput(el){$('#cnt').textContent=280-el.value.length;const h=$('#ga
 function saveDraftFields(){const g=id=>{const e=$(id);return e?e.value:null};return {t:g('#draft'),at:g('#evAt'),pl:g('#evPlace'),cap:g('#evCap')}}
 function restoreDraftFields(k){const s=(id,v)=>{const e=$(id);if(e&&v!=null)e.value=v};s('#draft',k.t);s('#evAt',k.at);s('#evPlace',k.pl);s('#evCap',k.cap);
   const d=$('#draft');if(d&&$('#cnt'))$('#cnt').textContent=280-d.value.length}
+function openComposer(){if(!API.me){needLogin();return}openSheet(sheetHead('Create')+'<div id="composeBox"></div>');renderCompose();const d=$('#draft');if(d)setTimeout(()=>d.focus(),250)}
 function pickDraftSport(s){draft.sport=s;renderCompose()}
 function setKind(k){draft.kind=k;renderCompose()}
 async function submitPost(){if(posting)return;const t=$('#draft').value.trim();
@@ -595,15 +615,14 @@ async function submitPost(){if(posting)return;const t=$('#draft').value.trim();
   if(draft.kind==='event'){const v=$('#evAt').value;if(!v){toast('Pick a date and time');return}
     body.event_at=new Date(v).toISOString();body.place=$('#evPlace').value.trim();const cap=$('#evCap').value;if(cap)body.capacity=parseInt(cap,10)}
   posting=true;$('#postBtn').disabled=true;
-  try{await api('posts/',{method:'POST',body:JSON.stringify(body)});$('#draft').value='';draft.kind='post';renderCompose();
-    toast(body.kind==='event'?'Game created · you are in':'Posted');if(FEED.filter!=='all'){FEED.filter='all';renderFilters()}await loadFeed()}
+  try{await api('posts/',{method:'POST',body:JSON.stringify(body)});$('#draft').value='';draft.kind='post';closeSheet();
+    toast(body.kind==='event'?'Game created · you are in':'Posted');go('arena');if(FEED.filter!==HOME()){FEED.filter=HOME();FEED.authorName=null;renderFilters()}await loadFeed()}
   catch(e){fail(e)}finally{posting=false;const b=$('#postBtn');if(b)b.disabled=false}}
 
 /* ---- filters ---- */
-function renderFilters(){const b=$('#fbar');if(!API.on){b.style.display='none';return}b.style.display='flex';
-  const f=[['all','All'],['events','📅 Games'],...(API.me?[['following','Following'],['saved','Saved']]:[]),...Object.keys(SPORT_STK).map(s=>[s,s])];
-  let extra='';if(FEED.filter.startsWith('author:'))extra=`<button class="chip wsel" onclick="setFilter('all')">${esc(FEED.authorName||'Player')} ✕</button>`;
-  b.innerHTML=extra+f.map(([k,l])=>`<button class="chip ${FEED.filter===k?'sel':''}" onclick="setFilter('${k}')">${l}</button>`).join('')}
+function renderFilters(){const b=$('#fbar'),f=FEED.filter;if(!API.on||f===HOME()){b.style.display='none';return}b.style.display='flex';
+  const label=f.startsWith('author:')?esc(FEED.authorName||'Player'):({saved:'Saved',events:'📅 Upcoming games',all:'Everyone'}[f]||esc(f));
+  b.innerHTML=`<button class="chip" onclick="setFilter(HOME())">← Home</button><span class="chip wsel">${label}</span>`}
 /* Names are looked up by id here, never passed through onclick attributes. */
 const NAMES={};
 const small=v=>/^\d{1,10}$/.test(v||'')?parseInt(v,10):null;
@@ -655,7 +674,8 @@ async function openNotifications(){if(!API.me){needLogin();return}openSheet(shee
     const open=i=>i.post_id?`onclick="closeSheet();jumpTo(${i.post_id})"`:i.user?`onclick="openProfile(${i.user.id})"`:'';
     openSheet(sheetHead('Notifications')+`<div class="sheet-list">${d.items.length?d.items.map(i=>`<div class="ntf ${i.unread?'unread':''}" style="cursor:pointer" ${open(i)}><div class="av" style="width:30px;height:30px;font-size:11px">${i.user?esc(i.user.ini):'📅'}</div><div style="flex:1;min-width:0">${who(i)}${verb(i)} ${i.post_text?`<span class="mu">“${esc(i.post_text)}”</span>`:''}${i.text?`<div style="color:#D5DEE6">${esc(i.text)}</div>`:''}<div class="mu" style="font-size:11px">${ago(i.at)}</div></div></div>`).join(''):'<div class="mu" style="font-size:13px">Nothing yet. When people react, comment, join your games or follow you, and when games you joined change, it shows up here.</div>'}</div>`);
     if(d.unread){await api('notifications/seen/',{method:'POST'});setDot(0)}}catch(e){closeSheet();fail(e)}}
-async function jumpTo(id){go('arena');if(idx(id)<0&&FEED.filter!=='all')setFilter('all');if(idx(id)<0)await loadFeed();
+async function jumpTo(id){go('arena');if(idx(id)<0&&FEED.filter!==HOME()){FEED.filter=HOME();FEED.authorName=null;renderFilters();await loadFeed()}
+  if(idx(id)<0){try{const d=await api(`posts/${id}/`);FEED.real=[d.post,...FEED.real];setPosts(FEED.real)}catch(e){toast('That post is no longer available');return}}
   const el=document.querySelector(`#feed article[data-id="${id}"]`);if(el){el.scrollIntoView({behavior:'smooth',block:'center'});el.animate([{opacity:.4},{opacity:1}],{duration:700})}else toast('That post is no longer in the feed')}
 
 /* ---- Me tab ---- */
@@ -672,7 +692,7 @@ async function renderMe(){if(!API.me)return;const box=$('#meReal');
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px">
      <button class="btn ghost" onclick="go('arena');setFilter('author:${API.me.id}')">My posts</button>
      <button class="btn ghost" onclick="go('arena');setFilter('saved')">Saved</button>
-     <button class="btn ghost" onclick="go('arena');setFilter('following')">Following feed</button>
+     <button class="btn ghost" onclick="openSuggestions()">Find people</button>
      <button class="btn ghost" onclick="go('arena');setFilter('events')">Games</button></div>
     <div class="mu" style="font-size:12px;margin-top:8px">The Explore, Chat and Clip Studio screens are still demo previews.</div></div>`}
 function logout(){if(confirm('Log out of arena?'))location.href=API.logout}
@@ -680,8 +700,8 @@ function logout(){if(confirm('Log out of arena?'))location.href=API.logout}
 /* ---- live updates ---- */
 async function livePoll(){if(!API.on||document.hidden)return;
   try{if(API.me){const m=await api('me/');setDot(m.unread)}
-    if(FEED.filter!=='all'||$('#sheet').classList.contains('on')||tray!==null)return;
-    const d=await api('posts/');const top=d.posts[0]?d.posts[0].id:null;
+    if(FEED.filter!==HOME()||$('#sheet').classList.contains('on')||tray!==null)return;
+    const q=filterQuery();const d=await api('posts/'+(q?'?'+q:''));const top=d.posts[0]?d.posts[0].id:null;
     if(top!==FEED.topId){const sc=$('#s-arena .scroll');if(sc.scrollTop<150&&cur==='arena'){FEED.topId=top;FEED.next=d.next;setPosts(d.posts)}else $('#newPill').classList.add('on')}
     else{d.posts.forEach(s=>{const i=idx(s.id);if(i>=0){const o=POSTS[i];if(o.cm!==s.comments||o.cheers+(o.mine?1:0)!==s.stickers||JSON.stringify(o.event)!==JSON.stringify(s.event||null))replacePost(s)}})}}catch(e){}}
 function showNewPosts(){$('#newPill').classList.remove('on');go('arena');loadFeed()}
@@ -690,8 +710,9 @@ function showNewPosts(){$('#newPill').classList.remove('on');go('arena');loadFee
   API.on=true;window.LIVE_ON=true;
   if(m.authenticated){API.me=m.user;API.logout=m.logout_url;API.edit=m.edit_profile_url;setDot(m.unread)}else{API.login=m.login_url;API.reg=m.register_url;setDot(0)}
   const bell=$('#bell');bell.removeAttribute('data-toast');bell.onclick=openNotifications;
-  const plus=document.querySelector('#nav button[data-go="studio"]');plus.onclick=()=>{go('arena');document.querySelector('#htabs [data-p=feed]').click();
-    const c=$('#compose');c.scrollIntoView({behavior:'smooth',block:'start'});const d=$('#draft');if(d)setTimeout(()=>d.focus(),300)};
+  const plus=document.querySelector('#nav button[data-go="studio"]');plus.onclick=()=>{go('arena');document.querySelector('#htabs [data-p=feed]').click();openComposer()};
+  FEED.filter=HOME();
+  document.querySelector('#htabs [data-p=feed]').addEventListener('click',e=>{if(e.isTrusted&&FEED.filter==='events')setFilter(HOME())});
   /* The Home "Events" tab shows real upcoming games once the app is live. */
   const evTab=document.querySelector('#htabs [data-p=ev]');evTab.onclick=e=>{e.stopPropagation();document.querySelector('#htabs [data-p=feed]').click();setFilter('events')};
   renderCompose();renderFilters();renderMe();await loadFeed();

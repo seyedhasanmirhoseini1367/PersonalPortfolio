@@ -11,7 +11,7 @@ from datetime import timedelta
 from django.conf import settings
 from django.core.cache import cache
 from django.db import IntegrityError, transaction
-from django.db.models import Count
+from django.db.models import Count, Max, Q
 from django.http import HttpResponse, JsonResponse
 from django.urls import reverse
 from django.utils import timezone
@@ -28,6 +28,7 @@ User = get_user_model()
 
 PAGE_PATH = settings.BASE_DIR / 'static' / 'sports' / 'index.html'
 PAGE_SIZE = 20
+SUGGEST_SIZE = 8
 MAX_COMMENTS = 200
 GOING_SHOWN = 12
 
@@ -284,7 +285,9 @@ def posts(request):
     if request.GET.get('following') == '1':
         if not request.user.is_authenticated:
             return error('Log in to see who you follow.', 401)
-        qs = qs.filter(author__sport_followers__follower=request.user)
+        # Home feed: people you follow plus your own posts.
+        followed = Follow.objects.filter(follower=request.user).values('following_id')
+        qs = qs.filter(Q(author_id__in=followed) | Q(author=request.user))
     if request.GET.get('saved') == '1':
         if not request.user.is_authenticated:
             return error('Log in to see your saved posts.', 401)
@@ -604,6 +607,24 @@ def profile(request, user_id):
         'sports': [s for s, _ in Counter(SportPost.objects.filter(author=person)
                                          .values_list('sport', flat=True)).most_common(3)],
     })
+
+
+@require_GET
+@login_required_json
+def suggested(request):
+    """Active players you don't follow yet, most recently active first."""
+    followed = Follow.objects.filter(follower=request.user).values('following_id')
+    people = (User.objects.filter(is_active=True, sport_posts__isnull=False)
+              .exclude(pk=request.user.pk).exclude(pk__in=followed)
+              .annotate(last=Max('sport_posts__created_at'), n=Count('sport_posts', distinct=True))
+              .order_by('-last')[:SUGGEST_SIZE])
+    items = []
+    for person in people:
+        sports = [s for s, _ in Counter(SportPost.objects.filter(author=person)
+                                        .values_list('sport', flat=True)).most_common(2)]
+        items.append({'user': user_json(person), 'posts': person.n, 'sports': sports})
+    return JsonResponse({'users': items,
+                         'following': Follow.objects.filter(follower=request.user).count()})
 
 
 @require_http_methods(['POST'])
