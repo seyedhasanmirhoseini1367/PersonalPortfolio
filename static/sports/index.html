@@ -73,7 +73,7 @@ nav button.on{color:var(--lime)}
 .meter .bar{width:100%;height:8px;border-radius:4px;background:var(--s2);overflow:hidden;display:block}
 .meter .bar span{display:block;height:100%;border-radius:4px;transition:width .25s,background .25s}
 @keyframes pop{from{transform:scale(.8);opacity:0}to{transform:none;opacity:1}}
-.toast{position:absolute;left:50%;bottom:96px;transform:translateX(-50%);background:var(--tx);color:var(--bg);padding:10px 16px;border-radius:20px;font-size:13px;font-weight:600;opacity:0;transition:opacity .2s;pointer-events:none;white-space:nowrap}
+.toast{position:absolute;z-index:40;left:50%;bottom:96px;transform:translateX(-50%);background:var(--tx);color:var(--bg);padding:10px 16px;border-radius:20px;font-size:13px;font-weight:600;opacity:0;transition:opacity .2s;pointer-events:none;white-space:nowrap}
 .toast.show{opacity:1}
 .react{display:flex;align-items:center;gap:5px;height:34px;padding:0 10px;border-radius:17px;border:1px solid var(--line);background:var(--s2);color:#E6EBF0;font-size:12px;font-weight:600}
 .react.sel{background:var(--lime);border-color:var(--lime);color:var(--bg)}
@@ -592,12 +592,13 @@ function renderCompose(){const slot=$('#compose');if(!API.on||API.me)slot.style.
     <div class="row" data-group="kind"><button class="chip ${ev?'':'wsel'}" onclick="setKind('post')">Post</button><button class="chip ${ev?'wsel':''}" onclick="setKind('event')">📅 Game</button></div>
     <div style="display:flex;gap:10px;align-items:flex-start"><div class="av" style="width:36px;height:36px;font-size:13px">${esc(API.me.ini)}</div>
     <textarea id="draft" class="field" rows="2" maxlength="280" oninput="draftInput(this)" placeholder="${ev?'What are you organising? e.g. Saturday doubles, all levels':'Share a moment, '+esc(API.me.name.split(' ')[0])+'…'}"></textarea></div>
+    <div id="cmpErr" role="alert" style="display:none;font-size:12px;color:#FF8A7A"></div>
     <div id="gameHint" style="display:none;font-size:12px;color:var(--lime);cursor:pointer" onclick="setKind('event')">Organising a game? Tap here to make it a 📅 Game so people can join with one tap.</div>
     ${ev?`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
       <input id="evAt" class="field" type="datetime-local" aria-label="When" value="${localInput(soon)}" style="grid-column:1/3">
       <input id="evPlace" class="field" maxlength="80" placeholder="Where (optional)">
       <input id="evCap" class="field" type="number" min="2" max="200" placeholder="Spots (optional)"></div>`:''}
-    <div class="mu" style="font-size:12px">Sport</div>
+    <div class="mu" style="font-size:12px">Sport <span style="opacity:.7">(pick one)</span></div>
     <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">${Object.keys(SPORT_STK).map(s=>`<button class="chip ${s===draft.sport?'sel':''}" onclick="pickDraftSport('${s}')">${s}</button>`).join('')}
     <span class="mu" id="cnt" style="margin-left:auto;font-size:11px">280</span><button class="btn" id="postBtn" onclick="submitPost()">${ev?'Create game':'Post'}</button></div></div>`;
   restoreDraftFields(keep)}
@@ -609,10 +610,11 @@ function restoreDraftFields(k){const s=(id,v)=>{const e=$(id);if(e&&v!=null)e.va
 function openComposer(){if(!API.me){needLogin();return}openSheet(sheetHead('Create')+'<div id="composeBox"></div>');renderCompose();const d=$('#draft');if(d)setTimeout(()=>d.focus(),250)}
 function pickDraftSport(s){draft.sport=s;renderCompose()}
 function setKind(k){draft.kind=k;renderCompose()}
+function cmpErr(m){const e=$('#cmpErr');if(e){e.textContent=m;e.style.display=m?'block':'none'}else if(m)toast(m)}
 async function submitPost(){if(posting)return;const t=$('#draft').value.trim();
-  if(!draft.sport){toast('Pick a sport first');return}if(!t){toast('Write something first');return}
+  if(!draft.sport){cmpErr('Pick a sport first');return}if(!t){cmpErr('Write something first');return}
   const body={sport:draft.sport,text:t,kind:draft.kind};
-  if(draft.kind==='event'){const v=$('#evAt').value;if(!v){toast('Pick a date and time');return}
+  if(draft.kind==='event'){const v=$('#evAt').value;if(!v){cmpErr('Pick a date and time');return}
     body.event_at=new Date(v).toISOString();body.place=$('#evPlace').value.trim();const cap=$('#evCap').value;if(cap)body.capacity=parseInt(cap,10)}
   posting=true;$('#postBtn').disabled=true;
   try{await api('posts/',{method:'POST',body:JSON.stringify(body)});$('#draft').value='';draft.kind='post';closeSheet();
