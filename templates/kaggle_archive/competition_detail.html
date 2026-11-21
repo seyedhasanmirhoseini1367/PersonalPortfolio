@@ -83,10 +83,19 @@
             {% if insights.challenge %}
                 <p class="learn-challenge"><b>The hard part:</b> {{ insights.challenge }}</p>
             {% endif %}
-            {% if insights.lessons %}
+            {% if lessons %}
                 <div class="learn-box learn-lessons">
-                    <h3><i class="fas fa-lightbulb"></i> Lessons to take to your next competition</h3>
-                    <ol>{% for l in insights.lessons %}<li>{{ l }}</li>{% endfor %}</ol>
+                    <h3><i class="fas fa-lightbulb"></i> Lessons to take to your next competition
+                        <a href="{% url 'kaggle_archive:trends' %}" class="learn-trends-link">All lessons &amp; trends →</a></h3>
+                    <ol class="lesson-list">{% for l in lessons %}
+                        <li><span>{{ l.text }}</span>
+                            {% if user.is_authenticated %}
+                            <button type="button" class="learned-btn{% if l.learned %} on{% endif %}"
+                                    data-url="{% url 'kaggle_archive:toggle_lesson' competition.slug %}" data-lesson="{{ l.text }}">
+                                {% if l.learned %}✓ Learned{% else %}Mark as learned{% endif %}</button>
+                            {% endif %}</li>
+                    {% endfor %}</ol>
+                    {% csrf_token %}
                 </div>
             {% endif %}
             <div class="learn-grid">
@@ -1291,6 +1300,26 @@
 .sol-card-body { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: .9rem 1.2rem; margin-bottom: .75rem; }
 .sol-card-sec h4 { margin: 0 0 .3rem; font-size: .8rem; text-transform: uppercase; letter-spacing: .05em; color: #6d28d9; }
 .sol-card-sec ul { margin: 0; padding-left: 1.05rem; font-size: .87rem; color: #334155; display: flex; flex-direction: column; gap: .25rem; }
+.lesson-list li { display: flex; gap: .6rem; align-items: flex-start; justify-content: space-between; }
+.learned-btn { flex: 0 0 auto; border: 1px solid #c4b5fd; background: #fff; color: #6d28d9; border-radius: 999px; padding: .1rem .6rem; font-size: .75rem; cursor: pointer; }
+.learned-btn.on { background: #6d28d9; color: #fff; border-color: #6d28d9; }
+.learn-trends-link { margin-left: auto; font-size: .8rem; font-weight: 500; color: #6d28d9; text-decoration: none; }
 </style>
 
+
+<script>
+document.querySelectorAll('.learned-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+        var token = (document.querySelector('[name=csrfmiddlewaretoken]') || {}).value;
+        fetch(btn.dataset.url, {method: 'POST', headers: {'Content-Type': 'application/json', 'X-CSRFToken': token},
+                                body: JSON.stringify({lesson: btn.dataset.lesson})})
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+                if (d.error) { return; }
+                btn.classList.toggle('on', d.learned);
+                btn.textContent = d.learned ? '✓ Learned' : 'Mark as learned';
+            });
+    });
+});
+</script>
 {% endblock %}

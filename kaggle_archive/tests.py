@@ -100,3 +100,36 @@ class AutoSyncTests(TestCase):
         self.assertEqual((run.status, run.processed), ('done', 3))
         self.assertEqual(dict(KaggleSyncItem.objects.values_list('slug', 'status')),
                          {'c3': 'archived', 'c2': 'archived', 'c1': 'skipped'})
+
+
+class TrendsTests(TestCase):
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+        from .models import Competition, Solution, Technique
+        self.user = get_user_model().objects.create_user('learner', 'l@example.test', 'pw-learn-123!')
+        self.comp = Competition.objects.create(
+            name='Vision Comp', slug='vision-comp', competition_type='cv',
+            insights={'lessons': ['Trust your CV.', 'Ensemble diverse backbones.'],
+                      'common': [{'idea': 'Group k-fold', 'teams': ['A', 'B']}], 'distinctive': [], 'based_on': 2})
+        tta = Technique.objects.create(name='TTA')
+        for rank in (1, 2):
+            s = Solution.objects.create(competition=self.comp, rank=rank, team_name=f'T{rank}')
+            if rank == 1:
+                s.techniques.add(tta)
+
+    def test_trends_page_groups_by_type(self):
+        r = self.client.get('/kaggle-winners-archive/trends/')
+        self.assertEqual(r.status_code, 200)
+        for text in ('Computer Vision', 'TTA', '50%', 'Group k-fold', 'Trust your CV.'):
+            self.assertContains(r, text)
+
+    def test_mark_lesson_learned(self):
+        import json
+        url = '/kaggle-winners-archive/vision-comp/learned/'
+        body = json.dumps({'lesson': 'Trust your CV.'})
+        self.assertEqual(self.client.post(url, body, content_type='application/json').status_code, 401)
+        self.client.force_login(self.user)
+        self.assertEqual(self.client.post(url, json.dumps({'lesson': 'made up'}), content_type='application/json').status_code, 400)
+        self.assertTrue(self.client.post(url, body, content_type='application/json').json()['learned'])
+        self.assertContains(self.client.get('/kaggle-winners-archive/trends/'), '<b>1</b> of 2 lessons learned', html=False)
+        self.assertFalse(self.client.post(url, body, content_type='application/json').json()['learned'])

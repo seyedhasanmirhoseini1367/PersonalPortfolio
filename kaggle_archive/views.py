@@ -119,6 +119,13 @@ class CompetitionDetailView(DetailView):
             })
         ctx['cards']    = cards
         ctx['insights'] = competition.insights or {}
+        learned = set()
+        if self.request.user.is_authenticated:
+            from .models import LearnedLesson
+            learned = set(LearnedLesson.objects.filter(user=self.request.user, competition=competition)
+                          .values_list('lesson_key', flat=True))
+        ctx['lessons'] = [{'text': t, 'learned': lesson_key(t) in learned}
+                          for t in (competition.insights or {}).get('lessons', [])]
         ctx['compare_columns'] = [label for _, label in compare_columns]
         ctx['without_writeup'] = [s for s in solutions if not s.card]
 
@@ -181,3 +188,82 @@ def job_status_view(request, job_id):
         'competition_name': job.competition.name if job.competition else '',
     }
     return JsonResponse(data)
+
+
+# ── Trends & learning progress ───────────────────────────────────────────────
+
+def lesson_key(text: str) -> str:
+    import hashlib
+    return hashlib.sha256((text or '').strip().encode('utf-8')).hexdigest()
+
+
+def trends_view(request):
+    """What top teams used, per competition type, plus every lesson in one place."""
+    from collections import Counter
+    from .models import LearnedLesson
+
+    learned = set()
+    if request.user.is_authenticated:
+        learned = set(LearnedLesson.objects.filter(user=request.user)
+                      .values_list('competition_id', 'lesson_key'))
+
+    groups = []
+    comps = (Competition.objects.prefetch_related('solutions__techniques')
+             .order_by('-end_date', 'name'))
+    by_type = {}
+    for comp in comps:
+        by_type.setdefault(comp.competition_type, []).append(comp)
+    labels = dict(Competition.TYPE_CHOICES)
+    total_lessons = done_lessons = 0
+    for type_, items in by_type.items():
+        teams = 0
+        tech = Counter()
+        for comp in items:
+            for sol in comp.solutions.all():
+                teams += 1
+                tech.update({t.name for t in sol.techniques.all()})
+        lessons, baseline = [], []
+        for comp in items:
+            ins = comp.insights or {}
+            for text in ins.get('lessons', []):
+                key = lesson_key(text)
+                is_done = (comp.id, key) in learned
+                lessons.append({'text': text, 'competition': comp, 'key': key, 'learned': is_done})
+                total_lessons += 1
+                done_lessons += is_done
+            for c in ins.get('common', []):
+                baseline.append({'idea': c.get('idea', ''), 'competition': comp})
+        groups.append({
+            'type': type_, 'label': labels.get(type_, type_.title()),
+            'competitions': items, 'teams': teams,
+            'techniques': [{'name': n, 'count': c, 'pct': round(100 * c / teams) if teams else 0}
+                           for n, c in tech.most_common(10)],
+            'lessons': lessons, 'baseline': baseline[:8],
+        })
+    groups.sort(key=lambda g: -len(g['competitions']))
+    return render(request, 'kaggle_archive/trends.html', {
+        'groups': groups,
+        'total_lessons': total_lessons,
+        'done_lessons': done_lessons,
+    })
+
+
+@require_POST
+def toggle_lesson(request, slug):
+    """Mark / unmark a lesson as learned (signed-in users)."""
+    import json
+    from .models import LearnedLesson
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Log in to track what you learned.'}, status=401)
+    comp = get_object_or_404(Competition, slug=slug)
+    try:
+        text = json.loads(request.body or b'{}').get('lesson', '')
+    except (ValueError, AttributeError):
+        text = ''
+    key = lesson_key(text)
+    if key not in {lesson_key(t) for t in (comp.insights or {}).get('lessons', [])}:
+        return JsonResponse({'error': 'Unknown lesson.'}, status=400)
+    obj, created = LearnedLesson.objects.get_or_create(user=request.user, competition=comp, lesson_key=key)
+    if not created:
+        obj.delete()
+    return JsonResponse({'learned': created})

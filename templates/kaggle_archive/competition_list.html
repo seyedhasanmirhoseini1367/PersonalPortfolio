@@ -17,6 +17,7 @@
                     Curated top solutions from the world's best ML competitions —
                     approaches, techniques, and code from gold medal winners.
                 </p>
+                <a href="{% url 'kaggle_archive:trends' %}" class="kwa-trends-btn"><i class="fas fa-chart-line"></i> Trends &amp; lessons</a>
             </div>
             <div class="kwa-stats-row">
                 <div class="kwa-stat">
@@ -910,5 +911,7 @@
     .kwa-filter-bar { position: static; }
     .kwa-main { padding: 1rem 15px 2rem; }
 }
+.kwa-trends-btn { display: inline-flex; gap: .45rem; align-items: center; margin-top: .75rem; padding: .45rem 1rem; border-radius: 999px; background: rgba(255,255,255,.12); border: 1px solid rgba(167,139,250,.5); color: #fff; text-decoration: none; font-size: .88rem; font-weight: 600; }
+.kwa-trends-btn:hover { background: rgba(167,139,250,.25); color: #fff; }
 </style>
 {% endblock %}
