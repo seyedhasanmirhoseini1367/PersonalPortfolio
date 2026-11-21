@@ -11,6 +11,14 @@ from django.utils.text import slugify
 from model_internals.models import Walkthrough, WalkthroughBlock
 
 
+def images_present(walkthrough):
+    """True when every image block's file still exists in storage."""
+    for block in walkthrough.blocks.exclude(image='').only('image'):
+        if not block.image or not block.image.storage.exists(block.image.name):
+            return False
+    return True
+
+
 def _cell_source(cell):
     src = cell.get('source', '')
     if isinstance(src, list):
@@ -92,14 +100,21 @@ class Command(BaseCommand):
         if options['if_empty']:
             existing = Walkthrough.objects.filter(slug=slug).first()
             if existing and existing.blocks.exists():
-                if existing.source_fingerprint == fingerprint:
+                # The plot images live on the server's disk, which is wiped on
+                # every deploy while the database (Postgres) keeps the rows. So
+                # "unchanged notebook" is only up to date if the files are there.
+                images_ok = images_present(existing)
+                if existing.source_fingerprint == fingerprint and images_ok:
                     self.stdout.write(
                         f'"{existing.title}" is up to date '
                         f'({existing.blocks.count()} blocks) - skipping.')
                     return
-                self.stdout.write(
-                    f'"{existing.title}" exists but the notebook has changed '
-                    f'- re-importing.')
+                if not images_ok:
+                    self.stdout.write(f'"{existing.title}" has missing plot images - re-importing.')
+                else:
+                    self.stdout.write(
+                        f'"{existing.title}" exists but the notebook has changed '
+                        f'- re-importing.')
 
         with transaction.atomic():
             walkthrough, _ = Walkthrough.objects.update_or_create(

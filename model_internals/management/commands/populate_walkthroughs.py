@@ -15,6 +15,7 @@ from django.conf import settings
 from django.core.management import call_command
 from django.core.management.base import BaseCommand
 
+from model_internals.management.commands.import_walkthrough_notebook import images_present
 from model_internals.models import Walkthrough, WalkthroughReference
 
 # Order here is the order the cards appear in, and it is meant to be read as a
@@ -930,7 +931,8 @@ class Command(BaseCommand):
             fingerprint = hashlib.sha256(path.read_bytes()).hexdigest()
             before = Walkthrough.objects.filter(title=spec['title']).first()
             up_to_date = bool(before and before.blocks.exists()
-                              and before.source_fingerprint == fingerprint)
+                              and before.source_fingerprint == fingerprint
+                              and images_present(before))
 
             call_command(
                 'import_walkthrough_notebook', str(path),
