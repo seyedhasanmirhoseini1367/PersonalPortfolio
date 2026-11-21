@@ -24,6 +24,18 @@ body{display:flex;align-items:center;justify-content:center;min-height:100vh}
 .sheet-bg{position:absolute;inset:0;background:rgba(0,0,0,.5);z-index:20;display:none}
 .sheet{position:absolute;left:0;right:0;bottom:0;max-height:70%;background:var(--s1);border-radius:22px 22px 0 0;z-index:21;display:none;flex-direction:column;padding:14px 16px 18px;gap:10px}
 .sheet.on,.sheet-bg.on{display:flex}
+.sheet-list{overflow-y:auto;display:flex;flex-direction:column;gap:10px;min-height:40px}
+.newpill{position:absolute;top:118px;left:50%;transform:translateX(-50%);z-index:6;border:0;border-radius:18px;background:var(--lime);color:var(--bg);font-size:12px;font-weight:700;padding:8px 14px;box-shadow:0 6px 18px rgba(0,0,0,.4);display:none}
+.newpill.on{display:block}
+.fbar{display:flex;gap:6px;overflow-x:auto;padding:0 18px}
+.evt{border-radius:22px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.evt .when{display:flex;gap:12px;align-items:center}
+.evt .cal{width:52px;height:56px;border-radius:12px;background:rgba(255,255,255,.08);display:flex;flex-direction:column;align-items:center;justify-content:center;flex:none}
+.stack{display:flex}.stack .av{border:2px solid var(--s1);margin-left:-8px}.stack .av:first-child{margin-left:0}
+.statrow{display:flex;gap:18px;font-size:13px}
+.ntf{display:flex;gap:10px;align-items:flex-start;font-size:13px;padding:6px;border-radius:12px}
+.ntf.unread{background:var(--s2)}
+.btn[disabled]{opacity:.5;pointer-events:none}
 h1,.sg{font-family:'Space Grotesk',sans-serif}
 button{font-family:inherit;cursor:pointer}
 .ico{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
@@ -84,14 +96,14 @@ nav button.on{color:var(--lime)}
 <section class="screen on" id="s-arena" aria-label="Home">
   <div class="top" style="padding-bottom:6px">
     <h1 style="font-size:24px">arena<span style="color:var(--lime)">.</span></h1>
-    <button class="round" aria-label="Notifications" data-toast="3 new: Coach Mika sent you a plan"><svg class="ico" viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg><span style="position:absolute;top:10px;right:11px;width:8px;height:8px;border-radius:4px;background:var(--or)"></span></button>
+    <button class="round" id="bell" aria-label="Notifications" data-toast="3 new: Coach Mika sent you a plan"><svg class="ico" viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg><span id="bellDot" style="position:absolute;top:10px;right:11px;width:8px;height:8px;border-radius:4px;background:var(--or)"></span></button>
   </div>
   <div class="scroll">
     <div style="display:flex;gap:14px;padding:4px 18px 14px;overflow-x:auto" id="warmups"></div>
     <div class="htabs" id="htabs">
       <button class="on" data-p="feed">Feed</button><button data-p="ch">Challenges</button><button data-p="tr">Training</button><button data-p="ev">Events</button>
     </div>
-    <div id="p-feed" class="hp" style="display:flex;flex-direction:column;gap:16px"><div id="compose" class="pad" style="display:none"></div><div id="feed" style="display:flex;flex-direction:column;gap:16px"></div></div>
+    <div id="p-feed" class="hp" style="display:flex;flex-direction:column;gap:16px"><div id="compose" class="pad" style="display:none"></div><div id="fbar" class="fbar" style="display:none"></div><div id="feed" style="display:flex;flex-direction:column;gap:16px"></div></div>
     <div id="p-ch" class="hp pad" style="display:none;flex-direction:column;gap:10px"></div>
     <div id="p-tr" class="hp pad" style="display:none;flex-direction:column;gap:12px"></div>
     <div id="p-ev" class="hp pad" style="display:none;flex-direction:column;gap:10px"></div>
@@ -236,6 +248,7 @@ nav button.on{color:var(--lime)}
 <!-- PROFILE -->
 <section class="screen" id="s-profile" aria-label="Profile">
   <div class="scroll">
+    <div id="meReal" style="display:none"></div>
     <div style="height:110px;background:#0F2E33;position:relative"><svg viewBox="0 0 390 110" width="100%" height="110" preserveAspectRatio="none" aria-hidden="true"><line x1="195" y1="0" x2="195" y2="110" stroke="#1C4A50" stroke-width="2"/><circle cx="195" cy="55" r="34" fill="none" stroke="#1C4A50" stroke-width="2"/></svg></div>
     <div class="pad" style="margin-top:-38px;display:flex;align-items:flex-end;gap:12px">
       <div class="av sg" id="meAv" style="width:84px;height:84px;border:4px solid var(--bg);font-size:28px">AK</div>
@@ -316,8 +329,9 @@ nav button.on{color:var(--lime)}
   <button data-go="locker" aria-label="Locker Room"><svg class="ico" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Chat</button>
   <button data-go="profile" aria-label="Profile"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/></svg>Me</button>
 </nav>
-<div class="sheet-bg" id="sheetBg" onclick="closeComments()"></div>
-<div class="sheet" id="sheet" role="dialog" aria-label="Comments"></div>
+<div class="sheet-bg" id="sheetBg" onclick="closeSheet()"></div>
+<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-label="Details"></div>
+<button class="newpill" id="newPill" onclick="showNewPosts()">↑ New posts</button>
 <div class="toast" id="toast"></div>
 </div>
 
@@ -404,22 +418,24 @@ const SMILE=`<span class="stk" style="width:28px;height:28px;background:var(--s2
 function stickerRow(p,i,pk,tops){const total=p.cheers+(pk?1:0);return `
  <div style="display:flex;align-items:center;gap:8px;padding:12px 2px 4px">
   <button class="ib" aria-label="React with a sticker" title="React with a sticker" onclick="tray=tray===${i}?null:${i};renderFeed()" style="min-width:44px;padding:0">${pk?stk(pk,32):SMILE}</button>
-  <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0" aria-label="${total.toLocaleString()} reactions">
+  <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0;${p.real&&total?'cursor:pointer':''}" aria-label="${total.toLocaleString()} reactions" ${p.real&&total?`onclick="openComments(${i})" title="See who reacted"`:''}>
    ${tops.length?`<span style="display:flex">${tops.map((k,j)=>`<span title="${G[k][0]}" style="margin-left:${j?-8:0}px;border:2px solid var(--bg);border-radius:50%;display:flex">${stk(k,24)}</span>`).join('')}</span>`:''}
    <span style="font-size:13px;font-weight:600;color:#C9D6E0">${total.toLocaleString()}</span>
   </div>
   <button class="ib" aria-label="Comments" onclick="${p.real?`openComments(${i})`:`go('match')`}" style="min-width:0;padding:0 2px">${svg('M21 12a8 8 0 0 1-11.5 7.2L4 20l1-4.5A8 8 0 1 1 21 12z')}<span style="font-size:13px">${p.cm}</span></button>
   <button class="ib" aria-label="Pass" title="Pass" onclick="toast('Pass to a teammate')" style="min-width:40px;padding:0 2px">${svg('M22 2L11 13M22 2l-7 20-4-9-9-4z')}</button>
-  <button class="ib" aria-label="Save" onclick="saved[${i}]=!saved[${i}];renderFeed()" style="min-width:40px;padding:0 2px;${saved[i]?'color:var(--lime)':''}"><svg class="ico" viewBox="0 0 24 24" style="${saved[i]?'fill:currentColor':''}"><path d="M6 3h12v18l-6-4-6 4z"/></svg></button>
+  <button class="ib" aria-label="${saved[i]?'Saved':'Save'}" onclick="${p.real?`toggleSave(${i})`:`saved[${i}]=!saved[${i}];renderFeed()`}" style="min-width:40px;padding:0 2px;${saved[i]?'color:var(--lime)':''}"><svg class="ico" viewBox="0 0 24 24" style="${saved[i]?'fill:currentColor':''}"><path d="M6 3h12v18l-6-4-6 4z"/></svg></button>
  </div>`}
-function renderFeed(){$('#feed').innerHTML=POSTS.map((p,i)=>{const h=heatOf(i),L=lvl(h),c=claps[i]||0,pk=picked[i];const tops=pk&&!p.top.includes(pk)?[pk,...p.top].slice(0,3):p.top;return `
-<article style="margin:0 14px;position:relative">
+function renderFeed(){const empty=typeof feedEmpty==='function'?feedEmpty():'';$('#feed').innerHTML=empty+POSTS.map((p,i)=>{const h=heatOf(i),L=lvl(h),c=claps[i]||0,pk=picked[i];const tops=pk&&!p.top.includes(pk)?[pk,...p.top].slice(0,3):p.top;
+ const divider=p.demo&&i>0&&POSTS[i-1].real?`<div class="mu" style="margin:6px 18px 0;font-size:12px;display:flex;align-items:center;gap:8px"><span style="flex:1;height:1px;background:var(--s2)"></span>Examples of what arena can look like<span style="flex:1;height:1px;background:var(--s2)"></span></div>`:'';return divider+`
+<article style="margin:0 14px;position:relative" ${p.real?`data-id="${p.id}"`:''}>
  <div style="display:flex;align-items:center;gap:10px;padding:0 4px 10px">
-  <div class="av" style="width:36px;height:36px;font-size:13px">${p.ini}</div>
-  <div style="flex:1;font-weight:600;font-size:14px">${p.name} <span class="mu" style="font-weight:400;font-size:12px">· ${p.tag}${p.real?` · ${ago(p.at)}`:''}</span>${p.demo&&window.LIVE_ON?` <span class="demo">Demo</span>`:''}</div>
-  <button class="round" style="width:36px;height:36px;background:none" aria-label="More" onclick="${p.canDelete?`deletePost(${i})`:`toast('Follow · Pass · Report')`}">${p.canDelete?svg('M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3'):svg('M5 12h.01M12 12h.01M19 12h.01')}</button>
+  <div class="av" style="width:36px;height:36px;font-size:13px;${p.real?'cursor:pointer':''}" ${p.real?`onclick="openProfile(${p.authorId})"`:''}>${p.ini}</div>
+  <div style="flex:1;font-weight:600;font-size:14px;min-width:0"><span ${p.real?`onclick="openProfile(${p.authorId})" style="cursor:pointer"`:''}>${p.name}</span> <span class="mu" style="font-weight:400;font-size:12px">· ${p.tag}${p.real?` · ${ago(p.at)}`:''}</span>${p.demo&&window.LIVE_ON?` <span class="demo">Demo</span>`:''}</div>
+  <button class="round" style="width:36px;height:36px;background:none" aria-label="${p.canDelete?'Delete post':'More'}" onclick="${p.canDelete?`deletePost(${i})`:p.real?`openProfile(${p.authorId})`:`toast('Follow · Pass · Report')`}">${p.canDelete?svg('M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3'):svg('M5 12h.01M12 12h.01M19 12h.01')}</button>
  </div>
- <div style="position:relative;height:${p.real?200:270}px;border-radius:22px;background:${p.bg};overflow:hidden" ondblclick="dblReact(${i})">
+ ${p.event?eventBox(p,i):''}
+ <div style="position:relative;height:${p.event?0:p.real?200:270}px;border-radius:22px;background:${p.bg};overflow:hidden;${p.event?'display:none':''}" ondblclick="dblReact(${i})">
   <svg viewBox="0 0 354 270" width="100%" height="${p.real?200:270}" preserveAspectRatio="none" aria-hidden="true">${p.art}</svg>
   ${p.real?'':`<button aria-label="Play" onclick="go('studio')" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:56px;height:56px;border-radius:28px;border:0;background:rgba(255,255,255,.92);color:#0A1220;display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M8 5v14l11-7z" fill="currentColor"/></svg></button>`}
   ${REACTION_MODE==='meter'&&tops.length?`<div style="position:absolute;right:10px;top:10px;display:flex">${tops.map((k,j)=>`<span style="margin-left:${j?-8:0}px;border:2px solid ${p.bg};border-radius:50%;display:flex">${stk(k,26)}</span>`).join('')}</div>`:''}
@@ -438,68 +454,198 @@ function renderFeed(){$('#feed').innerHTML=POSTS.map((p,i)=>{const h=heatOf(i),L
   <button class="ib" aria-label="Comments" onclick="go('match')" style="min-width:0;padding:0 2px">${svg('M21 12a8 8 0 0 1-11.5 7.2L4 20l1-4.5A8 8 0 1 1 21 12z')}<span style="font-size:13px">${p.cm}</span></button>
   <button class="ib" aria-label="Save" onclick="saved[${i}]=!saved[${i}];renderFeed()" style="min-width:0;padding:0 2px;${saved[i]?'color:var(--lime)':''}"><svg class="ico" viewBox="0 0 24 24" style="${saved[i]?'fill:currentColor':''}"><path d="M6 3h12v18l-6-4-6 4z"/></svg></button>
  </div>`}
- <p style="margin:0;padding:2px 4px 0;font-size:14px;color:#D5DEE6">${p.txt}</p>
-</article>`}).join('')}
+ <p style="margin:0;padding:2px 4px 0;font-size:14px;color:#D5DEE6;white-space:pre-line;overflow-wrap:anywhere">${p.txt}</p>
+</article>`}).join('')+(typeof feedFooter==='function'?feedFooter():'')}
 renderFeed();
 
-/* ===== LIVE MODE: real accounts, posts, stickers and comments =====
+/* ===== LIVE MODE: real accounts, posts, events, stickers, comments, follows =====
    When the page is served by the portfolio (hasanai.net/sports/) the API below
-   answers and real posts appear above the demo posts. Anywhere else (e.g. the
-   standalone static copy) the calls fail and the page stays a demo. */
+   answers: real posts appear above the demo posts and the bell, Me tab and "+"
+   become real. Anywhere else (e.g. the standalone static copy) the calls fail
+   and the page stays a demo. */
 const API={on:false,me:null,base:'/sports/api/'};
 const DEMO=POSTS.map(p=>({...p,demo:true}));
 const ART={},BG={};DEMO.forEach(p=>{if(!ART[p.tag]){ART[p.tag]=p.art.replace(/<text[^>]*>.*?<\/text>/g,'');BG[p.tag]=p.bg}});
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-function ago(t){const s=Math.max(1,(Date.now()-new Date(t))/1000);if(s<60)return 'now';if(s<3600)return Math.floor(s/60)+'m';if(s<86400)return Math.floor(s/3600)+'h';return Math.floor(s/86400)+'d'}
+function ago(t){const s=Math.max(1,(Date.now()-new Date(t))/1000);if(s<60)return 'now';if(s<3600)return Math.floor(s/60)+'m';if(s<86400)return Math.floor(s/3600)+'h';if(s<86400*7)return Math.floor(s/86400)+'d';return new Date(t).toLocaleDateString([], {day:'numeric',month:'short'})}
 function csrf(){const m=document.cookie.match(/(?:^|; )csrftoken=([^;]+)/);return m?decodeURIComponent(m[1]):''}
 async function api(path,opt={}){
   const r=await fetch(API.base+path,{credentials:'same-origin',...opt,headers:{'Content-Type':'application/json','X-CSRFToken':csrf(),...(opt.headers||{})}});
   const ct=r.headers.get('content-type')||'';const data=ct.includes('json')?await r.json():{};
-  if(!r.ok){const e=new Error(data.error||'Something went wrong');e.status=r.status;throw e}return data}
-function fromServer(s){return {real:true,id:s.id,ini:esc(s.author.ini),name:esc(s.author.name),tag:s.sport,bg:BG[s.sport]||'#13293A',
-  txt:esc(s.text),heat:0,cheers:s.stickers-(s.mine?1:0),top:s.top.filter(k=>k!==s.mine),mine:s.mine,cm:s.comments,at:s.created_at,canDelete:s.can_delete,art:ART[s.sport]||''}}
-function setPosts(real){POSTS=[...real.map(fromServer),...DEMO];
+  if(!r.ok){const e=new Error(data.error||(r.status===401?'Log in to do that':'Something went wrong, try again'));e.status=r.status;throw e}return data}
+function fail(e){if(e.status===401){needLogin();return}toast(e.message);if(e.status===404)loadFeed()}
+
+/* ---- posts ---- */
+function fromServer(s){return {real:true,id:s.id,authorId:s.author.id,ini:esc(s.author.ini),name:esc(s.author.name),tag:s.sport,bg:BG[s.sport]||'#13293A',
+  txt:esc(s.text),heat:0,cheers:s.stickers-(s.mine?1:0),top:s.top.filter(k=>k!==s.mine),mine:s.mine,cm:s.comments,at:s.created_at,
+  canDelete:s.can_delete,saved:s.saved,followed:s.author_followed,event:s.event||null,art:ART[s.sport]||''}}
+const FEED={filter:'all',next:null,loading:false,topId:null,real:[]};
+function filterQuery(){const f=FEED.filter;if(f==='all')return '';if(f==='following')return 'following=1';if(f==='saved')return 'saved=1';
+  if(f==='events')return 'kind=event';if(f.startsWith('author:'))return 'author='+f.slice(7);return 'sport='+encodeURIComponent(f)}
+function setPosts(real){FEED.real=real;const showDemo=FEED.filter==='all';POSTS=[...real.map(fromServer),...(showDemo?DEMO:[])];
   for(const o of [claps,picked,saved])for(const k in o)delete o[k];
-  POSTS.forEach((p,i)=>{if(p.real&&p.mine)picked[i]=p.mine});tray=null;renderFeed()}
-function needLogin(){toast('Log in to join in');const c=$('#compose');if(c)c.scrollIntoView({behavior:'smooth',block:'center'})}
-async function loadFeed(){try{const d=await api('posts/');setPosts(d.posts)}catch(e){}}
+  POSTS.forEach((p,i)=>{if(p.real){if(p.mine)picked[i]=p.mine;if(p.saved)saved[i]=true}});tray=null;renderFeed()}
+function needLogin(){toast('Log in or sign up to join in');go('arena');const c=$('#compose');if(c)c.scrollIntoView({behavior:'smooth',block:'center'})}
+async function loadFeed(){if(!API.on)return;const q=filterQuery();
+  try{const d=await api('posts/'+(q?'?'+q:''));FEED.next=d.next;FEED.topId=d.posts[0]?d.posts[0].id:null;setPosts(d.posts);$('#newPill').classList.remove('on')}catch(e){if(e.status)toast(e.message)}}
+async function loadMore(){if(FEED.loading||!FEED.next)return;FEED.loading=true;const q=filterQuery();
+  try{const d=await api('posts/?'+(q?q+'&':'')+'before='+FEED.next);FEED.next=d.next;setPosts([...FEED.real,...d.posts])}catch(e){toast(e.message)}FEED.loading=false}
+function feedEmpty(){if(!window.LIVE_ON||POSTS.some(p=>p.real))return '';
+  const msg={all:'No posts yet. Be the first to share something!',following:'Nothing from people you follow yet. Tap a name on any post to follow them.',
+    saved:'No saved posts yet. Tap the bookmark on a post to keep it here.',events:'No upcoming games yet. Create one with the Event button.'}[FEED.filter]||'No posts here yet.';
+  return FEED.filter==='all'?'':`<div class="card mu" style="margin:0 14px;padding:18px;font-size:13px;text-align:center">${msg}</div>`}
+function feedFooter(){return window.LIVE_ON&&FEED.next?`<button class="btn ghost" style="margin:0 14px" onclick="loadMore()">Load more</button>`:''}
+function idx(id){return POSTS.findIndex(p=>p.real&&p.id===id)}
+function replacePost(s){const i=idx(s.id);if(i<0)return;POSTS[i]=fromServer(s);picked[i]=POSTS[i].mine||null;saved[i]=!!POSTS[i].saved;
+  const j=FEED.real.findIndex(r=>r.id===s.id);if(j>=0)FEED.real[j]=s;renderFeed()}
 async function sendSticker(i,k){if(!API.me){needLogin();return}
-  const p=POSTS[i];try{const d=await api(`posts/${p.id}/sticker/`,{method:'POST',body:JSON.stringify({sticker:k})});
-  POSTS[i]=fromServer(d.post);picked[i]=POSTS[i].mine||null;renderFeed()}catch(e){toast(e.message)}}
+  const id=POSTS[i].id;try{const d=await api(`posts/${id}/sticker/`,{method:'POST',body:JSON.stringify({sticker:k})});replacePost(d.post)}catch(e){fail(e)}}
+async function toggleSave(i){if(!API.me){needLogin();return}const id=POSTS[i].id;
+  try{const d=await api(`posts/${id}/save/`,{method:'POST'});const j=idx(id);if(j>=0){POSTS[j].saved=d.saved;saved[j]=d.saved;renderFeed()}toast(d.saved?'Saved':'Removed from saved')}catch(e){fail(e)}}
 async function deletePost(i){if(!confirm('Delete this post?'))return;
-  try{await api(`posts/${POSTS[i].id}/`,{method:'DELETE'});toast('Post deleted');loadFeed()}catch(e){toast(e.message)}}
-let draftSport='Football';
+  try{await api(`posts/${POSTS[i].id}/`,{method:'DELETE'});toast('Post deleted');loadFeed()}catch(e){fail(e)}}
+
+/* ---- events ---- */
+function fmtWhen(iso){const d=new Date(iso);return {day:d.toLocaleDateString([], {day:'numeric'}),mon:d.toLocaleDateString([], {month:'short'}).toUpperCase(),
+  full:d.toLocaleDateString([], {weekday:'short',day:'numeric',month:'short'})+' · '+d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}}
+function eventBox(p,i){const e=p.event,w=fmtWhen(e.at),cap=e.capacity;const full=cap&&e.going_count>=cap;
+  const spots=cap?`${e.going_count}/${cap} going`:`${e.going_count} going`;
+  let btn;if(e.past)btn=`<span class="mu" style="font-size:12px">This game has been played</span>`;
+  else if(e.me==='in')btn=`<button class="btn ghost" onclick="rsvp(${i},false)">I'm in ✓ · Leave</button>`;
+  else if(e.me==='waitlist')btn=`<button class="btn ghost" onclick="rsvp(${i},false)">On waitlist · Leave</button>`;
+  else btn=`<button class="btn" onclick="rsvp(${i},true)">${full?'Join waitlist':"I'm in"}</button>`;
+  return `<div class="evt" style="background:${p.bg}">
+  <div class="when"><div class="cal"><span style="font-size:10px;font-weight:700;color:var(--lime)">${w.mon}</span><span class="sg" style="font-size:22px;font-weight:700">${w.day}</span></div>
+   <div style="min-width:0"><div style="font-size:12px;font-weight:700;color:var(--lime)">${p.tag.toUpperCase()} GAME</div><div style="font-size:14px;font-weight:600">${w.full}</div>${e.place?`<div class="mu" style="font-size:12px">📍 ${esc(e.place)}</div>`:''}</div></div>
+  <div style="display:flex;align-items:center;gap:10px"><span class="stack">${e.going.slice(0,6).map(u=>`<span class="av" title="${esc(u.name)}" style="width:28px;height:28px;font-size:10px">${esc(u.ini)}</span>`).join('')}</span>
+   <span style="font-size:13px;font-weight:600;flex:1">${spots}${e.waitlist_count?` · ${e.waitlist_count} waiting`:''}${full&&!e.waitlist_count?' · full':''}</span>${btn}</div></div>`}
+async function rsvp(i,going){if(!API.me){needLogin();return}const id=POSTS[i].id;
+  try{const d=await api(`posts/${id}/rsvp/`,{method:'POST',body:JSON.stringify({going})});replacePost(d.post);
+    const me=d.post.event.me;toast(going?(me==='in'?"You're in!":"You're on the waitlist"):'You left this game')}catch(e){fail(e)}}
+
+/* ---- composer ---- */
+let draft={sport:null,kind:'post'},posting=false;
+function localInput(d){const z=n=>String(n).padStart(2,'0');return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}T${z(d.getHours())}:${z(d.getMinutes())}`}
 function renderCompose(){const c=$('#compose');if(!API.on){c.style.display='none';return}c.style.display='block';
   if(!API.me){c.innerHTML=`<div class="card" style="padding:16px;display:flex;flex-direction:column;gap:10px">
     <div class="sg" style="font-size:17px;font-weight:700">Join arena<span style="color:var(--lime)">.</span></div>
-    <div class="mu" style="font-size:13px">Sign up to post, react with stickers and comment with your friends.</div>
+    <div class="mu" style="font-size:13px">Sign up to post, organise games, react with stickers and comment with your friends.</div>
     <div style="display:flex;gap:8px"><a class="btn" style="display:flex;align-items:center;text-decoration:none" href="${API.reg}">Sign up</a><a class="btn ghost" style="display:flex;align-items:center;text-decoration:none" href="${API.login}">Log in</a></div></div>`;return}
+  const keep=saveDraftFields();const ev=draft.kind==='event';const soon=new Date(Date.now()+864e5);soon.setMinutes(0);
   c.innerHTML=`<div class="card" style="padding:12px;display:flex;flex-direction:column;gap:10px">
+    <div class="row" data-group="kind"><button class="chip ${ev?'':'wsel'}" onclick="setKind('post')">Post</button><button class="chip ${ev?'wsel':''}" onclick="setKind('event')">📅 Event</button></div>
     <div style="display:flex;gap:10px;align-items:flex-start"><div class="av" style="width:36px;height:36px;font-size:13px">${esc(API.me.ini)}</div>
-    <textarea id="draft" class="field" rows="2" maxlength="280" placeholder="Share a moment, ${esc(API.me.name.split(' ')[0])}…"></textarea></div>
-    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">${Object.keys(SPORT_STK).map(s=>`<button class="chip ${s===draftSport?'sel':''}" onclick="pickDraftSport('${s}')">${s}</button>`).join('')}
-    <button class="btn" style="margin-left:auto" onclick="submitPost()">Post</button></div></div>`}
-function pickDraftSport(s){const t=$('#draft').value;draftSport=s;renderCompose();$('#draft').value=t}
-async function submitPost(){const t=$('#draft').value.trim();if(!t){toast('Write something first');return}
-  try{await api('posts/',{method:'POST',body:JSON.stringify({sport:draftSport,text:t})});$('#draft').value='';toast('Posted');loadFeed()}catch(e){toast(e.message)}}
-let sheetPost=null;
-async function openComments(i){sheetPost=i;$('#sheet').classList.add('on');$('#sheetBg').classList.add('on');
-  $('#sheet').innerHTML='<div class="mu" style="font-size:13px">Loading…</div>';
-  try{const d=await api(`posts/${POSTS[i].id}/comments/`);renderComments(d.comments)}catch(e){$('#sheet').innerHTML=`<div class="mu">${esc(e.message)}</div>`}}
-function renderComments(list){const p=POSTS[sheetPost];
-  $('#sheet').innerHTML=`<div style="display:flex;align-items:center"><b style="flex:1">Comments</b><button class="round" style="width:34px;height:34px" aria-label="Close" onclick="closeComments()">${svg('M6 6l12 12M18 6L6 18')}</button></div>
-  <div style="overflow-y:auto;display:flex;flex-direction:column;gap:10px;min-height:40px">${list.length?list.map(c=>`<div style="display:flex;gap:10px"><div class="av" style="width:30px;height:30px;font-size:11px">${esc(c.author.ini)}</div><div style="font-size:13px"><b>${esc(c.author.name)}</b> <span class="mu" style="font-size:11px">${ago(c.created_at)}</span><div style="margin-top:2px;color:#D5DEE6">${esc(c.text)}</div></div></div>`).join(''):'<div class="mu" style="font-size:13px">No comments yet. Start the chat.</div>'}</div>
-  ${API.me?`<div style="display:flex;gap:8px"><input id="cmt" class="field" maxlength="500" placeholder="Add a comment…" onkeydown="if(event.key==='Enter')sendComment()"><button class="btn" onclick="sendComment()">Send</button></div>`
-  :`<a class="btn" style="display:flex;align-items:center;justify-content:center;text-decoration:none" href="${API.login}">Log in to comment</a>`}`;
-  p.cm=list.length;renderFeed()}
-async function sendComment(){const t=$('#cmt').value.trim();if(!t)return;
-  try{const d=await api(`posts/${POSTS[sheetPost].id}/comments/`,{method:'POST',body:JSON.stringify({text:t})});renderComments(d.comments)}catch(e){toast(e.message)}}
-function closeComments(){$('#sheet').classList.remove('on');$('#sheetBg').classList.remove('on');sheetPost=null}
-function renderMe(){if(!API.me)return;$('#meAv').textContent=API.me.ini;$('#meName').textContent=API.me.name;
-  const b=$('#meBtn');b.removeAttribute('data-toggle');b.textContent='Log out';b.onclick=e=>{e.stopPropagation();location.href=API.logout}}
-(async function initLive(){try{const m=await api('me/');API.on=true;window.LIVE_ON=true;
-  if(m.authenticated){API.me=m.user;API.logout=m.logout_url}else{API.login=m.login_url;API.reg=m.register_url}
-  renderCompose();renderMe();await loadFeed()}catch(e){/* no backend here: demo only */}})();
+    <textarea id="draft" class="field" rows="2" maxlength="280" oninput="$('#cnt').textContent=280-this.value.length" placeholder="${ev?'What are you organising? e.g. Doubles, need 2 more':'Share a moment, '+esc(API.me.name.split(' ')[0])+'…'}"></textarea></div>
+    ${ev?`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <input id="evAt" class="field" type="datetime-local" aria-label="When" value="${localInput(soon)}" style="grid-column:1/3">
+      <input id="evPlace" class="field" maxlength="80" placeholder="Where (optional)">
+      <input id="evCap" class="field" type="number" min="2" max="200" placeholder="Spots (optional)"></div>`:''}
+    <div class="mu" style="font-size:12px">Sport</div>
+    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">${Object.keys(SPORT_STK).map(s=>`<button class="chip ${s===draft.sport?'sel':''}" onclick="pickDraftSport('${s}')">${s}</button>`).join('')}
+    <span class="mu" id="cnt" style="margin-left:auto;font-size:11px">280</span><button class="btn" id="postBtn" onclick="submitPost()">${ev?'Create':'Post'}</button></div></div>`;
+  restoreDraftFields(keep)}
+function saveDraftFields(){const g=id=>{const e=$(id);return e?e.value:null};return {t:g('#draft'),at:g('#evAt'),pl:g('#evPlace'),cap:g('#evCap')}}
+function restoreDraftFields(k){const s=(id,v)=>{const e=$(id);if(e&&v!=null)e.value=v};s('#draft',k.t);s('#evAt',k.at);s('#evPlace',k.pl);s('#evCap',k.cap);
+  const d=$('#draft');if(d&&$('#cnt'))$('#cnt').textContent=280-d.value.length}
+function pickDraftSport(s){draft.sport=s;renderCompose()}
+function setKind(k){draft.kind=k;renderCompose()}
+async function submitPost(){if(posting)return;const t=$('#draft').value.trim();
+  if(!draft.sport){toast('Pick a sport first');return}if(!t){toast('Write something first');return}
+  const body={sport:draft.sport,text:t,kind:draft.kind};
+  if(draft.kind==='event'){const v=$('#evAt').value;if(!v){toast('Pick a date and time');return}
+    body.event_at=new Date(v).toISOString();body.place=$('#evPlace').value.trim();const cap=$('#evCap').value;if(cap)body.capacity=parseInt(cap,10)}
+  posting=true;$('#postBtn').disabled=true;
+  try{await api('posts/',{method:'POST',body:JSON.stringify(body)});$('#draft').value='';draft.kind='post';renderCompose();
+    toast(body.kind==='event'?'Game created · you are in':'Posted');if(FEED.filter!=='all'){FEED.filter='all';renderFilters()}await loadFeed()}
+  catch(e){fail(e)}finally{posting=false;const b=$('#postBtn');if(b)b.disabled=false}}
+
+/* ---- filters ---- */
+function renderFilters(){const b=$('#fbar');if(!API.on){b.style.display='none';return}b.style.display='flex';
+  const f=[['all','All'],['events','📅 Games'],...(API.me?[['following','Following'],['saved','Saved']]:[]),...Object.keys(SPORT_STK).map(s=>[s,s])];
+  let extra='';if(FEED.filter.startsWith('author:'))extra=`<button class="chip wsel" onclick="setFilter('all')">${esc(FEED.authorName||'Player')} ✕</button>`;
+  b.innerHTML=extra+f.map(([k,l])=>`<button class="chip ${FEED.filter===k?'sel':''}" onclick="setFilter('${k}')">${l}</button>`).join('')}
+function setFilter(k,name){FEED.filter=k;FEED.authorName=name||null;renderFilters();loadFeed()}
+
+/* ---- sheet (comments, notifications, profiles) ---- */
+let sheetPostId=null;
+function openSheet(html){$('#sheet').innerHTML=html;$('#sheet').classList.add('on');$('#sheetBg').classList.add('on')}
+function closeSheet(){$('#sheet').classList.remove('on');$('#sheetBg').classList.remove('on');sheetPostId=null}
+const closeComments=closeSheet;
+const sheetHead=t=>`<div style="display:flex;align-items:center"><b style="flex:1;font-size:16px">${t}</b><button class="round" style="width:34px;height:34px" aria-label="Close" onclick="closeSheet()">${svg('M6 6l12 12M18 6L6 18')}</button></div>`;
+async function openComments(i){const id=POSTS[i].id;sheetPostId=id;openSheet(sheetHead('Comments')+'<div class="mu" style="font-size:13px">Loading…</div>');
+  try{renderComments(await api(`posts/${id}/comments/`))}catch(e){closeSheet();fail(e)}}
+function renderComments(d){if(sheetPostId==null)return;const list=d.comments,re=d.reactions||[];
+  openSheet(sheetHead('Comments')+
+  (re.length?`<div style="display:flex;gap:6px;flex-wrap:wrap">${re.map(r=>`<span title="${esc(r.user.name)} · ${G[r.sticker]?G[r.sticker][0]:''}" style="display:flex;align-items:center;gap:4px;background:var(--s2);border-radius:14px;padding:2px 8px 2px 2px;font-size:12px">${G[r.sticker]?stk(r.sticker,20):''}${esc(r.user.name.split(' ')[0])}</span>`).join('')}</div>`:'')+
+  `<div class="sheet-list">${list.length?list.map(c=>`<div style="display:flex;gap:10px"><div class="av" style="width:30px;height:30px;font-size:11px;cursor:pointer" onclick="openProfile(${c.author.id})">${esc(c.author.ini)}</div><div style="font-size:13px;flex:1;min-width:0"><b>${esc(c.author.name)}</b> <span class="mu" style="font-size:11px">${ago(c.created_at)}</span><div style="margin-top:2px;color:#D5DEE6;white-space:pre-line;overflow-wrap:anywhere">${esc(c.text)}</div></div>${c.can_delete?`<button class="ib" style="min-width:32px;min-height:32px" aria-label="Delete comment" onclick="deleteComment(${c.id})">${svg('M6 6l12 12M18 6L6 18','ico','width:14px;height:14px')}</button>`:''}</div>`).join(''):'<div class="mu" style="font-size:13px">No comments yet. Start the chat.</div>'}</div>
+  ${API.me?`<div style="display:flex;gap:8px"><input id="cmt" class="field" maxlength="500" placeholder="Add a comment…" onkeydown="if(event.key==='Enter')sendComment()"><button class="btn" id="cmtBtn" onclick="sendComment()">Send</button></div>`
+  :`<a class="btn" style="display:flex;align-items:center;justify-content:center;text-decoration:none" href="${API.login}">Log in to comment</a>`}`);
+  const i=idx(sheetPostId);if(i>=0&&POSTS[i].cm!==list.length){POSTS[i].cm=list.length;renderFeed()}}
+let commenting=false;
+async function sendComment(){if(commenting)return;const t=$('#cmt').value.trim();if(!t)return;const id=sheetPostId;commenting=true;$('#cmtBtn').disabled=true;
+  try{const d=await api(`posts/${id}/comments/`,{method:'POST',body:JSON.stringify({text:t})});if(sheetPostId===id)renderComments(d)}catch(e){fail(e)}
+  finally{commenting=false;const b=$('#cmtBtn');if(b)b.disabled=false}}
+async function deleteComment(cid){if(!confirm('Delete this comment?'))return;const id=sheetPostId;
+  try{await api(`comments/${cid}/`,{method:'DELETE'});if(sheetPostId===id)renderComments(await api(`posts/${id}/comments/`))}catch(e){fail(e)}}
+
+/* ---- profiles & follow ---- */
+async function openProfile(uid){openSheet(sheetHead('Player')+'<div class="mu" style="font-size:13px">Loading…</div>');
+  try{const p=await api(`users/${uid}/`);renderProfileSheet(p)}catch(e){closeSheet();fail(e)}}
+function statRow(p){return `<div class="statrow"><span><b class="sg" style="font-size:16px">${p.posts}</b> <span class="mu">Posts</span></span><span><b class="sg" style="font-size:16px" id="folN">${p.followers}</b> <span class="mu">Followers</span></span><span><b class="sg" style="font-size:16px">${p.following}</b> <span class="mu">Following</span></span><span><b class="sg" style="font-size:16px">${p.stickers_received}</b> <span class="mu">Stickers</span></span></div>`}
+function renderProfileSheet(p){const u=p.user;
+  openSheet(sheetHead('Player')+`<div style="display:flex;gap:12px;align-items:center"><div class="av sg" style="width:56px;height:56px;font-size:20px">${esc(u.ini)}</div>
+   <div style="flex:1;min-width:0"><div style="font-size:17px;font-weight:700">${esc(u.name)}</div><div class="mu" style="font-size:12px">${p.sports.length?p.sports.join(' · '):'New on arena'}</div></div>
+   ${p.is_me?'':`<button class="btn ${p.i_follow?'ghost':''}" id="folBtn" onclick="toggleFollow(${u.id})">${p.i_follow?'Following':'Follow'}</button>`}</div>
+   ${statRow(p)}<button class="btn ghost" onclick="closeSheet();go('arena');setFilter('author:${u.id}',${JSON.stringify(u.name).replace(/"/g,'&quot;')})">See ${p.is_me?'my':'their'} posts</button>`)}
+async function toggleFollow(uid){if(!API.me){needLogin();return}
+  try{const d=await api(`users/${uid}/follow/`,{method:'POST'});const b=$('#folBtn');if(b){b.textContent=d.following?'Following':'Follow';b.classList.toggle('ghost',d.following)}
+    const n=$('#folN');if(n)n.textContent=d.followers;toast(d.following?'Following':'Unfollowed')}catch(e){fail(e)}}
+
+/* ---- notifications ---- */
+function setDot(n){const d=$('#bellDot');d.style.display=n>0?'block':'none';$('#bell').setAttribute('aria-label',n?`Notifications (${n} new)`:'Notifications')}
+async function openNotifications(){if(!API.me){needLogin();return}openSheet(sheetHead('Notifications')+'<div class="mu" style="font-size:13px">Loading…</div>');
+  try{const d=await api('notifications/');const verb=i=>i.type==='sticker'?`reacted ${G[i.sticker]?stk(i.sticker,18):''} to`:i.type==='comment'?'commented on':i.type==='rsvp'?"is in for":'started following you';
+    openSheet(sheetHead('Notifications')+`<div class="sheet-list">${d.items.length?d.items.map(i=>`<div class="ntf ${i.unread?'unread':''}" ${i.post_id?`style="cursor:pointer" onclick="closeSheet();jumpTo(${i.post_id})"`:`style="cursor:pointer" onclick="openProfile(${i.user.id})"`}><div class="av" style="width:30px;height:30px;font-size:11px">${esc(i.user.ini)}</div><div style="flex:1;min-width:0"><b>${esc(i.user.name)}</b> ${verb(i)} ${i.post_text?`<span class="mu">“${esc(i.post_text)}”</span>`:''}${i.text?`<div style="color:#D5DEE6">${esc(i.text)}</div>`:''}<div class="mu" style="font-size:11px">${ago(i.at)}</div></div></div>`).join(''):'<div class="mu" style="font-size:13px">Nothing yet. When people react, comment, join your games or follow you, it shows up here.</div>'}</div>`);
+    if(d.unread){await api('notifications/seen/',{method:'POST'});setDot(0)}}catch(e){closeSheet();fail(e)}}
+async function jumpTo(id){go('arena');if(idx(id)<0&&FEED.filter!=='all')setFilter('all');if(idx(id)<0)await loadFeed();
+  const el=document.querySelector(`#feed article[data-id="${id}"]`);if(el){el.scrollIntoView({behavior:'smooth',block:'center'});el.animate([{opacity:.4},{opacity:1}],{duration:700})}else toast('That post is no longer in the feed')}
+
+/* ---- Me tab ---- */
+async function renderMe(){if(!API.me)return;const box=$('#meReal');
+  [...box.parentElement.children].forEach(el=>{if(el!==box)el.style.display='none'});box.style.display='block';
+  let p;try{p=await api(`users/${API.me.id}/`)}catch(e){p={posts:0,followers:0,following:0,stickers_received:0,sports:[]}}
+  box.innerHTML=`<div style="height:90px;background:#0F2E33"></div>
+   <div class="pad" style="margin-top:-36px;display:flex;align-items:flex-end;gap:12px"><div class="av sg" style="width:80px;height:80px;border:4px solid var(--bg);font-size:26px">${esc(API.me.ini)}</div>
+    <div style="flex:1;display:flex;gap:6px;justify-content:flex-end;padding-bottom:6px"><a class="btn ghost" style="display:flex;align-items:center;text-decoration:none" href="${API.edit}">Edit profile</a><button class="btn" onclick="logout()">Log out</button></div></div>
+   <div class="pad" style="padding-top:10px;display:flex;flex-direction:column;gap:10px">
+    <h1 style="margin:0;font-family:Inter;font-size:20px">${esc(API.me.name)}</h1>
+    <div class="mu" style="font-size:13px">${p.sports.length?p.sports.join(' · '):'Post something to show your sports here'}</div>
+    ${statRow(p)}
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px">
+     <button class="btn ghost" onclick="go('arena');setFilter('author:${API.me.id}','My posts')">My posts</button>
+     <button class="btn ghost" onclick="go('arena');setFilter('saved')">Saved</button>
+     <button class="btn ghost" onclick="go('arena');setFilter('following')">Following feed</button>
+     <button class="btn ghost" onclick="go('arena');setFilter('events')">Games</button></div>
+    <div class="mu" style="font-size:12px;margin-top:8px">The Explore, Chat and Clip Studio screens are still demo previews.</div></div>`}
+function logout(){if(confirm('Log out of arena?'))location.href=API.logout}
+
+/* ---- live updates ---- */
+async function livePoll(){if(!API.on||document.hidden)return;
+  try{if(API.me){const m=await api('me/');setDot(m.unread)}
+    if(FEED.filter!=='all'||$('#sheet').classList.contains('on')||tray!==null)return;
+    const d=await api('posts/');const top=d.posts[0]?d.posts[0].id:null;
+    if(top!==FEED.topId){const sc=$('#s-arena .scroll');if(sc.scrollTop<150&&cur==='arena'){FEED.topId=top;FEED.next=d.next;setPosts(d.posts)}else $('#newPill').classList.add('on')}
+    else{d.posts.forEach(s=>{const i=idx(s.id);if(i>=0){const o=POSTS[i];if(o.cm!==s.comments||o.cheers+(o.mine?1:0)!==s.stickers||JSON.stringify(o.event)!==JSON.stringify(s.event||null))replacePost(s)}})}}catch(e){}}
+function showNewPosts(){$('#newPill').classList.remove('on');go('arena');loadFeed()}
+
+(async function initLive(){let m;try{m=await api('me/')}catch(e){setDot(1);return/* no backend here: demo only */}
+  API.on=true;window.LIVE_ON=true;
+  if(m.authenticated){API.me=m.user;API.logout=m.logout_url;API.edit=m.edit_profile_url;setDot(m.unread)}else{API.login=m.login_url;API.reg=m.register_url;setDot(0)}
+  const bell=$('#bell');bell.removeAttribute('data-toast');bell.onclick=openNotifications;
+  const plus=document.querySelector('#nav button[data-go="studio"]');plus.onclick=()=>{go('arena');document.querySelector('#htabs [data-p=feed]').click();
+    const c=$('#compose');c.scrollIntoView({behavior:'smooth',block:'start'});const d=$('#draft');if(d)setTimeout(()=>d.focus(),300)};
+  renderCompose();renderFilters();renderMe();await loadFeed();
+  setInterval(livePoll,30000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)livePoll()})})();
 
 /* MATCH */
 let pa=58;function pulse(d){pa=Math.max(5,Math.min(95,pa+d*3));$('#pulseA').style.flex=pa;$('#pulseB').style.flex=100-pa;$('#pulseTxt').textContent=pa+'% Hervanta · '+(100-pa)+'% Kaleva';toast(d>0?'Reaction sent':'Robbed! noted')}

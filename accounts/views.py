@@ -28,12 +28,22 @@ from stories.models import Story, Comment
 logger = logging.getLogger(__name__)
 
 
+def safe_next(request):
+    """The ?next= target, but only if it stays on this site (no open redirects)."""
+    from django.utils.http import url_has_allowed_host_and_scheme
+    next_url = request.GET.get('next', '')
+    if next_url and url_has_allowed_host_and_scheme(
+            next_url, allowed_hosts={request.get_host()}, require_https=request.is_secure()):
+        return next_url
+    return ''
+
+
 def register_view(request):
     """
     User registration view
     """
     if request.user.is_authenticated:
-        return redirect('stories:story_list')
+        return redirect(safe_next(request) or 'stories:story_list')
 
     if request.method == 'POST':
         form = CustomUserCreationForm(request.POST)
@@ -48,11 +58,8 @@ def register_view(request):
             # Log the registration
             logger.info(f'New user registered: {user.username} ({user.email})')
 
-            # Redirect to next parameter if exists
-            next_url = request.GET.get('next')
-            if next_url:
-                return redirect(next_url)
-            return redirect('stories:story_list')
+            # Redirect to next parameter if it is a safe, same-site address
+            return redirect(safe_next(request) or 'stories:story_list')
         else:
             messages.error(request, 'Please correct the errors below.')
     else:
@@ -61,7 +68,7 @@ def register_view(request):
     context = {
         'form': form,
         'title': 'Register',
-        'next': request.GET.get('next', '')
+        'next': safe_next(request)
     }
     return render(request, 'accounts/register.html', context)
 
@@ -71,7 +78,7 @@ def login_view(request):
     Custom login view
     """
     if request.user.is_authenticated:
-        return redirect('stories:story_list')
+        return redirect(safe_next(request) or 'stories:story_list')
 
     if request.method == 'POST':
         form = CustomAuthenticationForm(request, data=request.POST)
@@ -93,11 +100,8 @@ def login_view(request):
                 # Log the login
                 logger.info(f'User logged in: {user.username}')
 
-                # Redirect to next parameter if exists
-                next_url = request.GET.get('next', '')
-                if next_url:
-                    return redirect(next_url)
-                return redirect('stories:story_list')
+                # Redirect to next parameter if it is a safe, same-site address
+                return redirect(safe_next(request) or 'stories:story_list')
         else:
             messages.error(request, 'Invalid username/email or password.')
     else:
@@ -106,7 +110,7 @@ def login_view(request):
     context = {
         'form': form,
         'title': 'Login',
-        'next': request.GET.get('next', '')
+        'next': safe_next(request)
     }
     return render(request, 'accounts/login.html', context)
 
