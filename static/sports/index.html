@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sports Social App – Clickable Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0A1220;--s1:#121C2C;--s2:#1B2738;--line:#2A3A50;--tx:#F2F5F7;--mu:#93A3B8;--lime:#2DD4BF;--or:#FF8A5B;--red:#FF5A5A}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:#050A12;font-family:Inter,system-ui,sans-serif;color:var(--tx)}
+body{display:flex;align-items:center;justify-content:center;min-height:100vh}
+.phone{width:390px;height:844px;background:var(--bg);border-radius:40px;overflow:hidden;position:relative;display:flex;flex-direction:column;box-shadow:0 0 0 10px #121C2C}
+@media (max-width:500px){body{display:block}.phone{width:100%;height:100vh;height:100dvh;border-radius:0;box-shadow:none}}
+.screen{display:none;flex:1;flex-direction:column;min-height:0}
+.screen.on{display:flex}
+.scroll{flex:1;overflow-y:auto;min-height:0;padding-bottom:16px}
+.scroll::-webkit-scrollbar{display:none}
+.phone *{scrollbar-width:none}.phone *::-webkit-scrollbar{display:none}
+h1,.sg{font-family:'Space Grotesk',sans-serif}
+button{font-family:inherit;cursor:pointer}
+.ico{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.top{display:flex;align-items:center;justify-content:space-between;padding:22px 18px 10px;gap:10px}
+.top h1{margin:0;font-size:26px;font-weight:700;letter-spacing:-.5px}
+.round{width:44px;height:44px;border-radius:22px;border:0;background:var(--s1);color:var(--tx);display:flex;align-items:center;justify-content:center;position:relative;flex:none}
+.chip{height:34px;padding:0 12px;border-radius:17px;border:1px solid var(--line);background:transparent;color:var(--tx);font-size:12px;font-weight:600;white-space:nowrap}
+.chip.sel{background:var(--lime);border-color:var(--lime);color:var(--bg)}
+.chip.wsel{background:var(--tx);border-color:var(--tx);color:var(--bg)}
+.row{display:flex;gap:6px;flex-wrap:wrap}
+.card{background:var(--s1);border-radius:18px}
+.pad{padding:0 18px}
+.btn{height:38px;padding:0 14px;border-radius:19px;border:0;background:var(--lime);color:var(--bg);font-size:13px;font-weight:700}
+.btn.ghost{background:transparent;border:1px solid var(--lime);color:var(--lime)}
+.mu{color:var(--mu)}
+.av{border-radius:50%;background:var(--line);display:flex;align-items:center;justify-content:center;font-weight:700;flex:none}
+nav{display:flex;justify-content:space-around;align-items:center;padding:8px 8px 18px;background:#0C1626;border-top:1px solid var(--s2)}
+nav button{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10px;color:var(--mu);background:none;border:0;min-width:56px;min-height:44px;justify-content:center}
+nav button.on{color:var(--lime)}
+.plus{width:52px;height:40px;border-radius:14px;background:var(--lime);color:var(--bg);display:flex;align-items:center;justify-content:center}
+.htabs{display:flex;gap:22px;padding:2px 18px 0;margin-bottom:14px;border-bottom:1px solid var(--s2)}
+.htabs button{background:none;border:0;color:var(--mu);font-size:15px;font-weight:600;padding:10px 0 12px;border-bottom:2.5px solid transparent;margin-bottom:-1px}
+.htabs button.on{color:var(--tx);border-color:var(--lime)}
+.stk{display:inline-flex;align-items:center;justify-content:center;border-radius:50%;flex:none}
+.ib{background:none;border:0;color:#C9D6E0;display:flex;align-items:center;gap:5px;min-width:44px;min-height:44px;justify-content:center;padding:0 6px}
+.tray{position:absolute;right:0;bottom:66px;display:flex;gap:6px;padding:8px;border-radius:30px;background:#162033;box-shadow:0 8px 24px rgba(0,0,0,.45);z-index:5;animation:pop .18s ease-out}
+.tray button{background:none;border:0;padding:2px;border-radius:50%;transition:transform .12s}
+.tray button:hover,.tray button.picked{transform:scale(1.18)}
+.cheer{position:relative;width:48px;height:48px;border-radius:24px;border:2px solid var(--line);background:var(--s1);color:#C9D6E0;display:flex;align-items:center;justify-content:center;flex:none;transition:transform .1s}
+.cheer:active{transform:scale(.9)}
+.cheer.on{border-color:var(--lv);color:#fff;background:var(--lv)}
+.burst{position:absolute;top:-6px;left:50%;transform:translateX(-50%);font-size:13px;font-weight:800;color:var(--lime);animation:up .7s ease-out forwards;pointer-events:none}
+@keyframes up{to{transform:translate(-50%,-28px);opacity:0}}
+.meter{flex:1;min-width:0;background:none;border:0;padding:0;display:flex;flex-direction:column;align-items:flex-start;gap:5px;min-height:44px;justify-content:center}
+.meter .bar{width:100%;height:8px;border-radius:4px;background:var(--s2);overflow:hidden;display:block}
+.meter .bar span{display:block;height:100%;border-radius:4px;transition:width .25s,background .25s}
+@keyframes pop{from{transform:scale(.8);opacity:0}to{transform:none;opacity:1}}
+.toast{position:absolute;left:50%;bottom:96px;transform:translateX(-50%);background:var(--tx);color:var(--bg);padding:10px 16px;border-radius:20px;font-size:13px;font-weight:600;opacity:0;transition:opacity .2s;pointer-events:none;white-space:nowrap}
+.toast.show{opacity:1}
+.react{display:flex;align-items:center;gap:5px;height:34px;padding:0 10px;border-radius:17px;border:1px solid var(--line);background:var(--s2);color:#E6EBF0;font-size:12px;font-weight:600}
+.react.sel{background:var(--lime);border-color:var(--lime);color:var(--bg)}
+.react svg{width:16px;height:16px}
+.act{flex:1;height:44px;border:0;background:transparent;color:#C9D2DB;font-size:13px;display:flex;align-items:center;justify-content:center;gap:6px}
+.act svg{width:18px;height:18px}
+.tile{position:relative;height:100px;border-radius:8px}
+.tile span{position:absolute;left:6px;bottom:6px;font-size:10px;font-weight:600;padding:3px 6px;border-radius:6px;background:var(--bg)}
+.tool{height:58px;border-radius:14px;border:1px solid #1E2B3D;background:var(--s1);color:#C9D2DB;font-size:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}
+.tool.sel{border-color:var(--lime);color:var(--lime)}
+.drill{display:flex;align-items:center;gap:12px;min-height:46px;border-top:1px solid #1E2B3D;cursor:pointer;font-size:13px}
+.drill input{width:20px;height:20px;accent-color:var(--lime)}
+.drill.done .n{color:var(--mu);text-decoration:line-through}
+</style>
+</head>
+<body>
+<div class="phone">
+
+<!-- ARENA -->
+<section class="screen on" id="s-arena" aria-label="Home">
+  <div class="top" style="padding-bottom:6px">
+    <h1 style="font-size:24px">arena<span style="color:var(--lime)">.</span></h1>
+    <button class="round" aria-label="Notifications" data-toast="3 new: Coach Mika sent you a plan"><svg class="ico" viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg><span style="position:absolute;top:10px;right:11px;width:8px;height:8px;border-radius:4px;background:var(--or)"></span></button>
+  </div>
+  <div class="scroll">
+    <div style="display:flex;gap:14px;padding:4px 18px 14px;overflow-x:auto" id="warmups"></div>
+    <div class="htabs" id="htabs">
+      <button class="on" data-p="feed">Feed</button><button data-p="ch">Challenges</button><button data-p="tr">Training</button><button data-p="ev">Events</button>
+    </div>
+    <div id="p-feed" class="hp" style="display:flex;flex-direction:column;gap:16px"><div id="feed" style="display:flex;flex-direction:column;gap:16px"></div></div>
+    <div id="p-ch" class="hp pad" style="display:none;flex-direction:column;gap:10px"></div>
+    <div id="p-tr" class="hp pad" style="display:none;flex-direction:column;gap:12px"></div>
+    <div id="p-ev" class="hp pad" style="display:none;flex-direction:column;gap:10px"></div>
+  </div>
+</section>
+
+<!-- MATCH -->
+<section class="screen" id="s-match" aria-label="Live match">
+  <div class="top" style="justify-content:flex-start">
+    <button class="round" aria-label="Back" onclick="go('arena')"><svg class="ico" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
+    <div style="flex:1"><div class="mu" style="font-size:12px">Tampere Amateur League · Round 9</div><div style="font-size:14px;font-weight:600">Hervanta sports field</div></div>
+    <button class="chip" data-toggle="Following|Follow match">Follow match</button>
+  </div>
+  <div class="scroll">
+    <div class="card" style="margin:4px 14px 0;padding:18px 16px;display:flex;flex-direction:column;align-items:center;gap:10px">
+      <span style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--red)"><span style="width:8px;height:8px;border-radius:4px;background:var(--red)"></span>LIVE · <span id="clock">67</span>'</span>
+      <div style="display:flex;align-items:center;justify-content:space-between;width:100%">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:6px;width:110px"><div class="av" style="width:52px;height:52px;background:var(--lime);color:var(--bg)">FH</div><span style="font-size:13px;font-weight:600">FC Hervanta</span></div>
+        <div class="sg" style="font-size:44px;font-weight:700">2 – 1</div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:6px;width:110px"><div class="av" style="width:52px;height:52px;background:var(--or);color:var(--bg)">KU</div><span style="font-size:13px;font-weight:600">Kaleva Utd</span></div>
+      </div>
+      <div style="display:flex;gap:6px;width:100%"><div id="pulseA" style="flex:58;height:6px;border-radius:3px;background:var(--lime);transition:flex .3s"></div><div id="pulseB" style="flex:42;height:6px;border-radius:3px;background:var(--or);transition:flex .3s"></div></div>
+      <span class="mu" style="font-size:11px">Fan pulse: <b id="pulseTxt">58% Hervanta · 42% Kaleva</b></span>
+    </div>
+    <div class="row" style="padding:14px 14px 10px;flex-wrap:nowrap" data-group="mtab" data-cls="wsel">
+      <button class="chip wsel" style="flex:1" data-pane="tl">Timeline</button><button class="chip" style="flex:1" data-pane="cams">Fan cams</button><button class="chip" style="flex:1" data-pane="stats">Stats</button><button class="chip" style="flex:1" data-pane="stands">Stands</button>
+    </div>
+    <div style="padding:0 14px;display:flex;flex-direction:column;gap:10px" id="mpane"></div>
+  </div>
+  <div style="display:flex;gap:6px;align-items:center;padding:10px 14px;border-top:1px solid var(--s2);background:#0C1626">
+    <span class="mu" style="font-size:12px">React</span>
+    <button class="chip" onclick="pulse(1)">Hype</button><button class="chip" onclick="pulse(1)">Roar</button><button class="chip" onclick="pulse(-1)">Robbed</button>
+    <button class="btn" style="margin-left:auto;height:34px;font-size:12px" onclick="go('studio')">Add clip</button>
+  </div>
+</section>
+
+<!-- STUDIO -->
+<section class="screen" id="s-studio" aria-label="Clip Studio">
+  <div class="top">
+    <button class="round" aria-label="Close" onclick="go('arena')"><svg class="ico" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    <h1 style="font-size:20px">Clip Studio</h1>
+    <button class="btn" onclick="toast('Posted to the Arena');setTimeout(()=>go('arena'),700)">Post</button>
+  </div>
+  <div class="scroll">
+    <div style="position:relative;margin:0 14px;height:300px;border-radius:20px;background:#0F2E33;overflow:hidden">
+      <svg viewBox="0 0 362 300" width="100%" height="100%" preserveAspectRatio="none" style="position:absolute;inset:0" aria-hidden="true">
+        <rect x="16" y="16" width="330" height="268" fill="none" stroke="#1C4A50" stroke-width="2"/><rect x="111" y="16" width="140" height="60" fill="none" stroke="#1C4A50" stroke-width="2"/>
+        <g id="drawLayer">
+        <circle cx="140" cy="200" r="22" fill="none" stroke="#FF8A5B" stroke-width="3"/>
+        <path d="M150 182 L205 95 M205 95 l-14 4 M205 95 l2 14" stroke="#2DD4BF" stroke-width="3" fill="none"/>
+        <path d="M60 240 Q100 210 125 205" stroke="#F2F5F7" stroke-width="2" stroke-dasharray="5 5" fill="none"/>
+        </g>
+        <circle id="ball" cx="140" cy="200" r="6" fill="#F2F5F7"/>
+        <circle cx="240" cy="150" r="5" fill="#9AA6B2"/><circle cx="270" cy="120" r="5" fill="#9AA6B2"/>
+      </svg>
+      <span style="position:absolute;left:12px;top:12px;padding:5px 9px;border-radius:10px;background:var(--bg);font-size:11px">Frame <span id="frame">412</span> / 1080</span>
+      <span style="position:absolute;right:12px;top:12px;padding:5px 9px;border-radius:10px;background:var(--bg);font-size:11px;color:var(--lime);font-weight:600">Slow-mo <span id="spd">0.25×</span></span>
+      <button aria-label="Play" id="playBtn" style="position:absolute;right:12px;bottom:12px;width:44px;height:44px;border-radius:22px;border:0;background:var(--tx);color:var(--bg);display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 24 24" width="20" height="20"><path d="M8 5v14l11-7z" fill="currentColor"/></svg></button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;padding:12px 14px 4px" id="tools"></div>
+    <div style="padding:10px 14px 0;display:flex;flex-direction:column;gap:8px">
+      <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:13px;font-weight:600">Speed</span>
+        <div class="row" data-group="speed" id="speeds"><button class="chip">0.1×</button><button class="chip sel">0.25×</button><button class="chip">0.5×</button><button class="chip">1×</button></div></div>
+      <div style="font-size:13px;font-weight:600;margin-top:4px">AI-detected moments <span class="mu" style="font-weight:400">(tap one)</span></div>
+      <div style="position:relative;height:46px;border-radius:12px;background:var(--s1);overflow:hidden">
+        <div id="prog" style="position:absolute;left:0;top:0;bottom:0;width:38%;background:var(--s2);transition:width .3s"></div>
+        <button aria-label="Key pass" onclick="seek(12,180)" style="position:absolute;left:12%;top:13px;width:20px;height:20px;border-radius:10px;border:0;background:var(--or)"></button>
+        <button aria-label="Shot" onclick="seek(44,412)" style="position:absolute;left:44%;top:13px;width:20px;height:20px;border-radius:10px;border:0;background:var(--lime)"></button>
+        <button aria-label="Goal" onclick="seek(79,860)" style="position:absolute;left:79%;top:13px;width:20px;height:20px;border-radius:10px;border:0;background:var(--lime)"></button>
+      </div>
+      <div style="display:flex;gap:14px;font-size:11px" class="mu"><span>● Shot / goal</span><span style="color:var(--or)">● Key pass</span></div>
+    </div>
+    <div class="card" style="margin:14px 14px 0;padding:12px 14px;display:flex;flex-direction:column;gap:10px;font-size:13px">
+      <div style="display:flex;justify-content:space-between"><span class="mu">Sport</span><b>Football</b></div>
+      <div style="display:flex;justify-content:space-between"><span class="mu">Link to match</span><b>Hervanta vs Kaleva</b></div>
+      <div style="display:flex;justify-content:space-between"><span class="mu">Tag players</span><b style="color:var(--lime)">A. Korhonen +1</b></div>
+      <div style="display:flex;justify-content:space-between"><span class="mu">Ask coach for feedback</span><input type="checkbox" checked style="accent-color:var(--lime);width:18px;height:18px"></div>
+    </div>
+  </div>
+</section>
+
+<!-- TRAINING -->
+<section class="screen" id="s-training" aria-label="Training Ground">
+  <div class="top"><h1>Training Ground</h1><button class="btn" onclick="toast('Session logged · streak 13 days')">Log session</button></div>
+  <div class="scroll pad" style="display:flex;flex-direction:column;gap:12px">
+    <div class="card" style="padding:14px;display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;justify-content:space-between"><span class="mu" style="font-size:13px">This week</span><span style="font-size:13px;font-weight:600;color:var(--or)">12-day streak</span></div>
+      <div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px" id="week"></div>
+    </div>
+    <div class="card" style="padding:14px 14px 4px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+        <div class="av" style="width:36px;height:36px;font-size:13px">MR</div>
+        <div style="flex:1"><div style="font-size:14px;font-weight:600">Today: Finishing &amp; first touch</div><div class="mu" style="font-size:12px">Plan from Coach Mika · 55 min</div></div>
+        <span class="sg" style="font-size:15px;font-weight:700;color:var(--lime)"><span id="doneN">2</span>/4</span>
+      </div>
+      <div id="drills"></div>
+    </div>
+    <button class="card" onclick="go('studio')" style="border:0;color:var(--tx);text-align:left;display:flex;gap:12px;align-items:center;padding:12px 14px">
+      <div style="display:flex;gap:4px"><div style="width:48px;height:62px;border-radius:10px;background:#0F2E33"></div><div style="width:48px;height:62px;border-radius:10px;background:#1A2440"></div></div>
+      <div style="flex:1"><div style="font-size:14px;font-weight:600">Technique check</div><div class="mu" style="font-size:12px;margin-top:2px">Your shot next to the coach's demo · 2 notes</div></div>
+      <svg class="ico mu" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
+    </button>
+    <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px">
+      <div class="card" style="padding:12px"><div class="sg" style="font-size:20px;font-weight:700">38 km</div><div class="mu" style="font-size:11px">Distance / month</div></div>
+      <div class="card" style="padding:12px"><div class="sg" style="font-size:20px;font-weight:700">14</div><div class="mu" style="font-size:11px">Sessions / month</div></div>
+      <div class="card" style="padding:12px"><div class="sg" style="font-size:20px;font-weight:700;color:var(--lime)">+9%</div><div class="mu" style="font-size:11px">Shot accuracy</div></div>
+    </div>
+    <div class="card" style="padding:12px 14px;display:flex;align-items:center;gap:10px">
+      <div style="flex:1"><div style="font-size:14px;font-weight:600">Train together</div><div class="mu" style="font-size:12px">3 squad members training near Hervanta tonight</div></div>
+      <button class="btn ghost" data-toggle="Joined ✓|Join">Join</button>
+    </div>
+  </div>
+</section>
+
+<!-- SCOUTING -->
+<section class="screen" id="s-scouting" aria-label="Scouting">
+  <div class="top" style="flex-direction:column;align-items:stretch"><h1>Scouting</h1>
+    <label style="display:flex;align-items:center;gap:8px;height:44px;padding:0 14px;border-radius:22px;background:var(--s1);color:var(--mu)">
+      <svg class="ico" viewBox="0 0 24 24" style="width:18px;height:18px"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input type="search" aria-label="Search" placeholder="Players, teams, courts, leagues…" style="flex:1;border:0;background:transparent;color:var(--tx);font-size:14px;font-family:inherit;outline:none">
+    </label>
+    <div class="row" id="cats"></div>
+  </div>
+  <div class="scroll pad" style="display:flex;flex-direction:column;gap:12px">
+    <div style="position:relative;height:130px;border-radius:18px;background:#121A22;overflow:hidden;flex:none">
+      <svg viewBox="0 0 354 130" width="100%" height="130" preserveAspectRatio="none" aria-hidden="true"><path d="M0 40 Q120 70 354 30 M0 100 Q180 80 354 115 M90 0 Q110 70 70 130 M250 0 Q230 60 270 130" stroke="#1F2A35" stroke-width="6" fill="none"/><circle cx="120" cy="58" r="9" fill="#2DD4BF"/><circle cx="210" cy="90" r="9" fill="#2DD4BF"/><circle cx="280" cy="45" r="9" fill="#FF8A5B"/><circle cx="170" cy="70" r="6" fill="#F2F5F7"/><circle cx="170" cy="70" r="16" fill="none" stroke="#F2F5F7" stroke-opacity=".4"/></svg>
+      <span style="position:absolute;left:10px;bottom:10px;padding:5px 9px;border-radius:10px;background:var(--bg);font-size:11px">Within 5 km · Tampere</span>
+    </div>
+    <div id="items" style="display:flex;flex-direction:column;gap:8px"></div>
+    <div style="padding:14px;border-radius:18px;background:#2A1A14;border:1px solid #5A3424;display:flex;flex-direction:column;gap:8px">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div><div style="font-size:12px;color:#FFB08E;font-weight:600">CHALLENGE · ends in 3 days</div><div class="sg" style="font-size:18px;font-weight:700">10 penalties, film it</div></div>
+        <button class="btn" style="background:var(--or)" onclick="go('arena');document.querySelector('#htabs [data-p=ch]').click()">See all</button>
+      </div>
+      <div style="display:flex;gap:10px;font-size:13px"><span class="sg" style="width:20px;color:#FFB08E;font-weight:700">1</span><span style="flex:1">Lauri S.</span><b>10 / 10</b></div>
+      <div style="display:flex;gap:10px;font-size:13px"><span class="sg" style="width:20px;color:#FFB08E;font-weight:700">2</span><span style="flex:1">Aino K.</span><b>9 / 10</b></div>
+      <div style="display:flex;gap:10px;font-size:13px"><span class="sg" style="width:20px;color:#FFB08E;font-weight:700">3</span><span style="flex:1">Juho L.</span><b>9 / 10</b></div>
+    </div>
+  </div>
+</section>
+
+<!-- PROFILE -->
+<section class="screen" id="s-profile" aria-label="Profile">
+  <div class="scroll">
+    <div style="height:110px;background:#0F2E33;position:relative"><svg viewBox="0 0 390 110" width="100%" height="110" preserveAspectRatio="none" aria-hidden="true"><line x1="195" y1="0" x2="195" y2="110" stroke="#1C4A50" stroke-width="2"/><circle cx="195" cy="55" r="34" fill="none" stroke="#1C4A50" stroke-width="2"/></svg></div>
+    <div class="pad" style="margin-top:-38px;display:flex;align-items:flex-end;gap:12px">
+      <div class="av sg" style="width:84px;height:84px;border:4px solid var(--bg);font-size:28px">AK</div>
+      <div style="flex:1;display:flex;gap:6px;justify-content:flex-end;padding-bottom:6px">
+        <button class="btn" data-toggle="Fan ✓|Become a Fan">Become a Fan</button>
+        <button class="round" style="width:38px;height:38px;border:1px solid var(--line);background:none" aria-label="Message" onclick="go('locker')"><svg class="ico" viewBox="0 0 24 24" style="width:18px;height:18px"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></button>
+      </div>
+    </div>
+    <div class="pad" style="padding-top:10px;display:flex;flex-direction:column;gap:6px">
+      <div style="display:flex;align-items:center;gap:6px"><h1 style="margin:0;font-family:Inter;font-size:20px">Aino Korhonen</h1><svg viewBox="0 0 24 24" width="18" height="18" role="img" aria-label="Verified"><circle cx="12" cy="12" r="10" fill="#2DD4BF"/><path d="M7 12l3 3 7-7" stroke="#0A1220" stroke-width="2.4" fill="none" stroke-linecap="round"/></svg></div>
+      <div class="mu" style="font-size:13px">Tampere · Football · Padel · <button onclick="go('team')" style="background:none;border:0;padding:0;color:var(--lime);font-size:13px;font-weight:600">FC Hervanta ›</button></div>
+      <div style="display:flex;gap:18px;font-size:13px;margin-top:4px"><span><b class="sg" style="font-size:16px">1,284</b> <span class="mu">Fans</span></span><span><b class="sg" style="font-size:16px">312</b> <span class="mu">Squad</span></span><span><b class="sg" style="font-size:16px">4.1k</b> <span class="mu">Hype</span></span></div>
+    </div>
+    <div class="row pad" style="padding-top:14px;padding-bottom:10px" id="roles"></div>
+    <div class="pad" style="display:flex;flex-direction:column;gap:10px">
+      <div style="font-size:13px;color:#C9D2DB" id="bio"></div>
+      <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px" id="pstats"></div>
+      <div style="display:flex;justify-content:space-between;margin-top:4px"><b style="font-size:14px" id="gtitle"></b><span class="mu" style="font-size:12px">See all</span></div>
+      <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px" id="tiles"></div>
+    </div>
+  </div>
+</section>
+
+<!-- TEAM -->
+<section class="screen" id="s-team" aria-label="Team page">
+  <div class="scroll">
+    <div style="height:120px;background:#0F2E33;position:relative">
+      <button class="round" aria-label="Back" onclick="back()" style="position:absolute;left:14px;top:18px;background:var(--bg)"><svg class="ico" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
+    </div>
+    <div class="pad" style="margin-top:-36px;display:flex;align-items:flex-end;gap:12px">
+      <div class="av sg" style="width:80px;height:80px;border-radius:22px;background:var(--lime);color:var(--bg);font-size:26px;border:4px solid var(--bg)">FH</div>
+      <div style="flex:1;display:flex;gap:6px;justify-content:flex-end;padding-bottom:6px">
+        <button class="btn" data-toggle="Following ✓|Follow">Follow</button>
+        <button class="btn ghost" onclick="go('locker')">Team chat</button>
+      </div>
+    </div>
+    <div class="pad" style="padding-top:10px">
+      <h1 style="margin:0;font-size:22px">FC Hervanta</h1>
+      <div class="mu" style="font-size:13px;margin-top:4px">Football club · Tampere Amateur League · Founded 2011</div>
+      <div style="display:flex;gap:18px;font-size:13px;margin-top:8px"><span><b class="sg" style="font-size:16px">24</b> <span class="mu">Members</span></span><span><b class="sg" style="font-size:16px">2nd</b> <span class="mu">In league</span></span><span><b class="sg" style="font-size:16px">3.2k</b> <span class="mu">Fans</span></span></div>
+    </div>
+    <div class="row" style="padding:14px 18px 10px;flex-wrap:nowrap" data-group="ttab" data-cls="wsel">
+      <button class="chip wsel" style="flex:1" onclick="tpane('sched')">Schedule</button><button class="chip" style="flex:1" onclick="tpane('mem')">Squad</button><button class="chip" style="flex:1" onclick="tpane('rec')">Recruiting</button><button class="chip" style="flex:1" onclick="tpane('tab')">Table</button>
+    </div>
+    <div class="pad" style="display:flex;flex-direction:column;gap:8px" id="tpane"></div>
+  </div>
+</section>
+
+<!-- LOCKER ROOM -->
+<section class="screen" id="s-locker" aria-label="Locker Room">
+  <div class="top" style="justify-content:flex-start">
+    <button class="round" aria-label="Back" onclick="back()"><svg class="ico" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
+    <h1 style="flex:1;font-size:22px">Locker Room</h1>
+  </div>
+  <div class="row pad" style="flex-wrap:nowrap;overflow-x:auto;padding-bottom:10px" id="chats"></div>
+  <div class="scroll pad" id="msgs" style="display:flex;flex-direction:column;gap:10px"></div>
+  <form id="sendForm" style="display:flex;gap:8px;padding:10px 14px 18px;border-top:1px solid var(--s2);background:#0C1626">
+    <input id="msgIn" aria-label="Message" placeholder="Message the squad…" style="flex:1;height:44px;border-radius:22px;border:0;background:var(--s1);color:var(--tx);padding:0 16px;font-family:inherit;font-size:14px;outline:none">
+    <button class="round" aria-label="Send" style="background:var(--lime);color:var(--bg)"><svg class="ico" viewBox="0 0 24 24"><path d="M4 12h14M12 5l7 7-7 7"/></svg></button>
+  </form>
+</section>
+
+<!-- CHALLENGES -->
+<section class="screen" id="s-challenges" aria-label="Challenges">
+  <div class="top">
+    <button class="round" aria-label="Back" onclick="back()"><svg class="ico" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
+    <h1 style="flex:1;font-size:22px">Challenges</h1>
+    <button class="btn" style="background:var(--or)" onclick="toast('Create a challenge: pick sport, rule, deadline')">+ Create</button>
+  </div>
+  <div class="row pad" style="padding-bottom:10px" data-group="cfilter"><button class="chip sel">All</button><button class="chip">Football</button><button class="chip">Padel</button><button class="chip">Running</button><button class="chip">Fitness</button></div>
+  <div class="scroll pad" style="display:flex;flex-direction:column;gap:10px" id="chList"></div>
+</section>
+
+<nav aria-label="Main" id="nav">
+  <button data-go="arena" class="on" aria-label="Home"><svg class="ico" viewBox="0 0 24 24"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>Home</button>
+  <button data-go="scouting" aria-label="Explore"><svg class="ico" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>Explore</button>
+  <button data-go="studio" aria-label="Create"><span class="plus"><svg class="ico" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span></button>
+  <button data-go="locker" aria-label="Locker Room"><svg class="ico" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Chat</button>
+  <button data-go="profile" aria-label="Profile"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/></svg>Me</button>
+</nav>
+<div class="toast" id="toast"></div>
+</div>
+
+<script>
+const $=s=>document.querySelector(s);
+const svg=(d,c='ico',st='')=>`<svg class="${c}" viewBox="0 0 24 24" style="${st}" aria-hidden="true"><path d="${d}"/></svg>`;
+let tt;function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('show'),1600)}
+let cur='arena',prev='arena';
+function back(){go(prev&&prev!==cur?prev:'arena')}
+const NAVMAP={match:'arena',team:'scouting',challenges:'arena',training:'arena'};
+function go(n){if(n!==cur){prev=cur;cur=n}
+  document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('on',s.id==='s-'+n));
+  document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.go===(NAVMAP[n]||n)));
+  $('#nav').style.display=n==='studio'?'none':'flex';
+  const sc=document.querySelector('#s-'+n+' .scroll');if(sc)sc.scrollTop=0;
+  try{history.replaceState(null,'','#'+n)}catch(e){}}
+document.querySelectorAll('#nav button').forEach(b=>b.onclick=()=>go(b.dataset.go));
+document.addEventListener('click',e=>{
+  const b=e.target.closest('button');if(!b)return;
+  if(b.dataset.toast)toast(b.dataset.toast);
+  if(b.dataset.toggle){const[a,z]=b.dataset.toggle.split('|');b.textContent=b.textContent===a?z:a}
+  const g=b.parentElement&&b.parentElement.dataset.group;
+  if(g){const cls=b.parentElement.dataset.cls||'sel';[...b.parentElement.children].forEach(x=>x.classList.toggle(cls,x===b))}
+});
+
+/* ARENA */
+const W=[['LIVE','Hervanta','#FF4D6D','match'],['FH','FC Hervanta','var(--lime)','team'],['MR','Coach Mika','var(--lime)',''],['TP','Padel Club','#FFC53D',''],['LS','Lauri','var(--line)',''],['IL','Ilves fans','var(--lime)','']];
+$('#warmups').innerHTML=`<button onclick="go('studio')" style="background:none;border:0;color:inherit;display:flex;flex-direction:column;align-items:center;gap:5px;width:62px;flex:none"><div class="av" style="width:62px;height:62px;background:var(--s1);border:2px dashed var(--line);color:var(--lime);font-size:24px;font-weight:400">+</div><span class="mu" style="font-size:11px">You</span></button>`+W.map(w=>`<button onclick="${w[3]?`go('${w[3]}')`:`toast('Story: ${w[1]}')`}" style="background:none;border:0;color:inherit;display:flex;flex-direction:column;align-items:center;gap:5px;width:62px;flex:none;position:relative"><div style="width:62px;height:62px;border-radius:31px;padding:3px;border:2.5px solid ${w[2]}"><div class="av" style="width:100%;height:100%;background:var(--s2);font-size:${w[0]=='LIVE'?11:15}px;${w[0]=='LIVE'?'color:#FF4D6D':''}">${w[0]}</div></div><span class="mu" style="font-size:11px;white-space:nowrap">${w[1]}</span></button>`).join('');
+document.querySelectorAll('#htabs button').forEach(b=>b.onclick=()=>{document.querySelectorAll('#htabs button').forEach(x=>x.classList.toggle('on',x===b));document.querySelectorAll('.hp').forEach(p=>p.style.display=p.id==='p-'+b.dataset.p?'flex':'none')});
+/* ===== CROWD METER + SPORT STICKERS ===== */
+const SOUND_ENABLED=false; /* future: set true to play crowd noise that grows with the level */
+const REACTION_MODE = 'stickers'; // 'stickers' | 'meter'
+let actx=null;
+function crowdSound(level){ if(!SOUND_ENABLED)return;
+  try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();const len=actx.sampleRate*0.6,buf=actx.createBuffer(1,len,actx.sampleRate),d=buf.getChannelData(0);
+  for(let i=0;i<len;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/len,2);
+  const src=actx.createBufferSource(),f=actx.createBiquadFilter(),g=actx.createGain();f.type='bandpass';f.frequency.value=800;g.gain.value=0.05+level*0.06;
+  src.buffer=buf;src.connect(f).connect(g).connect(actx.destination);src.start()}catch(e){} }
+const G={fire:['Fire','#FF6B3D','M12 21c3.5 0 6-2.6 6-6 0-3.5-2.5-5-3.5-9-1.8 1.8-2.5 3.5-2.5 5.2C11 10.3 10 9.3 10 7.5 7.5 9.3 6 11.8 6 15c0 3.4 2.5 6 6 6z'],
+ crown:['GOAT','#FFC53D','M4 9l4 3.5L12 6l4 6.5L20 9l-1.5 9h-13z'],
+ net:['Goal!','#14B8A6','M3 6h18v13M3 6v13M3 10h18M3 14h18M8 6v13M13 6v13M18 6v13'],
+ card:['Red card','#FF4D6D','M9 4h7a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z'],
+ glove:['Great save','#4C8DFF','M7 21v-6L4 11a1.5 1.5 0 0 1 2.5-1.7L8 11V5a1.5 1.5 0 0 1 3 0v5V4a1.5 1.5 0 0 1 3 0v6V5a1.5 1.5 0 0 1 3 0v10a6 6 0 0 1-6 6z'],
+ respect:['Respect','#4C8DFF','M8 11V7.5a1.5 1.5 0 0 1 3 0V11M11 10V6a1.5 1.5 0 0 1 3 0v4M14 10V7.5a1.5 1.5 0 0 1 3 0V14a6 6 0 0 1-6 6h-1a5 5 0 0 1-5-5v-1.5a1.5 1.5 0 0 1 3 0'],
+ note:['Saving this','#9B6BFF','M6 3h12v18l-6-4-6 4z'],
+ racket:['Smash','#14B8A6','M14 3a6 6 0 1 0 0 12 6 6 0 0 0 0-12zM9.8 13.2L4 19M12 6v6M9 9h6'],
+ watch:['PB!','#FFC53D','M12 22a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM12 10v4l2.5 1.5M9 2h6']};
+const SPORT_STK={Football:['net','fire','glove','card','crown'],Drill:['respect','note','fire'],Padel:['racket','fire','crown'],Running:['watch','fire','crown']};
+const stk=(k,sz)=>`<span class="stk" style="width:${sz}px;height:${sz}px;background:${G[k][1]}"><svg viewBox="0 0 24 24" width="${sz*.6}" height="${sz*.6}" fill="none" stroke="#fff" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="${G[k][2]}"/></svg></span>`;
+const LEVELS=[['Quiet','#5B6B80'],['Warming up','#14B8A6'],['Loud','#2DD4BF'],['Rocking','#FFC53D'],['Stadium erupts','#FF6B3D']];
+const POSTS=[
+ {ini:'AK',name:'Aino Korhonen',tag:'Football',bg:'#0F2E33',txt:'54th minute curler — Round 9',heat:0.62,cheers:2140,top:['net','fire'],cm:48,
+  art:'<rect x="20" y="20" width="314" height="230" fill="none" stroke="#1C4A50" stroke-width="2"/><line x1="177" y1="20" x2="177" y2="250" stroke="#1C4A50" stroke-width="2"/><circle cx="177" cy="135" r="40" fill="none" stroke="#1C4A50" stroke-width="2"/><path d="M90 200 Q170 60 290 115" fill="none" stroke="#2DD4BF" stroke-width="3" stroke-dasharray="6 6"/><circle cx="290" cy="115" r="8" fill="#fff"/>'},
+ {ini:'MR',name:'Coach Mika',tag:'Drill',bg:'#1A2440',txt:'Rondo 4v2 for a quicker first touch',heat:0.34,cheers:610,top:['respect','note'],cm:19,
+  art:'<rect x="97" y="55" width="160" height="160" fill="none" stroke="#2E3D66" stroke-width="2"/><circle cx="97" cy="55" r="9" fill="#FF8A5B"/><circle cx="257" cy="55" r="9" fill="#FF8A5B"/><circle cx="97" cy="215" r="9" fill="#FF8A5B"/><circle cx="257" cy="215" r="9" fill="#FF8A5B"/><circle cx="160" cy="130" r="9" fill="#fff"/><circle cx="195" cy="145" r="9" fill="#fff"/><path d="M106 60 L248 210" stroke="#2DD4BF" stroke-width="3" stroke-dasharray="6 6"/>'},
+ {ini:'TP',name:'Tampere Padel',tag:'Padel',bg:'#2A2135',txt:'Winter Padel Open · 6 Dec · 32 pairs',heat:0.18,cheers:240,top:['racket'],cm:12,
+  art:'<rect x="60" y="40" width="234" height="190" fill="none" stroke="#4A3A5E" stroke-width="2"/><line x1="60" y1="135" x2="294" y2="135" stroke="#fff" stroke-width="3"/><line x1="177" y1="40" x2="177" y2="230" stroke="#4A3A5E" stroke-width="2"/><circle cx="220" cy="90" r="8" fill="#FFC53D"/>'},
+ /* demo data (synthetic) */
+ {ini:'LS',name:'Lauri Saari',tag:'Running',bg:'#13293A',txt:'Näsijärvi loop · 10.4 km · new PB 44:12',heat:0.48,cheers:1320,top:['watch','fire'],cm:31,
+  art:'<path d="M40 210 C90 120 140 230 190 150 S280 60 320 110" fill="none" stroke="#2DD4BF" stroke-width="4" stroke-linecap="round"/><circle cx="40" cy="210" r="7" fill="#fff"/><circle cx="320" cy="110" r="9" fill="#FFC53D"/><text x="250" y="230" fill="#4C6A80" font-size="14" font-family="sans-serif">10.4 km</text>'},
+ {ini:'FH',name:'FC Hervanta',tag:'Football',bg:'#0F2E33',txt:'Full time: Hervanta 3–1 Kaleva · fan cams are in',heat:0.86,cheers:5480,top:['crown','net','fire'],cm:132,
+  art:'<rect x="20" y="20" width="314" height="230" fill="none" stroke="#1C4A50" stroke-width="2"/><rect x="20" y="85" width="50" height="100" fill="none" stroke="#1C4A50" stroke-width="2"/><rect x="284" y="85" width="50" height="100" fill="none" stroke="#1C4A50" stroke-width="2"/><text x="177" y="150" text-anchor="middle" fill="#fff" font-size="46" font-weight="700" font-family="sans-serif">3–1</text>'},
+ {ini:'EV',name:'Emma Virta',tag:'Padel',bg:'#2A2135',txt:'Bandeja finally clicked 🎾 thanks Coach Mika',heat:0.27,cheers:388,top:['racket','fire'],cm:9,
+  art:'<rect x="60" y="40" width="234" height="190" fill="none" stroke="#4A3A5E" stroke-width="2"/><line x1="60" y1="135" x2="294" y2="135" stroke="#fff" stroke-width="3"/><path d="M110 200 Q170 40 250 80" fill="none" stroke="#FFC53D" stroke-width="3" stroke-dasharray="6 6"/><circle cx="250" cy="80" r="8" fill="#FFC53D"/>'},
+ {ini:'JN',name:'Juho Niemi',tag:'Football',bg:'#0F2E33',txt:'Diving save in the 89th — keeps the clean sheet',heat:0.55,cheers:1790,top:['glove','fire'],cm:57,
+  art:'<rect x="97" y="70" width="160" height="110" fill="none" stroke="#1C4A50" stroke-width="3"/><path d="M110 210 Q160 150 230 95" fill="none" stroke="#4C8DFF" stroke-width="3" stroke-dasharray="6 6"/><circle cx="230" cy="95" r="8" fill="#fff"/>'},
+ {ini:'MR',name:'Coach Mika',tag:'Drill',bg:'#1A2440',txt:'5-cone agility ladder · 3 sets × 45 s',heat:0.12,cheers:156,top:['note'],cm:4,
+  art:'<circle cx="80" cy="200" r="9" fill="#FF8A5B"/><circle cx="130" cy="90" r="9" fill="#FF8A5B"/><circle cx="180" cy="200" r="9" fill="#FF8A5B"/><circle cx="230" cy="90" r="9" fill="#FF8A5B"/><circle cx="280" cy="200" r="9" fill="#FF8A5B"/><path d="M80 200 L130 90 L180 200 L230 90 L280 200" fill="none" stroke="#2DD4BF" stroke-width="3" stroke-dasharray="6 6"/>'},
+ {ini:'AK',name:'Aino Korhonen',tag:'Running',bg:'#13293A',txt:'Recovery jog by the lake · 5 km easy',heat:0.08,cheers:92,top:[],cm:2,
+  art:'<path d="M30 170 Q120 120 177 170 T324 170" fill="none" stroke="#1E4A66" stroke-width="18" stroke-linecap="round"/><circle cx="120" cy="138" r="7" fill="#fff"/>'}];
+const claps={},picked={},saved={};let tray=null;
+function lvl(h){return Math.min(4,Math.floor(h*5))}
+function heatOf(i){return Math.min(1,POSTS[i].heat+(claps[i]||0)*0.035)}
+function cheer(i,ev){const n=claps[i]||0;if(n>=10){toast('Max 10 cheers per post');return}
+  claps[i]=n+1;const L=lvl(heatOf(i));crowdSound(L);try{navigator.vibrate&&navigator.vibrate(12+L*6)}catch(e){}
+  renderFeed();const b=document.querySelector(`#cheer-${i}`);if(b){const f=document.createElement('span');f.className='burst';f.textContent='+'+claps[i];b.appendChild(f);setTimeout(()=>f.remove(),700)}}
+/* sticker mode: picking toggles the sticker; a picked sticker adds 1 to the post's count */
+function pickSticker(i,k){picked[i]=picked[i]===k?null:k;tray=null;renderFeed()}
+function dblReact(i){if(REACTION_MODE==='meter'){cheer(i);return}
+  const k=SPORT_STK[POSTS[i].tag][0];if(picked[i]!==k){picked[i]=k}tray=null;renderFeed()}
+const SMILE=`<span class="stk" style="width:28px;height:28px;background:var(--s2)"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="#C9D6E0" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M9 10h.01M15 10h.01M8.5 14.5a4.5 4.5 0 0 0 7 0"/></svg></span>`;
+function stickerRow(p,i,pk,tops){const total=p.cheers+(pk?1:0);return `
+ <div style="display:flex;align-items:center;gap:8px;padding:12px 2px 4px">
+  <button class="ib" aria-label="React with a sticker" title="React with a sticker" onclick="tray=tray===${i}?null:${i};renderFeed()" style="min-width:44px;padding:0">${pk?stk(pk,32):SMILE}</button>
+  <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0" aria-label="${total.toLocaleString()} reactions">
+   ${tops.length?`<span style="display:flex">${tops.map((k,j)=>`<span title="${G[k][0]}" style="margin-left:${j?-8:0}px;border:2px solid var(--bg);border-radius:50%;display:flex">${stk(k,24)}</span>`).join('')}</span>`:''}
+   <span style="font-size:13px;font-weight:600;color:#C9D6E0">${total.toLocaleString()}</span>
+  </div>
+  <button class="ib" aria-label="Comments" onclick="go('match')" style="min-width:0;padding:0 2px">${svg('M21 12a8 8 0 0 1-11.5 7.2L4 20l1-4.5A8 8 0 1 1 21 12z')}<span style="font-size:13px">${p.cm}</span></button>
+  <button class="ib" aria-label="Pass" title="Pass" onclick="toast('Pass to a teammate')" style="min-width:40px;padding:0 2px">${svg('M22 2L11 13M22 2l-7 20-4-9-9-4z')}</button>
+  <button class="ib" aria-label="Save" onclick="saved[${i}]=!saved[${i}];renderFeed()" style="min-width:40px;padding:0 2px;${saved[i]?'color:var(--lime)':''}"><svg class="ico" viewBox="0 0 24 24" style="${saved[i]?'fill:currentColor':''}"><path d="M6 3h12v18l-6-4-6 4z"/></svg></button>
+ </div>`}
+function renderFeed(){$('#feed').innerHTML=POSTS.map((p,i)=>{const h=heatOf(i),L=lvl(h),c=claps[i]||0,pk=picked[i];const tops=pk&&!p.top.includes(pk)?[pk,...p.top].slice(0,3):p.top;return `
+<article style="margin:0 14px;position:relative">
+ <div style="display:flex;align-items:center;gap:10px;padding:0 4px 10px">
+  <div class="av" style="width:36px;height:36px;font-size:13px">${p.ini}</div>
+  <div style="flex:1;font-weight:600;font-size:14px">${p.name} <span class="mu" style="font-weight:400;font-size:12px">· ${p.tag}</span></div>
+  <button class="round" style="width:36px;height:36px;background:none" aria-label="More" onclick="toast('Follow · Pass · Report')">${svg('M5 12h.01M12 12h.01M19 12h.01')}</button>
+ </div>
+ <div style="position:relative;height:270px;border-radius:22px;background:${p.bg};overflow:hidden" ondblclick="dblReact(${i})">
+  <svg viewBox="0 0 354 270" width="100%" height="270" preserveAspectRatio="none" aria-hidden="true">${p.art}</svg>
+  <button aria-label="Play" onclick="go('studio')" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:56px;height:56px;border-radius:28px;border:0;background:rgba(255,255,255,.92);color:#0A1220;display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M8 5v14l11-7z" fill="currentColor"/></svg></button>
+  ${REACTION_MODE==='meter'&&tops.length?`<div style="position:absolute;right:10px;top:10px;display:flex">${tops.map((k,j)=>`<span style="margin-left:${j?-8:0}px;border:2px solid ${p.bg};border-radius:50%;display:flex">${stk(k,26)}</span>`).join('')}</div>`:''}
+ </div>
+ ${tray===i?`<div class="tray" role="group" aria-label="Pick a sticker">${SPORT_STK[p.tag].map(k=>`<button aria-label="${G[k][0]}" title="${G[k][0]}" onclick="pickSticker(${i},'${k}')" class="${pk===k?'picked':''}">${stk(k,42)}</button>`).join('')}</div>`:''}
+ ${REACTION_MODE==='stickers'?stickerRow(p,i,pk,tops):`
+ <div style="display:flex;align-items:center;gap:10px;padding:12px 2px 4px">
+  <button id="cheer-${i}" class="cheer ${c?'on':''}" aria-label="Cheer (${c} of 10)" onclick="cheer(${i})" style="--lv:${LEVELS[L][1]}">
+   <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 11l4-6a1.6 1.6 0 0 1 2.7 1.7L12 9.5l4.5-4a1.5 1.5 0 0 1 2 2.2L15 11l3-1.5a1.5 1.5 0 0 1 1.3 2.7L14 16a7 7 0 0 1-9.5-2.5L4 12.5a1.6 1.6 0 0 1 3-1.5"/><path d="M4 4l1.5 1.5M8 2v2M2 8h2"/></svg>
+  </button>
+  <button class="meter" aria-label="Crowd level: ${LEVELS[L][0]}" onclick="toast('${(p.cheers+c).toLocaleString()} cheers from ${Math.round((p.cheers+c)/5.2)} fans')">
+   <span class="bar"><span style="width:${Math.round(h*100)}%;background:${LEVELS[L][1]}"></span></span>
+   <span style="font-size:12px;font-weight:700;color:${LEVELS[L][1]}">${LEVELS[L][0]}</span>
+  </button>
+  <button class="ib" aria-label="Stickers" onclick="tray=tray===${i}?null:${i};renderFeed()">${pk?stk(pk,28):`<span class="stk" style="width:28px;height:28px;background:var(--s2)"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="#C9D6E0" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M9 10h.01M15 10h.01M8.5 14.5a4.5 4.5 0 0 0 7 0"/></svg></span>`}</button>
+  <button class="ib" aria-label="Comments" onclick="go('match')" style="min-width:0;padding:0 2px">${svg('M21 12a8 8 0 0 1-11.5 7.2L4 20l1-4.5A8 8 0 1 1 21 12z')}<span style="font-size:13px">${p.cm}</span></button>
+  <button class="ib" aria-label="Save" onclick="saved[${i}]=!saved[${i}];renderFeed()" style="min-width:0;padding:0 2px;${saved[i]?'color:var(--lime)':''}"><svg class="ico" viewBox="0 0 24 24" style="${saved[i]?'fill:currentColor':''}"><path d="M6 3h12v18l-6-4-6 4z"/></svg></button>
+ </div>`}
+ <p style="margin:0;padding:2px 4px 0;font-size:14px;color:#D5DEE6">${p.txt}</p>
+</article>`}).join('')}
+renderFeed();
+
+/* MATCH */
+let pa=58;function pulse(d){pa=Math.max(5,Math.min(95,pa+d*3));$('#pulseA').style.flex=pa;$('#pulseB').style.flex=100-pa;$('#pulseTxt').textContent=pa+'% Hervanta · '+(100-pa)+'% Kaleva';toast(d>0?'Reaction sent':'Robbed! noted')}
+const EV=[["63'",'#2DD4BF','GOAL — A. Korhonen (FH)','Curler from 20 m · assist L. Saari',7],["51'",'#FFD23F','Yellow card — J. Niemi (KU)','Late tackle',0],["38'",'#FF8A5B','GOAL — T. Virta (KU)','Header from a corner',4],["12'",'#2DD4BF','GOAL — L. Saari (FH)','Penalty',3]];
+const PANES={
+ tl:`<button onclick="toast('Building highlights… ready in ~1 min')" style="height:48px;border-radius:14px;border:1px dashed var(--lime);background:#0E2A2C;color:var(--lime);font-size:13px;font-weight:600">✦ Auto-build match highlights (AI)</button>`+EV.map(e=>`<div style="display:flex;gap:12px"><div style="width:40px;display:flex;flex-direction:column;align-items:center;gap:4px"><span class="sg" style="font-size:14px;font-weight:700;color:${e[1]}">${e[0]}</span><span style="flex:1;width:2px;background:#1E2B3D"></span></div><div class="card" style="flex:1;padding:10px 12px;border-radius:14px;display:flex;gap:10px;align-items:center"><div style="flex:1"><div style="font-size:13px;font-weight:600">${e[2]}</div><div class="mu" style="font-size:12px;margin-top:2px">${e[3]}</div></div>${e[4]?`<span style="padding:6px 9px;border-radius:10px;background:var(--s2);font-size:11px;color:var(--lime);white-space:nowrap">${e[4]} fan cams</span>`:''}</div></div>`).join(''),
+ cams:`<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px">${['Stand A · 63\'','Behind goal · 63\'','Bench · 38\'','Corner flag · 12\''].map((t,i)=>`<button onclick="go('studio')" class="tile" style="border:0;height:130px;background:${i%2?'#14363B':'#0F2E33'};color:var(--tx)"><span>${t}</span></button>`).join('')}</div>`,
+ stats:[['Possession',58,42],['Shots',11,6],['On target',5,3],['Corners',4,7]].map(s=>`<div class="card" style="padding:10px 12px"><div style="display:flex;justify-content:space-between;font-size:13px"><b>${s[1]}</b><span class="mu">${s[0]}</span><b>${s[2]}</b></div><div style="display:flex;gap:4px;margin-top:6px"><div style="flex:${s[1]};height:5px;border-radius:3px;background:var(--lime)"></div><div style="flex:${s[2]};height:5px;border-radius:3px;background:var(--or)"></div></div></div>`).join(''),
+ stands:[['LS','What a strike from Aino!'],['JN','That yellow was harsh — Robbed'],['MR','Our press is working, keep it up']].map(c=>`<div class="card" style="padding:10px 12px;display:flex;gap:10px"><div class="av" style="width:32px;height:32px;font-size:12px">${c[0]}</div><div style="font-size:13px">${c[1]}</div></div>`).join('')};
+function pane(k){$('#mpane').innerHTML=PANES[k]}pane('tl');
+document.querySelectorAll('[data-pane]').forEach(b=>b.addEventListener('click',()=>pane(b.dataset.pane)));
+let clk=67;setInterval(()=>{clk=clk<90?clk+1:67;$('#clock').textContent=clk},6000);
+
+/* STUDIO */
+const T=[['Draw','M4 20l4-1 11-11-3-3L5 16z'],['Arrow','M5 19L19 5M19 5h-8M19 5v8'],['Spotlight','M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z'],['Track','M4 18c4-10 12-10 16 0'],['Frame','M6 5v14M10 12l8-6v12z'],['Compare','M4 4h7v16H4zM13 4h7v16h-7z']];
+$('#tools').innerHTML=T.map((t,i)=>`<button class="tool ${i==1?'sel':''}" onclick="toast('${t[0]} tool')">${svg(t[1],'ico','width:20px;height:20px')}${t[0]}</button>`).join('');
+$('#tools').dataset.group='tool';
+$('#speeds').addEventListener('click',e=>{const b=e.target.closest('button');if(b)$('#spd').textContent=b.textContent});
+function seek(p,f){$('#prog').style.width=p+'%';$('#frame').textContent=f}
+let playing=null;$('#playBtn').onclick=()=>{if(playing){clearInterval(playing);playing=null;return}
+ let t=0;playing=setInterval(()=>{t+=.02;if(t>1){t=0}const x=140+(205-140)*t,y=200+(95-200)*t;$('#ball').setAttribute('cx',x);$('#ball').setAttribute('cy',y);$('#frame').textContent=Math.round(412+t*80)},50)};
+
+/* TRAINING */
+const hs=[70,40,0,90,55,100,30];
+$('#week').innerHTML=['M','T','W','T','F','S','S'].map((l,i)=>`<div style="display:flex;flex-direction:column;align-items:center;gap:5px"><div style="width:100%;height:46px;border-radius:10px;background:var(--s2);display:flex;align-items:flex-end;overflow:hidden"><div style="width:100%;height:${hs[i]}%;background:${i==6?'var(--or)':'var(--lime)'}"></div></div><span class="mu" style="font-size:11px">${l}</span></div>`).join('');
+const D=[['Dynamic warm-up','10 min',1],['Wall passes, both feet','15 min',1],['Finishing from edge of box','20 min',0],['Cool-down & mobility','10 min',0]];
+$('#drills').innerHTML=D.map((d,i)=>`<label class="drill ${d[2]?'done':''}"><input type="checkbox" ${d[2]?'checked':''} onchange="this.parentElement.classList.toggle('done',this.checked);countD()"><span class="n" style="flex:1">${d[0]}</span><span class="mu" style="font-size:12px">${d[1]}</span></label>`).join('');
+function countD(){const n=document.querySelectorAll('#drills input:checked').length;$('#doneN').textContent=n;if(n==4)toast('Session complete! Coach notified')}
+
+/* SCOUTING */
+const S={Players:[['JL','Juho L. · Striker','Amateur · looking for a team · 1.2 km','Invite','#2DD4BF'],['SM','Sara M. · Goalkeeper','Free on Thursdays · 2.4 km','Invite','#2DD4BF'],['7v7','Pickup game tonight','Hervanta · 2 spots left','Join','#FF8A5B']],
+Teams:[['FH','FC Hervanta','Needs a goalkeeper · trials Sat','Apply','#2DD4BF'],['KU','Kaleva Utd','Open training Wednesdays','Visit','#FF8A5B'],['TP','Tampere Padel Club','Beginner group starting','Visit','#2DD4BF']],
+Courts:[['HF','Hervanta sports field','Free now · artificial turf','Book','#2DD4BF'],['PC','Padel center','Next slot 18:30','Book','#2DD4BF'],['SH','Sports hall Kaleva','Busy until 20:00','Book','#FF8A5B']],
+Leagues:[['TA','Tampere Amateur League','Round 9 · 12 teams','Follow','#2DD4BF'],['W5','Winter 5-a-side Cup','Registration open · 6 Dec','Sign up','#FF8A5B'],['CL','Corporate League','Mondays · 8 teams','Follow','#2DD4BF']],
+Coaches:[['MR','Coach Mika R.','Football · verified · takes students','Request','#2DD4BF'],['EH','Eveliina H.','Strength & conditioning','Request','#2DD4BF'],['PT','Physio Tero','Sports injuries · 3 km','Contact','#FF8A5B']],
+Events:[['LIVE','Hervanta vs Kaleva','Live now','Watch','#FF5A5A'],['6 Dec','Winter Padel Open','32 pairs','Going','#2DD4BF'],['14 Dec','Tampere 10K run','400 runners','Going','#2DD4BF']]};
+function cat(k){$('#cats').innerHTML=Object.keys(S).map(c=>`<button class="chip ${c==k?'sel':''}" onclick="cat('${c}')">${c}</button>`).join('');
+ $('#items').innerHTML=S[k].map(it=>`<div class="card" style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:16px"><div style="width:42px;height:42px;border-radius:12px;background:var(--s2);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;color:${it[4]};flex:none">${it[0]}</div><div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:600">${it[1]}</div><div class="mu" style="font-size:12px">${it[2]}</div></div><button class="chip" ${it[3]=='Watch'?`onclick="go('match')"`:`data-toggle="✓ Sent|${it[3]}"`}>${it[3]}</button></div>`).join('')}
+cat('Players');
+
+/* PROFILE */
+const P={Player:['Midfielder · FC Hervanta · Amateur · Right foot',[['9','Goals this season'],['14','Assists'],['22','Matches']],'Highlights',['Goal','Assist','Skill','Goal','Tackle','Padel'],['#0F2E33','#14363B']],
+Coach:['Youth coach U12 · UEFA C licence · takes private students',[['2','Teams coached'],['18','Students'],['36','Drills shared']],'Drill library',['Rondo','Finishing','Warm-up','1v1','Passing','Fitness'],['#22305A','#1A2440']],
+Fan:['Supports Ilves · follows Padel tour · 31 matches attended',[['31','Matches attended'],['6','Teams backed'],['120','Fan cams']],'Matchday memories',['Ilves','Derby','Away day','Final','Ilves','Padel'],['#1C2A3D','#1A2230']]};
+function role(k){const p=P[k];
+ $('#roles').innerHTML=Object.keys(P).map(r=>`<button class="chip ${r==k?'wsel':''}" onclick="role('${r}')">${r}</button>`).join('')+`<button class="chip" style="border-style:dashed;color:var(--mu)" onclick="toast('Roles: Club, Content creator, Organizer, Venue, Referee…')">+ Add role</button>`;
+ $('#bio').textContent=p[0];
+ $('#pstats').innerHTML=p[1].map(s=>`<div class="card" style="padding:10px;border-radius:14px"><div class="sg" style="font-size:20px;font-weight:700">${s[0]}</div><div class="mu" style="font-size:11px">${s[1]}</div></div>`).join('');
+ $('#gtitle').textContent=p[2];
+ $('#tiles').innerHTML=p[3].map((t,i)=>`<div class="tile" style="background:${p[4][i%2]}"><span>${t}</span></div>`).join('')}
+role('Player');
+
+/* TEAM */
+const TP={
+ sched:[['Sat 22 Nov','vs Kaleva Utd','League · Home · 14:00','Match'],['Tue 25 Nov','Team training','Hervanta field · 18:00','Training'],['Thu 27 Nov','Team training','Hervanta field · 18:00','Training'],['Sat 29 Nov','at Lempäälä FC','League · Away · 13:00','Match']].map(s=>`<div class="card" style="padding:12px 14px;display:flex;align-items:center;gap:12px"><div style="width:54px"><div class="sg" style="font-size:13px;font-weight:700;color:${s[3]=='Match'?'var(--lime)':'var(--or)'}">${s[0].split(' ')[0]}</div><div class="mu" style="font-size:11px">${s[0].split(' ').slice(1).join(' ')}</div></div><div style="flex:1"><div style="font-size:14px;font-weight:600">${s[1]}</div><div class="mu" style="font-size:12px">${s[2]}</div></div><button class="chip" data-toggle="In ✓|RSVP">RSVP</button></div>`).join(''),
+ mem:`<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px">`+[['MR','Coach'],['AK','MID'],['LS','FWD'],['JN','DEF'],['TV','GK'],['OH','DEF'],['EP','MID'],['RK','FWD']].map(m=>`<button onclick="go('profile')" style="background:none;border:0;color:var(--tx);display:flex;flex-direction:column;align-items:center;gap:4px"><div class="av" style="width:52px;height:52px">${m[0]}</div><span class="mu" style="font-size:11px">${m[1]}</span></button>`).join('')+`</div>`,
+ rec:[['Goalkeeper','Amateur · trials Sat 29 Nov','Apply'],['Left back','Must train twice a week','Apply'],['Assistant coach','Volunteer · U12 group','Apply']].map(r=>`<div class="card" style="padding:12px 14px;display:flex;align-items:center;gap:12px"><div style="flex:1"><div style="font-size:14px;font-weight:600">Looking for: ${r[0]}</div><div class="mu" style="font-size:12px">${r[1]}</div></div><button class="btn" style="height:34px;font-size:12px" data-toggle="Sent ✓|Apply">Apply</button></div>`).join(''),
+ tab:`<div class="card" style="padding:6px 14px">`+[['1','Ilves Juniors','22'],['2','FC Hervanta','20'],['3','Kaleva Utd','17'],['4','Lempäälä FC','15']].map(t=>`<div style="display:flex;gap:10px;font-size:13px;padding:10px 0;border-bottom:1px solid #1E2B3D;${t[1]=='FC Hervanta'?'color:var(--lime);font-weight:700':''}"><span style="width:18px">${t[0]}</span><span style="flex:1">${t[1]}</span><b>${t[2]} pts</b></div>`).join('')+`</div>`};
+function tpane(k){$('#tpane').innerHTML=TP[k]}tpane('sched');
+
+/* LOCKER ROOM */
+const CH={'FC Hervanta (team)':[['MR','Coach Mika','Great win last week. Training moved to 18:30 on Thursday.'],['poll'],['LS','Lauri S.','Who has the extra bibs?'],['AK','Aino K.','I do, bringing them Saturday']],
+'Coach Mika':[['MR','Coach Mika','Watched your finishing clip. Plant foot is too far back — check my 2 notes in Studio.']],
+'Pickup 7v7 tonight':[['JL','Juho L.','2 spots left, 19:00 at Hervanta field'],['SM','Sara M.','I\'m in, will play in goal']]};
+let curChat='FC Hervanta (team)',poll={in:9,out:2,me:null};
+function chats(){$('#chats').innerHTML=Object.keys(CH).map(c=>`<button class="chip ${c==curChat?'sel':''}" onclick="curChat='${c}';chats()">${c}</button>`).join('');
+ $('#msgs').innerHTML=CH[curChat].map(m=>m[0]=='poll'?`<div class="card" style="padding:12px 14px"><div style="font-size:13px;font-weight:600;margin-bottom:8px">Poll · Training Thu 18:30</div><div class="row"><button class="chip ${poll.me=='in'?'sel':''}" onclick="vote('in')">I'm in · ${poll.in}</button><button class="chip ${poll.me=='out'?'sel':''}" onclick="vote('out')">Can't make it · ${poll.out}</button></div></div>`:
+ m[0]=='ME'?`<div style="align-self:flex-end;max-width:75%;padding:10px 12px;border-radius:16px 16px 4px 16px;background:var(--lime);color:var(--bg);font-size:13px">${m[2]}</div>`:
+ `<div style="display:flex;gap:8px;max-width:85%"><div class="av" style="width:30px;height:30px;font-size:11px">${m[0]}</div><div><div class="mu" style="font-size:11px;margin-bottom:3px">${m[1]}</div><div class="card" style="padding:10px 12px;border-radius:4px 16px 16px 16px;font-size:13px">${m[2]}</div></div></div>`).join('');
+ $('#msgs').scrollTop=1e6}
+function vote(v){if(poll.me)poll[poll.me]--;poll.me=poll.me===v?null:v;if(poll.me)poll[poll.me]++;chats()}
+$('#sendForm').addEventListener('submit',e=>{e.preventDefault();const v=$('#msgIn').value.trim();if(!v)return;CH[curChat].push(['ME','You',v.replace(/</g,'&lt;')]);$('#msgIn').value='';chats()});
+chats();
+
+/* CHALLENGES */
+const CL=[{t:'10 penalties, film it',s:'Football',d:'3 days left',n:184,c:'var(--or)',b:[['Lauri S.','10/10'],['Aino K.','9/10'],['Juho L.','9/10']]},
+{t:'100 juggles without dropping',s:'Football',d:'1 week left',n:96,c:'var(--lime)',b:[['Eetu P.','214'],['Aino K.','160'],['Sara M.','131']]},
+{t:'Best bandeja shot',s:'Padel',d:'5 days left',n:41,c:'var(--lime)',b:[['Tampere Padel','Hype 88'],['Riikka K.','Hype 61'],['Oskari H.','Hype 40']]},
+{t:'5 km under 25 min',s:'Running',d:'Ends 30 Nov',n:312,c:'var(--or)',b:[['Ville T.','19:42'],['Noora L.','21:05'],['Lauri S.','22:30']]},
+{t:'Squad plank battle',s:'Fitness',d:'2 days left',n:58,c:'var(--lime)',b:[['FC Hervanta','avg 3:10'],['Kaleva Utd','avg 2:48'],['Ilves Jr','avg 2:41']]}];
+const joined={};
+function chRender(f){$('#chList').innerHTML=CL.map((c,i)=>(f&&f!=='All'&&c.s!==f)?'':`<div class="card" style="padding:14px;display:flex;flex-direction:column;gap:8px;border:1px solid ${joined[i]?'var(--lime)':'transparent'}">
+ <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px"><div><div style="font-size:11px;font-weight:700;color:${c.c}">${c.s.toUpperCase()} · ${c.d}</div><div class="sg" style="font-size:17px;font-weight:700;margin-top:2px">${c.t}</div><div class="mu" style="font-size:12px;margin-top:2px">${c.n+(joined[i]?1:0)} taking part · Local + global boards</div></div>
+ <button class="btn" style="height:34px;font-size:12px;flex:none;${joined[i]?'background:var(--s2);color:var(--lime)':''}" onclick="joined[${i}]=!joined[${i}];chRender(curF);if(joined[${i}])toast('Joined — record your attempt in Clip Studio')">${joined[i]?'Joined ✓':'Take it'}</button></div>
+ ${c.b.map((b,j)=>`<div style="display:flex;gap:10px;font-size:13px"><span class="sg" style="width:18px;font-weight:700;color:${c.c}">${j+1}</span><span style="flex:1">${b[0]}</span><b>${b[1]}</b></div>`).join('')}
+</div>`).join('')}
+let curF='All';chRender();
+(function(){const tr=document.querySelector('#s-training .scroll');const p=$('#p-tr');p.innerHTML=`<div style="display:flex;justify-content:flex-end"><button class="btn" onclick="toast('Session logged')">+ Log session</button></div>`;while(tr.firstChild)p.appendChild(tr.firstChild);
+$('#p-ch').appendChild($('#chList'));$('#chList').style.cssText='display:flex;flex-direction:column;gap:10px';
+$('#p-ev').innerHTML=[['LIVE',"Hervanta vs Kaleva","Live now · 67'",'#FF4D6D',"go('match')"],['6 DEC','Winter Padel Open','32 pairs · Tampere','var(--lime)',"toast('Added to your calendar')"],['14 DEC','Tampere 10K','400 runners','var(--lime)',"toast('Added to your calendar')"],['20 DEC','5-a-side Cup','16 teams · sign-ups open','var(--or)',"toast('Team sign-up started')"]].map(e=>`<button onclick="${e[4]}" class="card" style="border:0;color:var(--tx);text-align:left;display:flex;align-items:center;gap:14px;padding:12px 14px"><div class="sg" style="width:52px;height:52px;border-radius:14px;background:var(--s2);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:${e[3]};text-align:center">${e[0]}</div><div style="flex:1"><div style="font-size:15px;font-weight:600">${e[1]}</div><div class="mu" style="font-size:12px">${e[2]}</div></div>${svg('M9 18l6-6-6-6')}</button>`).join('')})();
+document.querySelector('[data-group="cfilter"]').addEventListener('click',e=>{const b=e.target.closest('button');if(b){curF=b.textContent;chRender(curF)}});
+
+const h=(location.hash||'').slice(1);if(['arena','match','studio','training','scouting','profile','team','locker','challenges'].includes(h))go(h);
+</script>
+</body>
+</html>
