@@ -2,6 +2,7 @@
 import os
 from typing import List, Dict, Any
 from django.conf import settings
+from django.db import transaction
 from ..models import Document, DocumentChunk
 
 
@@ -191,7 +192,13 @@ class DocumentProcessor:
         """
         Ingest a plain-text string. Creates/replaces the Document and
         all its chunks. Used by ingest_from_db for inline text fields.
+        The replace happens in one transaction, so readers never see a
+        half-built document.
         """
+        with transaction.atomic():
+            return self._replace_text(content, title, document_type, source)
+
+    def _replace_text(self, content, title, document_type, source) -> Document:
         Document.objects.filter(source=source).delete()
         doc = Document.objects.create(
             title=title,
