@@ -11,6 +11,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # ── Security ───────────────────────────────────────────────────────────────────
 SECRET_KEY = config('SECRET_KEY', default='build-time-dummy-not-for-production')
 DEBUG       = config('DEBUG', default=False, cast=bool)
+# Never show Django's debug pages on the live site: they expose code, settings
+# and request data to anyone. Render sets RENDER=true in every service.
+if os.environ.get('RENDER'):
+    DEBUG = False
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=Csv())
 OWNER_IPS     = config('OWNER_IPS', default='127.0.0.1', cast=Csv())
 

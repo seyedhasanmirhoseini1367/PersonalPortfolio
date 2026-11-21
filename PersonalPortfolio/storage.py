@@ -7,11 +7,14 @@ CLOUDINARY_URL is set. Without it (local development) they stay on disk.
 Other uploads (trained models, RAG documents, PDFs) stay on the local disk
 storage: the code reads them through a filesystem path.
 """
+import logging
 import os
 import uuid
 
 from django.core.files.storage import Storage, default_storage
 from django.utils.deconstruct import deconstructible
+
+logger = logging.getLogger(__name__)
 
 
 @deconstructible
@@ -61,8 +64,32 @@ class CloudinaryImageStorage(Storage):
         raise NotImplementedError('Size is not tracked for Cloudinary images.')
 
 
+def cloudinary_configured() -> bool:
+    """True when CLOUDINARY_URL holds a usable value.
+
+    Tolerates common copy-paste slips (surrounding spaces or quotes, or the
+    whole "CLOUDINARY_URL=cloudinary://..." line pasted as the value) by
+    cleaning the variable before the cloudinary package reads it. A value
+    that is still wrong is logged and ignored, so a bad setting can never
+    take the site down (it did once: every page raised ValueError).
+    """
+    raw = os.environ.get('CLOUDINARY_URL', '')
+    value = raw.strip().strip('"\'').strip()
+    if value.upper().startswith('CLOUDINARY_URL='):
+        value = value.split('=', 1)[1].strip().strip('"\'').strip()
+    if not value:
+        return False
+    if not (value.startswith('cloudinary://') and '@' in value and ':' in value[len('cloudinary://'):]):
+        logger.error('CLOUDINARY_URL is set but is not "cloudinary://<key>:<secret>@<cloud>"; '
+                     'uploaded images stay on local disk until it is fixed.')
+        return False
+    if value != raw:
+        os.environ['CLOUDINARY_URL'] = value
+    return True
+
+
 def image_storage():
     """Storage for uploaded images: Cloudinary in production, disk locally."""
-    if os.environ.get('CLOUDINARY_URL'):
+    if cloudinary_configured():
         return CloudinaryImageStorage()
     return default_storage

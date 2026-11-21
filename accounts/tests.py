@@ -91,3 +91,24 @@ class PasswordResetTests(TestCase):
         self.assertEqual(r.status_code, 200)
         self.victim.refresh_from_db()
         self.assertTrue(self.victim.check_password('Old-pass-123!'))
+
+
+class CloudinaryUrlCleaningTests(SimpleTestCase):
+    """A badly pasted CLOUDINARY_URL must never break the site."""
+
+    def check(self, value):
+        from PersonalPortfolio.storage import cloudinary_configured
+        with mock.patch.dict(os.environ, {'CLOUDINARY_URL': value}):
+            return cloudinary_configured(), os.environ['CLOUDINARY_URL']
+
+    def test_good_value(self):
+        self.assertEqual(self.check('cloudinary://1:abc@demo'), (True, 'cloudinary://1:abc@demo'))
+
+    def test_pasted_with_name_spaces_or_quotes(self):
+        for v in ('CLOUDINARY_URL=cloudinary://1:abc@demo', '  cloudinary://1:abc@demo ', '"cloudinary://1:abc@demo"'):
+            self.assertEqual(self.check(v), (True, 'cloudinary://1:abc@demo'), v)
+
+    def test_bad_value_falls_back_to_disk(self):
+        for v in ('https://cloudinary.com/console', 'cloudinary://<your_api_key>', '427292211492217'):
+            with mock.patch.dict(os.environ, {'CLOUDINARY_URL': v}):
+                self.assertIs(image_storage(), default_storage, v)
