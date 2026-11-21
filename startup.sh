@@ -38,7 +38,9 @@ fi
 # then fill in any vector that is missing or zero (e.g. after an embedding
 # model was retired). Runs in the background so start-up is not held.
 ( python manage.py ingest_from_db || echo "ingest_from_db failed (non-fatal)"
-  python manage.py embed_missing || echo "embed_missing failed (non-fatal)" ) &
+  python manage.py embed_missing || echo "embed_missing failed (non-fatal)"
+  # Kaggle archive: learning cards for any write-up that has none yet.
+  python manage.py summarize_solutions || echo "summarize_solutions failed (non-fatal)" ) &
 
 echo "Starting gunicorn..."
 gunicorn PersonalPortfolio.wsgi:application \

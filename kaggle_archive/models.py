@@ -55,6 +55,9 @@ class Competition(models.Model):
     evaluation_metric = models.CharField(max_length=100, blank=True)
     end_date         = models.DateField(null=True, blank=True)
     created_at       = models.DateTimeField(auto_now_add=True)
+    # Comparison of the top writeups (kaggle_archive/summarizer.py)
+    insights              = models.JSONField(null=True, blank=True)
+    insights_generated_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ['-end_date', '-created_at']
@@ -99,6 +102,9 @@ class Solution(models.Model):
     writeup_author     = models.CharField(max_length=200, blank=True)
     writeup_content    = models.TextField(blank=True, help_text='Full writeup body in markdown')
     writeup_fetched_at = models.DateTimeField(null=True, blank=True)
+    # Structured learning card made from the writeup (kaggle_archive/summarizer.py)
+    card               = models.JSONField(null=True, blank=True)
+    card_generated_at  = models.DateTimeField(null=True, blank=True)
     is_public          = models.BooleanField(default=True)
 
     class Meta:
