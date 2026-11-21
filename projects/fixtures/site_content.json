@@ -1,0 +1,1095 @@
+[
+ {
+  "model": "stories.tag",
+  "pk": 1,
+  "fields": {
+   "name": "Artificial Intelligence",
+   "slug": "artificial-intelligence",
+   "description": "Stories about AI concepts, tools, and trends.",
+   "created_at": "2026-04-02T12:31:38.718Z"
+  }
+ },
+ {
+  "model": "stories.tag",
+  "pk": 2,
+  "fields": {
+   "name": "Data Science",
+   "slug": "data-science",
+   "description": "Stories covering data analysis, visualization, and workflows.",
+   "created_at": "2026-04-02T12:31:38.722Z"
+  }
+ },
+ {
+  "model": "stories.tag",
+  "pk": 4,
+  "fields": {
+   "name": "Deep Learning",
+   "slug": "deep-learning",
+   "description": "Stories focused on neural networks and deep learning techniques.",
+   "created_at": "2026-04-02T12:31:38.724Z"
+  }
+ },
+ {
+  "model": "stories.tag",
+  "pk": 3,
+  "fields": {
+   "name": "Machine Learning",
+   "slug": "machine-learning",
+   "description": "Stories about ML algorithms, pipelines, and best practices.",
+   "created_at": "2026-04-02T12:31:38.724Z"
+  }
+ },
+ {
+  "model": "stories.tag",
+  "pk": 6,
+  "fields": {
+   "name": "NLP",
+   "slug": "nlp",
+   "description": "Natural Language Processing concepts and applications.",
+   "created_at": "2026-04-02T12:31:38.724Z"
+  }
+ },
+ {
+  "model": "stories.tag",
+  "pk": 5,
+  "fields": {
+   "name": "Python",
+   "slug": "python",
+   "description": "Python programming tips and libraries for data science and ML.",
+   "created_at": "2026-04-02T12:31:38.724Z"
+  }
+ },
+ {
+  "model": "stories.story",
+  "pk": 4,
+  "fields": {
+   "author": null,
+   "title": "Deep Learning Unveiled: Neural Networks That Are Changing the World",
+   "slug": "deep-learning-unveiled-neural-networks-that-are-changing-the-world",
+   "excerpt": "Deep learning has achieved superhuman performance in image recognition, language translation, and protein folding. This story explains how neural networks work and why they are so powerful.",
+   "content": "<p>Deep Learning (DL) is a subfield of machine learning that uses neural networks with many layers — hence &quot;deep&quot; — to learn hierarchical representations of data.</p><p>It is the technology behind image recognition systems, large language models, autonomous vehicles, and AlphaFold&#39;s landmark protein structure predictions.</p><p></p><p>The Building Block: The Artificial Neuron</p><p></p><p>Inspired loosely by biological neurons, an artificial neuron:</p><p>1. Takes a weighted sum of its inputs</p><p>2. Adds a bias term</p><p>3. Passes the result through a non-linear activation function (ReLU, sigmoid, tanh, GELU)</p><p></p><p>Stack thousands of these neurons into layers, connect the layers, and you have a neural network.</p><p></p><p>Why &quot;Deep&quot; Matters</p><p></p><p>Shallow networks with one or two layers can approximate any function in theory (the universal approximation theorem), but they require exponentially many neurons for complex tasks.</p><p>Deep networks learn hierarchical features: early layers detect edges and textures; later layers combine them into complex concepts like &quot;cat face&quot; or &quot;fraudulent transaction pattern.&quot;</p><p></p><p>Key Deep Learning Architectures</p><p></p><p>Convolutional Neural Networks (CNNs)</p><p>Designed for grid-structured data like images.</p><p>Convolutional filters slide across the image, detecting local patterns regardless of their position.</p><p>CNNs power face recognition, medical imaging, and self-driving car perception systems.</p><p></p><p>Recurrent Neural Networks (RNNs) and LSTMs</p><p>Designed for sequential data like time series and text.</p><p>They maintain a hidden state that carries information across time steps.</p><p>Long Short-Term Memory (LSTM) networks solve the vanishing gradient problem that plagues vanilla RNNs.</p><p></p><p>Transformers and Attention</p><p>The architecture behind GPT, BERT, and virtually all modern large language models.</p><p>Self-attention mechanisms allow the model to weigh the relevance of every input token against every other, capturing long-range dependencies that RNNs struggle with.</p><p>Transformers now dominate not just NLP but also computer vision (Vision Transformers) and protein biology (AlphaFold).</p><p></p><p>Training Deep Networks</p><p></p><p>Training a deep network involves:</p><p>1. Forward pass: compute predictions</p><p>2. Loss computation: measure how wrong the predictions are (cross-entropy, MSE, etc.)</p><p>3. Backward pass (backpropagation): compute gradients of the loss with respect to every parameter</p><p>4. Parameter update: adjust weights using gradient descent (SGD, Adam, AdamW)</p><p></p><p>Key challenges: vanishing/exploding gradients, overfitting, computational cost, and the need for massive labeled datasets.</p><p></p><p>Modern Solutions: Transfer Learning and Fine-Tuning</p><p></p><p>Training large models from scratch requires enormous compute.</p><p>Transfer learning lets you start from a pre-trained model (e.g., ResNet trained on ImageNet, or GPT-2) and fine-tune it on your task with much less data and compute.</p><p></p><p>This democratization of deep learning has been transformative — enabling small teams to achieve state-of-the-art results on specialized tasks.</p><p></p><p>The Future of Deep Learning</p><p></p><p>Multimodal models that understand images, text, audio, and video simultaneously are the frontier.</p><p>Models like GPT-4V, Gemini, and Claude combine modalities to reason more like humans.</p><p>Meanwhile, researchers are pursuing architectures that are more efficient, interpretable, and robust than today&#39;s transformers.</p><p></p><p>Deep learning is not magic — it is applied mathematics, statistics, and engineering at scale.</p><p>Understanding the fundamentals allows you to build, debug, and innovate rather than just consume.</p>",
+   "status": "PB",
+   "featured_image": "",
+   "read_time_minutes": 2,
+   "view_count": 0,
+   "is_featured": true,
+   "allow_comments": true,
+   "created_at": "2026-04-02T12:31:38.750Z",
+   "updated_at": "2026-04-13T08:18:50.801Z",
+   "published_at": "2026-04-02T12:31:38Z",
+   "tags": [
+    1,
+    4,
+    3
+   ]
+  }
+ },
+ {
+  "model": "stories.story",
+  "pk": 5,
+  "fields": {
+   "author": null,
+   "title": "Natural Language Processing in 2025: From Tokenization to Large Language Models",
+   "slug": "natural-language-processing-in-2025-from-tokenization-to-large-language-models",
+   "excerpt": "NLP has undergone a revolution. From classical bag-of-words approaches to billion-parameter transformers, this story traces the evolution of machines that understand human language.",
+   "content": "Natural Language Processing (NLP) is the branch of AI concerned with enabling computers to understand, interpret, and generate human language.\r\nIt is the technology behind your email spam filter, Google Translate, customer service chatbots, and the large language models (LLMs) that have captured the world's imagination.\r\n\r\nThe Classical Era: Rule-Based and Statistical NLP\r\n\r\nEarly NLP systems relied on hand-crafted linguistic rules.\r\nParsing sentences required grammarians to specify the rules of language explicitly — a brittle and labor-intensive approach.\r\n\r\nThe statistical revolution of the 1990s and 2000s changed everything.\r\nInstead of rules, models learned from large text corpora.\r\nTechniques like n-gram language models, TF-IDF for information retrieval, and Hidden Markov Models for part-of-speech tagging became standard.\r\n\r\nWord Embeddings: Teaching Computers About Meaning\r\n\r\nA breakthrough came with word embeddings — dense vector representations that capture semantic meaning.\r\nWord2Vec (2013) showed that vector arithmetic could encode relationships: \"king\" - \"man\" + \"woman\" ≈ \"queen\".\r\nGloVe and fastText followed, each improving on the approach.\r\n\r\nThe problem: these embeddings were static.\r\nThe word \"bank\" has the same vector whether you mean a river bank or a financial institution.\r\n\r\nThe Transformer Revolution\r\n\r\nThe 2017 paper \"Attention Is All You Need\" introduced the Transformer architecture and rendered most prior approaches obsolete.\r\nTransformers generate contextual embeddings — the representation of each word is influenced by every other word in the sentence.\r\n\r\nBERT (2018) trained a transformer to understand language by predicting masked words, creating powerful general-purpose representations.\r\nGPT (2018) trained a transformer to predict the next word, enabling fluent text generation.\r\n\r\nScaling to Large Language Models\r\n\r\nResearchers discovered that scaling up — more parameters, more data, more compute — produced qualitatively new capabilities.\r\nGPT-3 (175 billion parameters) could write essays, answer questions, and even code with minimal examples.\r\n\r\nModern LLMs like GPT-4, Claude, and Gemini demonstrate emergent abilities: translation across hundreds of languages, multi-step reasoning, code generation, and creative writing — all from a single model.\r\n\r\nKey NLP Tasks and Applications\r\n\r\nText Classification: sentiment analysis, topic categorization, spam detection\r\nNamed Entity Recognition (NER): extracting people, places, organizations from text\r\nMachine Translation: converting text between languages\r\nQuestion Answering: retrieving or generating answers from context\r\nText Summarization: condensing long documents into key points\r\nConversational AI: chatbots and virtual assistants\r\n\r\nChallenges and Frontiers\r\n\r\nDespite remarkable progress, NLP faces real challenges:\r\n- Hallucination: LLMs sometimes generate plausible-sounding but false information\r\n- Bias: models reflect and can amplify biases present in training data\r\n- Reasoning: multi-step logical and mathematical reasoning remains an active research area\r\n- Efficiency: deploying billion-parameter models at scale requires significant engineering\r\n\r\nRetrieval-Augmented Generation (RAG) — combining LLMs with a knowledge retrieval system — is one of the most promising approaches to grounding models in factual, up-to-date information.\r\n\r\nThe field of NLP is arguably the fastest-moving area in all of AI.\r\nStaying current requires reading papers, experimenting with open-source models, and engaging with the vibrant research community.",
+   "status": "PB",
+   "featured_image": "",
+   "read_time_minutes": 2,
+   "view_count": 0,
+   "is_featured": false,
+   "allow_comments": true,
+   "created_at": "2026-04-02T12:31:38.750Z",
+   "updated_at": "2026-04-13T08:18:46.545Z",
+   "published_at": "2026-04-02T12:31:38Z",
+   "tags": [
+    1,
+    4,
+    6
+   ]
+  }
+ },
+ {
+  "model": "stories.story",
+  "pk": 2,
+  "fields": {
+   "author": null,
+   "title": "Data Science From Scratch: A Practical End-to-End Workflow",
+   "slug": "data-science-from-scratch-a-practical-end-to-end-workflow",
+   "excerpt": "Data Science is not just about building models. It is a disciplined process of collecting, cleaning, exploring, modeling, and communicating data. Walk through a complete DS workflow with real examples.",
+   "content": "Data Science is one of the most sought-after skills of the 21st century, yet it is widely misunderstood.\r\nMany beginners jump straight into machine learning algorithms without appreciating that the bulk of a data scientist's work happens long before any model is trained.\r\n\r\nStep 1 — Define the Problem\r\n\r\nEvery successful data science project starts with a crisp business question.\r\n\"Can we predict which customers are likely to churn in the next 30 days?\" is actionable.\r\n\"Tell me something interesting about our data\" is not.\r\n\r\nStep 2 — Collect the Data\r\n\r\nData comes from many sources: relational databases, APIs, web scraping, sensors, and third-party providers.\r\nUnderstanding the data's provenance — how it was collected and what biases it may carry — is as important as the data itself.\r\n\r\nStep 3 — Clean and Preprocess\r\n\r\nReal-world data is messy. Missing values, duplicates, inconsistent formatting, and outliers are the norm, not the exception.\r\nThe saying \"garbage in, garbage out\" is a fundamental truth in data science.\r\n\r\nCommon preprocessing tasks include:\r\n- Imputing or dropping missing values\r\n- Encoding categorical variables (one-hot encoding, label encoding, target encoding)\r\n- Scaling numerical features (standardization, min-max normalization)\r\n- Handling outliers (clipping, winsorization, or domain-informed removal)\r\n\r\nStep 4 — Exploratory Data Analysis (EDA)\r\n\r\nBefore modeling, spend time understanding your data.\r\nVisualize distributions, correlations, and relationships between variables.\r\nTools like pandas, matplotlib, seaborn, and plotly make EDA both powerful and visual.\r\n\r\nStep 5 — Feature Engineering\r\n\r\nRaw data rarely has the perfect representation for a model.\r\nFeature engineering — creating new variables that capture domain knowledge — is often where data scientists add the most value.\r\nExamples: extracting day-of-week from a timestamp, computing moving averages, or creating interaction terms between features.\r\n\r\nStep 6 — Model Building and Evaluation\r\n\r\nChoose a model appropriate for your problem (classification, regression, clustering, etc.), train it on a portion of your data, and evaluate it on a held-out test set.\r\n\r\nCritical metrics to understand:\r\n- Classification: accuracy, precision, recall, F1, AUC-ROC\r\n- Regression: MAE, RMSE, R²\r\n\r\nAlways use cross-validation to get reliable performance estimates and avoid overfitting.\r\n\r\nStep 7 — Communicate Results\r\n\r\nThe final deliverable is not a model — it is insight.\r\nData scientists who can translate technical results into business language and compelling visualizations create far more impact.\r\n\r\nTools of the Trade\r\n\r\nThe modern data scientist's toolkit includes Python (pandas, scikit-learn, matplotlib), SQL for data extraction, Jupyter notebooks for exploration, and cloud platforms (AWS, GCP, Azure) for scalable computation.\r\n\r\nFinal Thoughts\r\n\r\nData Science is simultaneously a technical discipline and a creative endeavor.\r\nMastering it requires curiosity, statistical intuition, engineering skill, and the humility to know that your first model is rarely your best one.",
+   "status": "PB",
+   "featured_image": "",
+   "read_time_minutes": 2,
+   "view_count": 0,
+   "is_featured": true,
+   "allow_comments": true,
+   "created_at": "2026-04-02T12:31:38.735Z",
+   "updated_at": "2026-04-02T18:40:21.397Z",
+   "published_at": "2026-04-02T12:31:38Z",
+   "tags": [
+    2,
+    5
+   ]
+  }
+ },
+ {
+  "model": "stories.story",
+  "pk": 3,
+  "fields": {
+   "author": null,
+   "title": "Machine Learning Demystified: Algorithms Every Practitioner Should Know",
+   "slug": "machine-learning-demystified-algorithms-every-practitioner-should-know",
+   "excerpt": "From linear regression to gradient boosting, this guide breaks down the most important ML algorithms, explaining when to use each one and what pitfalls to watch out for.",
+   "content": "Machine Learning (ML) is the engine powering most modern AI applications.\r\nAt its heart, ML is about building systems that learn from data to make predictions or decisions without being explicitly programmed for each scenario.\r\n\r\nThe Three Paradigms of Machine Learning\r\n\r\nSupervised Learning\r\nThe model learns from labeled examples — input-output pairs — and learns to map inputs to outputs.\r\nCommon tasks: classification (spam detection, image recognition) and regression (house price prediction, demand forecasting).\r\n\r\nUnsupervised Learning\r\nThe model finds structure in unlabeled data.\r\nCommon tasks: clustering (customer segmentation), dimensionality reduction (PCA, t-SNE), and anomaly detection.\r\n\r\nReinforcement Learning\r\nAn agent learns by interacting with an environment, receiving rewards for good actions and penalties for bad ones.\r\nApplications: game playing (AlphaGo), robotics, and recommendation systems.\r\n\r\nKey Algorithms Every Practitioner Should Know\r\n\r\nLinear and Logistic Regression\r\nThe simplest and most interpretable models.\r\nLinear regression predicts a continuous value; logistic regression predicts class probabilities.\r\nAlways start with these baselines before reaching for complexity.\r\n\r\nDecision Trees and Random Forests\r\nDecision trees split data on feature thresholds, building an interpretable flowchart.\r\nRandom forests ensemble hundreds of trees, dramatically reducing variance and improving generalization.\r\n\r\nGradient Boosting Machines (GBM)\r\nXGBoost, LightGBM, and CatBoost dominate structured-data competitions.\r\nThey build trees sequentially, each correcting the errors of the previous one.\r\nExtremely powerful, but require careful hyperparameter tuning.\r\n\r\nSupport Vector Machines (SVM)\r\nSVMs find the maximum-margin boundary between classes.\r\nThey excel in high-dimensional spaces and are robust to overfitting, but do not scale well to very large datasets.\r\n\r\nK-Nearest Neighbors (KNN)\r\nA lazy learner that classifies a point by the majority class among its K nearest neighbors.\r\nSimple and effective for low-dimensional data; slow and memory-intensive at scale.\r\n\r\nThe Bias-Variance Tradeoff\r\n\r\nThe central challenge in ML is the bias-variance tradeoff:\r\n- High bias (underfitting): The model is too simple to capture the data's patterns.\r\n- High variance (overfitting): The model memorizes the training data but fails on new examples.\r\n\r\nRegularization techniques (L1/Lasso, L2/Ridge, dropout in neural networks) help manage this tradeoff.\r\n\r\nCross-Validation and Hyperparameter Tuning\r\n\r\nAlways evaluate your model using cross-validation — split your data into K folds, train on K-1, and evaluate on the remaining fold, rotating through all possibilities.\r\n\r\nFor hyperparameter tuning, grid search, random search, and Bayesian optimization are your tools.\r\nModern libraries like Optuna make this process nearly automatic.\r\n\r\nPractical Advice\r\n\r\nStart simple. A well-tuned logistic regression often beats a poorly tuned neural network.\r\nUnderstand your data before reaching for powerful models.\r\nAnd remember: model interpretability matters in production — stakeholders need to understand and trust the system's decisions.",
+   "status": "PB",
+   "featured_image": "",
+   "read_time_minutes": 2,
+   "view_count": 0,
+   "is_featured": false,
+   "allow_comments": true,
+   "created_at": "2026-04-02T12:31:38.735Z",
+   "updated_at": "2026-04-13T08:19:27.301Z",
+   "published_at": "2026-04-02T12:31:38Z",
+   "tags": [
+    2,
+    3,
+    5
+   ]
+  }
+ },
+ {
+  "model": "stories.story",
+  "pk": 1,
+  "fields": {
+   "author": null,
+   "title": "The Rise of Artificial Intelligence: Transforming Every Industry",
+   "slug": "the-rise-of-artificial-intelligence-transforming-every-industry",
+   "excerpt": "Artificial Intelligence is no longer a futuristic concept — it is reshaping healthcare, finance, education, and beyond. Discover how AI is being applied today and what the next decade holds.",
+   "content": "Artificial Intelligence (AI) has moved from science fiction into everyday reality faster than almost anyone predicted.\r\nJust a decade ago, self-driving cars and AI-powered medical diagnoses were distant dreams. Today, they are being tested and deployed at scale.\r\n\r\nWhat Exactly Is Artificial Intelligence?\r\n\r\nAt its core, AI refers to systems that can perform tasks that typically require human intelligence — reasoning, learning, problem-solving, understanding language, and perceiving the environment.\r\nUnlike traditional software that follows rigid rules, modern AI systems learn patterns from data and generalize to new situations.\r\n\r\nHow AI Is Transforming Industries\r\n\r\nHealthcare\r\nAI is accelerating drug discovery, detecting cancers from medical images with radiologist-level accuracy, and predicting patient deterioration before doctors notice clinical signs.\r\nCompanies like DeepMind have already demonstrated AI that can diagnose over 50 eye diseases from retinal scans.\r\n\r\nFinance\r\nBanks use AI to detect fraudulent transactions in real time, assess credit risk more fairly, and power algorithmic trading systems that execute thousands of trades per second based on market signals.\r\n\r\nEducation\r\nAdaptive learning platforms adjust the difficulty and style of content based on each student's progress.\r\nAI tutors provide personalized feedback 24/7, democratizing access to quality education regardless of geography.\r\n\r\nManufacturing\r\nPredictive maintenance powered by AI monitors machinery sensors to detect anomalies before equipment fails, saving billions in downtime costs annually.\r\n\r\nThe Ethical Dimension\r\n\r\nWith great power comes great responsibility. As AI systems influence hiring decisions, loan approvals, and even criminal sentencing, ensuring they are fair, transparent, and accountable is critical.\r\nResearchers and policymakers worldwide are working on frameworks to govern AI responsibly.\r\n\r\nWhat Comes Next?\r\n\r\nThe next frontier is Artificial General Intelligence (AGI) — systems that can reason across domains the way humans do.\r\nWhile AGI remains an open research challenge, the progress in narrow AI is staggering.\r\nFrom large language models that write code and prose to reinforcement learning agents that master complex games, the pace of innovation shows no signs of slowing.\r\n\r\nWhether you are a student, professional, or curious observer, understanding AI is becoming as essential as understanding electricity.\r\nThe question is no longer whether AI will transform your field — it is how soon and how deeply.",
+   "status": "PB",
+   "featured_image": "",
+   "read_time_minutes": 2,
+   "view_count": 0,
+   "is_featured": true,
+   "allow_comments": true,
+   "created_at": "2026-04-02T12:31:38.724Z",
+   "updated_at": "2026-04-24T09:28:18.816Z",
+   "published_at": "2026-04-02T12:31:38Z",
+   "tags": [
+    1,
+    3
+   ]
+  }
+ },
+ {
+  "model": "projects.projects",
+  "pk": 14,
+  "fields": {
+   "owner": null,
+   "title": "Predicting F1 Pit Stops",
+   "short_description": "Predict whether a Formula 1 driver will pit on the next lap.",
+   "project_type": "KAGGLE_COMPETITION",
+   "difficulty_level": "INTERMEDIATE",
+   "trained_model": "",
+   "model_type": "CLASSIFICATION",
+   "target_feature": "",
+   "prediction_endpoint": false,
+   "prediction_input_type": "manual",
+   "file_input_config": {},
+   "input_features": [],
+   "description": "",
+   "description_rich": {},
+   "business_problem": "",
+   "technical_approach": "",
+   "challenges": "",
+   "key_achievements": "",
+   "lessons_learned": "",
+   "health_disclaimer": "",
+   "data_type": "TABULAR",
+   "skills_used": "",
+   "libraries_used": "",
+   "accuracy_score": null,
+   "evaluation_metric": "",
+   "kaggle_rank": null,
+   "total_competitors": null,
+   "featured_image": "",
+   "additional_images": [],
+   "github_url": "",
+   "kaggle_url": "",
+   "live_demo_url": "",
+   "dataset_url": "",
+   "rag_document": "",
+   "rag_document_uploaded_at": null,
+   "rag_document_processed": false,
+   "mlflow_run_id": "",
+   "mlflow_tracking_url": "",
+   "experiment_params": {},
+   "experiment_metrics": {},
+   "is_dockerized": false,
+   "has_api": false,
+   "avg_inference_ms": null,
+   "ci_cd_badge_url": "",
+   "is_featured": true,
+   "is_public": true,
+   "start_date": "2026-05-02",
+   "end_date": "2026-05-29",
+   "time_spent": "",
+   "created_at": "2026-05-02T13:00:43.323Z",
+   "updated_at": "2026-05-02T13:00:43.323Z"
+  }
+ },
+ {
+  "model": "projects.projects",
+  "pk": 1,
+  "fields": {
+   "owner": null,
+   "title": "Seizure Detection, CNN-Transformer Model",
+   "short_description": "Goal: Predict the likelihood of seizure",
+   "project_type": "ACADEMIC",
+   "difficulty_level": "EXPERT",
+   "trained_model": "",
+   "model_type": "CLASSIFICATION",
+   "target_feature": "eeg_pattern",
+   "prediction_endpoint": true,
+   "prediction_input_type": "file",
+   "file_input_config": {
+    "handler": "seizure_eeg",
+    "model_variant": "cnn_simple",
+    "accepted_formats": [
+     "parquet",
+     "csv"
+    ],
+    "sampling_rate_hz": 200,
+    "n_channels": 19,
+    "nperseg": 128,
+    "label_map": {
+     "0": "LPD (Lateralised Periodic Discharge)",
+     "1": "Seizure"
+    }
+   },
+   "input_features": [],
+   "description": "Seizures can originate in one specific part of the brain, or they can rapidly spread to affect the whole brain. Different parts of the brain are responsible for different functions, so where a seizure commences or spreads will determine how it affects parts of the body. This is one reason why seizures can look so different between people.\r\n\r\nIn this section, we look at the brain’s functions, seizure classifications and types, and the benefit of recording seizures and maintaining a seizure record form.\r\n\r\nThis information is intended to help people learn about seizures and the wide range of tools that can assist in epilepsy self-management. Whether you are a person living with epilepsy, care for someone who does, or are an interested community member, we hope that you find this information useful. To learn more about epilepsy and seizure management tools click here.",
+   "description_rich": {},
+   "business_problem": "Some types of epilepsy are considered syndromes because they have specific signs and symptoms. Doctors may consider the type of seizures, age of onset, gender, behavioural issues, as well as the results of medical investigations and sometimes genetic testing.\r\n\r\nKnowing whether a person’s epilepsy is related to a syndrome can be useful in understanding whether seizures can be controlled. It will help inform the choice of medication or other treatments, as well as help you understand the potential impacts on physical and cognitive development.  \r\n\r\nThis section briefly outlines epilepsy syndromes, associated seizures, and provides links for more information or syndrome-specific support where available.",
+   "technical_approach": "The area of seizure monitors or alert devices is a area of research which is constantly developing. To date there has been no proven evidence to indicate that using a monitor or alert device can guarantee the safety of a person experiencing seizures. No alert device or monitor has been designed to prevent seizures or the possible impact of seizures. Research is continuing in this area to determine the benefits of this technology.",
+   "challenges": "",
+   "key_achievements": "",
+   "lessons_learned": "",
+   "health_disclaimer": "",
+   "data_type": "MULTIMODAL",
+   "skills_used": "",
+   "libraries_used": "",
+   "accuracy_score": 90.0,
+   "evaluation_metric": "Accuracy",
+   "kaggle_rank": null,
+   "total_competitors": null,
+   "featured_image": "",
+   "additional_images": [],
+   "github_url": "",
+   "kaggle_url": "",
+   "live_demo_url": "",
+   "dataset_url": "",
+   "rag_document": "",
+   "rag_document_uploaded_at": "2026-04-13T07:19:46.027Z",
+   "rag_document_processed": true,
+   "mlflow_run_id": "",
+   "mlflow_tracking_url": "",
+   "experiment_params": {},
+   "experiment_metrics": {},
+   "is_dockerized": false,
+   "has_api": false,
+   "avg_inference_ms": null,
+   "ci_cd_badge_url": "",
+   "is_featured": true,
+   "is_public": true,
+   "start_date": "2026-03-30",
+   "end_date": "2026-03-30",
+   "time_spent": "",
+   "created_at": "2026-03-30T16:32:38.146Z",
+   "updated_at": "2026-05-04T19:34:54.806Z"
+  }
+ },
+ {
+  "model": "projects.projects",
+  "pk": 16,
+  "fields": {
+   "owner": null,
+   "title": "Seizure Detection - Fusion Model",
+   "short_description": "fusion model seizure",
+   "project_type": "ACADEMIC",
+   "difficulty_level": "ADVANCED",
+   "trained_model": "",
+   "model_type": "CLASSIFICATION",
+   "target_feature": "",
+   "prediction_endpoint": true,
+   "prediction_input_type": "file",
+   "file_input_config": {
+    "handler": "seizure_eeg",
+    "model_variant": "fusion",
+    "accepted_formats": [
+     "parquet",
+     "csv"
+    ],
+    "sampling_rate_hz": 200,
+    "n_channels": 19,
+    "nperseg": 128,
+    "label_map": {
+     "0": "LPD (Lateralised Periodic Discharge)",
+     "1": "Seizure"
+    }
+   },
+   "input_features": [],
+   "description": "",
+   "description_rich": {},
+   "business_problem": "",
+   "technical_approach": "",
+   "challenges": "",
+   "key_achievements": "",
+   "lessons_learned": "",
+   "health_disclaimer": "⚠️ Demo Only – Not Medical Advice. This prediction is for research/educational use only. Always consult a doctor for any medical concerns.",
+   "data_type": "MULTIMODAL",
+   "skills_used": "",
+   "libraries_used": "",
+   "accuracy_score": 81.0,
+   "evaluation_metric": "Accuracy",
+   "kaggle_rank": null,
+   "total_competitors": null,
+   "featured_image": "",
+   "additional_images": [],
+   "github_url": "",
+   "kaggle_url": "",
+   "live_demo_url": "",
+   "dataset_url": "",
+   "rag_document": "",
+   "rag_document_uploaded_at": null,
+   "rag_document_processed": false,
+   "mlflow_run_id": "",
+   "mlflow_tracking_url": "",
+   "experiment_params": {},
+   "experiment_metrics": {},
+   "is_dockerized": false,
+   "has_api": false,
+   "avg_inference_ms": null,
+   "ci_cd_badge_url": "",
+   "is_featured": true,
+   "is_public": true,
+   "start_date": null,
+   "end_date": null,
+   "time_spent": "",
+   "created_at": "2026-05-04T19:11:36.828Z",
+   "updated_at": "2026-08-20T14:10:13.133Z"
+  }
+ },
+ {
+  "model": "projects.projects",
+  "pk": 15,
+  "fields": {
+   "owner": null,
+   "title": "Seizure Detection- LSTM-Transformer",
+   "short_description": "LSTM-Transformer",
+   "project_type": "ACADEMIC",
+   "difficulty_level": "ADVANCED",
+   "trained_model": "",
+   "model_type": "CLASSIFICATION",
+   "target_feature": "",
+   "prediction_endpoint": true,
+   "prediction_input_type": "file",
+   "file_input_config": {
+    "handler": "seizure_eeg",
+    "model_variant": "gru_attention",
+    "accepted_formats": [
+     "parquet",
+     "csv"
+    ],
+    "sampling_rate_hz": 200,
+    "n_channels": 19,
+    "nperseg": 128,
+    "label_map": {
+     "0": "LPD (Lateralised Periodic Discharge)",
+     "1": "Seizure"
+    }
+   },
+   "input_features": [],
+   "description": "",
+   "description_rich": {},
+   "business_problem": "",
+   "technical_approach": "",
+   "challenges": "",
+   "key_achievements": "",
+   "lessons_learned": "",
+   "health_disclaimer": "",
+   "data_type": "TIME_SERIES",
+   "skills_used": "",
+   "libraries_used": "",
+   "accuracy_score": 79.0,
+   "evaluation_metric": "Accuracy",
+   "kaggle_rank": null,
+   "total_competitors": null,
+   "featured_image": "",
+   "additional_images": [],
+   "github_url": "",
+   "kaggle_url": "",
+   "live_demo_url": "",
+   "dataset_url": "",
+   "rag_document": "",
+   "rag_document_uploaded_at": null,
+   "rag_document_processed": false,
+   "mlflow_run_id": "",
+   "mlflow_tracking_url": "",
+   "experiment_params": {},
+   "experiment_metrics": {},
+   "is_dockerized": false,
+   "has_api": false,
+   "avg_inference_ms": null,
+   "ci_cd_badge_url": "",
+   "is_featured": true,
+   "is_public": true,
+   "start_date": null,
+   "end_date": null,
+   "time_spent": "",
+   "created_at": "2026-05-04T18:03:30.559Z",
+   "updated_at": "2026-08-20T14:10:13.133Z"
+  }
+ },
+ {
+  "model": "projects.projects",
+  "pk": 13,
+  "fields": {
+   "owner": null,
+   "title": "NeurIPS 2025 EEG Foundation Challenge 2: Psychopathology Prediction",
+   "short_description": "Predicting continuous externalizing psychopathology scores from resting and naturalistic EEG using a pre-trained Transformer.",
+   "project_type": "DEEP_LEARNING",
+   "difficulty_level": "EXPERT",
+   "trained_model": "",
+   "model_type": "REGRESSION",
+   "target_feature": "Externalizing Factor Score",
+   "prediction_endpoint": false,
+   "prediction_input_type": "file",
+   "file_input_config": {
+    "handler": "eeg_externalizing_predictor",
+    "model_bundle_path": "D:/eegchallenge_results/challenge2_externalizing_unfrozen_20260426_094813/weights_challenge_2.pt",
+    "sample_data_path": "D:/PersonalPortfolio/projects/inference/sample_eeg_ch2.npy",
+    "accepted_formats": [
+     "npy",
+     "csv"
+    ],
+    "description": "Upload a 129×200 NumPy (.npy) or CSV file representing a 2-second EEG window (129 channels, 100 Hz, z-scored). Or click \"Try with sample EEG data\" — no file needed."
+   },
+   "input_features": [],
+   "description": "Challenge 2 of the NeurIPS 2025 EEG Foundation Model Challenge. A supervised regression task: predict the continuous externalizing psychopathology score (from the HBN assessment battery) for each participant using their EEG recordings across all available tasks.\r\n\r\nArchitecture: Same Transformer AE backbone as Challenge 1. Random 2-second windows are sampled across all tasks per subject, producing a distribution of predictions that are aggregated at evaluation. Task availability is filtered per-subject from participants.tsv.",
+   "description_rich": {},
+   "business_problem": "Can EEG biomarkers reliably predict dimensional psychopathology in children and adolescents? Externalizing behaviour (ADHD, conduct disorder) leaves measurable neural signatures that a foundation model may capture across diverse cognitive contexts.",
+   "technical_approach": "Load pre-trained backbone from Challenge 1 pre-training. Sample n random windows per subject across all available task recordings. Split train/val by subject (not by window) to prevent data leakage. Regression head on mean-pooled encoder output, trained with MSE loss, evaluated with NRMSE.",
+   "challenges": "Subject-level label with window-level input: many windows share one label, requiring careful subject-stratified splitting. Missing data: not all subjects completed all tasks — handled via participants.tsv flags.",
+   "key_achievements": "Subject-stratified dataset split preventing any data leakage. Per-subject task availability filtering using participants.tsv flag columns. Shared backbone with Challenge 1 enables transfer of pre-trained representations.",
+   "lessons_learned": "",
+   "health_disclaimer": "",
+   "data_type": "TIME_SERIES",
+   "skills_used": "PYTHON, PYTORCH",
+   "libraries_used": "PyTorch, MNE-Python, scikit-learn, NumPy, pandas",
+   "accuracy_score": null,
+   "evaluation_metric": "NRMSE (Normalized RMSE)",
+   "kaggle_rank": null,
+   "total_competitors": null,
+   "featured_image": "",
+   "additional_images": [],
+   "github_url": "",
+   "kaggle_url": "",
+   "live_demo_url": "",
+   "dataset_url": "",
+   "rag_document": "",
+   "rag_document_uploaded_at": null,
+   "rag_document_processed": false,
+   "mlflow_run_id": "",
+   "mlflow_tracking_url": "",
+   "experiment_params": {},
+   "experiment_metrics": {},
+   "is_dockerized": false,
+   "has_api": true,
+   "avg_inference_ms": null,
+   "ci_cd_badge_url": "",
+   "is_featured": true,
+   "is_public": true,
+   "start_date": null,
+   "end_date": null,
+   "time_spent": "",
+   "created_at": "2026-04-25T21:16:43.798Z",
+   "updated_at": "2026-04-26T15:47:51.281Z"
+  }
+ },
+ {
+  "model": "projects.projects",
+  "pk": 12,
+  "fields": {
+   "owner": null,
+   "title": "NeurIPS 2025 EEG Foundation Challenge 1: Cross-Task RT Prediction",
+   "short_description": "Self-supervised EEG Transformer pre-trained on passive tasks, fine-tuned to predict reaction time on unseen active task.",
+   "project_type": "DEEP_LEARNING",
+   "difficulty_level": "EXPERT",
+   "trained_model": "",
+   "model_type": "REGRESSION",
+   "target_feature": "Reaction Time (s)",
+   "prediction_endpoint": false,
+   "prediction_input_type": "file",
+   "file_input_config": {
+    "handler": "eeg_rt_predictor",
+    "model_bundle_path": "D:/eegchallenge_results/finetuning_20260426_034840/weights_challenge_1.pt",
+    "sample_data_path": "D:/PersonalPortfolio/projects/inference/sample_eeg_ch1.npy",
+    "accepted_formats": [
+     "npy",
+     "csv"
+    ],
+    "description": "Upload a 129×200 NumPy (.npy) or CSV file representing a 2-second EEG window (129 channels, 100 Hz, z-scored). Or click \"Try with sample EEG data\" to see a live prediction on a real anonymised HBN-EEG window."
+   },
+   "input_features": [],
+   "description": "Challenge 1 of the NeurIPS 2025 EEG Foundation Model Challenge. The goal is cross-task transfer: pre-train a foundation model on passive EEG tasks (Resting State, Surround Suppression, movie clips) and fine-tune it to predict reaction time on the Contrast Change Detection (CCD) task — which was withheld during pre-training.\r\n\r\nArchitecture: Transformer AutoEncoder with patch-channel cross-attention fusion, trained with VICReg + MAE reconstruction objective. Fine-tuning uses mean-pooled encoder representations passed through a regression head.",
+   "description_rich": {},
+   "business_problem": "Can a model trained on passive brain activity generalize to predict active cognitive performance? This tests whether EEG foundation models capture task-agnostic neural representations.",
+   "technical_approach": "Pre-training: VICReg contrastive loss + masked patch reconstruction (MAE) on 6 passive tasks. Fine-tuning: freeze encoder, train regression head on stimulus-locked 2-second windows from CCD. Data: HBN-EEG dataset (3000+ participants, 100 Hz, 129 channels, BIDS format).",
+   "challenges": "Cross-task generalization with no target-task signal during pre-training. High inter-subject variability in EEG. Variable-length recordings requiring windowing strategy.",
+   "key_achievements": "Implemented full self-supervised pre-training pipeline with VICReg + MAE. Task availability filtering from participants.tsv to avoid wasted I/O. Argparse-based CLI for easy hyperparameter sweeps.",
+   "lessons_learned": "",
+   "health_disclaimer": "",
+   "data_type": "TIME_SERIES",
+   "skills_used": "PYTHON, PYTORCH",
+   "libraries_used": "PyTorch, MNE-Python, scikit-learn, NumPy, pandas",
+   "accuracy_score": null,
+   "evaluation_metric": "NRMSE (Normalized RMSE)",
+   "kaggle_rank": null,
+   "total_competitors": null,
+   "featured_image": "",
+   "additional_images": [],
+   "github_url": "",
+   "kaggle_url": "",
+   "live_demo_url": "",
+   "dataset_url": "",
+   "rag_document": "",
+   "rag_document_uploaded_at": "2026-04-27T08:48:43.401Z",
+   "rag_document_processed": true,
+   "mlflow_run_id": "",
+   "mlflow_tracking_url": "",
+   "experiment_params": {},
+   "experiment_metrics": {},
+   "is_dockerized": false,
+   "has_api": true,
+   "avg_inference_ms": null,
+   "ci_cd_badge_url": "",
+   "is_featured": true,
+   "is_public": true,
+   "start_date": null,
+   "end_date": null,
+   "time_spent": "",
+   "created_at": "2026-04-25T21:16:43.793Z",
+   "updated_at": "2026-04-26T15:49:16.548Z"
+  }
+ },
+ {
+  "model": "kaggle_archive.technique",
+  "pk": 9,
+  "fields": {
+   "name": "Augmentation",
+   "slug": "augmentation"
+  }
+ },
+ {
+  "model": "kaggle_archive.technique",
+  "pk": 15,
+  "fields": {
+   "name": "Blending",
+   "slug": "blending"
+  }
+ },
+ {
+  "model": "kaggle_archive.technique",
+  "pk": 11,
+  "fields": {
+   "name": "CNN",
+   "slug": "cnn"
+  }
+ },
+ {
+  "model": "kaggle_archive.technique",
+  "pk": 1,
+  "fields": {
+   "name": "CatBoost",
+   "slug": "catboost"
+  }
+ },
+ {
+  "model": "kaggle_archive.technique",
+  "pk": 8,
+  "fields": {
+   "name": "Cross Validation",
+   "slug": "cross-validation"
+  }
+ },
+ {
+  "model": "kaggle_archive.technique",
+  "pk": 3,
+  "fields": {
+   "name": "EfficientNet",
+   "slug": "efficientnet"
+  }
+ },
+ {
+  "model": "kaggle_archive.technique",
+  "pk": 6,
+  "fields": {
+   "name": "Ensemble",
+   "slug": "ensemble"
+  }
+ },
+ {
+  "model": "kaggle_archive.technique",
+  "pk": 19,
+  "fields": {
+   "name": "Feature Engineering",
+   "slug": "feature-engineering"
+  }
+ },
+ {
+  "model": "kaggle_archive.technique",
+  "pk": 13,
+  "fields": {
+   "name": "GPT",
+   "slug": "gpt"
+  }
+ },
+ {
+  "model": "kaggle_archive.technique",
+  "pk": 12,
+  "fields": {
+   "name": "GRU",
+   "slug": "gru"
+  }
+ },
+ {
+  "model": "kaggle_archive.technique",
+  "pk": 14,
+  "fields": {
+   "name": "HuggingFace",
+   "slug": "huggingface"
+  }
+ },
+ {
+  "model": "kaggle_archive.technique",
+  "pk": 5,
+  "fields": {
+   "name": "Keras",
+   "slug": "keras"
+  }
+ },
+ {
+  "model": "kaggle_archive.technique",
+  "pk": 17,
+  "fields": {
+   "name": "LightGBM",
+   "slug": "lightgbm"
+  }
+ },
+ {
+  "model": "kaggle_archive.technique",
+  "pk": 10,
+  "fields": {
+   "name": "Neural Network",
+   "slug": "neural-network"
+  }
+ },
+ {
+  "model": "kaggle_archive.technique",
+  "pk": 16,
+  "fields": {
+   "name": "Pseudo Labeling",
+   "slug": "pseudo-labeling"
+  }
+ },
+ {
+  "model": "kaggle_archive.technique",
+  "pk": 4,
+  "fields": {
+   "name": "PyTorch",
+   "slug": "pytorch"
+  }
+ },
+ {
+  "model": "kaggle_archive.technique",
+  "pk": 2,
+  "fields": {
+   "name": "ResNet",
+   "slug": "resnet"
+  }
+ },
+ {
+  "model": "kaggle_archive.technique",
+  "pk": 7,
+  "fields": {
+   "name": "Stacking",
+   "slug": "stacking"
+  }
+ },
+ {
+  "model": "kaggle_archive.technique",
+  "pk": 18,
+  "fields": {
+   "name": "XGBoost",
+   "slug": "xgboost"
+  }
+ },
+ {
+  "model": "kaggle_archive.competition",
+  "pk": 5,
+  "fields": {
+   "name": "Predicting Irrigation Need",
+   "slug": "playground-series-s6e4",
+   "competition_type": "nlp",
+   "domain": "other",
+   "host": "Kaggle",
+   "prize_pool": "Swag",
+   "num_teams": 4315,
+   "description": "",
+   "kaggle_url": "https://www.kaggle.com/competitions/playground-series-s6e4",
+   "evaluation_metric": "Balanced Accuracy Score",
+   "end_date": "2026-04-30",
+   "created_at": "2026-05-17T09:25:01.877Z"
+  }
+ },
+ {
+  "model": "kaggle_archive.competition",
+  "pk": 4,
+  "fields": {
+   "name": "HMS - Harmful Brain Activity Classification ",
+   "slug": "hms-harmful-brain-activity-classification",
+   "competition_type": "tabular",
+   "domain": "healthcare",
+   "host": "Harvard Medical School",
+   "prize_pool": "50,000 Usd",
+   "num_teams": 2767,
+   "description": "",
+   "kaggle_url": "https://www.kaggle.com/competitions/hms-harmful-brain-activity-classification",
+   "evaluation_metric": "Kullback Leibler Divergence",
+   "end_date": "2024-04-08",
+   "created_at": "2026-05-17T09:16:32.339Z"
+  }
+ },
+ {
+  "model": "kaggle_archive.solution",
+  "pk": 21,
+  "fields": {
+   "competition": 4,
+   "rank": 1,
+   "team_name": "team Sony",
+   "score": "0.272332",
+   "medal": "gold",
+   "approach_summary": "",
+   "writeup_url": "https://www.kaggle.com/competitions/hms-harmful-brain-activity-classification/writeups/team-sony-1st-place-solution-team-sony",
+   "writeup_title": "1st place solution, team Sony",
+   "writeup_author": "",
+   "writeup_content": "I would like to thank the organizers and the community of the competition!\nI'm grateful to the members who joined the team.\n\n# Code ( updated on 4/23/2024)\n- train : https://www.kaggle.com/code/sugupoko/1st-place-all-train-code/notebook\n- inferenece: https://www.kaggle.com/code/sugupoko/1st-place-hms-inference-code\n \n# Summary\nOur prediction pipeline is this.\nEach approaches are will added in the comments!\n - yamash's part   : [Link](https://www.kaggle.com/competitions/hms-harmful-brain-activity-classification/discussion/492560#2744629)\n - suguuuuu's part: [Link](https://www.kaggle.com/competitions/hms-harmful-brain-activity-classification/discussion/492560#2744628)\n - kfuji's part         : [Link](https://www.kaggle.com/competitions/hms-harmful-brain-activity-classification/discussion/492560#2744643)\n - Muku's part       : [Link](https://www.kaggle.com/competitions/hms-harmful-brain-activity-classification/discussion/492560#2744634)\n\n![](https://www.googleapis.com/download/storage/v1/b/kaggle-forum-message-attachments/o/inbox%2F2930242%2Fdb96007aaf4d5c3278bcda3b17c1bb14%2Fkaggle_overview.jpg?generation=1712721482613740&alt=media)\n\n# Team Validation Strategy\nThe verification method was the same for the entire team.\n - Validation using Chris's method\n  - link : https://www.kaggle.com/code/cdeotte/wavenet-starter-lb-0-52\n   - Normalize by summing labels with eeg_id, crop the middle 10,000 frames of EEG.\n - Folding strategy : Group K-fold with a 5-fold split.\n - vote >=10\n",
+   "writeup_fetched_at": "2026-05-17T09:45:56.668Z",
+   "is_public": true,
+   "techniques": [
+    8
+   ]
+  }
+ },
+ {
+  "model": "kaggle_archive.solution",
+  "pk": 26,
+  "fields": {
+   "competition": 5,
+   "rank": 1,
+   "team_name": "cstdy",
+   "score": "0.98158",
+   "medal": "gold",
+   "approach_summary": "",
+   "writeup_url": "https://www.kaggle.com/competitions/playground-series-s6e4/writeups/1st-place-one-vs-rest-approach",
+   "writeup_title": "1st place: One vs Rest approach",
+   "writeup_author": "",
+   "writeup_content": "First of all, thanks to Kaggle for this competition. This month dataset and metric were non-standard, which made it more interesting! Also, a huge thanks to @mahoganybuttstrings, @utaazu, @yunsuxiaozi, @include4eto, @yekenot, @mikhailnaumov, @rohit8527kmr7518, @rawashishsin, @wguesdon, @lucasmoraes001, and @ravi20076 for sharing the solutions I used in final submission.\n\n# Approach\n\nI used OOF predictions from public notebooks with different FE for ensembling. If public notebook contained only 1 model, I trained other models on same FE in some cases. \nI also made one FE and a set of 6 models myself, where FE is still based on public notebooks.\n\nKey observation I used was mentioned in [https://www.kaggle.com/competitions/playground-series-s6e4/discussion/690677](https://www.kaggle.com/competitions/playground-series-s6e4/discussion/690677) - models almost never confuse Low and High classes. Therefore, I developed an approach with two binary classifiers. The first trained on Low vs Rest target on whole dataset. Since High class part is small, it is almost same as Low vs Medium.\n\nIn the second step, I trained Medium vs. High classifier. Only Medium and High classes were used for training, but OOF predictions were generated for the whole dataset. I considered two options: train the second binary classifier on true Medium and High labels or on predicted by the first model. In the final solution, I chose the latter. \n\nConversion to class probabilities was done by formulas\n```\nP(Low) = P(Model_1)\nP(Medium) = (1 - P(Model_1)) * (1 - P(Model_2))\nP(High) = (1 - P(Model_1)) * P(Model_2)\n```\n\nThis gave XGBoost and RealMLP models with a CV of 0.9805 each.\n\n# Ensemble\n\nI applied same scheme with 2 binary classifiers for probabilities blending. Blending was made with transform to logits + LogisticRegressionCV on 5 folds. I also ensured that all OOF predictions were obtained on 5 folds cv. Final cv of ensemble is 0.98155.\nFor final predictions, I used two threshold search algorithms—both are greedy selection based on OOF balanced accuracy.\n\n# Models\n\n61 oof predictions of models were used in final solution, 30 of them are from @wguesdon, 6 from my approach described above and the rest are from other public contributors. In a few cases, I reran public notebooks with other models.\nIn total, there are 17 XGBoost, 11 LightGBM, 10 CatBoost, 9 RealMLP, 3 TabM, 2 LogisticRegression and a few others. \n\nDetails can be found in the attached ensemble notebook, which contains both ensembling and training mode for my models.\nI have also attached one of TabM models training, based on [https://www.kaggle.com/code/rawashishsin/s6e4-highest-score-xgboost-cv-0-98109](https://www.kaggle.com/code/rawashishsin/s6e4-highest-score-xgboost-cv-0-98109) which was not included in best scoring submission.\n\n# Conclusion\n\nThere are many multiclass and multilabel problems where one-vs-rest is not optimal.\nHere the dataset is specific because models almost never confuse Low and High classes. This made one-vs-rest approach with 2 binary classifiers possible and allowed to focus first on ranking and then on thresholds calibration for balanced accuracy.",
+   "writeup_fetched_at": "2026-05-17T09:47:59.208Z",
+   "is_public": true,
+   "techniques": [
+    15,
+    1,
+    6,
+    17,
+    18
+   ]
+  }
+ },
+ {
+  "model": "kaggle_archive.solution",
+  "pk": 22,
+  "fields": {
+   "competition": 4,
+   "rank": 2,
+   "team_name": "holiday",
+   "score": "0.273765",
+   "medal": "silver",
+   "approach_summary": "",
+   "writeup_url": "https://www.kaggle.com/competitions/hms-harmful-brain-activity-classification/writeups/holiday-2nd-place-solution",
+   "writeup_title": "2nd place solution ",
+   "writeup_author": "",
+   "writeup_content": "First of all, I would like to thanks to Kaggle and the organizers. I have learned a lot from this experience.  \n\n\n\n##  1. model\n\nIn early time, feeding a bsx4xHxW input to the 2D-CNN produce worse result than the one-image method.  I start to think why?\n\nDue to the position-sensitive nature of the labels (LPD, GPD, etc.), We should take care of the channel dimension. 2D-CNN is not well-equipped to capture positional information within the channels. Because there is not pad in channel direction. And that's why we need to concat the spectrum into one image for a vision model other than a bsx16xHxW image( double banana montage).\nSo I decided to use 3d-CNN for spectrum, and 2d-CNN model for raw-eeg signal.\n\n\ndiagram like:\n\n\ntotal solution like this:\n![solution figure](https://www.googleapis.com/download/storage/v1/b/kaggle-forum-message-attachments/o/inbox%2F1562037%2F9d2ab8354f85f39d092a75fd13922db7%2Fimg.png?generation=1715226166682613&alt=media)\n+ mne 0.5-20hz means use MNE-tool do filter.\n+ scipy.signal means use scipy.signal to do filter.\n+ For the reshape operator and the stft params please refer to the codes below.\n+ And the number in () means final weights of the ensemble.\n\n### 1.1 x3d-l (spectrum model)\n\n\nAfter double banana montage, +-1024 clip and 0.5-20hz filter,\nuse stft to extract the spectrum, then feed to a 3d-CNN(x3d-l).\n\n![](https://www.googleapis.com/download/storage/v1/b/kaggle-forum-message-attachments/o/inbox%2F1562037%2Fcbfe301faa8741dc262aa334e620e4c9%2Fimg_2.png?generation=1715226202040353&alt=media)\n\nThe input data is a 16-channels spectrum image.\n\nX3d-l cv 0.21+, public lb0.25 private lb0.29.\n\n\n\nstft code like below, use it as a nn.Module :\n\n```\nclass Transform50s(nn.Module):\n    def __init__(self, ):\n        super().__init__()\n        self.wave_transform = torchaudio.transforms.Spectrogram(n_fft=512, win_length=128, hop_length=50, power=1)\n\n    def forward(self, x):\n        image = self.wave_transform(x)\n        image = torch.clip(image, min=0, max=10000) / 1000\n        n, c, h, w = image.size()\n        image = image[:, :, :int(20 / 100 * h + 10), :]\n        return image\n\n\nclass Transform10s(nn.Module):\n    def __init__(self, ):\n        super().__init__()\n        self.wave_transform = torchaudio.transforms.Spectrogram(n_fft=512, win_length=128, hop_length=10, power=1)\n\n    def forward(self, x):\n        image = self.wave_transform(x)\n        image = torch.clip(image, min=0, max=10000) / 1000\n        n, c, h, w = image.size()\n        image = image[:, :, :int(20 / 100 * h + 10), :]\n        return image\n\n\nclass Model(nn.Module):\n    def __init__(self):\n        super().__init__()\n\n        model_name = \"x3d_l\"\n        self.net = torch.hub.load('facebookresearch/pytorchvideo',\n                                  model_name, pretrained=True)\n\n        self.net.blocks[5].pool.pool = nn.AdaptiveAvgPool3d(1)\n        # self.net.blocks[5]=nn.Identity()\n        # self.net.avgpool = nn.Identity()\n        self.net.blocks[5].dropout = nn.Identity()\n        self.net.blocks[5].proj = nn.Identity()\n        self.net.blocks[5].activation = nn.Identity()\n        self.net.blocks[5].output_pool = nn.Identity()\n\n    def forward(self, x):\n        x = self.net(x)\n        return x\n\n\nclass Net(nn.Module):\n    def __init__(self, num_classes=1):\n        super().__init__()\n\n        self.preprocess50s = Transform50s()\n        self.preprocess10s = Transform10s()\n\n        self.model = Model()\n\n        self.pool = nn.AdaptiveAvgPool3d(1)\n        self.fc = nn.Linear(2048, 6, bias=True)\n        self.drop = nn.Dropout(0.5)\n\n    def forward(self, eeg):\n        # do preprocess\n        bs = eeg.size(0)\n        eeg_50s = eeg\n        eeg_10s = eeg[:, :, 4000:6000]\n        x_50 = self.preprocess50s(eeg_50s)\n        x_10 = self.preprocess10s(eeg_10s)\n        x = torch.cat([x_10, x_50], dim=1)\n        x = torch.unsqueeze(x, dim=1)\n        x = torch.cat([x, x, x], dim=1)\n        x = self.model(x)\n        # x = self.pool(x)\n        x = x.view(bs, -1)\n        x = self.drop(x)\n        x = self.fc(x)\n        return x\n\n```\n\n### 1.2 oneimage\nIt's a 2d vision model, efficientnetb5, public lb 0.26 2490 private lb0.304877.\n\nFor 2d model, I concat the 16-channels spectrum image like many people does.\n\n```\n        image = torch.reshape(image, shape=[n, 2, -1, w])\n        x1 = image[:, 0:1, ...]\n        x2 = image[:, 1:2, ...]\n        image = torch.cat([x1, x2], dim=-1)\n        image = torch.cat([image, image, image], dim=1)\n```\n\nI check the submission score, combine these two spectrum model, get 0.28 private lb.\n\n\n### 1.3 eeg model\n\nView eeg (bsx16x10000) as an image. So expand dim=1( bsx1x16x10000), but the time dimension is too large. Then I make a reshape.\nThe model define as below\n```python\nrclass Net(nn.Module):\n    def __init__(self,):\n        super(Net, self).__init__()\n        self.model = timm.create_model('efficientnet_b5', pretrained=True, in_chans=3)\n        self.pool = nn.AdaptiveAvgPool2d(1)\n        self.fc = nn.Linear(2048, out_features=6, bias=True)\n        self.dropout = nn.Dropout(p=0.5)\n\n    def extract_features(self, x):\n        feature1 = self.model.forward_features(x)\n        return feature1\n\n    def forward(self, x):\n        bs = x.size(0)\n        reshaped_tensor = x.view(bs, 16, 1000, 10)\n        reshaped_and_permuted_tensor = reshaped_tensor.permute(0, 1, 3, 2)\n        reshaped_and_permuted_tensor = reshaped_and_permuted_tensor.reshape(bs, 16 * 10, 1000)\n        x = torch.unsqueeze(reshaped_and_permuted_tensor, dim=1)\n\n        x = torch.cat([x, x, x], dim=1)\n        bs = x.size(0)\n\n        x = self.extract_features(x)\n        x = self.pool(x)\n        x = x.view(bs, -1)\n        x = self.dropout(x)\n        x = self.fc(x)\n        return x\n```\nThen, the eeg 'reshaped' to bsx3x160x1000.  With efficinetnetb5, actives public lb 0.230 978, private lb 0.282 873.\n\nThere are 3 models , but slightly different, mne-filter-efficinetnetb5, scipy.signal-filter-efficientnetb5 and mne-filter-hgnetb5. \nAnd the scires are slightly different,also.\n\n### 1.4  doublehead (eeg+spectrum)\n\nI use x3d-l to extract the spectrum feature ( with Transform50s only ), efficientnetb5 to extract the raw eeg feature, \nlike the solution figure.\nconcat the last feature. public lb 0.24, private lb 0.29 ? ? not sure\n\n# 2 Preprocess\n- 2.1.Double banana montage, eeg as 16x10000\n- 2.2.Filter with 0.5-20hz\n- 2.3.Clip by +-1024\n\n# 3. Train\n- 3.1 Stage1, 15 epochs, with loss weight voters_num/20, Adamw lr=0.001, cos scheduel\n- 3.2 Stage2, 5 epoch, loss weight=1, voters_num>=6.   , Adamw lr=0.0001, cos scheduel\n- 3.3 use eeg_label_offset_seconds. I random choose an offset for each eegid, and the target is average according to eegid for each train iter.\n- 3.4 augmentation, mirror eeg, flip between left brain data and right brain data.\n- 3.5 10 folds, then move 1000 samples from val to train, left 709 samples in val set. And use vote_num>=6 to do validation. \n\n# 4. ensemble\n\nBy combining these models, I think it could get my current score. However my score is 6 model emsemble, but not improvement that much (0.28->0.27 private lb). \nFinal ensemble including:  \n- 2 spectrum model (x3d, efficientnetb5), both use mne-filter\n- 3 raw eeg model( efficientnetb5 with-mne.filter, efficientnetb5 -butter filter, 1 hgnetb5 mne.filter),\n- 1 eeg-spectrum mix model, butter filter,   \n\nWith weights=[0.1,0.1,0.2,0.2,0.2,0.2].\n\nps. with-mne.filter means use mne lib to do filter, butter filter means use scipy.signal, just to add some diversity.\n\n# Some thought\nI think raw eeg is more important in this task.  Feeding raw EEG data into a 2D visual model is somewhat similar to how humans observe EEG signals. Observe in time and channel  dimensions！\n\n",
+   "writeup_fetched_at": "2026-05-17T09:45:57.223Z",
+   "is_public": true,
+   "techniques": [
+    9,
+    3,
+    6,
+    4
+   ]
+  }
+ },
+ {
+  "model": "kaggle_archive.solution",
+  "pk": 27,
+  "fields": {
+   "competition": 5,
+   "rank": 2,
+   "team_name": "Chris Deotte",
+   "score": "0.98151",
+   "medal": "silver",
+   "approach_summary": "",
+   "writeup_url": "https://www.kaggle.com/competitions/playground-series-s6e4/writeups/2nd-place-claude-code-and-codex-gpu-logreg",
+   "writeup_title": "2nd Place - Claude Code and Codex - GPU LogReg",
+   "writeup_author": "",
+   "writeup_content": "Congratulations to all the winners and everyone who pushed hard. Kaggle's April Playground (predicting irrigation) competition was similar to Kaggle's March Playground (predicting churn) competiton [here][1]. \n\nApril was 3-class multi-class classification and March was binary classification, so both were classification. The data was similar. Both competitions came from original data with minimal feature interactions (i.e. xgb optimal max depth on orginal data was max_depth=1 in both). Both comps had original data roughly 10k rows. And both comps had similar number of features with no NAN and some numeric and some categorical with similar cardinalities.\n\n# Convert March Solution to April Solution\nOn the first day of the competition, I asked Claude Code cli to read all my local March solution Python scripts and convert them to April competition. Claude rewrote the 150 model scripts that I used and converted March to April. I ran the 150 scripts on GPU over the weekend and ensembled them. On the third day of the competition I had a private LB first place solution with `private LB 0.98160, public LB 0.98182, cv 0.98130`. The LLM Agent was so fast, there wasn't anything else to do for the remaining 27 days!\n\n# Final Solution\nAfter Claude Code cli converted my March solution to April and obtained `private LB 0.98160, public LB 0.98182`, there wasn't anything to do for 27 days. I didn't think I could improve because my March solution was already the result of LLMs working for 30 days and writing 600,000 lines of code. I also believed that the April and March comps were so similar that there wasn't any new signal to be found. None-the-less I built some more models and tried various things. Specifically I had Codex cli convert my March solution to April also.\n\nMy final submission was Claude Code's conversion ensemble blended with Codex's conversation ensemble! This solution achieved `private LB 0.98151, public LB 0.98195, cv 0.98170`. Unfortunately working for more days past day 3 improved CV score but decreased private LB by about 1e-4 :-(\n\n# GPU Logistic Regression Stacker\nOne important aspect of my final solution is the ensemble technique. In this competition, the metric is `balanced accuracy`, so we want the stacker to be true multinomial logistic regression with weighted classes. We also need it to run fast, so we can repeatedly ensemble potentially 100s of models. And do forward or backward feature selection if desired. Unfortunately NVIDIA cuML's logistic regression (which we used in March comp) isn't multinomial and doesn't support class weighting. So Claude wrote me a fast GPU multinomial logistic regression using PyTorch\n\n    class PyTorchMultiLogReg(nn.Module):\n        def __init__(self, in_features, out_features=3):\n            super().__init__()\n            self.linear = nn.Linear(in_features, out_features)\n\n        def forward(self, x):\n            return self.linear(x)\n\nIt is often overlooked but logistic regression is just an NN with input going to output (and no middle hidden layers). Additionally to mimic logistic regression with L2 regularization we need weight decay on the coefficients but not the bias\n\n        criterion = nn.CrossEntropyLoss(reduction='none')\n        weight_decay_mapped = 1.0 / (C * len(y_tr))\n        optimizer = optim.Adam([\n            {'params': model.linear.weight, 'weight_decay': weight_decay_mapped},\n            {'params': model.linear.bias, 'weight_decay': 0.0}\n        ], lr=0.01)\n\nAnd we want class weights\n\n        classes = np.unique(y_tr)\n        cw = compute_class_weight('balanced', classes=classes, y=y_tr)\n        dd = dict(zip(classes, cw))\n        sample_weights = np.array([dd[c] for c in y_tr], dtype=np.float32)\n        sw_t    = torch.tensor(sample_weights, dtype=torch.float32, device=device)\n        loss = (criterion(logits, y_tr_t) * sw_t).mean()\n\n# CV to Private LB Correlation\nUnfortunately for me in this competition, the metric and CV to Private LB correlation was a little noisy (compared to how close participants were clustered on the leaderboard). In the image below, we can see that I had many ensembles with similar CV = 0.98175. However those multiple submission.csv files had Private LB ranging from 0.98130 to 0.98170. My best unselected submission is `CV = 0.98175, Private LB = 0.98172, Public LB = 0.98182`. \n![](https://raw.githubusercontent.com/cdeotte/Kaggle_Images/refs/heads/main/May-2026/cv-private2.png)\n\n# CV to Public LB Correlation\n![](https://raw.githubusercontent.com/cdeotte/Kaggle_Images/refs/heads/main/May-2026/cv-public2.png)\n\n# Solution Code\nI will be publishing my final submission code which includes GPU PyTorch multinomial logistic regression soon...\n\n\n[1]: https://www.kaggle.com/competitions/playground-series-s6e3\n[2]: https://www.kaggle.com/competitions/playground-series-s6e4/writeups/1st-place-one-vs-rest-approach",
+   "writeup_fetched_at": "2026-05-17T09:48:00.134Z",
+   "is_public": true,
+   "techniques": [
+    6,
+    19,
+    4,
+    18
+   ]
+  }
+ },
+ {
+  "model": "kaggle_archive.solution",
+  "pk": 23,
+  "fields": {
+   "competition": 4,
+   "rank": 3,
+   "team_name": "nvidia/DD",
+   "score": "0.274112",
+   "medal": "bronze",
+   "approach_summary": "",
+   "writeup_url": "https://www.kaggle.com/competitions/hms-harmful-brain-activity-classification/writeups/nvidia-dd-3rd-place-solution",
+   "writeup_title": "3rd place solution",
+   "writeup_author": "",
+   "writeup_content": "Thanks to kaggle and everyone involved for hosting such an interesting competition. We learned a lot about EEG data and how to create strong models for it. Special thanks to @darraghdog who carried most of the workload in the last weeks of the competition, when I was busy with training my first real life neural network. \n\n## TLDR\n\nOur solution is an ensemble of multiple models from two diverse modeling approaches. The first approach is to apply pretrained 2d-CNN architectures to the MelSpectrogram transformation of the data. The second approach uses 1D-Convolutions to encode the raw eeg data before modeling with Squeezeformer blocks. \nKey ingredients for our solution were a robust cross validation based on data selection and creative augmentations. \n\n## Cross validation and Data filtering\n\nHaving a solid cross validation was certainly key to doing well in this competition! So we spend a lot of time figuring out a good validation scheme. In general we used a 4fold validation setup, split by patient id. One key ingredient was filtering the val dataset for those rows only having more than 9 votes. The [SPaRCNet paper](https://github.com/bdsp-core/IIIC-SPaRCNet/blob/main/IIIC_Classification-Supplemental.pdf) most likely explained how the data was created.\n\n![](https://www.googleapis.com/download/storage/v1/b/kaggle-forum-message-attachments/o/inbox%2F1424766%2F3690bc48fab4ed74631ebd292ad0e421%2FScreenshot%202024-04-09%20at%2018.39.18.png?generation=1712680785774576&alt=media)\n\nNot only was the test data filtered by having more than 9 votes, but also the data has been augmented by using the same labels but shifting the eeg data. This means that the given 106k training rows are highly redundant and can/ should be filtered. \n\n> We expanded the high- and low-quality sets of EEG segments by adding additional segments belonging to the\nsame stationary period of the EEG\n\nThis basically means the authors applied a shift-like augmentation to the raw eeg data to create more data and used same labels for the newly created data. This explains why there were so many rows for the same EEG_id having the same label. We believe that separating the original data from the augmented data makes the data cleaner and improved our cross validation. So we put some effort into reverse-engineering this process and finding the original “true” data point belonging to a given label. So we ended up with a filtered dataset of **only 6350 rows** which we used not only for validation using our 4fold scheme but also mainly used that for training, and discarded the other 100k rows. At the end we had a quite good cv/ lb correlation\n\n![](https://www.googleapis.com/download/storage/v1/b/kaggle-forum-message-attachments/o/inbox%2F1424766%2Fccecc2d899a329f4d796640a966d5f53%2FScreenshot%202024-04-09%20at%2018.47.16.png?generation=1712681252795117&alt=media)\n\n## Data sources\nFor 2D models, we had pretrained weights and we observed high data quality was important and we got no benefit from using pseudo labels and data with <8 votes in the label. All models were trained with high quality data. \n\nOur 1D models were trained from scratch so it helped to also use the low count data. See below in the training procedure how low vote data was used in training. Pseudo labelling was not helpful for us - we tried a lot of things here.  \n\nIn the end we did not use the 10 minute spectrograms. They may have helped slightly in the 2d model in some experiments but not in any major way. \n\n## Data preprocessing\nNo preprocessing of the data to disk was made, which really sped up experiments and allowed flexibility in approaches. We used torchaudio‘s GPU implementation to create the MelSpectrogram on the fly and normalized the signal. \n\nThe double banana montage, explained by @cdeotte was used throughout our solution. As mentioned by others, stacking 16 signals next to one another had limitations in that the each node would interact more strongly in the model with it’s neighbours. We experimented with ordering and found this order worked well, which essentially looks at the left and right side of the brain for each node together, \nFp1>F7 Fp2>F8 F7>T3 F8>T4 T3>T5 T4>T6 T5>O1 T6>O2 Fp1>F3 Fp2>F4 F3>C3 F4>C4 C3>P3 C4>P4 P3>O1 P4>O2\n\nScipy implementation of butter bandpass filter was used with an order of 2, and lowpass of between 0 and 1.5 Hz on different models, and a highpass of between 20 and 30 Hz. No notchfilter was used. \n \nWe observed it was important not to normalize the data batch-wise or sample-wise. We saw this in @medali1992 Resnet 1D GRU implementation -  Not sure if this is where the idea originally came from. Instead, after the butter filter, we used the logic implemented `x = x.clip(-1024, 1024) / 32.`. \n\n## Augmentations\nFor 2D models, we had pretrained weights and we observed high data quality was more important - not all augmentations helped. Our 1D models were trained from scratch so heavy augmentations were used. In both models, augmentation was highly effective. \n\nThe following augmentations were used by boths models,\n- Overwrite with zeros between 1 to 8 melspec nodes, from the total 16, in 50% of samples.\n- Randomly choose a different narrower butter bandpass range in between 1 and 8 melspec nodes, from the total 16, in 20% of samples.\n- In 50% of samples, randomly shift the 50s window around the center point by up to 20 seconds. \n\nIn the 1D models only, \n\n- In 50% of samples, left-right flip the signal time wise. \n- In 50% of samples, switch the sides of the brain left-right.   \n\nIn the 2D models only, \n\n- In 50% of samples for the zoomed center, using a static 50s window, randomly shift the 10 second center point within the window by up to 5 seconds. \n\n## Models\n\n### Melspec + 2D-CNN backbones\n\nLike most other competitors we used pretrained 2D CNN backbones which we fed with melspec transformation of the data. However, we made several improvements to publicly known approaches. The first major boost comes from not combining the data into regions of the EEG electrodes (LL, LP, RP, RL) but creating 16 individual mel spectrograms for the double banana montage. We then concatenated the 16 images into one large image. In the last week we found another big improvement, by “zooming” onto the center 10sec. Zooming was applied with different window and hop lengths to increase diversity.  Mel-Spectrogram transformation are done as part of the model directly on GPU using torchaudios Mel-Spectrogram. \n\n![](https://www.googleapis.com/download/storage/v1/b/kaggle-forum-message-attachments/o/inbox%2F1424766%2F2088a92e1f8bf11dbff9735ce5c9be94%2FScreenshot%202024-04-09%20at%2018.53.19.png?generation=1712681633116409&alt=media)\n\n### 1D-CNN + Squeezeformer blocks\n\nOur 1d CNN was heavily inspired by the work of Yuri Sun @sunyuri , and particularly his implementation of a lightweight CNN for seizure detection ([code and paper here](https://github.com/ThreePoundUniverse/2023JNE/blob/main/The_proposed_model.py)). As shown on the architecture the model focuses on grouped convolutions timewise and then channel wise. The first two blocks focus time-wise, keeping the channel information independent with grouped convolutions. After pooling the timewise information a channel wise convolution is made to interact across the nodes on the brain, and then another timewise convoltion. Technically we use conv2d, but the effect is like conv1d, only we can convolve over all channels in parallel. The original implementation used a CBAM attention block, we swapped this out and instead used 3 layers of squeezeformer. In addition we added pointwise convolutions before and after the depthwise convolutions which helped stabilite and learn better within the net. \nAs we train from scratch on relatively small data, keeping parameter count low was important. During ASL competition we had spent a lot of time on that, so leveraged our squeezeformer implementation from [there](https://github.com/ChristofHenkel/kaggle-asl-fingerspelling-1st-place-solution/tree/main). \n\n![](https://www.googleapis.com/download/storage/v1/b/kaggle-forum-message-attachments/o/inbox%2F1424766%2Fdc57c62c4a5e83a98435a20b780b6860%2FScreenshot%202024-04-09%20at%2018.55.46.png?generation=1712681758605758&alt=media)\n\n## Training procedure\n\n### Melspec + 2d CNN backbones\n\nTraining parameters used were generally 12 to 16 epochs, cosine learning rate decay with initial lr 0.0012 and batch size 32. Drop path was quite effective and set at 0.2. The main difference in the training was the granularity of the window lengths in the magnified 10 second window, different models were trained with different granularity and a mixnet_l and mixnet_xl backbones. \n\n### 1D CNN + SqueezeFormer blocks\n\nTraining parameters used were ~32 epochs, cosine learning rate decay with initial lr 0.001 and batch size 64. When we used low vote samples, we increased batch size to 256. We used a hidden dimension of 128 and dropout (attention, ff, head, conv) were all 0.1, going deeper on hidden dimension or more layers did not help. \nWe trained 3 different version of the 1d model with respect to data. \n- Only 8+ vote samples.\n- 3-8 vote count samples, and 8+ vote count samples. In each epoch the 3-8 votes dataset was subsampled; and a different loss was used for each set. We decayed the weight of the 3-8 batch over time, so it started with 0.8 weight and decayed with linear or cosine schedule to ~0.2 weight. This decay weighted loss was added to the loss of the 8+ vote dataset. \n- Finally, we added 1-2 votes as a separate decayed weight loss, and trained it in the same manner together with the 3-8 vote set and the 8+ set. The 1-2 vote set was very noisy and thus started with a weight on 0.5 and finished with 0. \n\nFor diversity, we trained some 1d models with butter bandpass order 0 and 1. They were not as strong but added some diversity in the blend. \n\n## Ensembling + Postprocessing\nUp until the last day we had been using mean blend of weights, with a higher weighting on 2d models. 15 hours before the end, with the help of GPT4, we created a simple neural net to learn the best blend weight on the 23 base models. 5 of the models were 1D CNN with different training procedures. 18 of the models were Mixnet 2d CNNs, with different backbones, and 10 second magnification windows. \nOn CV the learned blend weights lifted the score but affect on public LB was not so large. \nEarlier, we had been thinking that the distribution of the predictions were different to the distribution seen in the >8 votes portion of the training dataset. So about 10 hours from the end we added a bias term for each of the 6 classes to the nnet. This bias would be added to the logits. CV difference was small, but when the Public LB score came through it jumped us from 9th to 4th position which was exciting. The nnet is quite simple, see below. On private score, over the final days, we had been in the 0.27 LB prize zone with most of our blends even with mean weights. \n\n```\nclass Net(nn.Module):\n    def __init__(self, n_models = 23):\n        super(Net, self).__init__()\n        self.fc = nn.Linear(n_models, 1, bias = False) \n        self.fc_c = torch.nn.Parameter(torch.zeros(6)[None,:,None])\n    def forward(self, x):\n        return self. fc(x) + self.fc_c\n```  \n\n## Supplemental Data\nNo supplemental data was used\n\n## Ablation study (roughly)\n\n- Ordering of the 16 nodes signals  -0.02 \n- Including low votes samples in 1D model  -0.01\n- Augmentations -0.03 or more\n- Magnify annotated window -0.006; and more by blending different views\n- Remove sample wise and batch wise normalisation -0.02\n- FC layer to learn blend weights -0.003\n- Postprocessing with bias term -0.001\n\n\nBest single 1D model - 4 folds, 2 seed per fold - CV/Public/Private 0.257 / 0.25 / 0.30\nBest single 2D model - 4 folds, 2 seed per fold - CV/Public/Private 0.232 / 0.24 / 0.29\nFinal blend 4 folds, 2 seed, 23 model per fold - CV/Public/Private 0.207 / 0.22 / 0.27\n\n## Used tools/ repos\nPytorch\nTimm, huggingface, albumentations.\n@darraghdog used a 4090 GPU instance rented from runpod.io\nNeptune.ai was our MLOps stack to track, compare and share models. It was heavily used and allowed easy 4 fold **grouped** view of models and mean of the val scores for all folds - which made tracking a lot easier. \n\n![](https://www.googleapis.com/download/storage/v1/b/kaggle-forum-message-attachments/o/inbox%2F1424766%2F7ef0101b2bb47fdcc1b99688221b47b9%2FScreenshot%202024-04-09%20at%2019.02.09.png?generation=1712682149182806&alt=media)\n\nThanks for reading. Questions are welcome. \n\nEdit:\nInference kernel: https://www.kaggle.com/code/darraghdog/3rd-place-solution \ngithub: https://github.com/darraghdog/kaggle-hms-3rd-place-solution",
+   "writeup_fetched_at": "2026-05-17T09:45:57.745Z",
+   "is_public": true,
+   "techniques": [
+    9,
+    15,
+    11,
+    6,
+    13,
+    12,
+    14,
+    10,
+    16,
+    4,
+    2,
+    7
+   ]
+  }
+ },
+ {
+  "model": "kaggle_archive.solution",
+  "pk": 28,
+  "fields": {
+   "competition": 5,
+   "rank": 3,
+   "team_name": "r0tor team",
+   "score": "0.98147",
+   "medal": "bronze",
+   "approach_summary": "",
+   "writeup_url": "",
+   "writeup_title": "",
+   "writeup_author": "",
+   "writeup_content": "",
+   "writeup_fetched_at": null,
+   "is_public": true,
+   "techniques": []
+  }
+ },
+ {
+  "model": "kaggle_archive.solution",
+  "pk": 24,
+  "fields": {
+   "competition": 4,
+   "rank": 4,
+   "team_name": "Aillis & GO & bilzard",
+   "score": "0.276039",
+   "medal": "other",
+   "approach_summary": "",
+   "writeup_url": "",
+   "writeup_title": "",
+   "writeup_author": "",
+   "writeup_content": "",
+   "writeup_fetched_at": null,
+   "is_public": true,
+   "techniques": []
+  }
+ },
+ {
+  "model": "kaggle_archive.solution",
+  "pk": 29,
+  "fields": {
+   "competition": 5,
+   "rank": 4,
+   "team_name": "Optimistix",
+   "score": "0.98133",
+   "medal": "other",
+   "approach_summary": "",
+   "writeup_url": "https://www.kaggle.com/competitions/playground-series-s6e4/writeups/4th-place-more-ensemblers-than-models",
+   "writeup_title": "4th place - more ensemblers than models!",
+   "writeup_author": "",
+   "writeup_content": "I've skipped the write-ups for a few of my recent Top 10-15 finishes, for a variety of reasons. The 2nd place finish last month (PSS6E3) certainly warranted a writeup, but I was down with Bronchitis and just not up to it. This month's competition was a bit weird with the combination of the High class being just 3.3% of the samples, and the metric being balanced accuracy - it made the CV-LB relationship a bit wonky. I'm glad to finish 4th, even though the submissions I selected ended being outside my top 10-15 (perhaps 20!) on the private LB. Before I go on, I'd like to thank those who generously shared their code and/or insights, including (but not limited to) :\n\n@aerdem4, @cdeotte, @siukeitin, @utaazu, @yunsuxiaozi, @yekenot \n\nUnlike most of my strong finishes in past episodes, where I built large ensembles of many models and usually tried a few ensemblers, with Ridge often being the one behind the top scoring solutions, this month was very different. Adding models often didn't improve CV or (especially) LB. The requirement of predicting a label rather than probability/number also mean that voting was an obvious thing to try. I always try a few ensemblers - typically Ridge, Hill Climbing (HC) & Autogluon; more occasionally NNs, GBDTs, Logistic Regression etc. This month, I decided to get a headstart by trying multiple ensemblers, and was especially keen on using Logistic Regression with logits, after reading @cdeotte's winning solution in PSS6E3, and finding out that it did indeed help my score as well(after the competition ended, of course). As I kept adding more ensemblers at both the L1 and L2 levels, soon my enembling notebook was taking an hour, so I also used a \"leaner\" version with \"only\" 6 L1 and 2 L2 ensemblers. The bigger one had as many as 11 L1 and 4 L2 ensemblers, including Rank Average, MLP, LGB, Ridge, LogReg with logits, Differential Evolution, Hill Climbing and more; with the L2 ensemblers being Hill Climbing, LogReg with logits, Differential Evolution and Top-K average. I also used the average of the L2 ensemblers (which was often but not always better than that of the individuals L2s), as well as the average across all L1 + L2 (which was typically weaker, so rarely used). It was clear that the combo of High being quite rare but as important as Medium and Low meant that the scores were very sensitive to slight variations in predicting High in particular, opening the door to \"lottery ticket\" situations. My best scores certainly all felt a bit like that - an L2 vote suddenly jumping ahead of the CV of individual L2s by quite a bit, or the occasional model with LB > CV + 0.001. My top solo model on the public LB was CatBoost with CV 0.979875, LB 0.98143 - a clear lottery ticket winner surrounded by several other CBs with just a few different features, slightly higher CVs, but scores in the 0.97996-0.98115 range (this nb scored only 0.98022 on the private LB, while the top solo was another, similar CB, with CV 0.980602, LB 0.98111 on public, and 0.98086 on private LB - quite amazing to think it could have placed 12th on the private LB as a solo model). Similarly, my top two ensembles (using only 14 and 12 models, respectively) on the public LB scored 0.98191 (0.98132 private) and 0.98190 (0.98140 private) with L2 voting, well ahead of the individual L2. My top public LB score of 0.98200 came via 3-way voting between these two and my strongest solo model (but this only scored 0.98133 on private LB). Given that CV-LB was wonky, I couldn't trust CV enough to base my final two selections on that - and L2 voting made that tricky anyway. \n\nReviewing my scores on the private LB afterwards, it turned out that I had some 15-20 scores higher than my final 2 selections, all the way to 0.98148. But given how hard it was to know that, I can't really be mad - rather, I'm thankful to still end up being 4th. The 0.98148 was achieved with just 9 models - literally a case of more ensemblers than models! This notebook had scored only 0.98118 on the public LB, but its L2s were\n\nL2C_hillclimb       0.981457\nL2B_topK_avg     0.981448\nL2A_lr_logits       0.981355\nL2D_diffevol        0.981233\n\nSo it ended up being pretty consistent with that on the private LB. \n\nMost of the month was spent trying various things that didn't help the final ensembles - lots of variants of GBDTs, various NNs, some notebooks with heavy feature engineering, and so on. I should also mention that I've been using Claude for the last several episodes, alternating between marveling at how much it helps, and being annoyed at how it often seems to give up too early, and how quickly I seem to run out of tokens on a $20 subscription. I've tried ChatGPT off and on, but find it more annoying and less effective than Claude. Wondering whether to try Gemini and/or other options - all feedback/suggestions are most welcome.\n\nIn the end, it was weird but fun in its own way. I'd like to end with big congratulations to @kirill0212, @cdeotte, @nikita7364777 & all others who finished strong and/or learned new things. All the best for May, and Happy Kaggling!",
+   "writeup_fetched_at": "2026-05-17T09:48:00.679Z",
+   "is_public": true,
+   "techniques": [
+    1,
+    6,
+    19
+   ]
+  }
+ },
+ {
+  "model": "kaggle_archive.solution",
+  "pk": 25,
+  "fields": {
+   "competition": 4,
+   "rank": 5,
+   "team_name": "KTMUD",
+   "score": "0.276157",
+   "medal": "other",
+   "approach_summary": "",
+   "writeup_url": "",
+   "writeup_title": "",
+   "writeup_author": "",
+   "writeup_content": "",
+   "writeup_fetched_at": null,
+   "is_public": true,
+   "techniques": []
+  }
+ },
+ {
+  "model": "kaggle_archive.solution",
+  "pk": 30,
+  "fields": {
+   "competition": 5,
+   "rank": 5,
+   "team_name": "Topiast",
+   "score": "0.98133",
+   "medal": "other",
+   "approach_summary": "",
+   "writeup_url": "",
+   "writeup_title": "",
+   "writeup_author": "",
+   "writeup_content": "",
+   "writeup_fetched_at": null,
+   "is_public": true,
+   "techniques": []
+  }
+ },
+ {
+  "model": "kaggle_archive.solution",
+  "pk": 31,
+  "fields": {
+   "competition": 5,
+   "rank": 6,
+   "team_name": "kobby_",
+   "score": "0.98111",
+   "medal": "other",
+   "approach_summary": "",
+   "writeup_url": "",
+   "writeup_title": "",
+   "writeup_author": "",
+   "writeup_content": "",
+   "writeup_fetched_at": null,
+   "is_public": true,
+   "techniques": []
+  }
+ },
+ {
+  "model": "kaggle_archive.solution",
+  "pk": 32,
+  "fields": {
+   "competition": 5,
+   "rank": 7,
+   "team_name": "Kagick",
+   "score": "0.98110",
+   "medal": "other",
+   "approach_summary": "",
+   "writeup_url": "",
+   "writeup_title": "",
+   "writeup_author": "",
+   "writeup_content": "",
+   "writeup_fetched_at": null,
+   "is_public": true,
+   "techniques": []
+  }
+ },
+ {
+  "model": "kaggle_archive.solution",
+  "pk": 33,
+  "fields": {
+   "competition": 5,
+   "rank": 8,
+   "team_name": "MILANFX",
+   "score": "0.98106",
+   "medal": "other",
+   "approach_summary": "",
+   "writeup_url": "",
+   "writeup_title": "",
+   "writeup_author": "",
+   "writeup_content": "",
+   "writeup_fetched_at": null,
+   "is_public": true,
+   "techniques": []
+  }
+ },
+ {
+  "model": "kaggle_archive.solution",
+  "pk": 34,
+  "fields": {
+   "competition": 5,
+   "rank": 9,
+   "team_name": "automatylicza_KNAI",
+   "score": "0.98103",
+   "medal": "other",
+   "approach_summary": "",
+   "writeup_url": "",
+   "writeup_title": "",
+   "writeup_author": "",
+   "writeup_content": "",
+   "writeup_fetched_at": null,
+   "is_public": true,
+   "techniques": []
+  }
+ },
+ {
+  "model": "kaggle_archive.solution",
+  "pk": 35,
+  "fields": {
+   "competition": 5,
+   "rank": 10,
+   "team_name": "UtaAzu",
+   "score": "0.98097",
+   "medal": "other",
+   "approach_summary": "",
+   "writeup_url": "",
+   "writeup_title": "",
+   "writeup_author": "",
+   "writeup_content": "",
+   "writeup_fetched_at": null,
+   "is_public": true,
+   "techniques": []
+  }
+ }
+]

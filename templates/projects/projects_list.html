@@ -330,7 +330,7 @@
 <!-- Projects Grid -->
 <div class="projects-grid">
     {% for project in projects %}
-    <div class="project-card {% if project.live_demo_url or project.prediction_endpoint %}has-demo{% endif %}">
+    <div class="project-card {% if project.live_demo_url or project.has_prediction_capability %}has-demo{% endif %}">
 
         {% if project.featured_image %}
             <img src="{{ project.featured_image.url }}" alt="{{ project.title }}" class="project-image">
@@ -379,7 +379,7 @@
             {% if project.live_demo_url %}
                 <a href="{{ project.live_demo_url }}" target="_blank" rel="noopener"
                    class="btn-demo live">🚀 Live Demo</a>
-            {% elif project.prediction_endpoint %}
+            {% elif project.has_prediction_capability %}
                 <a href="{% url 'prediction_demo' project.id %}"
                    class="btn-demo live">🚀 Live Demo</a>
             {% else %}
