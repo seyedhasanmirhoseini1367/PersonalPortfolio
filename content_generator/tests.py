@@ -1,18 +1,19 @@
 from unittest import mock
 
 from django.contrib.auth import get_user_model
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from .models import CompanyProfile, GenerationJob
-from .views import DAILY_JOB_LIMIT
+DAILY_JOB_LIMIT = 10
 
 User = get_user_model()
 
 
+@override_settings(CONTENT_GENERATOR_DAILY_LIMIT=DAILY_JOB_LIMIT)
 @mock.patch('content_generator.views.threading.Thread')
 class AccessTests(TestCase):
-    """Every signed-in user can use the generator, within a daily budget."""
+    """Every signed-in user can use the generator, within an optional daily budget."""
 
     def setUp(self):
         self.ana = User.objects.create_user('ana', 'ana@example.test', 'pw-ana-123!')
@@ -41,6 +42,13 @@ class AccessTests(TestCase):
         self.assertEqual(thread.call_count, DAILY_JOB_LIMIT)
         self.assertEqual(self.submit().status_code, 302)
         self.assertEqual(GenerationJob.objects.filter(owner=self.ana).count(), DAILY_JOB_LIMIT)
+
+    @override_settings(CONTENT_GENERATOR_DAILY_LIMIT=0)
+    def test_no_limit_by_default(self, _thread):
+        self.client.force_login(self.ana)
+        self.assertNotContains(self.client.get(reverse('content_generator:form')), 'more generation')
+        for _ in range(DAILY_JOB_LIMIT + 1):
+            self.assertEqual(self.submit().status_code, 200)
 
     def test_staff_has_no_limit(self, _thread):
         self.ana.is_staff = True

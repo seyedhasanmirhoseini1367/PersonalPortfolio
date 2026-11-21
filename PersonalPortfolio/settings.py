@@ -235,6 +235,11 @@ SYNTHETIC_MONITOR = {
     'INTERVAL_MINUTES': config('MONITOR_INTERVAL_MINUTES', default=30, cast=int),
 }
 
+# ── Content generator ────────────────────────────────────────────────────────
+# Generations per user per 24 hours; 0 = unlimited (this is a test site and the
+# AI keys are on free plans, which stop at their quota rather than charge).
+CONTENT_GENERATOR_DAILY_LIMIT = config('CONTENT_GENERATOR_DAILY_LIMIT', default=0, cast=int)
+
 # ── RAG Configuration ─────────────────────────────────────────────────────────
 RAG_CONFIG = {
     # Provider models retire often; override any of these with an env var.
