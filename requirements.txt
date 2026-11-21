@@ -134,3 +134,5 @@ langgraph==0.2.28
 langchain-core>=0.2.39,<0.4
 langchain-groq==0.2.3
 nh3==0.3.8
+json_repair==0.59.4
+python-dotenv==1.2.2
