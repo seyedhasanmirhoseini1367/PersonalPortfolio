@@ -25,7 +25,9 @@ class SportPost(models.Model):
     event_at = models.DateTimeField(null=True, blank=True)
     place = models.CharField(max_length=80, blank=True)
     capacity = models.PositiveSmallIntegerField(null=True, blank=True)
+    cancelled_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    edited_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ['-created_at', '-id']
@@ -82,6 +84,29 @@ class SavedPost(models.Model):
 
     class Meta:
         constraints = [models.UniqueConstraint(fields=['user', 'post'], name='save_once')]
+
+
+class Notice(models.Model):
+    """A stored notification for things that can't be rebuilt from current data
+    (someone left, you got a spot, a game changed or was cancelled)."""
+    JOINED = 'joined'
+    WAITLISTED = 'waitlisted'
+    LEFT = 'left'
+    PROMOTED = 'promoted'
+    CHANGED = 'changed'
+    CANCELLED = 'cancelled'
+    TYPES = [(t, t) for t in (JOINED, WAITLISTED, LEFT, PROMOTED, CHANGED, CANCELLED)]
+
+    recipient = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='sport_notices')
+    actor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True,
+                              related_name='+')
+    type = models.CharField(max_length=12, choices=TYPES)
+    post = models.ForeignKey(SportPost, on_delete=models.CASCADE, null=True, blank=True, related_name='notices')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at', '-id']
+        indexes = [models.Index(fields=['recipient', '-created_at'])]
 
 
 class SportsProfile(models.Model):

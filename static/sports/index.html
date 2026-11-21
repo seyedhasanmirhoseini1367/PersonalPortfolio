@@ -423,7 +423,7 @@ function stickerRow(p,i,pk,tops){const total=p.cheers+(pk?1:0);return `
    <span style="font-size:13px;font-weight:600;color:#C9D6E0">${total.toLocaleString()}</span>
   </div>
   <button class="ib" aria-label="Comments" onclick="${p.real?`openComments(${i})`:`go('match')`}" style="min-width:0;padding:0 2px">${svg('M21 12a8 8 0 0 1-11.5 7.2L4 20l1-4.5A8 8 0 1 1 21 12z')}<span style="font-size:13px">${p.cm}</span></button>
-  <button class="ib" aria-label="Pass" title="Pass" onclick="toast('Pass to a teammate')" style="min-width:40px;padding:0 2px">${svg('M22 2L11 13M22 2l-7 20-4-9-9-4z')}</button>
+  <button class="ib" aria-label="${p.real?'Share':'Pass'}" title="${p.real?'Share link':'Pass'}" onclick="${p.real?`sharePost(${i})`:`toast('Pass to a teammate')`}" style="min-width:40px;padding:0 2px">${svg('M22 2L11 13M22 2l-7 20-4-9-9-4z')}</button>
   <button class="ib" aria-label="${saved[i]?'Saved':'Save'}" onclick="${p.real?`toggleSave(${i})`:`saved[${i}]=!saved[${i}];renderFeed()`}" style="min-width:40px;padding:0 2px;${saved[i]?'color:var(--lime)':''}"><svg class="ico" viewBox="0 0 24 24" style="${saved[i]?'fill:currentColor':''}"><path d="M6 3h12v18l-6-4-6 4z"/></svg></button>
  </div>`}
 function renderFeed(){const empty=typeof feedEmpty==='function'?feedEmpty():'';$('#feed').innerHTML=empty+POSTS.map((p,i)=>{const h=heatOf(i),L=lvl(h),c=claps[i]||0,pk=picked[i];const tops=pk&&!p.top.includes(pk)?[pk,...p.top].slice(0,3):p.top;
@@ -431,8 +431,9 @@ function renderFeed(){const empty=typeof feedEmpty==='function'?feedEmpty():'';$
 <article style="margin:0 14px;position:relative" ${p.real?`data-id="${p.id}"`:''}>
  <div style="display:flex;align-items:center;gap:10px;padding:0 4px 10px">
   <div class="av" style="width:36px;height:36px;font-size:13px;${p.real?'cursor:pointer':''}" ${p.real?`onclick="openProfile(${p.authorId})"`:''}>${p.ini}</div>
-  <div style="flex:1;font-weight:600;font-size:14px;min-width:0"><span ${p.real?`onclick="openProfile(${p.authorId})" style="cursor:pointer"`:''}>${p.name}</span> <span class="mu" style="font-weight:400;font-size:12px">· ${p.tag}${p.real?` · ${ago(p.at)}`:''}</span>${p.demo&&window.LIVE_ON?` <span class="demo">Demo</span>`:''}</div>
-  <button class="round" style="width:36px;height:36px;background:none" aria-label="${p.canDelete?'Delete post':'More'}" onclick="${p.canDelete?`deletePost(${i})`:p.real?`openProfile(${p.authorId})`:`toast('Follow · Pass · Report')`}">${p.canDelete?svg('M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3'):svg('M5 12h.01M12 12h.01M19 12h.01')}</button>
+  <div style="flex:1;font-weight:600;font-size:14px;min-width:0"><span ${p.real?`onclick="openProfile(${p.authorId})" style="cursor:pointer"`:''}>${p.name}</span> <span class="mu" style="font-weight:400;font-size:12px">· ${p.tag}${p.real?` · ${ago(p.at)}${p.edited?' · edited':''}`:''}</span>${p.demo&&window.LIVE_ON?` <span class="demo">Demo</span>`:''}</div>
+  ${p.real&&!p.canDelete&&!p.followed&&window.LIVE_ON?`<button class="chip" style="height:28px;padding:0 10px" onclick="quickFollow(${p.authorId})">Follow</button>`:''}
+  <button class="round" style="width:36px;height:36px;background:none" aria-label="${p.canDelete?'Edit or delete':'More'}" onclick="${p.canDelete?`postActions(${i})`:p.real?`openProfile(${p.authorId})`:`toast('Follow · Pass · Report')`}">${svg('M5 12h.01M12 12h.01M19 12h.01')}</button>
  </div>
  ${p.event?eventBox(p,i):''}
  <div style="position:relative;height:${p.event?0:p.real?200:270}px;border-radius:22px;background:${p.bg};overflow:hidden;${p.event?'display:none':''}" ondblclick="dblReact(${i})">
@@ -476,12 +477,12 @@ async function api(path,opt={}){
 function fail(e){if(e.status===401){needLogin();return}toast(e.message);if(e.status===404)loadFeed()}
 
 /* ---- posts ---- */
-function fromServer(s){return {real:true,id:s.id,authorId:s.author.id,ini:esc(s.author.ini),name:esc(s.author.name),tag:s.sport,bg:BG[s.sport]||'#13293A',
+function fromServer(s){NAMES[s.author.id]=s.author.name;return {real:true,edited:s.edited,id:s.id,authorId:s.author.id,ini:esc(s.author.ini),name:esc(s.author.name),tag:s.sport,bg:BG[s.sport]||'#13293A',
   txt:esc(s.text),heat:0,cheers:s.stickers-(s.mine?1:0),top:s.top.filter(k=>k!==s.mine),mine:s.mine,cm:s.comments,at:s.created_at,
   canDelete:s.can_delete,saved:s.saved,followed:s.author_followed,event:s.event||null,art:ART[s.sport]||''}}
 const FEED={filter:'all',next:null,loading:false,topId:null,real:[]};
 function filterQuery(){const f=FEED.filter;if(f==='all')return '';if(f==='following')return 'following=1';if(f==='saved')return 'saved=1';
-  if(f==='events')return 'kind=event';if(f.startsWith('author:'))return 'author='+f.slice(7);return 'sport='+encodeURIComponent(f)}
+  if(f==='events')return 'upcoming=1';if(f.startsWith('author:'))return 'author='+f.slice(7);return 'sport='+encodeURIComponent(f)}
 function setPosts(real){FEED.real=real;const showDemo=FEED.filter==='all';POSTS=[...real.map(fromServer),...(showDemo?DEMO:[])];
   for(const o of [claps,picked,saved])for(const k in o)delete o[k];
   POSTS.forEach((p,i)=>{if(p.real){if(p.mine)picked[i]=p.mine;if(p.saved)saved[i]=true}});tray=null;renderFeed()}
@@ -489,10 +490,11 @@ function needLogin(){toast('Log in or sign up to join in');go('arena');const c=$
 async function loadFeed(){if(!API.on)return;const q=filterQuery();
   try{const d=await api('posts/'+(q?'?'+q:''));FEED.next=d.next;FEED.topId=d.posts[0]?d.posts[0].id:null;setPosts(d.posts);$('#newPill').classList.remove('on')}catch(e){if(e.status)toast(e.message)}}
 async function loadMore(){if(FEED.loading||!FEED.next)return;FEED.loading=true;const q=filterQuery();
-  try{const d=await api('posts/?'+(q?q+'&':'')+'before='+FEED.next);FEED.next=d.next;setPosts([...FEED.real,...d.posts])}catch(e){toast(e.message)}FEED.loading=false}
+  try{const d=await api('posts/?'+(q?q+'&':'')+'before='+FEED.next);FEED.next=d.next;const have=new Set(FEED.real.map(p=>p.id));
+    setPosts([...FEED.real,...d.posts.filter(p=>!have.has(p.id))])}catch(e){toast(e.message)}FEED.loading=false}
 function feedEmpty(){if(!window.LIVE_ON||POSTS.some(p=>p.real))return '';
   const msg={all:'No posts yet. Be the first to share something!',following:'Nothing from people you follow yet. Tap a name on any post to follow them.',
-    saved:'No saved posts yet. Tap the bookmark on a post to keep it here.',events:'No upcoming games yet. Create one with the Event button.'}[FEED.filter]||'No posts here yet.';
+    saved:'No saved posts yet. Tap the bookmark on a post to keep it here.',events:'No upcoming games yet. Tap + and choose 📅 Game to organise one.'}[FEED.filter]||'No posts here yet.';
   return FEED.filter==='all'?'':`<div class="card mu" style="margin:0 14px;padding:18px;font-size:13px;text-align:center">${msg}</div>`}
 function feedFooter(){return window.LIVE_ON&&FEED.next?`<button class="btn ghost" style="margin:0 14px" onclick="loadMore()">Load more</button>`:''}
 function idx(id){return POSTS.findIndex(p=>p.real&&p.id===id)}
@@ -508,20 +510,54 @@ async function deletePost(i){if(!confirm('Delete this post?'))return;
 /* ---- events ---- */
 function fmtWhen(iso){const d=new Date(iso);return {day:d.toLocaleDateString([], {day:'numeric'}),mon:d.toLocaleDateString([], {month:'short'}).toUpperCase(),
   full:d.toLocaleDateString([], {weekday:'short',day:'numeric',month:'short'})+' · '+d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}}
-function eventBox(p,i){const e=p.event,w=fmtWhen(e.at),cap=e.capacity;const full=cap&&e.going_count>=cap;
-  const spots=cap?`${e.going_count}/${cap} going`:`${e.going_count} going`;
-  let btn;if(e.past)btn=`<span class="mu" style="font-size:12px">This game has been played</span>`;
+function eventBox(p,i){const e=p.event,w=fmtWhen(e.at),cap=e.capacity;const full=cap&&e.going_count>=cap;const mine=p.canDelete;
+  const spots=e.past||e.cancelled?`${e.going_count} ${e.past&&!e.cancelled?'played':'were in'}`:cap?(full?`Full · ${e.going_count}/${cap}`:`${e.spots_left} spot${e.spots_left===1?'':'s'} left · ${e.going_count}/${cap}`):`${e.going_count} going`;
+  let btn;if(e.cancelled)btn='';else if(e.past)btn=`<span class="mu" style="font-size:12px">Played</span>`;
+  else if(mine)btn=`<button class="btn ghost" onclick="postActions(${i})">Manage</button>`;
   else if(e.me==='in')btn=`<button class="btn ghost" onclick="rsvp(${i},false)">I'm in ✓ · Leave</button>`;
-  else if(e.me==='waitlist')btn=`<button class="btn ghost" onclick="rsvp(${i},false)">On waitlist · Leave</button>`;
+  else if(e.me==='waitlist')btn=`<button class="btn ghost" onclick="rsvp(${i},false)">#${e.waitlist_position} on waitlist · Leave</button>`;
   else btn=`<button class="btn" onclick="rsvp(${i},true)">${full?'Join waitlist':"I'm in"}</button>`;
-  return `<div class="evt" style="background:${p.bg}">
-  <div class="when"><div class="cal"><span style="font-size:10px;font-weight:700;color:var(--lime)">${w.mon}</span><span class="sg" style="font-size:22px;font-weight:700">${w.day}</span></div>
-   <div style="min-width:0"><div style="font-size:12px;font-weight:700;color:var(--lime)">${p.tag.toUpperCase()} GAME</div><div style="font-size:14px;font-weight:600">${w.full}</div>${e.place?`<div class="mu" style="font-size:12px">📍 ${esc(e.place)}</div>`:''}</div></div>
-  <div style="display:flex;align-items:center;gap:10px"><span class="stack">${e.going.slice(0,6).map(u=>`<span class="av" title="${esc(u.name)}" style="width:28px;height:28px;font-size:10px">${esc(u.ini)}</span>`).join('')}</span>
-   <span style="font-size:13px;font-weight:600;flex:1">${spots}${e.waitlist_count?` · ${e.waitlist_count} waiting`:''}${full&&!e.waitlist_count?' · full':''}</span>${btn}</div></div>`}
+  const status=e.cancelled?`<div style="font-size:13px;font-weight:700;color:#FF4D6D">Cancelled by the organiser</div>`
+    :e.me==='waitlist'?`<div class="mu" style="font-size:12px">You're #${e.waitlist_position} on the waitlist. If someone leaves, you'll move up and get a notification.</div>`:'';
+  return `<div class="evt" style="background:${p.bg};${e.cancelled?'opacity:.7':''}">
+  <div class="when"><div class="cal"><span style="font-size:10px;font-weight:700;color:var(--lime)">${w.mon}</span><span class="sg" style="font-size:22px;font-weight:700;${e.cancelled?'text-decoration:line-through':''}">${w.day}</span></div>
+   <div style="min-width:0"><div style="font-size:12px;font-weight:700;color:var(--lime)">${p.tag.toUpperCase()} GAME</div><div style="font-size:14px;font-weight:600">${w.full}</div>${e.place?`<div class="mu" style="font-size:12px;overflow-wrap:anywhere">📍 ${esc(e.place)}</div>`:''}</div></div>
+  ${status}
+  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><span class="stack">${e.going.slice(0,6).map(u=>`<span class="av" title="${esc(u.name)}" onclick="openProfile(${u.id})" style="width:28px;height:28px;font-size:10px;cursor:pointer">${esc(u.ini)}</span>`).join('')}</span>
+   <span style="font-size:13px;font-weight:600;flex:1;min-width:90px">${spots}${e.waitlist_count?` · ${e.waitlist_count} waiting`:''}</span>${btn}</div>
+  ${e.going.length||e.waitlist.length?`<div class="mu" style="font-size:12px;cursor:pointer" onclick="openComments(${i})">Going: ${e.going.map(u=>esc(u.name.split(' ')[0])).join(', ')}${e.waitlist.length?` · Waiting: ${e.waitlist.map(u=>esc(u.name.split(' ')[0])).join(', ')}`:''}</div>`:''}</div>`}
 async function rsvp(i,going){if(!API.me){needLogin();return}const id=POSTS[i].id;
   try{const d=await api(`posts/${id}/rsvp/`,{method:'POST',body:JSON.stringify({going})});replacePost(d.post);
-    const me=d.post.event.me;toast(going?(me==='in'?"You're in!":"You're on the waitlist"):'You left this game')}catch(e){fail(e)}}
+    const e=d.post.event;toast(going?(e.me==='in'?"You're in!":`You're #${e.waitlist_position} on the waitlist`):'You left this game')}catch(e){fail(e)}}
+
+/* ---- your own posts: edit, delete, cancel a game; sharing ---- */
+function postActions(i){const p=POSTS[i];const g=p.event;
+  openSheet(sheetHead(g?'Your game':'Your post')+`<div style="display:flex;flex-direction:column;gap:8px">
+   ${g&&g.cancelled?'':`<button class="btn ghost" onclick="openEdit(${i})">Edit${g?' details':''}</button>`}
+   <button class="btn ghost" onclick="closeSheet();sharePost(${i})">Share link</button>
+   ${g&&!g.cancelled&&!g.past?`<button class="btn ghost" style="border-color:#FF4D6D;color:#FF4D6D" onclick="cancelGame(${i})">Cancel game</button>`:''}
+   <button class="btn ghost" style="border-color:#FF4D6D;color:#FF4D6D" onclick="closeSheet();deletePost(${i})">Delete</button></div>`)}
+function openEdit(i){const p=POSTS[i],g=p.event;const raw=FEED.real.find(r=>r.id===p.id)||{};
+  openSheet(sheetHead(g?'Edit game':'Edit post')+`<div style="display:flex;flex-direction:column;gap:8px">
+   <textarea id="edText" class="field" rows="3" maxlength="280"></textarea>
+   ${g?`<input id="edAt" class="field" type="datetime-local" aria-label="When" value="${localInput(new Date(g.at))}">
+   <input id="edPlace" class="field" maxlength="80" placeholder="Where (optional)"><input id="edCap" class="field" type="number" min="2" max="200" placeholder="Spots (optional)">
+   <div class="mu" style="font-size:12px">Everyone who's in gets a notification if the time or place changes.</div>`:''}
+   <button class="btn" id="edBtn" onclick="saveEdit(${p.id})">Save</button></div>`);
+  $('#edText').value=raw.text||'';if(g){$('#edPlace').value=g.place||'';$('#edCap').value=g.capacity||''}}
+async function saveEdit(id){const b={text:$('#edText').value.trim()};if($('#edAt')){b.event_at=new Date($('#edAt').value).toISOString();b.place=$('#edPlace').value.trim();
+  const c=$('#edCap').value;b.capacity=c?parseInt(c,10):null}$('#edBtn').disabled=true;
+  try{const d=await api(`posts/${id}/`,{method:'PATCH',body:JSON.stringify(b)});closeSheet();replacePost(d.post);toast('Saved')}catch(e){toast(e.message);const x=$('#edBtn');if(x)x.disabled=false}}
+async function cancelGame(i){if(!confirm('Cancel this game? Everyone who is in will be notified.'))return;
+  try{const d=await api(`posts/${POSTS[i].id}/cancel/`,{method:'POST'});closeSheet();replacePost(d.post);toast('Game cancelled')}catch(e){fail(e)}}
+async function sharePost(i){const p=POSTS[i];if(!p.real){toast('Pass to a teammate');return}
+  const url=`${location.origin}/sports/?post=${p.id}`;const title=p.event?`${p.tag} game on arena`:`${NAMES[p.authorId]||'A post'} on arena`;
+  try{if(navigator.share){await navigator.share({title,url});return}await navigator.clipboard.writeText(url);toast('Link copied')}
+  catch(e){if(e&&e.name==='AbortError')return;prompt('Copy this link:',url)}}
+async function openShared(id){try{const d=await api(`posts/${id}/`);if(idx(id)<0){FEED.real=[d.post,...FEED.real];setPosts(FEED.real)}jumpTo(id)}
+  catch(e){toast('That post is no longer available')}}
+async function quickFollow(uid){if(!API.me){needLogin();return}
+  try{const d=await api(`users/${uid}/follow/`,{method:'POST'});POSTS.forEach(p=>{if(p.real&&p.authorId===uid)p.followed=d.following});renderFeed();toast(d.following?`Following ${NAMES[uid]||''}`:'Unfollowed')}catch(e){fail(e)}}
 
 /* ---- composer ---- */
 let draft={sport:null,kind:'post'},posting=false;
@@ -529,21 +565,25 @@ function localInput(d){const z=n=>String(n).padStart(2,'0');return `${d.getFullY
 function renderCompose(){const c=$('#compose');if(!API.on){c.style.display='none';return}c.style.display='block';
   if(!API.me){c.innerHTML=`<div class="card" style="padding:16px;display:flex;flex-direction:column;gap:10px">
     <div class="sg" style="font-size:17px;font-weight:700">Join arena<span style="color:var(--lime)">.</span></div>
-    <div class="mu" style="font-size:13px">Sign up to post, organise games, react with stickers and comment with your friends.</div>
+    <div style="font-size:13px;color:#D5DEE6">A sports feed for you and your friends: share match moments, set up games people can join with one tap, and cheer each other on with stickers.</div>
+    <div class="mu" style="font-size:12px">Posts marked <span class="demo">Demo</span> and the Explore, Chat and Studio screens are examples only.</div>
     <div style="display:flex;gap:8px"><a class="btn" style="display:flex;align-items:center;text-decoration:none" href="${API.reg}">Sign up</a><a class="btn ghost" style="display:flex;align-items:center;text-decoration:none" href="${API.login}">Log in</a></div></div>`;return}
   const keep=saveDraftFields();const ev=draft.kind==='event';const soon=new Date(Date.now()+864e5);soon.setMinutes(0);
   c.innerHTML=`<div class="card" style="padding:12px;display:flex;flex-direction:column;gap:10px">
-    <div class="row" data-group="kind"><button class="chip ${ev?'':'wsel'}" onclick="setKind('post')">Post</button><button class="chip ${ev?'wsel':''}" onclick="setKind('event')">📅 Event</button></div>
+    <div class="row" data-group="kind"><button class="chip ${ev?'':'wsel'}" onclick="setKind('post')">Post</button><button class="chip ${ev?'wsel':''}" onclick="setKind('event')">📅 Game</button></div>
     <div style="display:flex;gap:10px;align-items:flex-start"><div class="av" style="width:36px;height:36px;font-size:13px">${esc(API.me.ini)}</div>
-    <textarea id="draft" class="field" rows="2" maxlength="280" oninput="$('#cnt').textContent=280-this.value.length" placeholder="${ev?'What are you organising? e.g. Doubles, need 2 more':'Share a moment, '+esc(API.me.name.split(' ')[0])+'…'}"></textarea></div>
+    <textarea id="draft" class="field" rows="2" maxlength="280" oninput="draftInput(this)" placeholder="${ev?'What are you organising? e.g. Saturday doubles, all levels':'Share a moment, '+esc(API.me.name.split(' ')[0])+'…'}"></textarea></div>
+    <div id="gameHint" style="display:none;font-size:12px;color:var(--lime);cursor:pointer" onclick="setKind('event')">Organising a game? Tap here to make it a 📅 Game so people can join with one tap.</div>
     ${ev?`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
       <input id="evAt" class="field" type="datetime-local" aria-label="When" value="${localInput(soon)}" style="grid-column:1/3">
       <input id="evPlace" class="field" maxlength="80" placeholder="Where (optional)">
       <input id="evCap" class="field" type="number" min="2" max="200" placeholder="Spots (optional)"></div>`:''}
     <div class="mu" style="font-size:12px">Sport</div>
     <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">${Object.keys(SPORT_STK).map(s=>`<button class="chip ${s===draft.sport?'sel':''}" onclick="pickDraftSport('${s}')">${s}</button>`).join('')}
-    <span class="mu" id="cnt" style="margin-left:auto;font-size:11px">280</span><button class="btn" id="postBtn" onclick="submitPost()">${ev?'Create':'Post'}</button></div></div>`;
+    <span class="mu" id="cnt" style="margin-left:auto;font-size:11px">280</span><button class="btn" id="postBtn" onclick="submitPost()">${ev?'Create game':'Post'}</button></div></div>`;
   restoreDraftFields(keep)}
+const GAME_WORDS=/who'?s in|need \d|\d+ (more|players|spots)|court|sign.?ups?|join us|anyone up for|reply here/i;
+function draftInput(el){$('#cnt').textContent=280-el.value.length;const h=$('#gameHint');if(h)h.style.display=draft.kind==='post'&&GAME_WORDS.test(el.value)?'block':'none'}
 function saveDraftFields(){const g=id=>{const e=$(id);return e?e.value:null};return {t:g('#draft'),at:g('#evAt'),pl:g('#evPlace'),cap:g('#evCap')}}
 function restoreDraftFields(k){const s=(id,v)=>{const e=$(id);if(e&&v!=null)e.value=v};s('#draft',k.t);s('#evAt',k.at);s('#evPlace',k.pl);s('#evCap',k.cap);
   const d=$('#draft');if(d&&$('#cnt'))$('#cnt').textContent=280-d.value.length}
@@ -564,7 +604,10 @@ function renderFilters(){const b=$('#fbar');if(!API.on){b.style.display='none';r
   const f=[['all','All'],['events','📅 Games'],...(API.me?[['following','Following'],['saved','Saved']]:[]),...Object.keys(SPORT_STK).map(s=>[s,s])];
   let extra='';if(FEED.filter.startsWith('author:'))extra=`<button class="chip wsel" onclick="setFilter('all')">${esc(FEED.authorName||'Player')} ✕</button>`;
   b.innerHTML=extra+f.map(([k,l])=>`<button class="chip ${FEED.filter===k?'sel':''}" onclick="setFilter('${k}')">${l}</button>`).join('')}
-function setFilter(k,name){FEED.filter=k;FEED.authorName=name||null;renderFilters();loadFeed()}
+/* Names are looked up by id here, never passed through onclick attributes. */
+const NAMES={};
+const small=v=>/^\d{1,10}$/.test(v||'')?parseInt(v,10):null;
+function setFilter(k){FEED.filter=k;FEED.authorName=k.startsWith('author:')?(API.me&&k==='author:'+API.me.id?'My posts':NAMES[k.slice(7)]):null;renderFilters();loadFeed()}
 
 /* ---- sheet (comments, notifications, profiles) ---- */
 let sheetPostId=null;
@@ -592,11 +635,11 @@ async function deleteComment(cid){if(!confirm('Delete this comment?'))return;con
 async function openProfile(uid){openSheet(sheetHead('Player')+'<div class="mu" style="font-size:13px">Loading…</div>');
   try{const p=await api(`users/${uid}/`);renderProfileSheet(p)}catch(e){closeSheet();fail(e)}}
 function statRow(p){return `<div class="statrow"><span><b class="sg" style="font-size:16px">${p.posts}</b> <span class="mu">Posts</span></span><span><b class="sg" style="font-size:16px" id="folN">${p.followers}</b> <span class="mu">Followers</span></span><span><b class="sg" style="font-size:16px">${p.following}</b> <span class="mu">Following</span></span><span><b class="sg" style="font-size:16px">${p.stickers_received}</b> <span class="mu">Stickers</span></span></div>`}
-function renderProfileSheet(p){const u=p.user;
+function renderProfileSheet(p){const u=p.user;NAMES[u.id]=u.name;
   openSheet(sheetHead('Player')+`<div style="display:flex;gap:12px;align-items:center"><div class="av sg" style="width:56px;height:56px;font-size:20px">${esc(u.ini)}</div>
    <div style="flex:1;min-width:0"><div style="font-size:17px;font-weight:700">${esc(u.name)}</div><div class="mu" style="font-size:12px">${p.sports.length?p.sports.join(' · '):'New on arena'}</div></div>
    ${p.is_me?'':`<button class="btn ${p.i_follow?'ghost':''}" id="folBtn" onclick="toggleFollow(${u.id})">${p.i_follow?'Following':'Follow'}</button>`}</div>
-   ${statRow(p)}<button class="btn ghost" onclick="closeSheet();go('arena');setFilter('author:${u.id}',${JSON.stringify(u.name).replace(/"/g,'&quot;')})">See ${p.is_me?'my':'their'} posts</button>`)}
+   ${statRow(p)}<button class="btn ghost" onclick="closeSheet();go('arena');setFilter('author:${u.id}')">See ${p.is_me?'my':'their'} posts</button>`)}
 async function toggleFollow(uid){if(!API.me){needLogin();return}
   try{const d=await api(`users/${uid}/follow/`,{method:'POST'});const b=$('#folBtn');if(b){b.textContent=d.following?'Following':'Follow';b.classList.toggle('ghost',d.following)}
     const n=$('#folN');if(n)n.textContent=d.followers;toast(d.following?'Following':'Unfollowed')}catch(e){fail(e)}}
@@ -604,8 +647,13 @@ async function toggleFollow(uid){if(!API.me){needLogin();return}
 /* ---- notifications ---- */
 function setDot(n){const d=$('#bellDot');d.style.display=n>0?'block':'none';$('#bell').setAttribute('aria-label',n?`Notifications (${n} new)`:'Notifications')}
 async function openNotifications(){if(!API.me){needLogin();return}openSheet(sheetHead('Notifications')+'<div class="mu" style="font-size:13px">Loading…</div>');
-  try{const d=await api('notifications/');const verb=i=>i.type==='sticker'?`reacted ${G[i.sticker]?stk(i.sticker,18):''} to`:i.type==='comment'?'commented on':i.type==='rsvp'?"is in for":'started following you';
-    openSheet(sheetHead('Notifications')+`<div class="sheet-list">${d.items.length?d.items.map(i=>`<div class="ntf ${i.unread?'unread':''}" ${i.post_id?`style="cursor:pointer" onclick="closeSheet();jumpTo(${i.post_id})"`:`style="cursor:pointer" onclick="openProfile(${i.user.id})"`}><div class="av" style="width:30px;height:30px;font-size:11px">${esc(i.user.ini)}</div><div style="flex:1;min-width:0"><b>${esc(i.user.name)}</b> ${verb(i)} ${i.post_text?`<span class="mu">“${esc(i.post_text)}”</span>`:''}${i.text?`<div style="color:#D5DEE6">${esc(i.text)}</div>`:''}<div class="mu" style="font-size:11px">${ago(i.at)}</div></div></div>`).join(''):'<div class="mu" style="font-size:13px">Nothing yet. When people react, comment, join your games or follow you, it shows up here.</div>'}</div>`);
+  try{const d=await api('notifications/');
+    const VERB={comment:'commented on',joined:'is in for your game',waitlisted:'joined the waitlist for',left:'left your game',
+      promoted:'🎉 A spot opened up: you are now in for',changed:'changed the time or place of',cancelled:'cancelled the game',follow:'started following you'};
+    const verb=i=>i.type==='sticker'?`reacted ${G[i.sticker]?stk(i.sticker,18):''} to`:(VERB[i.type]||'');
+    const who=i=>i.user?`<b>${esc(i.user.name)}</b> `:'';
+    const open=i=>i.post_id?`onclick="closeSheet();jumpTo(${i.post_id})"`:i.user?`onclick="openProfile(${i.user.id})"`:'';
+    openSheet(sheetHead('Notifications')+`<div class="sheet-list">${d.items.length?d.items.map(i=>`<div class="ntf ${i.unread?'unread':''}" style="cursor:pointer" ${open(i)}><div class="av" style="width:30px;height:30px;font-size:11px">${i.user?esc(i.user.ini):'📅'}</div><div style="flex:1;min-width:0">${who(i)}${verb(i)} ${i.post_text?`<span class="mu">“${esc(i.post_text)}”</span>`:''}${i.text?`<div style="color:#D5DEE6">${esc(i.text)}</div>`:''}<div class="mu" style="font-size:11px">${ago(i.at)}</div></div></div>`).join(''):'<div class="mu" style="font-size:13px">Nothing yet. When people react, comment, join your games or follow you, and when games you joined change, it shows up here.</div>'}</div>`);
     if(d.unread){await api('notifications/seen/',{method:'POST'});setDot(0)}}catch(e){closeSheet();fail(e)}}
 async function jumpTo(id){go('arena');if(idx(id)<0&&FEED.filter!=='all')setFilter('all');if(idx(id)<0)await loadFeed();
   const el=document.querySelector(`#feed article[data-id="${id}"]`);if(el){el.scrollIntoView({behavior:'smooth',block:'center'});el.animate([{opacity:.4},{opacity:1}],{duration:700})}else toast('That post is no longer in the feed')}
@@ -622,7 +670,7 @@ async function renderMe(){if(!API.me)return;const box=$('#meReal');
     <div class="mu" style="font-size:13px">${p.sports.length?p.sports.join(' · '):'Post something to show your sports here'}</div>
     ${statRow(p)}
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px">
-     <button class="btn ghost" onclick="go('arena');setFilter('author:${API.me.id}','My posts')">My posts</button>
+     <button class="btn ghost" onclick="go('arena');setFilter('author:${API.me.id}')">My posts</button>
      <button class="btn ghost" onclick="go('arena');setFilter('saved')">Saved</button>
      <button class="btn ghost" onclick="go('arena');setFilter('following')">Following feed</button>
      <button class="btn ghost" onclick="go('arena');setFilter('events')">Games</button></div>
@@ -644,7 +692,10 @@ function showNewPosts(){$('#newPill').classList.remove('on');go('arena');loadFee
   const bell=$('#bell');bell.removeAttribute('data-toast');bell.onclick=openNotifications;
   const plus=document.querySelector('#nav button[data-go="studio"]');plus.onclick=()=>{go('arena');document.querySelector('#htabs [data-p=feed]').click();
     const c=$('#compose');c.scrollIntoView({behavior:'smooth',block:'start'});const d=$('#draft');if(d)setTimeout(()=>d.focus(),300)};
+  /* The Home "Events" tab shows real upcoming games once the app is live. */
+  const evTab=document.querySelector('#htabs [data-p=ev]');evTab.onclick=e=>{e.stopPropagation();document.querySelector('#htabs [data-p=feed]').click();setFilter('events')};
   renderCompose();renderFilters();renderMe();await loadFeed();
+  const shared=small(new URLSearchParams(location.search).get('post'));if(shared)openShared(shared);
   setInterval(livePoll,30000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)livePoll()})})();
 
 /* MATCH */
