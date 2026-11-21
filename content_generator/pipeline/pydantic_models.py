@@ -130,3 +130,5 @@ class PipelineOutput(BaseModel):
     content_fi: ContentPiece
     evaluation: EvaluationResult
     content_type: dict = {}
+    # Grounding check: numbers removed for lack of a source, attributions/quotes to review
+    fact_check: dict = {}

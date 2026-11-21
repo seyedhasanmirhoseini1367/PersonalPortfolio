@@ -512,6 +512,8 @@ def _run_pipeline_now(job_id: str, seo_params: dict = None):
         job.content_en    = output.content_en.model_dump() if output.content_en else None
         job.content_fi    = output.content_fi.model_dump() if output.content_fi else None
         job.evaluation    = output.evaluation.model_dump() if output.evaluation else None
+        if job.evaluation is not None:
+            job.evaluation['fact_check'] = output.fact_check or {}
         job.overall_score = output.evaluation.overall_score if output.evaluation else None
         job.status        = GenerationJob.STATUS_DONE
 
