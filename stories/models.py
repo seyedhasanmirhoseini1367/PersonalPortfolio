@@ -384,3 +384,31 @@ class StoryLike(models.Model):
 
     def __str__(self):
         return f"{self.user.username} likes {self.story.title}"
+
+
+class DailyDigest(models.Model):
+    """One day of the AI & ML digest (stories/digest.py)."""
+    date       = models.DateField(unique=True)
+    status     = models.CharField(max_length=10, default="running")  # running/done/empty/failed
+    attempts   = models.PositiveSmallIntegerField(default=0)
+    items      = models.PositiveSmallIntegerField(default=0)
+    story      = models.ForeignKey(Story, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+    log        = models.TextField(blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-date"]
+
+    def __str__(self):
+        return f"Digest {self.date} ({self.status})"
+
+
+class DigestItem(models.Model):
+    """A source already used in a digest, so it is never repeated."""
+    url         = models.URLField(max_length=500, unique=True)
+    title       = models.CharField(max_length=300)
+    source      = models.CharField(max_length=100)
+    digest_date = models.DateField()
+
+    class Meta:
+        ordering = ["-digest_date"]

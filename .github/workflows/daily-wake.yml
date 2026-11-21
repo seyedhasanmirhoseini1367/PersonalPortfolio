@@ -1,0 +1,22 @@
+# Render's free instance sleeps when idle, and the daily AI & ML digest
+# (stories/digest.py) runs inside the web process. This wakes the site
+# shortly after 07:00 Helsinki time so the digest is published in the morning.
+name: Daily wake-up
+
+on:
+  schedule:
+    # 04:10 and 05:10 UTC: one of them is just after 07:00 Helsinki in both
+    # summer (UTC+3) and winter (UTC+2) time.
+    - cron: "10 4,5 * * *"
+  workflow_dispatch:
+
+jobs:
+  wake:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wake hasanai.net
+        run: |
+          for i in 1 2 3; do
+            curl -s -o /dev/null -m 120 -w "%{http_code}\n" https://hasanai.net/stories/ && break
+            sleep 30
+          done
