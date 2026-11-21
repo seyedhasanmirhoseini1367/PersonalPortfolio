@@ -233,7 +233,7 @@
             <div class="user-story-card">
                 <div class="user-story-content">
                     <h3 class="user-story-title">
-                        <a href="{% url 'stories:story_detail' pk=story.pk %}">{{ story.title }}</a>
+                        <a href="{% url 'stories:story_detail' story.slug %}">{{ story.title }}</a>
                     </h3>
                     <div class="user-story-meta">
                         <span>Created: {{ story.created_at|date:"M j, Y" }}</span>

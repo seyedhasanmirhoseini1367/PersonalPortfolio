@@ -69,7 +69,7 @@
                         </div>
                     {% endif %}
 
-                    <div class="story-content ql-content">
+                    <div class="story-content ql-content{% if story.is_digest %} digest{% endif %}">
                         {% if story.content|slice:":1" == "<" %}
                             {{ story.content|clean_story_html }}
                         {% else %}
@@ -1183,7 +1183,20 @@
                 flex-wrap: wrap;
             }
         }
-    </style>
+    
+/* Daily AI & ML digest: each item reads as its own card */
+.story-content.digest h2 { margin: 2rem 0 .8rem; padding-bottom: .4rem; border-bottom: 2px solid #ede9fe; color: #4c1d95; font-size: 1.2rem; }
+.story-content.digest h3 { margin: 1.1rem 0 .4rem; padding-top: 1rem; border-top: 1px solid #eef2f7; font-size: 1.05rem; line-height: 1.4; }
+.story-content.digest h2 + h3 { border-top: 0; padding-top: 0; }
+.story-content.digest h3 a { color: #1e1b4b; text-decoration: none; }
+.story-content.digest h3 a:hover { color: #6d28d9; text-decoration: underline; }
+.story-content.digest p { margin: .35rem 0; }
+.story-content.digest p strong { color: #6d28d9; }
+.story-content.digest p em { display: inline-block; font-style: normal; font-size: .82rem; color: #64748b;
+    background: #f8fafc; border: 1px solid #eef2f7; border-radius: 8px; padding: .15rem .6rem; }
+.story-content.digest p em a { color: #6d28d9; }
+.story-content.digest hr { margin: 2rem 0 1rem; border: 0; border-top: 1px solid #eef2f7; }
+</style>
 
 {% endblock %}
 
