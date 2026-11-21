@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 from django.urls import reverse
 from django.utils.text import slugify
@@ -189,3 +190,14 @@ class KaggleSyncItem(models.Model):
 
     def __str__(self):
         return f"{self.slug} ({self.status})"
+
+
+class LearnedLesson(models.Model):
+    """A lesson a signed-in user marked as learned (Trends / competition pages)."""
+    user        = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="learned_lessons")
+    competition = models.ForeignKey(Competition, on_delete=models.CASCADE, related_name="learned_by")
+    lesson_key  = models.CharField(max_length=64, help_text="sha256 of the lesson text")
+    created_at  = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ["user", "competition", "lesson_key"]

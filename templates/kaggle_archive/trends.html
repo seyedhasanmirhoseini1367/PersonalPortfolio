@@ -1,0 +1,116 @@
+{% extends 'base.html' %}
+{% block title %}Trends &amp; lessons — Kaggle Winners Archive{% endblock %}
+{% block meta_description %}What top Kaggle teams used, by competition type, and the lessons from their write-ups.{% endblock %}
+
+{% block content %}
+<div class="tr-wrap">
+    <a href="{% url 'kaggle_archive:competition_list' %}" class="tr-back">← Winners Archive</a>
+    <h1 class="tr-title"><i class="fas fa-chart-line"></i> Trends &amp; lessons</h1>
+    <p class="tr-sub">What the top-10 teams used in each kind of competition, the baseline they shared, and every lesson
+        from their write-ups. Updated automatically each month.</p>
+
+    {% if user.is_authenticated and total_lessons %}
+        <div class="tr-progress">
+            <div><b>{{ done_lessons }}</b> of {{ total_lessons }} lessons learned</div>
+            <div class="tr-bar"><span style="width:{% widthratio done_lessons total_lessons 100 %}%"></span></div>
+        </div>
+    {% elif not user.is_authenticated %}
+        <p class="tr-hint"><a href="{% url 'accounts:login' %}?next={{ request.path|urlencode }}">Log in</a> to mark lessons as learned and track your progress.</p>
+    {% endif %}
+
+    <nav class="tr-tabs">
+        {% for g in groups %}<a href="#type-{{ g.type }}">{{ g.label }} <span>{{ g.competitions|length }}</span></a>{% endfor %}
+    </nav>
+
+    {% for g in groups %}
+    <section class="tr-group" id="type-{{ g.type }}">
+        <h2>{{ g.label }} <small>{{ g.competitions|length }} competition{{ g.competitions|length|pluralize }} · {{ g.teams }} top teams</small></h2>
+
+        <div class="tr-grid">
+            <div class="tr-box">
+                <h3>Techniques among top teams</h3>
+                {% for t in g.techniques %}
+                    <div class="tr-tech"><span class="tr-tech-name">{{ t.name }}</span>
+                        <span class="tr-tech-bar"><span style="width:{{ t.pct }}%"></span></span>
+                        <span class="tr-tech-pct">{{ t.pct }}%</span></div>
+                {% empty %}<p class="tr-muted">No technique data yet.</p>{% endfor %}
+                <p class="tr-muted tr-note">Share of top-10 teams whose write-up or listing mentions the technique.</p>
+            </div>
+            <div class="tr-box">
+                <h3>The shared baseline</h3>
+                {% if g.baseline %}<ul>{% for b in g.baseline %}<li>{{ b.idea }} <a href="{{ b.competition.get_absolute_url }}" class="tr-src">{{ b.competition.name|truncatechars:40 }}</a></li>{% endfor %}</ul>
+                {% else %}<p class="tr-muted">Appears once write-ups have been compared.</p>{% endif %}
+            </div>
+        </div>
+
+        {% if g.lessons %}
+        <div class="tr-box tr-lessons">
+            <h3>Lessons</h3>
+            <ol>{% for l in g.lessons %}
+                <li><span>{{ l.text }} <a href="{{ l.competition.get_absolute_url }}" class="tr-src">{{ l.competition.name|truncatechars:40 }}</a></span>
+                    {% if user.is_authenticated %}
+                    <button type="button" class="learned-btn{% if l.learned %} on{% endif %}"
+                            data-url="{% url 'kaggle_archive:toggle_lesson' l.competition.slug %}" data-lesson="{{ l.text }}">
+                        {% if l.learned %}✓ Learned{% else %}Mark as learned{% endif %}</button>
+                    {% endif %}</li>
+            {% endfor %}</ol>
+        </div>
+        {% endif %}
+
+        <div class="tr-comps">{% for c in g.competitions %}<a href="{{ c.get_absolute_url }}">{{ c.name }}</a>{% endfor %}</div>
+    </section>
+    {% empty %}
+        <p class="tr-muted">No competitions archived yet.</p>
+    {% endfor %}
+    {% csrf_token %}
+</div>
+
+<style>
+.tr-wrap { max-width: 1100px; margin: 0 auto; }
+.tr-back { color: #6d28d9; text-decoration: none; font-size: .88rem; }
+.tr-title { margin: .4rem 0 .2rem; color: #1e1b4b; }
+.tr-sub { color: #475569; margin-bottom: 1rem; }
+.tr-hint { color: #475569; }
+.tr-progress { display: flex; gap: 1rem; align-items: center; background: #faf5ff; border: 1px solid #ddd6fe; border-radius: 12px; padding: .7rem 1rem; margin-bottom: 1rem; }
+.tr-bar { flex: 1; height: 8px; background: #ede9fe; border-radius: 99px; overflow: hidden; }
+.tr-bar span { display: block; height: 100%; background: linear-gradient(90deg, #6d5dfc, #00b8e6); }
+.tr-tabs { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: 1.25rem; }
+.tr-tabs a { border: 1px solid #e2e8f0; border-radius: 999px; padding: .25rem .8rem; text-decoration: none; color: #302b63; font-size: .85rem; background: #fff; }
+.tr-tabs a span { color: #94a3b8; margin-left: .2rem; }
+.tr-group { background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 1.2rem 1.3rem; margin-bottom: 1.25rem; scroll-margin-top: 80px; }
+.tr-group h2 { margin: 0 0 .9rem; color: #1e1b4b; font-size: 1.25rem; }
+.tr-group h2 small { font-weight: 400; color: #64748b; font-size: .8rem; margin-left: .4rem; }
+.tr-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; margin-bottom: 1rem; }
+.tr-box { border: 1px solid #eef2f7; border-radius: 12px; padding: .9rem 1rem; }
+.tr-box h3 { margin: 0 0 .6rem; font-size: .9rem; color: #6d28d9; text-transform: uppercase; letter-spacing: .04em; }
+.tr-box ul, .tr-box ol { margin: 0; padding-left: 1.1rem; display: flex; flex-direction: column; gap: .45rem; font-size: .9rem; color: #334155; }
+.tr-tech { display: grid; grid-template-columns: 9rem 1fr 3rem; gap: .5rem; align-items: center; font-size: .85rem; margin-bottom: .35rem; }
+.tr-tech-bar { height: 8px; background: #f1f5f9; border-radius: 99px; overflow: hidden; }
+.tr-tech-bar span { display: block; height: 100%; background: #a78bfa; }
+.tr-tech-pct { text-align: right; color: #64748b; }
+.tr-muted { color: #94a3b8; font-size: .85rem; }
+.tr-note { margin-top: .5rem; }
+.tr-src { font-size: .75rem; color: #6d28d9; background: #f5f3ff; border-radius: 999px; padding: 0 .45rem; text-decoration: none; white-space: nowrap; }
+.tr-lessons ol li { display: flex; gap: .6rem; align-items: flex-start; justify-content: space-between; }
+.tr-comps { display: flex; flex-wrap: wrap; gap: .4rem .9rem; font-size: .82rem; }
+.tr-comps a { color: #475569; }
+.learned-btn { flex: 0 0 auto; border: 1px solid #c4b5fd; background: #fff; color: #6d28d9; border-radius: 999px; padding: .1rem .6rem; font-size: .75rem; cursor: pointer; }
+.learned-btn.on { background: #6d28d9; color: #fff; border-color: #6d28d9; }
+@media (max-width: 600px) { .tr-tech { grid-template-columns: 6.5rem 1fr 2.6rem; } }
+</style>
+<script>
+document.querySelectorAll('.learned-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+        var token = (document.querySelector('[name=csrfmiddlewaretoken]') || {}).value;
+        fetch(btn.dataset.url, {method: 'POST', headers: {'Content-Type': 'application/json', 'X-CSRFToken': token},
+                                body: JSON.stringify({lesson: btn.dataset.lesson})})
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+                if (d.error) { return; }
+                btn.classList.toggle('on', d.learned);
+                btn.textContent = d.learned ? '✓ Learned' : 'Mark as learned';
+            });
+    });
+});
+</script>
+{% endblock %}
