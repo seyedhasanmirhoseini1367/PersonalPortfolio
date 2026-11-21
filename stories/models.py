@@ -158,12 +158,9 @@ class Story(models.Model):
 
     def get_absolute_url(self):
         if self.published_at:
-            return reverse('stories:story_detail', args=[
-                self.published_at.year,
-                self.published_at.month,
-                self.published_at.day,
-                self.slug
-            ])
+            # The detail route is /stories/story/<slug>/ (it used to pass the
+            # date too, which raised NoReverseMatch).
+            return reverse('stories:story_detail', args=[self.slug])
         return reverse('stories:story_preview', args=[self.pk])
 
     def is_published(self):

@@ -5,6 +5,7 @@ from .models import Story
 
 class StorySitemap(Sitemap):
     changefreq = 'weekly'
+    protocol   = 'https'
     priority   = 0.6
 
     def items(self):

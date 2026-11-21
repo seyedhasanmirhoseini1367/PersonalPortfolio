@@ -3,6 +3,7 @@ from django import forms
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import User
 from .models import Story, Comment, Tag
+from .sanitize import clean_html
 from django.core.exceptions import ValidationError
 
 
@@ -68,7 +69,8 @@ class StoryForm(forms.ModelForm):
         return title
 
     def clean_content(self):
-        content = self.cleaned_data.get('content')
+        # Stored already cleaned; the template cleans again on display.
+        content = clean_html(self.cleaned_data.get('content'))
         if len(content) < 100:
             raise ValidationError('Story content must be at least 100 characters.')
         return content
