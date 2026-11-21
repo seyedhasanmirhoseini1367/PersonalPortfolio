@@ -521,6 +521,7 @@ def _run_pipeline_now(job_id: str, seo_params: dict = None, progress=None):
         job.evaluation    = output.evaluation.model_dump() if output.evaluation else None
         if job.evaluation is not None:
             job.evaluation['fact_check'] = output.fact_check or {}
+            job.evaluation['llm_calls'] = output.llm_calls
         job.overall_score = output.evaluation.overall_score if output.evaluation else None
         job.status        = GenerationJob.STATUS_DONE
 

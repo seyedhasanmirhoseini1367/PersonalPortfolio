@@ -229,3 +229,18 @@ class KnowledgeChunk(models.Model):
 
     def __str__(self):
         return f"{self.client_id}/{self.scope_id}#{self.position}"
+
+
+class AnalysisCache(models.Model):
+    """Reusable pipeline analysis (brand profile, competitor gaps, intent).
+
+    Keyed by a hash of the exact inputs, so several formats for the same
+    company, or a later run on the same material, skip those model calls.
+    """
+    key        = models.CharField(max_length=64, unique=True)
+    kind       = models.CharField(max_length=30)
+    data       = models.JSONField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.kind} {self.key[:10]}"
