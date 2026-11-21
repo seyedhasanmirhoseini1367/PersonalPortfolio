@@ -6,8 +6,11 @@ import urllib.error
 import threading
 import logging
 from functools import wraps
+from datetime import timedelta
 from django.conf import settings
+from django.contrib import messages
 from django.db.models import Q
+from django.utils import timezone
 from django.shortcuts import render, get_object_or_404, redirect
 from django.http import JsonResponse, HttpResponseForbidden
 from django.contrib.auth.decorators import login_required
@@ -16,14 +19,28 @@ from .models import GenerationJob, CompanyProfile, ServiceProduct, CMSConnection
 
 
 def client_required(view_func):
-    """Allow access only to clients and staff (admins). Redirect unauthenticated users to login."""
+    """Open to every signed-in user. Unauthenticated users are sent to login."""
     @login_required
     @wraps(view_func)
     def _wrapped(request, *args, **kwargs):
-        if request.user.is_staff or getattr(request.user, 'is_client', False):
-            return view_func(request, *args, **kwargs)
-        return render(request, 'content_generator/access_denied.html', status=403)
+        return view_func(request, *args, **kwargs)
     return _wrapped
+
+
+# Each job calls the paid LLM APIs, so non-staff users get a daily budget.
+DAILY_JOB_LIMIT = 10
+MAX_FORMATS = 4
+
+
+def jobs_left_today(user):
+    if user.is_staff:
+        return None
+    used = GenerationJob.objects.filter(owner=user, created_at__gte=timezone.now() - timedelta(days=1)).count()
+    return max(0, DAILY_JOB_LIMIT - used)
+
+
+def _user_services(user):
+    return ServiceProduct.objects.filter(company__in=_user_profiles(user))
 
 logger = logging.getLogger(__name__)
 
@@ -79,7 +96,7 @@ def demo_form(request):
         if profile:
             prefill['profile'] = profile
     if service_id:
-        service = ServiceProduct.objects.filter(pk=service_id).first()
+        service = _user_services(request.user).filter(pk=service_id).first()
         if service:
             prefill['service'] = service
             if 'profile' not in prefill and _user_profiles(request.user).filter(pk=service.company_id).exists():
@@ -92,6 +109,7 @@ def demo_form(request):
         'format_choices': GenerationJob.FORMAT_CHOICES,
         'tone_choices':   GenerationJob.TONE_CHOICES,
         'prefill':        prefill,
+        'jobs_left':      jobs_left_today(request.user),
         'page_title':     'AI Content Generator',
     })
 
@@ -99,7 +117,8 @@ def demo_form(request):
 @client_required
 @require_POST
 def submit_job(request):
-    formats       = request.POST.getlist('content_formats') or ['blog_post']
+    valid_formats = {key for key, _ in GenerationJob.FORMAT_CHOICES}
+    formats       = list(dict.fromkeys(f for f in request.POST.getlist('content_formats') if f in valid_formats))[:MAX_FORMATS] or ['blog_post']
     tone_preset   = request.POST.get('tone_preset', 'professional')
     ab_variants   = max(1, min(3, int(request.POST.get('ab_variants', '1') or '1')))
     languages_raw = request.POST.getlist('target_languages') or ['English']
@@ -108,8 +127,15 @@ def submit_job(request):
     profile_id = request.POST.get('profile_id')
     service_id = request.POST.get('service_id')
 
-    company_profile = CompanyProfile.objects.filter(pk=profile_id).first() if profile_id else None
-    service         = ServiceProduct.objects.filter(pk=service_id).first() if service_id else None
+    # Only the user's own profiles/services (or shared ones) can be used.
+    company_profile = _user_profiles(request.user).filter(pk=profile_id).first() if (profile_id or '').isdigit() else None
+    service         = _user_services(request.user).filter(pk=service_id).first() if (service_id or '').isdigit() else None
+
+    left = jobs_left_today(request.user)
+    if left is not None and len(formats) * ab_variants > left:
+        messages.error(request, f'Daily limit reached: you can start {left} more generation(s) today '
+                                f'(limit {DAILY_JOB_LIMIT} per 24 hours). Choose fewer formats or variants.')
+        return redirect('content_generator:form')
 
     company_name    = (request.POST.get('company_name', '').strip()
                        or (company_profile.name if company_profile else ''))

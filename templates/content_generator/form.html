@@ -138,6 +138,9 @@
             <span class="cg-badge">✦ 9 Specialized AI Agents</span>
             <h1>AI Content Generator</h1>
             <p>Brand-aligned · RAG-powered · Multi-agent evaluation · GEO-optimised</p>
+            {% if jobs_left is not None %}
+            <p style="font-size:.85rem;opacity:.8;margin-top:.25rem;">You can start {{ jobs_left }} more generation{{ jobs_left|pluralize }} today (each format × variant counts as one).</p>
+            {% endif %}
             <div class="agent-badges">
                 <span class="agent-badge">Brand Analyzer</span>
                 <span class="agent-badge">Competitor Gap</span>
