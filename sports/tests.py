@@ -194,9 +194,29 @@ class SocialTests(ApiTestCase):
         self.login(self.bob)
         self.assertEqual(self.send('post', f'/sports/api/users/{self.bob.id}/follow/').status_code, 400)
         self.assertTrue(self.send('post', f'/sports/api/users/{self.alice.id}/follow/').json()['following'])
-        self.assertEqual([p['text'] for p in self.feed('?following=1')['posts']], ['from alice'])
+        # Home feed: your own posts plus people you follow, newest first.
+        self.assertEqual([p['text'] for p in self.feed('?following=1')['posts']], ['from bob', 'from alice'])
         profile = self.client.get(f'/sports/api/users/{self.alice.id}/').json()
         self.assertEqual((profile['followers'], profile['i_follow'], profile['posts']), (1, True, 1))
+
+    def test_home_feed_hides_people_you_dont_follow(self):
+        SportPost.objects.create(author=self.alice, sport='Padel', text='alice padel')
+        self.login(self.bob)
+        self.assertEqual(self.feed('?following=1')['posts'], [])
+        self.send('post', f'/sports/api/users/{self.alice.id}/follow/')
+        self.assertEqual(len(self.feed('?following=1')['posts']), 1)
+
+    def test_suggested_players(self):
+        self.assertEqual(self.client.get('/sports/api/users/suggested/').status_code, 401)
+        SportPost.objects.create(author=self.alice, sport='Padel', text='alice padel')
+        SportPost.objects.create(author=self.bob, sport='Running', text='bob run')
+        self.login(self.bob)
+        d = self.client.get('/sports/api/users/suggested/').json()
+        self.assertEqual([u['user']['id'] for u in d['users']], [self.alice.id])
+        self.assertEqual((d['users'][0]['sports'], d['following']), (['Padel'], 0))
+        self.send('post', f'/sports/api/users/{self.alice.id}/follow/')
+        d = self.client.get('/sports/api/users/suggested/').json()
+        self.assertEqual((d['users'], d['following']), ([], 1))
 
     def test_saved_posts(self):
         post = SportPost.objects.create(author=self.alice, sport='Drill', text='keep this drill')
