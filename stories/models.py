@@ -1,5 +1,6 @@
 # stories/models.py - COMPLETE FIXED VERSION
 from django.db import models
+from PersonalPortfolio.storage import image_storage
 from django.conf import settings
 from django.urls import reverse
 from django.utils.text import slugify
@@ -73,6 +74,7 @@ class Story(models.Model):
 
     featured_image = models.ImageField(
         upload_to='stories/%Y/%m/%d/',
+        storage=image_storage,
         blank=True,
         null=True,
         verbose_name='Featured Image',

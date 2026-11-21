@@ -421,8 +421,8 @@ def story_image_upload(request):
     Returns JSON: { "url": "/media/stories/inline/filename.jpg" }
     """
     import os
-    from django.core.files.storage import default_storage
     from django.core.files.base import ContentFile
+    from PersonalPortfolio.storage import image_storage
 
     image = request.FILES.get('image')
     if not image:
@@ -435,8 +435,9 @@ def story_image_upload(request):
     if image.size > 5 * 1024 * 1024:   # 5 MB limit
         return JsonResponse({'error': 'Image must be smaller than 5 MB'}, status=400)
 
-    path = default_storage.save(f'stories/inline/{image.name}', ContentFile(image.read()))
-    url  = request.build_absolute_uri(default_storage.url(path))
+    storage = image_storage()
+    path = storage.save(f'stories/inline/{image.name}', ContentFile(image.read()))
+    url  = request.build_absolute_uri(storage.url(path))
     return JsonResponse({'url': url})
 
 

@@ -1,4 +1,5 @@
 from django.db import models
+from PersonalPortfolio.storage import image_storage
 from django.conf import settings
 import uuid
 
@@ -59,7 +60,7 @@ class ServiceProduct(models.Model):
     description   = models.TextField()
     item_type     = models.CharField(max_length=10, choices=TYPE_CHOICES, default=TYPE_SERVICE)
     display_order = models.IntegerField(default=0)
-    image         = models.ImageField(upload_to='content_generator/service_images/', null=True, blank=True)
+    image         = models.ImageField(upload_to='content_generator/service_images/', storage=image_storage, null=True, blank=True)
     document      = models.FileField(upload_to='content_generator/service_docs/',   null=True, blank=True,
                                      help_text="PDF, DOCX, or TXT — used by the AI agents")
     video_url     = models.URLField(null=True, blank=True, help_text="YouTube or Vimeo link")

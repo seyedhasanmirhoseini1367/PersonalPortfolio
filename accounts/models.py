@@ -1,4 +1,5 @@
 from django.db import models
+from PersonalPortfolio.storage import image_storage
 from django.contrib.auth.models import AbstractUser, Group, Permission
 from django.utils.translation import gettext_lazy as _
 from django.core.validators import RegexValidator
@@ -19,6 +20,7 @@ class CustomUser(AbstractUser):
     bio = models.TextField(_('biography'), blank=True, max_length=500)
     profile_picture = models.ImageField(
         upload_to='profile_pics/',
+        storage=image_storage,
         blank=True,
         null=True,
     )

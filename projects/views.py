@@ -768,10 +768,10 @@ def editor_image_upload(request):
     if ext not in allowed:
         return JsonResponse({'success': 0, 'message': f'Unsupported format: {ext}'})
 
-    from django.core.files.storage import default_storage
-    from django.conf import settings
-    path = default_storage.save(f'projects/editor_images/{image.name}', image)
-    url  = request.build_absolute_uri(settings.MEDIA_URL + path)
+    from PersonalPortfolio.storage import image_storage
+    storage = image_storage()
+    path = storage.save(f'projects/editor_images/{image.name}', image)
+    url  = request.build_absolute_uri(storage.url(path))
     return JsonResponse({'success': 1, 'file': {'url': url}})
 
 
