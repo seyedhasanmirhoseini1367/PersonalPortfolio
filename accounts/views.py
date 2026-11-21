@@ -158,8 +158,7 @@ class ProfileDetailView(LoginRequiredMixin, DetailView):
         context['recent_comments'] = user_comments[:5]
 
         is_own = self.request.user == user
-        is_client = getattr(user, 'is_client', False) or user.is_staff
-        if is_own and is_client:
+        if is_own:
             from content_generator.models import GenerationJob, CompanyProfile
             from django.db.models import Avg
             jobs_qs = GenerationJob.objects.filter(owner=user)
@@ -332,7 +331,7 @@ def dashboard_view(request):
         'title': 'Dashboard',
     }
 
-    if getattr(profile_user, 'is_client', False) or profile_user.is_staff:
+    if profile_user.is_authenticated:
         from content_generator.models import GenerationJob, CompanyProfile
         from django.db.models import Avg
         jobs_qs = GenerationJob.objects.filter(owner=profile_user)
