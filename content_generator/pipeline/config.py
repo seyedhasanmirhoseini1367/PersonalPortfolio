@@ -18,4 +18,4 @@ GROQ_MODEL_LARGE = os.getenv("GROQ_MODEL_LARGE", "openai/gpt-oss-120b")
 BRAND_SCORE_THRESHOLD = 0.75
 GEO_SCORE_THRESHOLD = 0.75
 COMPETITOR_DIFF_THRESHOLD = 0.70
-MAX_RETRIES = 3
+MAX_RETRIES = 2   # writing attempts (first + one rewrite); each attempt costs ~2 model calls

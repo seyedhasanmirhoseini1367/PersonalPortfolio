@@ -248,54 +248,43 @@ You MUST include every missing keyword verbatim in the output. Rewrite and retur
                 if cta_override:
                     piece.cta = cta_override
 
-    # Generate image/video prompts for formats that benefit from visuals
-    if content_format not in ('motto',):
-        piece.image_prompts = _suggest_image_prompts(piece, brand, content_format)
-    if content_format in ('landing_page', 'blog_post', 'social_post'):
-        piece.video_prompts = _suggest_video_prompts(piece, brand, content_format)
-
     return piece
 
 
-def _suggest_image_prompts(piece: ContentPiece, brand: BrandProfile, content_format: str) -> list[ImageAsset]:
-    """Ask the LLM to suggest image generation prompts for the content."""
+def suggest_visuals(piece: ContentPiece, brand: BrandProfile, content_format: str) -> ContentPiece:
+    """Image (and video) prompts for the FINAL content, in one model call.
+    (They used to be made on every rewrite attempt, as two calls.)"""
+    if content_format == 'motto':
+        return piece
     n = {"blog_post": 3, "landing_page": 2, "social_post": 1, "email": 1, "ad_copy": 3}.get(content_format, 1)
-    prompt = f"""You are a visual art director. Based on this content, suggest {n} image(s) that would pair with it.
+    want_video = content_format in ('landing_page', 'blog_post', 'social_post')
+    video_line = ('- "video": one short video concept: {"prompt": Runway/Kling prompt (scene, motion, mood), '
+                  '"duration_seconds": 5-30}\n') if want_video else ''
+    prompt = f"""You are a visual art director. Suggest visuals to pair with this content.
 
 CONTENT TITLE: {piece.title}
 HEADLINE: {piece.headline}
 BRAND TONE: {brand.tone}
 AUDIENCE: {brand.audience}
-
-Return a JSON array of {n} objects, each with:
-- "prompt": a detailed DALL-E/Stable Diffusion generation prompt (describe style, subject, mood, colors)
-- "alt_text": short accessible description (10 words max)
-
-Return ONLY the JSON array."""
-    try:
-        items = json.loads(generate(prompt))
-        if isinstance(items, dict):
-            items = [items]
-        return [ImageAsset(**i) for i in items[:n]]
-    except Exception:
-        return []
-
-
-def _suggest_video_prompts(piece: ContentPiece, brand: BrandProfile, content_format: str) -> list[VideoAsset]:
-    """Ask the LLM to suggest a short video concept for the content."""
-    prompt = f"""You are a video creative director. Suggest 1 short video concept for this content.
-
-CONTENT TITLE: {piece.title}
-BRAND TONE: {brand.tone}
 FORMAT: {content_format}
 
 Return a JSON object with:
-- "prompt": a Runway/Kling video generation prompt (describe scene, motion, mood, duration)
-- "duration_seconds": suggested clip length (5–30)
-
+- "images": a list of {n} objects with "prompt" (detailed image-generation prompt: style, subject,
+  mood, colours) and "alt_text" (10 words max)
+{video_line}Do not put text, numbers or statistics into the images.
 Return ONLY the JSON object."""
+    piece = piece.model_copy(deep=True)
     try:
-        item = json.loads(generate(prompt))
-        return [VideoAsset(**item)]
+        data = json.loads(generate(prompt))
+        if isinstance(data, list):
+            data = {"images": data}
+        images = data.get("images") or []
+        if isinstance(images, dict):
+            images = [images]
+        piece.image_prompts = [ImageAsset(**i) for i in images[:n] if isinstance(i, dict) and i.get("prompt")]
+        video = data.get("video")
+        if want_video and isinstance(video, dict) and video.get("prompt"):
+            piece.video_prompts = [VideoAsset(**video)]
     except Exception:
-        return []
+        pass
+    return piece

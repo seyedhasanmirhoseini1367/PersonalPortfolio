@@ -48,6 +48,60 @@ Return ONLY valid JSON."""
     }
 
 
+# ── JUDGES 1 + 4 IN ONE CALL ─────────────────────────────────────────────────
+
+def judge_quality(content: str, audience: str, goal: str) -> tuple[dict, dict]:
+    """Customer fit and naturalness from a single model call (they read the
+    same text; two calls doubled the cost of every attempt)."""
+    found_cliches = [w for w in AI_CLICHES if w.lower() in content.lower()]
+    prompt = f"""You are evaluating marketing content in two ways.
+
+TARGET AUDIENCE: {audience}
+CONTENT GOAL: {goal}
+
+CONTENT:
+{content}
+
+A) CUSTOMER FIT, 0-100: does it address the audience's real pain points, at the right
+   level, answer questions they would ask, give a clear value proposition and a call to action?
+B) NATURALNESS as marketing copy, 0-100: 90-100 skilled copywriter, 70-89 good with minor
+   formulaic phrases, 50-69 some AI patterns, 30-49 templated, 0-29 robotic. Structured,
+   professional copy is fine; penalise buzzwords, repetitive sentences, no specifics.
+   Short formats (a tagline, an ad line) are judged as what they are, not for length.
+
+Return JSON:
+{{
+  "customer": {{"score": 0-100, "pain_points_addressed": true/false, "clarity": "excellent/good/poor",
+               "value_proposition": "clear/vague/missing",
+               "feedback": "2-3 specific sentences on what works and what to improve"}},
+  "naturalness": {{"score": 0-100, "sounds_human": true/false,
+                  "ai_patterns_detected": ["specific patterns found, if any"],
+                  "feedback": "2 sentences on what to improve"}}
+}}
+Return ONLY valid JSON."""
+    data = json.loads(generate(prompt))
+    c = data.get("customer") or {}
+    n = data.get("naturalness") or {}
+    customer = {
+        "score": int(c.get("score", 70)),
+        "pain_points_addressed": c.get("pain_points_addressed", True),
+        "clarity": c.get("clarity", "good"),
+        "value_proposition": c.get("value_proposition", "clear"),
+        "feedback": c.get("feedback", ""),
+    }
+    score = int(n.get("score", 70))
+    if found_cliches:
+        score = max(0, score - len(found_cliches) * 3)
+    naturalness = {
+        "score": score,
+        "sounds_human": n.get("sounds_human", True),
+        "ai_cliches_found": found_cliches,
+        "ai_patterns": n.get("ai_patterns_detected", []),
+        "feedback": n.get("feedback", ""),
+    }
+    return customer, naturalness
+
+
 # ── JUDGE 2: GEO COMPLIANCE (checklist — objective) ──────────────────────────
 
 def judge_geo(content: str, content_format: str = None) -> dict:
@@ -265,14 +319,11 @@ def evaluate_loop(
     content_format: str = None,
 ) -> dict:
     """Runs inside the retry loop. Judges content quality, GEO signals, and naturalness."""
-    print("    [Judge 1] Customer fit...")
-    customer = judge_customer(content_text, audience, goal)
+    print("    [Judges 1+4] Customer fit and naturalness...")
+    customer, naturalness = judge_quality(content_text, audience, goal)
 
     print("    [Judge 2] GEO compliance...")
     geo = judge_geo(content_text, content_format)
-
-    print("    [Judge 4] Human naturalness...")
-    naturalness = judge_naturalness(content_text)
 
     structure_issues   = []
     structure_feedback = ""

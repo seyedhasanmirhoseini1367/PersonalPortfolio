@@ -13,6 +13,10 @@ from .agents.geo_optimizer import optimize_for_geo
 from .agents.localizer import localize_content
 from .agents.evaluator import evaluate_loop, evaluate_competitor_edge
 from .agents.grounding import check_and_clean, merge_reports
+from .agents.cache import cached
+from .agents.content_writer import suggest_visuals
+from .pydantic_models import BrandProfile, CompetitorGapMap
+from .agents.gemini_client import call_count, reset_call_count
 from .agents.content_writer import LONG_FORMATS
 from .config import MAX_RETRIES
 
@@ -86,14 +90,21 @@ def node_ingest(state: PipelineState) -> dict:
 
 def node_classify(state: PipelineState) -> dict:
     print("[Node 2] Classifying content intent...")
-    content_type = classify_content(state["goal"])
+    content_type = cached("classify", [state["goal"]], lambda: classify_content(state["goal"]))
     print(f"  Intent: {content_type['primary_intent'].upper()} — {' → '.join(content_type['structure'])}")
     return {"content_type": content_type}
 
 
 def node_brand(state: PipelineState) -> dict:
     print("[Node 3] Analyzing brand voice (LangChain RAG)...")
-    brand = analyze_brand(state["client_id"], scope_ids=state.get("scope_ids"))
+    # Same company material -> same brand profile: reuse it across formats/runs.
+    from content_generator.models import KnowledgeChunk
+    chunks = KnowledgeChunk.objects.filter(client_id=state["client_id"])
+    if state.get("scope_ids"):
+        chunks = chunks.filter(scope_id__in=state["scope_ids"])
+    material = list(chunks.order_by("scope_id", "position").values_list("text", flat=True))
+    brand = cached("brand", [material],
+                   lambda: analyze_brand(state["client_id"], scope_ids=state.get("scope_ids")), BrandProfile)
     print(f"  Brand tone: {brand.tone}")
     return {"brand": brand}
 
@@ -102,12 +113,11 @@ def node_competitors(state: PipelineState) -> dict:
     print("[Node 4] Analyzing competitor landscape...")
     brand = state["brand"]
     brand_context = f"{brand.tone} {brand.audience} — {', '.join(brand.differentiators[:2])}"
-    gap_map = analyze_competitors(
-        state["goal"],
-        state["competitor_documents"],
-        brand_context,
-        state["content_type"]["primary_intent"],
-    )
+    intent = state["content_type"]["primary_intent"]
+    gap_map = cached(
+        "competitors", [state["goal"], state["competitor_documents"], brand_context, intent],
+        lambda: analyze_competitors(state["goal"], state["competitor_documents"], brand_context, intent),
+        CompetitorGapMap)
     print(f"  Competitors: {', '.join(gap_map.competitors[:3])}")
     print(f"  Gaps found: {len(gap_map.gaps)}")
     return {"gap_map": gap_map}
@@ -216,6 +226,8 @@ def node_localize(state: PipelineState) -> dict:
 
 def node_finalize(state: PipelineState) -> dict:
     content_en, report_en = check_and_clean(state["content_en"], state.get("sources", ""))
+    # Image/video prompts once, for the final text (one call).
+    content_en = suggest_visuals(content_en, state["brand"], state["content_format"])
     content_fi, report_fi = check_and_clean(state["content_fi"], state.get("sources", ""))
     loop_result = state["loop_result"]
     competitor_result = state["competitor_result"]
@@ -412,6 +424,7 @@ def run_pipeline(
     }
 
     _progress.cb = progress
+    reset_call_count()
     try:
         final_state = _graph.invoke(initial_state)
     finally:
@@ -423,6 +436,7 @@ def run_pipeline(
         evaluation=final_state["evaluation"],
         content_type=final_state["content_type"],
         fact_check=final_state.get("fact_check") or {},
+        llm_calls=call_count(),
     )
 
 

@@ -132,3 +132,4 @@ class PipelineOutput(BaseModel):
     content_type: dict = {}
     # Grounding check: numbers removed for lack of a source, attributions/quotes to review
     fact_check: dict = {}
+    llm_calls: int = 0   # model calls this run made (cost / speed tracking)
