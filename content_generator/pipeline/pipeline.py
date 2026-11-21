@@ -278,9 +278,9 @@ def _build_graph():
 
     g.add_node("ingest",           node_ingest)
     g.add_node("classify",         node_classify)
-    g.add_node("brand",            node_brand)
+    g.add_node("analyze_brand",    node_brand)   # node names must differ from state keys
     g.add_node("competitors",      node_competitors)
-    g.add_node("brief",            node_brief)
+    g.add_node("build_brief",      node_brief)
     g.add_node("write",            node_write)
     g.add_node("geo",              node_geo)
     g.add_node("evaluate",         node_evaluate)
@@ -290,10 +290,10 @@ def _build_graph():
 
     g.add_edge(START,        "ingest")
     g.add_edge("ingest",     "classify")
-    g.add_edge("classify",   "brand")
-    g.add_edge("brand",      "competitors")
-    g.add_edge("competitors","brief")
-    g.add_edge("brief",      "write")
+    g.add_edge("classify",   "analyze_brand")
+    g.add_edge("analyze_brand", "competitors")
+    g.add_edge("competitors","build_brief")
+    g.add_edge("build_brief", "write")
     g.add_edge("write",      "geo")
     g.add_edge("geo",        "evaluate")
 
