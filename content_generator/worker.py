@@ -147,6 +147,11 @@ def _idle_tasks() -> None:
         maybe_run()   # monthly Kaggle archive update (checks at most hourly)
     except Exception:
         logger.exception('Kaggle archive auto-update check failed')
+    try:
+        from stories.digest import maybe_run as digest_maybe_run
+        digest_maybe_run()   # daily AI & ML digest after 07:00 Helsinki (checks every 10 min)
+    except Exception:
+        logger.exception('Daily digest check failed')
 
 
 def _loop() -> None:
