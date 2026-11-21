@@ -1,4 +1,5 @@
 import json
+import threading
 from typing import TypedDict, Optional, Any
 from langgraph.graph import StateGraph, START, END
 
@@ -278,22 +279,59 @@ def node_finalize(state: PipelineState) -> dict:
             "fact_check": fact_check}
 
 
+# ── Progress reporting ────────────────────────────────────────
+# The worker passes a callback; each step reports (index, label) so the
+# waiting page shows where the job really is. Thread-local because the
+# graph is compiled once and shared.
+_progress = threading.local()
+
+PROGRESS_STEPS = {
+    # node name -> (step shown on the waiting page, label)
+    "ingest":           (0, "Reading your company material"),
+    "classify":         (0, "Reading your company material"),
+    "analyze_brand":    (1, "Analysing brand voice"),
+    "competitors":      (2, "Looking for competitor gaps"),
+    "build_brief":      (2, "Planning the content"),
+    "write":            (3, "Writing"),
+    "geo":              (4, "Checking facts and structure"),
+    "evaluate":         (5, "Evaluating quality"),
+    "competitor_judge": (5, "Evaluating quality"),
+    "localize":         (6, "Translating"),
+    "finalize":         (6, "Finishing"),
+}
+
+
+def _step(name, fn):
+    def wrapped(state):
+        cb = getattr(_progress, "cb", None)
+        if cb is not None:
+            step, label = PROGRESS_STEPS[name]
+            if name == "write" and state.get("attempt", 0) > 0:
+                label = f"Rewriting (attempt {state['attempt'] + 1} of {MAX_RETRIES})"
+            try:
+                cb(step, label)
+            except Exception:   # progress must never break generation
+                pass
+        return fn(state)
+    return wrapped
+
+
 # ── Build graph ───────────────────────────────────────────────
 
 def _build_graph():
     g = StateGraph(PipelineState)
 
-    g.add_node("ingest",           node_ingest)
-    g.add_node("classify",         node_classify)
-    g.add_node("analyze_brand",    node_brand)   # node names must differ from state keys
-    g.add_node("competitors",      node_competitors)
-    g.add_node("build_brief",      node_brief)
-    g.add_node("write",            node_write)
-    g.add_node("geo",              node_geo)
-    g.add_node("evaluate",         node_evaluate)
-    g.add_node("competitor_judge", node_competitor_judge)
-    g.add_node("localize",         node_localize)
-    g.add_node("finalize",         node_finalize)
+    g.add_node("ingest",           _step("ingest", node_ingest))
+    g.add_node("classify",         _step("classify", node_classify))
+    g.add_node("analyze_brand",    _step("analyze_brand", node_brand))   # node names must differ from state keys
+    g.add_node("competitors",      _step("competitors", node_competitors))
+    g.add_node("build_brief",      _step("build_brief", node_brief))
+    g.add_node("write",            _step("write", node_write))
+    g.add_node("geo",              _step("geo", node_geo))
+    g.add_node("evaluate",         _step("evaluate", node_evaluate))
+    g.add_node("competitor_judge", _step("competitor_judge", node_competitor_judge))
+    g.add_node("localize",         _step("localize", node_localize))
+    g.add_node("finalize",         _step("finalize", node_finalize))
 
     g.add_edge(START,        "ingest")
     g.add_edge("ingest",     "classify")
@@ -336,6 +374,7 @@ def run_pipeline(
     tone_preset: str = "professional",
     initial_feedback: str = None,
     seo_params: dict = None,
+    progress=None,
 ) -> PipelineOutput:
     if target_languages is None:
         target_languages = ["English"]
@@ -372,7 +411,11 @@ def run_pipeline(
         "fact_check": {},
     }
 
-    final_state = _graph.invoke(initial_state)
+    _progress.cb = progress
+    try:
+        final_state = _graph.invoke(initial_state)
+    finally:
+        _progress.cb = None
 
     return PipelineOutput(
         content_en=final_state["content_en"],

@@ -91,36 +91,42 @@
     <h2 class="waiting-title">Generating your content…</h2>
     <p class="waiting-sub">
         {{ jobs|length }} format{{ jobs|length|pluralize }} queued
-        &nbsp;·&nbsp; usually 2–4 min per format
+        &nbsp;·&nbsp; usually 1–3 min per format, one at a time
+        &nbsp;·&nbsp; you can leave this page; results appear in Content History
     </p>
 
-    <!-- Pipeline steps — colored as work progresses -->
+    <!-- Pipeline steps: the real step of the job being worked on (from the server) -->
     <div class="pipeline-steps" id="pipelineSteps">
         <div class="step" data-step="0">
             <span class="step-icon"><span class="step-icon-pending"></span></span>
-            Ingesting company documents into vector store
+            Reading your company material
         </div>
         <div class="step" data-step="1">
             <span class="step-icon"><span class="step-icon-pending"></span></span>
-            Analyzing brand profile via RAG
+            Analysing brand voice
         </div>
         <div class="step" data-step="2">
             <span class="step-icon"><span class="step-icon-pending"></span></span>
-            Detecting competitor gaps
+            Finding competitor gaps &amp; planning
         </div>
         <div class="step" data-step="3">
             <span class="step-icon"><span class="step-icon-pending"></span></span>
-            Writing brand-aligned content
+            Writing
         </div>
         <div class="step" data-step="4">
             <span class="step-icon"><span class="step-icon-pending"></span></span>
-            GEO optimization pass
+            Checking facts and structure
         </div>
         <div class="step" data-step="5">
             <span class="step-icon"><span class="step-icon-pending"></span></span>
-            4-judge evaluation &amp; auto-retry if score &lt; 70
+            Evaluating quality
+        </div>
+        <div class="step" data-step="6">
+            <span class="step-icon"><span class="step-icon-pending"></span></span>
+            Translating &amp; finishing
         </div>
     </div>
+    <p class="progress-text" id="stepLabel" style="margin-top:.4rem;">Waiting for the worker…</p>
 
     <hr class="divider">
 
@@ -151,56 +157,51 @@
     const resultUrl = "{% url 'content_generator:group_result' group_id %}";
     const total     = {{ jobs|length }};
     const steps     = document.querySelectorAll('#pipelineSteps .step');
-    const TOTAL_STEPS = steps.length;
+    const stepLabel = document.getElementById('stepLabel');
 
     const CHECK_SVG = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#15803d" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>`;
     const DOT_HTML  = `<span class="step-icon-dot"></span>`;
     const PENDING_HTML = `<span class="step-icon-pending"></span>`;
 
-    const statusLabels = { pending: 'Pending', running: 'Running…', done: '✓ Done', failed: '✗ Failed' };
-
-    // Timing (ms) at which each step activates — spread across ~3.5 min total
-    const STEP_TIMES = [0, 12000, 25000, 50000, 110000, 170000];
-
-    let currentStep = -1;
-
-    function activateStep(idx) {
-        if (idx <= currentStep) return;
-        // Mark previous as done
-        for (let i = 0; i < idx; i++) {
-            steps[i].classList.remove('active');
-            steps[i].classList.add('done');
-            steps[i].querySelector('.step-icon').innerHTML = CHECK_SVG;
-        }
-        // Mark current as active
-        steps[idx].classList.add('active');
-        steps[idx].querySelector('.step-icon').innerHTML = DOT_HTML;
-        currentStep = idx;
-    }
-
-    function allDone() {
-        steps.forEach(s => {
-            s.classList.remove('active');
-            s.classList.add('done');
-            s.querySelector('.step-icon').innerHTML = CHECK_SVG;
+    function showStep(idx) {
+        steps.forEach((s, i) => {
+            s.classList.toggle('done', i < idx);
+            s.classList.toggle('active', i === idx);
+            s.querySelector('.step-icon').innerHTML = i < idx ? CHECK_SVG : (i === idx ? DOT_HTML : PENDING_HTML);
         });
     }
 
-    // Schedule step activations
-    STEP_TIMES.forEach((t, i) => setTimeout(() => activateStep(i), t));
+    function badgeText(job) {
+        if (job.status === 'pending') {
+            return job.ahead ? `Queued · ${job.ahead} ahead` : 'Queued · next';
+        }
+        if (job.status === 'running') return 'Running · ' + (job.label || 'Starting');
+        return job.status === 'done' ? '✓ Done' : '✗ Failed';
+    }
 
-    // Poll for completion
     function poll() {
-        fetch(statusUrl)
+        fetch(statusUrl, {headers: {'Accept': 'application/json'}})
             .then(r => r.json())
             .then(data => {
-                data.statuses.forEach((s, i) => {
+                (data.jobs || []).forEach((job, i) => {
                     const badge = document.getElementById('job-badge-' + i);
                     if (badge) {
-                        badge.className = 'job-status-badge status-' + s;
-                        badge.textContent = statusLabels[s] || s;
+                        badge.className = 'job-status-badge status-' + job.status;
+                        badge.textContent = badgeText(job);
                     }
                 });
+                // The step list follows the job that is being worked on now.
+                const current = (data.jobs || []).find(j => j.status === 'running')
+                             || (data.jobs || []).find(j => j.status === 'pending');
+                if (current && current.status === 'running') {
+                    showStep(current.step || 0);
+                    stepLabel.textContent = current.label || 'Working…';
+                } else if (current) {
+                    showStep(-1);
+                    stepLabel.textContent = current.ahead
+                        ? `In the queue: ${current.ahead} job(s) ahead of yours`
+                        : 'Starting shortly…';
+                }
 
                 const pct = total > 0 ? Math.round((data.done_count / total) * 100) : 0;
                 document.getElementById('progressBar').style.width = pct + '%';
@@ -208,17 +209,17 @@
                     data.done_count + ' / ' + total + ' complete';
 
                 if (data.all_done) {
-                    allDone();
+                    showStep(steps.length);
+                    stepLabel.textContent = 'Done';
                     setTimeout(() => { window.location.href = resultUrl; }, 800);
                 } else {
-                    setTimeout(poll, 5000);
+                    setTimeout(poll, 3000);
                 }
             })
             .catch(() => setTimeout(poll, 8000));
     }
 
-    activateStep(0);   // start first step immediately
-    setTimeout(poll, 5000);
+    poll();
 })();
 </script>
 {% endblock %}

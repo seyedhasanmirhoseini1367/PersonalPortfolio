@@ -16,6 +16,7 @@ from django.http import JsonResponse, HttpResponseForbidden
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
 from .models import GenerationJob, CompanyProfile, ServiceProduct, CMSConnection, CompanyDocument
+from . import worker
 
 
 def client_required(view_func):
@@ -193,15 +194,11 @@ def submit_job(request):
                 competitor_docs  = competitor_docs,
                 tone_preset      = tone_preset,
                 target_languages = target_languages,
+                seo_params       = seo_params,
                 status           = GenerationJob.STATUS_PENDING,
             )
             jobs.append(job)
-            threading.Thread(
-                target=_run_pipeline,
-                args=(str(job.id),),
-                kwargs={'seo_params': seo_params},
-                daemon=True,
-            ).start()
+            worker.enqueue(job)
 
     return render(request, 'content_generator/waiting.html', {
         'jobs':       jobs,
@@ -212,14 +209,27 @@ def submit_job(request):
 
 @client_required
 def group_status(request, group_id):
-    jobs     = GenerationJob.objects.filter(job_group_id=group_id)
-    statuses = list(jobs.values_list('status', flat=True))
-    all_done = all(s in (GenerationJob.STATUS_DONE, GenerationJob.STATUS_FAILED) for s in statuses)
+    # Same order as the waiting page lists them (creation order).
+    jobs = list(GenerationJob.objects.filter(job_group_id=group_id).order_by('created_at'))
+    if jobs and not _owns_job(request.user, jobs[0]):
+        return JsonResponse({'error': 'Not authorized'}, status=403)
+    finished = (GenerationJob.STATUS_DONE, GenerationJob.STATUS_FAILED)
+    items = []
+    for job in jobs:
+        ahead = None
+        if job.status == GenerationJob.STATUS_PENDING:
+            ahead = GenerationJob.objects.filter(
+                status__in=(GenerationJob.STATUS_PENDING, GenerationJob.STATUS_RUNNING),
+                created_at__lt=job.created_at).count()
+        items.append({'status': job.status, 'step': job.progress_step,
+                      'label': job.progress_label, 'ahead': ahead})
+    statuses = [j.status for j in jobs]
     return JsonResponse({
         'statuses':   statuses,
-        'all_done':   all_done,
+        'jobs':       items,
+        'all_done':   all(s in finished for s in statuses),
         'total':      len(statuses),
-        'done_count': sum(1 for s in statuses if s in (GenerationJob.STATUS_DONE, GenerationJob.STATUS_FAILED)),
+        'done_count': sum(1 for s in statuses if s in finished),
     })
 
 
@@ -317,9 +327,10 @@ def rerun_job(request, job_id):
         target_languages = original.target_languages,
         parent_job       = original,
         user_feedback    = feedback,
+        seo_params       = original.seo_params or {},
         status           = GenerationJob.STATUS_PENDING,
     )
-    threading.Thread(target=_run_pipeline, args=(str(new_job.id),), daemon=True).start()
+    worker.enqueue(new_job)
     return JsonResponse({
         'status':    'started',
         'job_id':    str(new_job.id),
@@ -441,9 +452,8 @@ def _publish_notion(api_url: str, token: str, title: str, content: dict):
     return {'url': result.get('url', '')}
 
 
-# One pipeline at a time: each run loads models and calls the LLM APIs, and the
-# free instance has little memory. Jobs wait (status "pending") for their turn.
-_PIPELINE_SLOT = threading.Semaphore(1)
+# Jobs are queued in the database and run one at a time by
+# content_generator/worker.py (the free instance has little memory).
 _IMPORT_LOCK = threading.Lock()
 
 
@@ -456,16 +466,7 @@ def _load_pipeline():
     return run_pipeline
 
 
-def _run_pipeline(job_id: str, seo_params: dict = None):
-    from django.db import connection
-    try:
-        with _PIPELINE_SLOT:
-            _run_pipeline_now(job_id, seo_params)
-    finally:
-        connection.close()  # this thread's own DB connection
-
-
-def _run_pipeline_now(job_id: str, seo_params: dict = None):
+def _run_pipeline_now(job_id: str, seo_params: dict = None, progress=None):
     from .models import GenerationJob
 
     job = GenerationJob.objects.get(pk=job_id)
@@ -512,6 +513,7 @@ def _run_pipeline_now(job_id: str, seo_params: dict = None):
             tone_preset          = job.tone_preset or 'professional',
             initial_feedback     = feedback_with_hint or None,
             seo_params           = seo_params or {},
+            progress             = progress,
         )
 
         job.content_en    = output.content_en.model_dump() if output.content_en else None
