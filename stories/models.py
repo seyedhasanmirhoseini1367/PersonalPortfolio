@@ -198,6 +198,32 @@ class Story(models.Model):
             return True
         return False
 
+    # ── Daily AI & ML digest (stories/digest.py) ─────────────────────────────
+    @property
+    def is_digest(self):
+        return (self.slug or '').startswith('ai-ml-digest-')
+
+    @property
+    def digest_overview(self):
+        """For list cards: item counts per section and the first headline."""
+        import html as _html
+        import re as _re
+        labels = {'Research papers': 'paper', 'From the labs and newsrooms': 'news item',
+                  'Discussed on Hacker News': 'discussion'}
+        parts = _re.split(r'<h2>(.*?)</h2>', self.content or '')
+        sections, lead, total = [], '', 0
+        for name, body in zip(parts[1::2], parts[2::2]):
+            n = body.count('<h3>')
+            if not n:
+                continue
+            total += n
+            word = labels.get(_html.unescape(name), 'item')
+            sections.append(f"{n} {word}{'' if n == 1 else 's'}")
+            if not lead:
+                m = _re.search(r'<h3>(.*?)</h3>', body, _re.S)
+                lead = _html.unescape(_re.sub(r'<[^>]+>', '', m.group(1))).strip() if m else ''
+        return {'sections': sections, 'lead': lead, 'total': total}
+
     def get_excerpt(self):
         """Get excerpt or generate one from content (HTML stripped)."""
         import re

@@ -199,7 +199,8 @@
             color: #64748b;
             margin-bottom: 1.5rem;
         }
-    </style>
+    .tag-digest-cover { height: 120px; } .tag-digest-cover .digest-cover { height: 100%; flex-direction: row; align-items: baseline; gap: .6rem; }
+</style>
 {% endblock %}
 
 {% block content %}
@@ -221,10 +222,12 @@
             <article class="story-card">
                 {% if story.featured_image %}
                     <img src="{{ story.featured_image.url }}" alt="{{ story.title }}" class="story-image">
+                {% elif story.is_digest %}
+                    <div class="tag-digest-cover">{% include "stories/_digest_cover.html" %}</div>
                 {% endif %}
                 <div class="story-content">
                     <h2 class="story-title">
-                        <a href="{% url 'stories:story_detail' pk=story.pk %}">{{ story.title }}</a>
+                        <a href="{% url 'stories:story_detail' story.slug %}">{{ story.title }}</a>
                     </h2>
 
                     <div class="story-meta">
@@ -233,9 +236,13 @@
                         <span class="read-time">{{ story.read_time_minutes }} min read</span>
                     </div>
 
+                    {% if story.is_digest %}
+                        {% include "stories/_digest_overview.html" %}
+                    {% else %}
                     <p class="story-excerpt">
                         {{ story.get_excerpt }}
                     </p>
+                    {% endif %}
 
                     <div class="story-tags">
                         {% for tag in story.tags.all %}
@@ -252,7 +259,7 @@
                         ❤️ {{ story.likes_count }} likes
                     </span>
                         </div>
-                        <a href="{% url 'stories:story_detail' pk=story.pk %}" class="read-more">
+                        <a href="{% url 'stories:story_detail' story.slug %}" class="read-more">
                             Read Full Story →
                         </a>
                     </div>

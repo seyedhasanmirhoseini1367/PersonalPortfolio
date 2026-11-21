@@ -107,3 +107,33 @@ class DigestTests(TestCase):
         self.assertTrue(is_due(datetime(2026, 11, 22, 7, 5, tzinfo=hel)))
         DailyDigest.objects.create(date=datetime(2026, 11, 22).date(), status='done')
         self.assertFalse(is_due(datetime(2026, 11, 22, 9, 0, tzinfo=hel)))
+
+
+class StoryListPagesTests(TestCase):
+    def setUp(self):
+        from .models import Tag
+        self.user = get_user_model().objects.create_user('writer2', 'w2@example.test', 'pw-writer-123!')
+        self.digest = Story.objects.create(
+            author=self.user, title='AI & ML Digest — 21 Nov 2026', slug='ai-ml-digest-2026-11-21',
+            status=Story.Status.PUBLISHED, excerpt='x',
+            content='<p>intro</p><h2>Research papers</h2><h3><a href="https://a">Paper A</a></h3><p>s</p>'
+                    '<h3><a href="https://b">Paper B</a></h3><h2>From the labs and newsrooms</h2>'
+                    '<h3><a href="https://c">News C</a></h3>' + '<p>' + 'y' * 120 + '</p>')
+        tag = Tag.objects.create(name='AI News', slug='ai-news')
+        self.digest.tags.add(tag)
+
+    def test_digest_overview(self):
+        o = self.digest.digest_overview
+        self.assertEqual((o['sections'], o['lead'], o['total']), (['2 papers', '1 news item'], 'Paper A', 3))
+
+    def test_list_and_tag_pages_render_digest_card(self):
+        for url in ('/stories/', '/stories/tag/ai-news/'):
+            r = self.client.get(url)
+            self.assertEqual(r.status_code, 200, url)
+            self.assertContains(r, 'Daily digest')
+            self.assertContains(r, '2 papers · 1 news item')
+            self.assertContains(r, '/stories/story/ai-ml-digest-2026-11-21/')
+
+    def test_my_stories_page(self):
+        self.client.force_login(self.user)
+        self.assertEqual(self.client.get('/stories/my-stories/').status_code, 200)

@@ -304,10 +304,12 @@ def publish(items: list[dict], day):
     author = (User.objects.filter(username=os.environ.get('SUPERUSER_USERNAME', 'seyed')).first()
               or User.objects.filter(is_superuser=True).order_by('pk').first())
     title = f'AI & ML Digest — {day.strftime("%d %b %Y")}'
-    lead = '; '.join(i['title'] for i in items[:3])
+    counts = {k: sum(1 for i in items if i['section'] == k) for k in ('papers', 'news', 'hn')}
+    lead = (f"{counts['papers']} papers, {counts['news']} news items and {counts['hn']} discussions. "
+            f"Top: {items[0]['title']}")
     story, _ = Story.objects.update_or_create(
         slug=f'ai-ml-digest-{day.isoformat()}',
-        defaults=dict(author=author, title=title, excerpt=f'Today: {lead}'[:290],
+        defaults=dict(author=author, title=title, excerpt=lead[:290],
                       content=render_html(items, day), status=Story.Status.PUBLISHED,
                       published_at=timezone.now()))
     for name in ('AI News', 'Digest'):

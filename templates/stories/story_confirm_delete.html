@@ -146,7 +146,7 @@
                 {% csrf_token %}
                 <div class="form-actions">
                     <button type="submit" class="btn btn-danger">Yes, Delete Story</button>
-                    <a href="{% url 'stories:story_detail' pk=story.pk %}" class="btn btn-secondary">Cancel</a>
+                    <a href="{% url 'stories:story_detail' story.slug %}" class="btn btn-secondary">Cancel</a>
                 </div>
             </form>
         </div>

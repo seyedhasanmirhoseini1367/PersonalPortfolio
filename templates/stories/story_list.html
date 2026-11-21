@@ -136,13 +136,15 @@
 
                         <div class="stories-grid">
                             {% for story in stories %}
-                                <article class="story-card">
+                                <article class="story-card{% if not story.featured_image and not story.is_digest %} no-image{% endif %}">
                                     {% if story.featured_image %}
                                         <div class="story-image-wrapper">
                                             <img src="{{ story.featured_image.url }}"
                                                  alt="{{ story.title }}"
                                                  class="story-image">
                                         </div>
+                                    {% elif story.is_digest %}
+                                        {% include "stories/_digest_cover.html" %}
                                     {% endif %}
 
                                     <div class="story-card-content">
@@ -158,7 +160,11 @@
                                             <a href="{% url 'stories:story_detail' story.slug %}">{{ story.title }}</a>
                                         </h2>
 
-                                        <p class="story-card-excerpt">{{ story.get_excerpt }}</p>
+                                        {% if story.is_digest %}
+                                            {% include "stories/_digest_overview.html" %}
+                                        {% else %}
+                                            <p class="story-card-excerpt">{{ story.get_excerpt }}</p>
+                                        {% endif %}
 
                                         <div class="story-card-footer">
                                             <div class="author-section">
@@ -682,6 +688,11 @@
             display: grid;
             grid-template-columns: 150px 1fr;
             transition: all 0.3s;
+        }
+
+        .story-card.no-image { grid-template-columns: 1fr; }
+        .story-card-excerpt {
+            display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
         }
 
         .story-card:hover {

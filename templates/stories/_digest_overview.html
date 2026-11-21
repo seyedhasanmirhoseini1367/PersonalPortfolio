@@ -1,0 +1,9 @@
+{# Card text for the daily digest: what is inside, and the top item. #}
+{% with o=story.digest_overview %}
+    {% if o.sections %}<p class="digest-counts">{{ o.sections|join:" · " }}</p>{% endif %}
+    {% if o.lead %}<p class="story-card-excerpt digest-lead"><b>Top:</b> {{ o.lead }}</p>{% endif %}
+{% endwith %}
+<style>
+.digest-counts { margin: 0 0 .3rem; font-size: .74rem; font-weight: 600; color: #6d28d9; }
+.digest-lead { -webkit-line-clamp: 2 !important; display: -webkit-box; -webkit-box-orient: vertical; overflow: hidden; }
+</style>
