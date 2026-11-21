@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'content_generator',
     'kaggle_archive',
     'model_internals',
+    'sports',
 
     'storages',
 ]

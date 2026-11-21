@@ -29,8 +29,7 @@ urlpatterns = [
     path('sitemap.xml', sitemap, {'sitemaps': sitemaps}, name='django.contrib.sitemaps.views.sitemap'),
     path('robots.txt', include('projects.robots_urls')),
     re_path(r'^media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),
-    # Sports social-app prototype: a single self-contained HTML file
-    path('sports/', serve, {'document_root': settings.BASE_DIR / 'static' / 'sports', 'path': 'index.html'}, name='sports_prototype'),
+    path('sports/', include('sports.urls')),
 ]
 
 handler404 = 'projects.views.error_404'

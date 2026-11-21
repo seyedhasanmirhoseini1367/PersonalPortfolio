@@ -9,6 +9,7 @@ def robots_txt(request):
         'Disallow: /accounts/login/',
         'Disallow: /accounts/register/',
         'Disallow: /rag/',
+        'Disallow: /sports/api/',
         'Allow: /',
         '',
         f'Sitemap: {request.build_absolute_uri("/sitemap.xml")}',
