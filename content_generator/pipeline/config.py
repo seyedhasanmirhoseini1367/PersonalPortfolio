@@ -6,10 +6,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 load_dotenv(BASE_DIR / ".env")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
-GROQ_MODEL = "llama-3.1-8b-instant"
-
-# Completely separate from the portfolio RAG chromadb (data/chromadb/)
-CHROMA_PATH = str(BASE_DIR / "data" / "content_gen_chromadb")
+# Groq retires models often: override with GROQ_MODEL / GROQ_MODEL_LARGE.
+GROQ_MODEL = os.getenv("GROQ_MODEL", "qwen/qwen3.8-27b")
+GROQ_MODEL_LARGE = os.getenv("GROQ_MODEL_LARGE", "openai/gpt-oss-120b")
 
 BRAND_SCORE_THRESHOLD = 0.75
 GEO_SCORE_THRESHOLD = 0.75

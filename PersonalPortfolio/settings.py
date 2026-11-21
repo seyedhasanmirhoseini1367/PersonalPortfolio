@@ -237,15 +237,16 @@ SYNTHETIC_MONITOR = {
 
 # ── RAG Configuration ─────────────────────────────────────────────────────────
 RAG_CONFIG = {
-    'EMBEDDING_MODEL':  'models/text-embedding-004',
+    # Provider models retire often; override any of these with an env var.
+    'EMBEDDING_MODEL':  config('GEMINI_EMBEDDING_MODEL', default='models/gemini-embedding-001'),
     'VECTOR_STORE_PATH': BASE_DIR / 'rag_system' / 'vector_store',
     'DOCUMENTS_PATH':    BASE_DIR / 'rag_system' / 'documents',
     'CHUNK_SIZE':        300,
     'CHUNK_OVERLAP':     50,
-    'GEMINI_MODEL':      'gemini-2.0-flash',
+    'GEMINI_MODEL':      config('GEMINI_MODEL', default='gemini-2.5-flash'),
     'ANTHROPIC_MODEL':   'claude-haiku-4-5-20251001',
     'OPENAI_MODEL':      'gpt-4o-mini',
-    'GROQ_MODEL':        'llama-3.1-8b-instant',
+    'GROQ_MODEL':        config('GROQ_MODEL', default='qwen/qwen3.8-27b'),
     'MAX_TOKENS':        1200,
 }
 

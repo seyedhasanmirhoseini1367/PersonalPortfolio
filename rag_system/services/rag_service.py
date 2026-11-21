@@ -71,7 +71,7 @@ class RAGService:
             )
             client = Groq(api_key=key)
             resp = client.chat.completions.create(
-                model='llama-3.1-8b-instant',
+                model=django_settings.RAG_CONFIG.get('GROQ_MODEL', 'qwen/qwen3.8-27b'),
                 messages=[{'role': 'user', 'content': prompt}],
                 max_tokens=80,
                 temperature=0,

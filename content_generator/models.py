@@ -198,3 +198,23 @@ class GenerationJob(models.Model):
 
     def __str__(self):
         return f"{self.company_name} — {self.get_content_format_display()} ({self.status})"
+
+
+class KnowledgeChunk(models.Model):
+    """A piece of a client's company text, searched by the content pipeline.
+
+    Stored in the database so it survives deploys (the old on-disk vector
+    store was wiped with the container). Searched with BM25 (rank-bm25).
+    """
+    client_id  = models.CharField(max_length=80, db_index=True)
+    scope_id   = models.CharField(max_length=80, default='general')
+    scope_name = models.CharField(max_length=200, blank=True)
+    position   = models.PositiveIntegerField(default=0)
+    text       = models.TextField()
+
+    class Meta:
+        ordering = ['client_id', 'scope_id', 'position']
+        indexes = [models.Index(fields=['client_id', 'scope_id'])]
+
+    def __str__(self):
+        return f"{self.client_id}/{self.scope_id}#{self.position}"

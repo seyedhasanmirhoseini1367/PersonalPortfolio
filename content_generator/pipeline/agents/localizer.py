@@ -2,6 +2,7 @@ import json
 from ..pydantic_models import ContentPiece, BrandProfile
 from .ingestion import query_collection
 from .gemini_client import generate
+from ..config import GROQ_MODEL_LARGE
 
 LANGUAGE_CONTEXT = {
     "Finnish": "Finnish business culture values directness, modesty, and practicality. Avoid hype. Use 'sinä' form for direct audience address.",
@@ -48,7 +49,7 @@ Return a single JSON object with these exact keys:
 
 Return ONLY valid JSON. No explanation. No extra keys."""
 
-    data = json.loads(generate(prompt, model="llama-3.3-70b-versatile"))
+    data = json.loads(generate(prompt, model=GROQ_MODEL_LARGE))
     if isinstance(data, list):
         data = data[0] if data else {}
     # unwrap if LLM nested the response

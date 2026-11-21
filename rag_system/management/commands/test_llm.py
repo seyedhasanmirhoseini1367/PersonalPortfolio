@@ -67,7 +67,7 @@ class Command(BaseCommand):
             from google.genai import types
             client = genai.Client(api_key=key)
             resp = client.models.generate_content(
-                model="gemini-2.0-flash",
+                model=settings.RAG_CONFIG.get('GEMINI_MODEL', 'gemini-2.5-flash'),
                 contents="Say OK",
                 config=types.GenerateContentConfig(max_output_tokens=5),
             )

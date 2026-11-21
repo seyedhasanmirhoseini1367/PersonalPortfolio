@@ -33,6 +33,10 @@ if [ "${REINDEX_ON_STARTUP}" = "1" ]; then
     python manage.py ingest_from_db --clear || echo "ingest_from_db failed (non-fatal)"
 fi
 
+# Fill in AI Assistant vectors that are missing or zero (e.g. after an
+# embedding model was retired). Runs in the background so start-up is not held.
+(python manage.py embed_missing || echo "embed_missing failed (non-fatal)") &
+
 echo "Starting gunicorn..."
 gunicorn PersonalPortfolio.wsgi:application \
     --bind 0.0.0.0:${PORT:-8000} \

@@ -1,17 +1,29 @@
-import shutil
-import threading
-import chromadb
-from sentence_transformers import SentenceTransformer
-from ..config import CHROMA_PATH
+"""Company knowledge for the content pipeline: store chunks, find relevant ones.
 
-_model = SentenceTransformer("all-MiniLM-L6-v2")
+Chunks live in the database (content_generator.KnowledgeChunk) so they survive
+deploys, and are ranked with BM25 (rank-bm25). This replaces ChromaDB +
+sentence-transformers, which were missing from the production image and would
+not fit in the small instance's memory (PyTorch alone is ~1 GB).
+"""
+import re
 
-_chroma_lock = threading.Lock()
-_chroma_instance = None
+from rank_bm25 import BM25Okapi
+
+_WORD = re.compile(r"[\w']+", re.UNICODE)
+_STOP = {
+    'the', 'a', 'an', 'and', 'or', 'of', 'to', 'in', 'on', 'for', 'with', 'is', 'are', 'be',
+    'our', 'we', 'you', 'your', 'it', 'its', 'this', 'that', 'as', 'at', 'by', 'from', 'about',
+}
+
+
+def tokenize(text: str) -> list[str]:
+    words = [w.lower() for w in _WORD.findall(text or '')]
+    # light stemming so "services"/"service", "clinics"/"clinic" match
+    return [w[:-1] if len(w) > 4 and w.endswith('s') else w for w in words if w not in _STOP]
 
 
 def chunk_text(text: str, chunk_size: int = 500, overlap: int = 50) -> list[str]:
-    words = text.split()
+    words = (text or '').split()
     chunks = []
     for i in range(0, len(words), chunk_size - overlap):
         chunk = " ".join(words[i:i + chunk_size])
@@ -20,102 +32,73 @@ def chunk_text(text: str, chunk_size: int = 500, overlap: int = 50) -> list[str]
     return chunks
 
 
-def embed_texts(texts: list[str]) -> list[list[float]]:
-    return _model.encode(texts, convert_to_numpy=True).tolist()
-
-
-def embed_query(query: str) -> list[float]:
-    return _model.encode([query], convert_to_numpy=True)[0].tolist()
-
-
-def _chroma_client() -> chromadb.PersistentClient:
-    """Singleton PersistentClient — thread-safe, auto-heals corrupt DB."""
-    global _chroma_instance
-    with _chroma_lock:
-        if _chroma_instance is not None:
-            return _chroma_instance
-        try:
-            _chroma_instance = chromadb.PersistentClient(path=CHROMA_PATH)
-        except Exception as e:
-            if "tenant" in str(e).lower():
-                shutil.rmtree(CHROMA_PATH, ignore_errors=True)
-                _chroma_instance = chromadb.PersistentClient(path=CHROMA_PATH)
-            else:
-                raise
-        return _chroma_instance
-
-
-def _get_collection(client_id: str) -> chromadb.Collection:
-    db = _chroma_client()
-    try:
-        return db.get_collection(name=f"client_{client_id}")
-    except Exception:
-        return db.create_collection(name=f"client_{client_id}")
+def _store(client_id: str, scope_id: str, scope_name: str, chunks: list[str]) -> None:
+    from content_generator.models import KnowledgeChunk
+    KnowledgeChunk.objects.bulk_create([
+        KnowledgeChunk(client_id=client_id, scope_id=scope_id, scope_name=scope_name, position=i, text=c)
+        for i, c in enumerate(chunks)
+    ])
 
 
 def ingest_client_data(client_id: str, documents: list[str]) -> None:
-    """Legacy: ingest raw documents without scope (used by CLI and guest form)."""
+    """Replace everything stored for client_id with these documents."""
+    from content_generator.models import KnowledgeChunk
     if not documents:
         return
-    db = _chroma_client()
-    try:
-        db.delete_collection(name=f"client_{client_id}")
-    except Exception:
-        pass
-    collection = db.create_collection(name=f"client_{client_id}")
-
-    all_chunks, all_ids, all_meta = [], [], []
-    for i, doc in enumerate(documents):
-        for j, chunk in enumerate(chunk_text(doc)):
-            all_chunks.append(chunk)
-            all_ids.append(f"{client_id}_{i}_{j}")
-            all_meta.append({"scope_id": "general", "scope_name": "General"})
-
-    embeddings = embed_texts(all_chunks)
-    collection.add(documents=all_chunks, embeddings=embeddings, ids=all_ids, metadatas=all_meta)
-    print(f"Ingested {len(all_chunks)} chunks for client '{client_id}'")
+    KnowledgeChunk.objects.filter(client_id=client_id).delete()
+    chunks = [c for doc in documents for c in chunk_text(doc)]
+    _store(client_id, 'general', 'General', chunks)
 
 
 def ingest_scope_data(client_id: str, scope_id: str, scope_name: str, text: str) -> int:
-    """Ingest text for a specific scope, appending to the company collection."""
+    """Replace the chunks of one scope (e.g. a service) for this client."""
+    from content_generator.models import KnowledgeChunk
+    KnowledgeChunk.objects.filter(client_id=client_id, scope_id=scope_id).delete()
     chunks = chunk_text(text)
-    if not chunks:
-        return 0
-
-    collection = _get_collection(client_id)
-
-    # Remove existing chunks for this scope_id to avoid duplicates on re-upload
-    try:
-        existing = collection.get(where={"scope_id": {"$eq": scope_id}})
-        if existing["ids"]:
-            collection.delete(ids=existing["ids"])
-    except Exception:
-        pass
-
-    ids = [f"{client_id}_scope{scope_id}_{j}" for j in range(len(chunks))]
-    meta = [{"scope_id": scope_id, "scope_name": scope_name} for _ in chunks]
-    embeddings = embed_texts(chunks)
-    collection.add(documents=chunks, embeddings=embeddings, ids=ids, metadatas=meta)
+    _store(client_id, scope_id, scope_name, chunks)
     return len(chunks)
 
 
 def delete_scope_data(client_id: str, scope_id: str) -> None:
-    """Remove all chunks for a scope from ChromaDB."""
-    try:
-        collection = _get_collection(client_id)
-        existing = collection.get(where={"scope_id": {"$eq": scope_id}})
-        if existing["ids"]:
-            collection.delete(ids=existing["ids"])
-    except Exception:
-        pass
+    from content_generator.models import KnowledgeChunk
+    KnowledgeChunk.objects.filter(client_id=client_id, scope_id=scope_id).delete()
 
 
 def query_collection(client_id: str, query: str, n_results: int = 5, scope_ids: list[str] = None) -> list[str]:
-    """Retrieve relevant chunks via LangChain Chroma retriever with optional scope filter."""
-    from .lc_client import lc_retrieve
-    return lc_retrieve(client_id, query, scope_ids=scope_ids, k=n_results)
+    """The n_results chunks most relevant to query (BM25), optionally within scopes."""
+    from content_generator.models import KnowledgeChunk
+    qs = KnowledgeChunk.objects.filter(client_id=client_id)
+    if scope_ids:
+        qs = qs.filter(scope_id__in=scope_ids)
+    texts = list(qs.values_list('text', flat=True))
+    if not texts:
+        return []
+    tokens = tokenize(query)
+    if not tokens:
+        return texts[:n_results]
+    scores = BM25Okapi([tokenize(t) or ['_'] for t in texts]).get_scores(tokens)
+    ranked = sorted(range(len(texts)), key=lambda i: scores[i], reverse=True)
+    return [texts[i] for i in ranked[:n_results]]
 
 
-# Keep old name as alias
-def get_collection(client_id: str):
-    return _get_collection(client_id)
+def scope_names(client_id: str) -> list[tuple[str, str]]:
+    from content_generator.models import KnowledgeChunk
+    return list(KnowledgeChunk.objects.filter(client_id=client_id)
+                .values_list('scope_id', 'scope_name').distinct())
+
+
+def ensure_company_indexed(profile) -> None:
+    """Index a company profile (about text + services) if nothing is stored yet.
+
+    Profiles saved while indexing was broken have no chunks; this fills them
+    in on the first generation instead of producing content with no context.
+    """
+    from content_generator.models import KnowledgeChunk
+    client_id = f"company_{profile.pk}"
+    if KnowledgeChunk.objects.filter(client_id=client_id).exists():
+        return
+    if profile.about:
+        ingest_scope_data(client_id, 'about', 'Company About', profile.about)
+    for service in profile.services.all():
+        if service.description:
+            ingest_scope_data(client_id, f"service_{service.pk}", service.name, service.description)

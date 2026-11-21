@@ -61,3 +61,26 @@ class AccessTests(TestCase):
         job = GenerationJob.objects.get(owner=self.ana)
         self.assertIsNone(job.company_profile)
         self.assertNotIn('secret', job.company_docs)
+
+
+class KnowledgeSearchTests(TestCase):
+    """Company knowledge is stored in the database and ranked with BM25."""
+
+    def test_store_search_and_scopes(self):
+        from .pipeline.agents.ingestion import ingest_scope_data, query_collection, ensure_company_indexed
+        from .pipeline.agents.scope_detector import detect_scope
+        ingest_scope_data('c1', 'about', 'Company About', 'We build a health app for patients in Finland.')
+        ingest_scope_data('c1', 's1', 'Lab result explainer', 'Explains lab results and blood tests in plain words.')
+        ingest_scope_data('c1', 's2', 'Medication reminders', 'Daily reminders and refill alerts.')
+        self.assertIn('lab results', query_collection('c1', 'explain my blood test results', 1)[0])
+        self.assertEqual(len(query_collection('c1', 'anything', 5, scope_ids=['s2'])), 1)
+        self.assertEqual(detect_scope('Promote the lab result explainer', [('s1', 'Lab result explainer'), ('s2', 'Medication reminders')]), ['s1'])
+        self.assertEqual(detect_scope('Post about the whole company', [('s1', 'Lab result explainer')]), [])
+        ingest_scope_data('c1', 's1', 'Lab result explainer', 'Replaced text.')  # re-index replaces
+        self.assertEqual(query_collection('c1', 'replaced', 5, scope_ids=['s1']), ['Replaced text.'])
+
+        profile = CompanyProfile.objects.create(name='Acme', about='Acme makes rockets.')
+        from .models import KnowledgeChunk
+        KnowledgeChunk.objects.filter(client_id=f'company_{profile.pk}').delete()
+        ensure_company_indexed(profile)
+        self.assertEqual(query_collection(f'company_{profile.pk}', 'rockets', 1), ['Acme makes rockets.'])
