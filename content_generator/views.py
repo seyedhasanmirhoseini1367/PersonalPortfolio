@@ -27,16 +27,21 @@ def client_required(view_func):
     return _wrapped
 
 
-# Each job calls the paid LLM APIs, so non-staff users get a daily budget.
-DAILY_JOB_LIMIT = 10
 MAX_FORMATS = 4
 
 
+def daily_limit() -> int:
+    """Generations per user per 24 h (CONTENT_GENERATOR_DAILY_LIMIT); 0 = no limit."""
+    return int(getattr(settings, 'CONTENT_GENERATOR_DAILY_LIMIT', 0) or 0)
+
+
 def jobs_left_today(user):
-    if user.is_staff:
+    """How many generations the user may still start today, or None for no limit."""
+    limit = daily_limit()
+    if user.is_staff or limit <= 0:
         return None
     used = GenerationJob.objects.filter(owner=user, created_at__gte=timezone.now() - timedelta(days=1)).count()
-    return max(0, DAILY_JOB_LIMIT - used)
+    return max(0, limit - used)
 
 
 def _user_services(user):
@@ -134,7 +139,7 @@ def submit_job(request):
     left = jobs_left_today(request.user)
     if left is not None and len(formats) * ab_variants > left:
         messages.error(request, f'Daily limit reached: you can start {left} more generation(s) today '
-                                f'(limit {DAILY_JOB_LIMIT} per 24 hours). Choose fewer formats or variants.')
+                                f'(limit {daily_limit()} per 24 hours). Choose fewer formats or variants.')
         return redirect('content_generator:form')
 
     company_name    = (request.POST.get('company_name', '').strip()
