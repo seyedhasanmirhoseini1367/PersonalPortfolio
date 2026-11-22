@@ -3,7 +3,7 @@ from django.contrib import admin
 from django.utils.html import format_html
 from django.utils import timezone
 from django.contrib import messages
-from .models import Story, Tag, Comment, StoryView, StoryLike, NewsSource, DailyDigest, WeeklyDigest
+from .models import Story, Tag, Comment, StoryView, StoryLike, NewsSource, DailyDigest, WeeklyDigest, TelegramPost
 
 
 class TagInline(admin.TabularInline):
@@ -183,3 +183,9 @@ class DailyDigestAdmin(admin.ModelAdmin):
 class WeeklyDigestAdmin(admin.ModelAdmin):
     list_display = ('week_start', 'status', 'attempts', 'updated_at')
     readonly_fields = ('log',)
+
+@admin.register(TelegramPost)
+class TelegramPostAdmin(admin.ModelAdmin):
+    """Review and publish them on /stories/telegram/."""
+    list_display = ('story', 'status', 'created_at', 'sent_at')
+    list_filter = ('status',)

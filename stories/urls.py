@@ -22,6 +22,10 @@ urlpatterns = [
     # RSS feed of the daily digests and weekly roundups
     path('feed/', DigestFeed(), name='digest_feed'),
 
+    # Telegram channel: staff approval page and the bot's webhook
+    path('telegram/', views.telegram_review, name='telegram_review'),
+    path('telegram/webhook/', views.telegram_webhook, name='telegram_webhook'),
+
     # Tag views
     path('tag/<slug:slug>/', views.TagStoryListView.as_view(), name='tag_stories'),
 

@@ -504,3 +504,36 @@ class WeeklyDigest(models.Model):
 
     class Meta:
         ordering = ['-week_start']
+
+
+class TelegramConfig(models.Model):
+    """One row: which Telegram chat may approve posts (stories/telegram.py)."""
+    admin_chat_id = models.BigIntegerField(null=True, blank=True)
+    admin_name    = models.CharField(max_length=100, blank=True)
+    link_code     = models.CharField(max_length=40, blank=True)
+    bot_username  = models.CharField(max_length=100, blank=True)
+    webhook_url   = models.CharField(max_length=300, blank=True)
+
+    @classmethod
+    def get(cls):
+        return cls.objects.get_or_create(pk=1)[0]
+
+
+class TelegramPost(models.Model):
+    """A digest announcement for the Telegram channel, sent only after approval."""
+    PENDING, SENDING, SENT, SKIPPED, FAILED = 'pending', 'sending', 'sent', 'skipped', 'failed'
+    STATUS_CHOICES = [(s, s.title()) for s in (PENDING, SENDING, SENT, SKIPPED, FAILED)]
+    story              = models.ForeignKey(Story, on_delete=models.CASCADE, related_name='telegram_posts')
+    text               = models.TextField(help_text="Telegram HTML: <b>, <i>, <a href=...>")
+    status             = models.CharField(max_length=10, choices=STATUS_CHOICES, default=PENDING)
+    error              = models.TextField(blank=True)
+    review_message_id  = models.BigIntegerField(null=True, blank=True)
+    channel_message_id = models.BigIntegerField(null=True, blank=True)
+    created_at         = models.DateTimeField(auto_now_add=True)
+    sent_at            = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'{self.story.title} ({self.status})'

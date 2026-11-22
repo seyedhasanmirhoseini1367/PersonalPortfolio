@@ -680,6 +680,12 @@ def _run(rec, make, log):
         if hasattr(rec, 'items'):
             rec.items = len(items) if story else 0
         rec.status = 'done' if story else 'empty'
+        if story:
+            try:
+                from .telegram import queue_post
+                queue_post(story)   # draft for the Telegram channel; sent only after approval
+            except Exception as exc:
+                say(f'telegram draft failed: {exc}')
     except Exception as exc:
         logger.exception('News digest failed')
         say(f'failed: {type(exc).__name__}: {exc}')

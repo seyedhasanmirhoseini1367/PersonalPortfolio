@@ -152,6 +152,11 @@ def _idle_tasks() -> None:
         digest_maybe_run()   # daily AI & ML digest after 07:00 Helsinki (checks every 10 min)
     except Exception:
         logger.exception('Daily digest check failed')
+    try:
+        from stories.telegram import ensure_webhook
+        ensure_webhook()   # once per process, only when the Telegram bot is configured
+    except Exception:
+        logger.exception('Telegram webhook setup failed')
 
 
 def _loop() -> None:

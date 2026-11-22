@@ -269,3 +269,126 @@ class NewsUpgradeTests(TestCase):
         self.assertIn('/stories/story/ai-ml-digest-2026-11-21/', body)
         self.assertNotIn('my-essay', body)
         self.assertContains(self.client.get('/stories/'), 'application/rss+xml')
+
+
+from django.test import override_settings
+
+
+@override_settings(TELEGRAM_BOT_TOKEN='123:test-token', TELEGRAM_CHANNEL_ID='AIFrontiers', SITE_URL='https://hasanai.net')
+class TelegramTests(TestCase):
+    """Digest announcements go to the channel only after the owner approves them."""
+
+    def setUp(self):
+        from unittest import mock
+        self.calls = []
+
+        def fake_api(method, **params):
+            self.calls.append((method, params))
+            if method == 'getMe':
+                return {'username': 'hasanainews_bot'}
+            return {'message_id': len(self.calls)}
+        patcher = mock.patch('stories.telegram.api', side_effect=fake_api)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        self.user = get_user_model().objects.create_user('w4', 'w4@example.test', 'pw-writer-123!')
+        self.story = Story.objects.create(
+            author=self.user, title='AI & ML Digest — 22 Nov 2026', slug='ai-ml-digest-2026-11-22',
+            status=Story.Status.PUBLISHED,
+            content='<h2>Research papers</h2><h3><a href="https://arxiv.org/abs/1" target="_blank">Paper &amp; one</a></h3>'
+                    '<p class="digest-meta"><a class="digest-topic" href="/stories/tag/llms/">LLMs</a></p><p>s</p>')
+
+    def _sent(self, method):
+        return [p for m, p in self.calls if m == method]
+
+    def _link_admin(self, chat_id=42):
+        from .models import TelegramConfig
+        TelegramConfig.objects.update_or_create(pk=1, defaults={'admin_chat_id': chat_id})
+
+    def test_channel_name_normalised(self):
+        from . import telegram
+        self.assertEqual(telegram.channel(), '@AIFrontiers')
+        with override_settings(TELEGRAM_CHANNEL_ID='https://t.me/AIFrontiers'):
+            self.assertEqual(telegram.channel(), '@AIFrontiers')
+        with override_settings(TELEGRAM_CHANNEL_ID='-1001234'):
+            self.assertEqual(telegram.channel(), '-1001234')
+
+    def test_text_lists_items_with_links_and_story_url(self):
+        from .telegram import build_text
+        text = build_text(self.story)
+        self.assertIn('<b>AI &amp; ML Digest — 22 Nov 2026</b>', text)
+        self.assertIn('• <a href="https://arxiv.org/abs/1">Paper &amp; one</a> <i>· LLMs</i>', text)
+        self.assertIn('https://hasanai.net/stories/story/ai-ml-digest-2026-11-22/', text)
+        self.assertIn('#LLMs', text)
+
+    def test_queue_sends_draft_to_owner_not_channel(self):
+        from .telegram import queue_post
+        self._link_admin()
+        post = queue_post(self.story)
+        self.assertEqual(post.status, 'pending')
+        sends = self._sent('sendMessage')
+        self.assertEqual([s['chat_id'] for s in sends], [42])   # only the owner's chat
+        self.assertEqual(sends[0]['reply_markup']['inline_keyboard'][0][0]['callback_data'], f'tg:pub:{post.pk}')
+        self.assertIsNone(queue_post(self.story).channel_message_id)   # re-queue does not publish
+
+    def test_owner_approves_in_telegram(self):
+        from .telegram import handle_update, queue_post
+        self._link_admin()
+        post = queue_post(self.story)
+        cb = {'id': 'c1', 'from': {'id': 99}, 'data': f'tg:pub:{post.pk}',
+              'message': {'message_id': 7, 'chat': {'id': 99}}}
+        handle_update({'callback_query': cb})   # a stranger: refused
+        post.refresh_from_db()
+        self.assertEqual(post.status, 'pending')
+        handle_update({'callback_query': {**cb, 'from': {'id': 42}, 'message': {'message_id': 7, 'chat': {'id': 42}}}})
+        post.refresh_from_db()
+        self.assertEqual(post.status, 'sent')
+        self.assertEqual(self._sent('sendMessage')[-1]['chat_id'], '@AIFrontiers')
+        handle_update({'callback_query': {**cb, 'from': {'id': 42}}})   # second press: no second post
+        self.assertEqual(sum(1 for s in self._sent('sendMessage') if s['chat_id'] == '@AIFrontiers'), 1)
+
+    def test_link_owner_with_one_time_code(self):
+        from .models import TelegramConfig
+        from .telegram import handle_update, new_link_code
+        code = new_link_code()
+        handle_update({'message': {'text': '/start wrong', 'chat': {'id': 5, 'type': 'private'}}})
+        self.assertIsNone(TelegramConfig.get().admin_chat_id)
+        handle_update({'message': {'text': f'/start {code}', 'chat': {'id': 5, 'type': 'private', 'username': 'me'}}})
+        cfg = TelegramConfig.get()
+        self.assertEqual((cfg.admin_chat_id, cfg.admin_name, cfg.link_code), (5, 'me', ''))
+
+    def test_webhook_needs_secret(self):
+        import json
+        from .telegram import webhook_secret
+        body = json.dumps({'message': {'text': '/start', 'chat': {'id': 1, 'type': 'private'}}})
+        self.assertEqual(self.client.post('/stories/telegram/webhook/', body, content_type='application/json').status_code, 403)
+        r = self.client.post('/stories/telegram/webhook/', body, content_type='application/json',
+                             HTTP_X_TELEGRAM_BOT_API_SECRET_TOKEN=webhook_secret())
+        self.assertEqual(r.status_code, 200)
+
+    def test_review_page_staff_only_and_publish(self):
+        from .models import TelegramPost
+        post = TelegramPost.objects.create(story=self.story, text='<b>hi</b>')
+        self.assertEqual(self.client.get('/stories/telegram/').status_code, 302)   # anonymous -> login
+        staff = get_user_model().objects.create_user('st', 'st@example.test', 'pw-staff-123!', is_staff=True)
+        self.client.force_login(staff)
+        r = self.client.get('/stories/telegram/')
+        self.assertContains(r, '@AIFrontiers')
+        self.assertContains(r, 'Publish to channel')
+        self.client.post('/stories/telegram/', {'action': 'publish', 'post': post.pk, 'text': '<b>edited</b>'})
+        post.refresh_from_db()
+        self.assertEqual((post.status, post.text), ('sent', '<b>edited</b>'))
+        self.client.post('/stories/telegram/', {'action': 'link'})
+        self.assertContains(self.client.get('/stories/telegram/'), 'https://t.me/hasanainews_bot?start=')
+
+    def test_digest_run_drafts_a_post(self):
+        from unittest import mock
+        from .digest import run_today
+        from .models import TelegramPost
+        get_user_model().objects.create_superuser('seyed', 'a@example.test', 'pw-admin-123!')
+        items = [{'section': 'news', 'title': 'Lab ships model', 'url': 'https://lab.example/y', 'source': 'Lab',
+                  'text': 't', 'date': None, 'summary': 'A lab shipped a model for papers.', 'why': 'Useful.'}]
+        with mock.patch('stories.digest.collect', return_value={'papers': [], 'news': items, 'hn': []}), \
+             mock.patch('stories.digest.summarize', return_value=items):
+            rec = run_today()
+        self.assertEqual(TelegramPost.objects.get(story=rec.story).status, 'pending')
+        self.assertFalse([s for s in self._sent('sendMessage') if s['chat_id'] == '@AIFrontiers'])
