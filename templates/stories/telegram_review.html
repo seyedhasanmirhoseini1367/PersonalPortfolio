@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+{% block title %}Telegram posts — Stories{% endblock %}
+
+{% block content %}
+<div class="tg-wrap">
+    <div class="tg-head">
+        <div class="tg-eyebrow"><i class="fas fa-shield-alt"></i> Staff only</div>
+        <h1><i class="fab fa-telegram"></i> Telegram channel posts</h1>
+        <p>New AI news digests are drafted here and sent to your private chat with <b>Publish</b> / <b>Skip</b> buttons.
+           Nothing goes to the channel until you approve it.</p>
+    </div>
+
+    {% for m in messages %}<div class="tg-msg tg-{{ m.tags }}">{{ m }}</div>{% endfor %}
+
+    <section class="tg-card">
+        <h2>Setup</h2>
+        <ul class="tg-status">
+            <li>{% if configured %}✅{% else %}❌{% endif %} Bot token and channel
+                {% if configured %}<code>{{ channel }}</code>{% else %}— set <code>TELEGRAM_BOT_TOKEN</code> and
+                <code>TELEGRAM_CHANNEL_ID</code> in Render → Environment{% endif %}</li>
+            <li>{% if cfg.webhook_url %}✅ Bot connected to the site{% else %}⏳ Bot not connected to the site yet{% endif %}
+                {% if configured %}
+                <form method="post" class="tg-inline">{% csrf_token %}<input type="hidden" name="action" value="webhook">
+                    <button class="tg-btn tg-light">Reconnect</button></form>{% endif %}</li>
+            <li>{% if cfg.admin_chat_id %}✅ Approvals go to your Telegram{% if cfg.admin_name %} (<b>{{ cfg.admin_name }}</b>){% endif %}
+                {% else %}⏳ Your Telegram chat is not linked yet — drafts wait on this page{% endif %}
+                {% if configured %}
+                <form method="post" class="tg-inline">{% csrf_token %}<input type="hidden" name="action" value="link">
+                    <button class="tg-btn tg-light">{% if cfg.admin_chat_id %}Link again{% else %}Link my Telegram{% endif %}</button></form>{% endif %}</li>
+        </ul>
+        {% if link %}
+            <p class="tg-link">Open this on your phone or Telegram Desktop and press <b>Start</b>:<br>
+               <a href="{{ link }}" target="_blank" rel="noopener">{{ link }}</a></p>
+        {% endif %}
+        <p class="tg-note">Also make the bot an <b>admin</b> of the channel (Channel → Administrators → Add admin) so it can post.</p>
+    </section>
+
+    <section class="tg-card">
+        <div class="tg-row">
+            <h2>Drafts</h2>
+            {% if configured %}
+            <form method="post">{% csrf_token %}<input type="hidden" name="action" value="queue">
+                <button class="tg-btn tg-light">Draft the latest digest</button></form>
+            {% endif %}
+        </div>
+        {% for p in posts %}
+            <form method="post" class="tg-post">{% csrf_token %}
+                <input type="hidden" name="post" value="{{ p.pk }}">
+                <div class="tg-row">
+                    <a href="{% url 'stories:story_detail' p.story.slug %}">{{ p.story.title }}</a>
+                    <span class="tg-pill tg-{{ p.status }}">{{ p.get_status_display }}</span>
+                </div>
+                {% if p.status == 'pending' or p.status == 'failed' %}
+                    <textarea name="text" rows="12">{{ p.text }}</textarea>
+                    <p class="tg-note">Telegram formatting: &lt;b&gt;bold&lt;/b&gt;, &lt;i&gt;italic&lt;/i&gt;, &lt;a href="…"&gt;link&lt;/a&gt;.</p>
+                    {% if p.error %}<p class="tg-err">Last error: {{ p.error }}</p>{% endif %}
+                    <div class="tg-actions">
+                        <button name="action" value="publish" class="tg-btn">✅ Publish to channel</button>
+                        <button name="action" value="save" class="tg-btn tg-light">Save</button>
+                        <button name="action" value="skip" class="tg-btn tg-light">❌ Skip</button>
+                    </div>
+                {% else %}
+                    <pre class="tg-text">{{ p.text }}</pre>
+                    {% if p.sent_at %}<p class="tg-note">Sent {{ p.sent_at|date:"d M Y H:i" }}</p>{% endif %}
+                {% endif %}
+            </form>
+        {% empty %}
+            <p class="tg-note">No drafts yet. One is made each time a daily digest or weekly roundup is published.</p>
+        {% endfor %}
+    </section>
+</div>
+<style>
+.tg-wrap { max-width: 860px; margin: 1.5rem auto 3rem; padding: 0 16px; }
+.tg-head h1 { font-size: 1.5rem; margin: .2rem 0 .4rem; color: #1e1b4b; }
+.tg-head p { color: #475569; margin: 0 0 1rem; }
+.tg-eyebrow { font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; color: #6d28d9; font-weight: 700; }
+.tg-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 1rem 1.2rem; margin-bottom: 1rem; }
+.tg-card h2 { font-size: 1.05rem; margin: 0 0 .6rem; color: #1e1b4b; }
+.tg-status { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: .5rem; font-size: .9rem; }
+.tg-inline { display: inline; margin-left: .4rem; }
+.tg-row { display: flex; justify-content: space-between; align-items: center; gap: .75rem; flex-wrap: wrap; }
+.tg-post { border-top: 1px solid #eef2f7; padding: .9rem 0; }
+.tg-post textarea, .tg-text { width: 100%; margin-top: .6rem; font: .85rem/1.45 ui-monospace, Consolas, monospace;
+    border: 1px solid #e2e8f0; border-radius: 10px; padding: .6rem .7rem; white-space: pre-wrap; background: #f8fafc; }
+.tg-actions { display: flex; gap: .5rem; flex-wrap: wrap; margin-top: .5rem; }
+.tg-btn { border: 0; border-radius: 999px; padding: .4rem .95rem; font-size: .82rem; font-weight: 600; cursor: pointer;
+    background: #229ED9; color: #fff; }
+.tg-btn.tg-light { background: #f1f5f9; color: #334155; border: 1px solid #e2e8f0; }
+.tg-pill { font-size: .72rem; font-weight: 700; border-radius: 999px; padding: .1rem .6rem; background: #f1f5f9; color: #475569; }
+.tg-pill.tg-pending { background: #fef3c7; color: #92400e; } .tg-pill.tg-sent { background: #dcfce7; color: #166534; }
+.tg-pill.tg-failed { background: #fee2e2; color: #991b1b; }
+.tg-note { font-size: .8rem; color: #64748b; margin: .4rem 0 0; }
+.tg-err { font-size: .82rem; color: #b91c1c; margin: .4rem 0 0; }
+.tg-link { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: .6rem .8rem; font-size: .88rem; word-break: break-all; }
+.tg-msg { border-radius: 10px; padding: .55rem .8rem; margin-bottom: .7rem; font-size: .88rem; background: #eff6ff; color: #1e3a8a; }
+.tg-msg.tg-success { background: #f0fdf4; color: #166534; } .tg-msg.tg-error { background: #fef2f2; color: #991b1b; }
+.tg-msg.tg-warning { background: #fffbeb; color: #92400e; }
+</style>
+{% endblock %}

@@ -246,6 +246,10 @@ KAGGLE_AUTO_SYNC_LIMIT = config('KAGGLE_AUTO_SYNC_LIMIT', default=3, cast=int)
 # Daily AI & ML digest in Stories (stories/digest.py), after this hour (Helsinki).
 NEWS_DIGEST_ENABLED = config('NEWS_DIGEST_ENABLED', default=True, cast=bool)
 NEWS_DIGEST_HOUR = config('NEWS_DIGEST_HOUR', default=7, cast=int)
+# Telegram channel announcements, sent only after approval (stories/telegram.py).
+TELEGRAM_BOT_TOKEN = config('TELEGRAM_BOT_TOKEN', default='')
+TELEGRAM_CHANNEL_ID = config('TELEGRAM_CHANNEL_ID', default='')
+SITE_URL = config('SITE_URL', default='https://hasanai.net')
 # Run the queue worker thread inside the web process (content_generator/worker.py).
 CONTENT_GENERATOR_RUN_WORKER = config('CONTENT_GENERATOR_RUN_WORKER', default=True, cast=bool)
 

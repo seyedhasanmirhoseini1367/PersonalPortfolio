@@ -464,3 +464,70 @@ def story_preview(request, pk):
         ).select_related('author').prefetch_related('replies__author').order_by('-created_at')
     }
     return render(request, 'stories/story_detail.html', context)
+
+# ── Telegram channel: approval page and bot webhook (stories/telegram.py) ────
+
+from django.contrib.admin.views.decorators import staff_member_required
+from django.views.decorators.csrf import csrf_exempt
+
+
+@csrf_exempt
+@require_POST
+def telegram_webhook(request):
+    import hmac
+    from . import telegram
+    if not telegram.configured() or not hmac.compare_digest(
+            request.headers.get('X-Telegram-Bot-Api-Secret-Token', ''), telegram.webhook_secret()):
+        return HttpResponseForbidden()
+    try:
+        telegram.handle_update(json.loads(request.body or b'{}'))
+    except Exception:
+        import logging
+        logging.getLogger(__name__).exception('Telegram update failed')
+    return JsonResponse({'ok': True})   # always 200, so Telegram does not resend
+
+
+@staff_member_required
+def telegram_review(request):
+    from . import telegram
+    from .models import TelegramConfig, TelegramPost
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        post = TelegramPost.objects.filter(pk=request.POST.get('post')).first()
+        try:
+            if action == 'link':
+                telegram.new_link_code()
+                messages.info(request, 'Open the link below in Telegram and press Start.')
+            elif action == 'webhook':
+                telegram.ensure_webhook(force=True)
+                messages.success(request, 'Bot webhook connected.')
+            elif action == 'queue':
+                latest = Story.objects.filter(status=Story.Status.PUBLISHED).filter(digest_q()).order_by('-published_at').first()
+                if latest and telegram.queue_post(latest):
+                    messages.success(request, f'Draft ready for “{latest.title}”.')
+                else:
+                    messages.warning(request, 'No digest to announce, or Telegram is not configured.')
+            elif post and action in ('save', 'publish'):
+                if post.status in (TelegramPost.PENDING, TelegramPost.FAILED):
+                    post.text = request.POST.get('text', post.text).strip()[:4000]
+                    post.save(update_fields=['text'])
+                if action == 'publish':
+                    if telegram.publish_post(post):
+                        messages.success(request, 'Published to the channel.')
+                    else:
+                        post.refresh_from_db()
+                        messages.error(request, f'Not sent: {post.error or post.status}')
+                else:
+                    messages.success(request, 'Saved.')
+            elif post and action == 'skip':
+                telegram.skip_post(post)
+                messages.info(request, 'Skipped.')
+        except telegram.TelegramError as exc:
+            messages.error(request, f'Telegram: {exc}')
+        return redirect('stories:telegram_review')
+    cfg = TelegramConfig.get()
+    return render(request, 'stories/telegram_review.html', {
+        'configured': telegram.configured(), 'channel': telegram.channel(), 'cfg': cfg,
+        'link': f'https://t.me/{cfg.bot_username}?start={cfg.link_code}' if cfg.link_code and cfg.bot_username else '',
+        'posts': TelegramPost.objects.select_related('story')[:20],
+    })
