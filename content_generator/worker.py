@@ -148,6 +148,11 @@ def _idle_tasks() -> None:
     except Exception:
         logger.exception('Kaggle archive auto-update check failed')
     try:
+        from kaggle_archive.playground import maybe_run as playground_maybe_run
+        playground_maybe_run()   # Playground Series: new episodes + a few analyses a day
+    except Exception:
+        logger.exception('Kaggle Playground check failed')
+    try:
         from stories.digest import maybe_run as digest_maybe_run
         digest_maybe_run()   # daily AI & ML digest after 07:00 Helsinki (checks every 10 min)
     except Exception:

@@ -243,6 +243,9 @@ CONTENT_GENERATOR_DAILY_LIMIT = config('CONTENT_GENERATOR_DAILY_LIMIT', default=
 # KAGGLE_USERNAME / KAGGLE_KEY. Runs from the worker thread above.
 KAGGLE_AUTO_SYNC = config('KAGGLE_AUTO_SYNC', default=True, cast=bool)
 KAGGLE_AUTO_SYNC_LIMIT = config('KAGGLE_AUTO_SYNC_LIMIT', default=3, cast=int)
+# Playground Series (kaggle_archive/playground.py): episodes analysed per day.
+KAGGLE_PLAYGROUND_SYNC = config('KAGGLE_PLAYGROUND_SYNC', default=True, cast=bool)
+KAGGLE_PLAYGROUND_DAILY = config('KAGGLE_PLAYGROUND_DAILY', default=3, cast=int)
 # Daily AI & ML digest in Stories (stories/digest.py), after this hour (Helsinki).
 NEWS_DIGEST_ENABLED = config('NEWS_DIGEST_ENABLED', default=True, cast=bool)
 NEWS_DIGEST_HOUR = config('NEWS_DIGEST_HOUR', default=7, cast=int)

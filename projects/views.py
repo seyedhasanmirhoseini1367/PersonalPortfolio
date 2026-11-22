@@ -124,7 +124,12 @@ def home(request):
         news_items = list(DigestItem.objects.filter(digest_date=latest_digest.slug[-10:])
                           .exclude(summary='').order_by('score', 'pk')[:4])
     walkthroughs = Walkthrough.objects.filter(is_published=True)
-    competitions = Competition.objects.prefetch_related('solutions')
+    competitions = Competition.objects.exclude(series=Competition.SERIES_PLAYGROUND).prefetch_related('solutions')
+    today = timezone.now().date()
+    live_playground = (Competition.objects.filter(series=Competition.SERIES_PLAYGROUND, start_date__lte=today,
+                                                  end_date__gte=today).order_by('-start_date').first())
+    if live_playground:
+        live_playground.days_left = (live_playground.end_date - today).days
 
     channel = telegram.channel()
     return render(request, 'home.html', {
@@ -138,8 +143,10 @@ def home(request):
         'digest_count':      Story.objects.filter(status=Story.Status.PUBLISHED).filter(digest_q()).count(),
         'walkthrough_count': walkthroughs.count(),
         'walkthroughs':      walkthroughs.order_by('-created_at')[:3],
-        'competition_count': competitions.count(),
+        'competition_count': Competition.objects.count(),
         'competitions':      competitions[:3],
+        'live_playground':   live_playground,
+        'playground_count':  Competition.objects.filter(series=Competition.SERIES_PLAYGROUND).count(),
         'telegram_url':      f'https://t.me/{channel.lstrip("@")}' if channel.startswith('@') else '',
     })
 

@@ -12,8 +12,8 @@ class SolutionInline(admin.TabularInline):
 
 @admin.register(Competition)
 class CompetitionAdmin(admin.ModelAdmin):
-    list_display        = ['name', 'competition_type', 'domain', 'end_date', 'num_teams', 'prize_pool']
-    list_filter         = ['competition_type', 'domain', 'end_date']
+    list_display        = ['name', 'series', 'season', 'episode', 'competition_type', 'end_date', 'num_teams', 'analyzed_at']
+    list_filter         = ['series', 'season', 'competition_type', 'domain', 'end_date']
     search_fields       = ['name', 'host']
     prepopulated_fields = {'slug': ('name',)}
     inlines             = [SolutionInline]

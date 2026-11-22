@@ -187,6 +187,20 @@
 .hm-comp .nm { font-weight: 700; font-size: .92rem; }
 .hm-comp small { display: block; font-size: .75rem; color: var(--text-muted); }
 .hm-comp .arrow { margin-left: auto; color: #a78bfa; }
+.hm-pg { display: flex; align-items: center; gap: 1rem; margin-bottom: .8rem; padding: .9rem 1.1rem; border-radius: 16px; color: #e7eaff;
+    background: radial-gradient(circle at 100% 0%, rgba(0,212,255,.22), transparent 55%), linear-gradient(160deg, #15123a, #0d1430);
+    transition: transform .2s; }
+.hm-pg:hover { transform: translateY(-2px); color: #fff; }
+.hm-pg-cal { flex: 0 0 58px; height: 62px; border-radius: 12px; background: #fff; color: #0f0c29; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; overflow: hidden; box-shadow: 0 4px 14px rgba(0,0,0,.3); }
+.hm-pg-cal b { width: 100%; text-align: center; background: #ef4444; color: #fff; font-size: .72rem; padding: .15rem 0; text-transform: uppercase; }
+.hm-pg-cal i { font-style: normal; font-weight: 800; font-size: 1rem; padding-top: .25rem; font-family: var(--mono); }
+.hm-pg-tx { display: flex; flex-direction: column; gap: .15rem; min-width: 0; }
+.hm-pg-tx .nm { font-weight: 800; font-size: 1rem; color: #fff; }
+.hm-pg-tx small { font-size: .76rem; color: rgba(231,234,255,.7); }
+.hm-pg-live { font-family: var(--mono); font-size: .7rem; color: #fca5a5; }
+.hm-pg-go { margin-left: auto; font-size: .82rem; font-weight: 700; color: var(--cy); white-space: nowrap; }
+@media (max-width: 640px) { .hm-pg { flex-wrap: wrap; } .hm-pg-go { margin-left: 74px; } }
 
 /* closing band */
 .hm-cta { position: relative; overflow: hidden; text-align: center; color: #e7eaff; border-radius: 20px; padding: 2.4rem 1.4rem;
@@ -334,7 +348,7 @@
 <section class="hm-sec hm-stats">
     <a class="hm-card hm-stat" href="{% url 'projects_list' %}"><b data-count="{{ total_projects }}">{{ total_projects }}</b><span>ML models built</span><i class="fas fa-cubes"></i></a>
     <a class="hm-card hm-stat" href="{% url 'model_internals:walkthrough_list' %}"><b data-count="{{ walkthrough_count }}">{{ walkthrough_count }}</b><span>ML Explained lessons</span><i class="fas fa-graduation-cap"></i></a>
-    <a class="hm-card hm-stat" href="{% url 'kaggle_archive:competition_list' %}"><b data-count="{{ competition_count }}">{{ competition_count }}</b><span>Kaggle competitions analysed</span><i class="fab fa-kaggle"></i></a>
+    <a class="hm-card hm-stat" href="{% url 'kaggle_archive:competition_list' %}"><b data-count="{{ competition_count }}">{{ competition_count }}</b><span>Kaggle competitions archived</span><i class="fab fa-kaggle"></i></a>
     <a class="hm-card hm-stat" href="{% url 'stories:story_list' %}"><b data-count="{{ digest_count }}">{{ digest_count }}</b><span>AI news digests</span><i class="fas fa-bolt"></i></a>
 </section>
 
@@ -417,6 +431,19 @@
     <div class="hm-head"><div><p class="hm-kicker">// 05 — compete</p><h2>Kaggle Winners Archive</h2>
         <p>What the top teams did, compared side by side — and the lessons to take to your next competition.</p></div>
         <a class="hm-more" href="{% url 'kaggle_archive:competition_list' %}">Full archive →</a></div>
+    {% if live_playground or playground_count %}
+    <a class="hm-pg" href="{% url 'kaggle_archive:playground' %}">
+        <span class="hm-pg-cal"><b>{% now "M" %}</b><i>{% now "Y" %}</i></span>
+        <span class="hm-pg-tx">
+            {% if live_playground %}<span class="hm-pg-live">● Live now · S{{ live_playground.season }}E{{ live_playground.episode }}</span>
+            <span class="nm">{{ live_playground.name }}</span>
+            <small>Playground Series · {{ live_playground.evaluation_metric }} · {{ live_playground.days_left }} day{{ live_playground.days_left|pluralize }} left</small>
+            {% else %}<span class="nm">Playground Series</span>{% endif %}
+            <small>{{ playground_count }} monthly practice competitions since 2021, month by month, with the winners’ solutions</small>
+        </span>
+        <span class="hm-pg-go">Open the calendar →</span>
+    </a>
+    {% endif %}
     <div class="hm-card hm-kaggle">
         {% for c in competitions %}
         <a class="hm-comp" href="{{ c.get_absolute_url }}">

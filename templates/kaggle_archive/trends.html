@@ -4,7 +4,7 @@
 
 {% block content %}
 <div class="tr-wrap">
-    <a href="{% url 'kaggle_archive:competition_list' %}" class="tr-back">← Winners Archive</a>
+    {% include "kaggle_archive/_tabs.html" %}
     <h1 class="tr-title"><i class="fas fa-chart-line"></i> Trends &amp; lessons</h1>
     <p class="tr-sub">What the top-10 teams used in each kind of competition, the baseline they shared, and every lesson
         from their write-ups. Updated automatically each month.</p>

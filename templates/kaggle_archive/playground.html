@@ -1,0 +1,207 @@
+{% extends 'base.html' %}
+{% block title %}Kaggle Playground Series {{ year }} — Winners Archive{% endblock %}
+{% block meta_description %}Every monthly Kaggle Playground Series competition since {{ first_year }}, month by month: what the winners did and the lessons to learn.{% endblock %}
+
+{% block content %}
+<div class="pg-wrap">
+
+    <header class="pg-head">
+        <div class="pg-head-inner">
+            <div>
+                <div class="pg-eyebrow"><i class="fas fa-calendar-days"></i> A new practice competition every month</div>
+                <h1>Kaggle Playground Series</h1>
+                <p>Every monthly Playground competition since {{ first_year|default:"2021" }}, month by month:
+                   what the winning teams did, compared side by side, and the lessons to take with you.</p>
+            </div>
+            <div class="pg-stats">
+                <div><b>{{ total_episodes }}</b><span>episodes</span></div>
+                <div><b>{{ years|length }}</b><span>years</span></div>
+                <div><b>{{ total_analysed }}</b><span>analysed</span></div>
+            </div>
+        </div>
+    </header>
+
+    {% include "kaggle_archive/_tabs.html" with playground_count=total_episodes %}
+
+    <div class="pg-body">
+
+        {% if live %}
+        <a class="pg-live" href="{{ live.kaggle_url }}" target="_blank" rel="noopener">
+            <span class="pg-live-dot"></span>
+            <span class="pg-live-text"><b>Live now · S{{ live.season }}E{{ live.episode }}:</b> {{ live.name }}
+                <small>{{ live.evaluation_metric }} · {{ live.num_teams }} teams · {{ live.days_left }} day{{ live.days_left|pluralize }} left</small></span>
+            <span class="pg-live-go">Join on Kaggle <i class="fas fa-arrow-up-right-from-square"></i></span>
+        </a>
+        {% endif %}
+
+        <!-- years -->
+        <nav class="pg-years" aria-label="Years">
+            {% for y in years %}
+                <a href="?year={{ y }}" class="{% if y == year %}on{% endif %}">{{ y }}</a>
+            {% endfor %}
+        </nav>
+
+        <div class="pg-yearbar">
+            <div>
+                <h2>{{ year }} <span>{% if season and season <= 2 %}Tabular Playground Series{% elif season %}Season {{ season }}{% endif %}</span></h2>
+                <p>{{ year_total }} episode{{ year_total|pluralize }} · {{ year_analysed }} analysed
+                   {% if year_analysed < year_total %}<span class="pg-soft">· the rest are being analysed a few a day</span>{% endif %}</p>
+            </div>
+            <div class="pg-filter" role="group" aria-label="Filter by task">
+                <button type="button" class="on" data-task="">All</button>
+                {% if task_counts.classification %}<button type="button" data-task="classification"><i class="pg-dot c"></i> Classification</button>{% endif %}
+                {% if task_counts.regression %}<button type="button" data-task="regression"><i class="pg-dot r"></i> Regression</button>{% endif %}
+                {% if task_counts.other %}<button type="button" data-task="other"><i class="pg-dot o"></i> Other</button>{% endif %}
+            </div>
+        </div>
+
+        {% if year_summary and year_summary.summary %}
+        <section class="pg-glance">
+            <h3><i class="fas fa-lightbulb"></i> {{ year }} at a glance <small>from {{ year_summary.based_on }} analysed episodes · AI summary of the winners’ write-ups</small></h3>
+            <div class="pg-glance-grid">
+                {% if year_summary.summary.recurring %}
+                <div><h4>What kept winning</h4><ul>{% for x in year_summary.summary.recurring %}<li>{{ x }}</li>{% endfor %}</ul></div>
+                {% endif %}
+                {% if year_summary.summary.lessons %}
+                <div><h4>Lessons of the year</h4><ol>{% for x in year_summary.summary.lessons %}<li>{{ x }}</li>{% endfor %}</ol></div>
+                {% endif %}
+            </div>
+            {% if year_summary.summary.surprise %}<p class="pg-surprise"><b>Surprise:</b> {{ year_summary.summary.surprise }}</p>{% endif %}
+        </section>
+        {% endif %}
+
+        <!-- the 12 months -->
+        <div class="pg-cal">
+            {% for m in months %}
+            <div class="pg-month{% if not m.episodes %} empty{% endif %}">
+                <div class="pg-month-name">{{ m.name }}</div>
+                {% for c in m.episodes %}
+                <a class="pg-ep t-{{ c.task|default:'other' }} s-{{ c.state }}" data-task="{{ c.task|default:'other' }}"
+                   href="{% if c.state == 'live' or c.state == 'upcoming' %}{{ c.kaggle_url }}{% else %}{{ c.get_absolute_url }}{% endif %}"
+                   {% if c.state == 'live' or c.state == 'upcoming' %}target="_blank" rel="noopener"{% endif %}>
+                    <span class="pg-ep-top">
+                        <span class="pg-code">{% if c.season <= 2 %}TPS{% else %}S{{ c.season }}E{{ c.episode }}{% endif %}</span>
+                        {% if c.state == 'live' %}<span class="pg-badge live">● live · {{ c.days_left }}d</span>
+                        {% elif c.state == 'analysed' %}<span class="pg-badge done" title="{{ c.n_writeups }} winner write-up{{ c.n_writeups|pluralize }}">🏆 {{ c.n_writeups }}</span>
+                        {% elif c.state == 'pending' %}<span class="pg-badge soon">analysis soon</span>{% endif %}
+                    </span>
+                    <span class="pg-title">{{ c.name }}</span>
+                    <span class="pg-meta"><i class="pg-dot {{ c.task|slice:':1'|default:'o' }}"></i>{{ c.evaluation_metric|default:"—" }}</span>
+                </a>
+                {% empty %}
+                <span class="pg-none">{% if m.future %}coming soon{% else %}—{% endif %}</span>
+                {% endfor %}
+            </div>
+            {% endfor %}
+        </div>
+
+        <p class="pg-note">Winner write-ups are summarised automatically and may simplify; every episode links to the
+            original write-ups and the Kaggle leaderboard. Not every top team publishes a write-up.</p>
+    </div>
+</div>
+
+<style>
+.pg-wrap { --pg-ink: #0f0c29; margin: -1.4rem -20px 0; }
+.pg-head { color: #fff; padding: 2rem 0 1.6rem; border-radius: 0 0 24px 24px; position: relative; overflow: hidden;
+    background: radial-gradient(ellipse 50% 90% at 85% 0%, rgba(0,212,255,.25), transparent 70%),
+                linear-gradient(135deg, #0f0c29 0%, #302b63 55%, #24243e 100%); box-shadow: 0 4px 24px rgba(15,12,41,.35); }
+.pg-head::before { content: ''; position: absolute; inset: 0; opacity: .5; pointer-events: none;
+    background-image: linear-gradient(rgba(0,212,255,.06) 1px, transparent 1px), linear-gradient(90deg, rgba(0,212,255,.06) 1px, transparent 1px);
+    background-size: 28px 28px; }
+.pg-head-inner { position: relative; max-width: 1300px; margin: 0 auto; padding: 0 20px; display: flex; justify-content: space-between;
+    align-items: flex-end; gap: 1.5rem; flex-wrap: wrap; }
+.pg-eyebrow { display: inline-flex; gap: .45rem; align-items: center; font-size: .72rem; letter-spacing: .06em; text-transform: uppercase;
+    color: #7dd3fc; background: rgba(0,212,255,.1); border: 1px solid rgba(0,212,255,.25); border-radius: 999px; padding: .2rem .7rem; }
+.pg-head h1 { font-size: 1.8rem; font-weight: 800; margin: .5rem 0 .35rem; }
+.pg-head p { max-width: 620px; color: rgba(255,255,255,.75); font-size: .92rem; margin: 0; }
+.pg-stats { display: flex; gap: 1.4rem; }
+.pg-stats div { display: flex; flex-direction: column; }
+.pg-stats b { font-size: 1.5rem; font-family: ui-monospace, Consolas, monospace; color: #fff; }
+.pg-stats span { font-size: .72rem; color: rgba(255,255,255,.6); text-transform: uppercase; letter-spacing: .05em; }
+.pg-body { max-width: 1300px; margin: 0 auto; padding: 1rem 20px 2rem; }
+
+.pg-live { display: flex; align-items: center; gap: .8rem; text-decoration: none; color: #7f1d1d; margin: .4rem 0 1rem;
+    background: linear-gradient(90deg, #fff1f2, #fff); border: 1px solid #fecdd3; border-radius: 14px; padding: .75rem 1rem; }
+.pg-live:hover { border-color: #fb7185; color: #7f1d1d; }
+.pg-live-dot { flex: 0 0 10px; height: 10px; border-radius: 50%; background: #ef4444; animation: pg-ping 1.6s infinite; }
+@keyframes pg-ping { 0% { box-shadow: 0 0 0 0 rgba(239,68,68,.6); } 70%, 100% { box-shadow: 0 0 0 9px rgba(239,68,68,0); } }
+.pg-live-text { font-size: .9rem; }
+.pg-live-text small { display: block; color: #9f1239; opacity: .8; font-size: .76rem; }
+.pg-live-go { margin-left: auto; font-size: .8rem; font-weight: 700; white-space: nowrap; }
+
+.pg-years { display: flex; gap: .35rem; flex-wrap: wrap; margin: .4rem 0 1rem; }
+.pg-years a { font-family: ui-monospace, Consolas, monospace; font-weight: 700; font-size: .95rem; text-decoration: none; color: #64748b;
+    padding: .35rem .9rem; border-radius: 10px; border: 1px solid transparent; }
+.pg-years a:hover { color: #302b63; background: #f1f5f9; }
+.pg-years a.on { color: #302b63; background: #fff; border-color: #c4b5fd; box-shadow: 0 2px 10px rgba(109,93,252,.15); }
+
+.pg-yearbar { display: flex; justify-content: space-between; align-items: flex-end; gap: 1rem; flex-wrap: wrap; margin-bottom: .9rem; }
+.pg-yearbar h2 { margin: 0; font-size: 1.4rem; font-weight: 800; color: var(--text); }
+.pg-yearbar h2 span { font-size: .85rem; font-weight: 600; color: #7c3aed; margin-left: .3rem; }
+.pg-yearbar p { margin: .15rem 0 0; font-size: .82rem; color: var(--text-muted); }
+.pg-soft { opacity: .8; }
+.pg-filter { display: flex; gap: .3rem; flex-wrap: wrap; }
+.pg-filter button { display: inline-flex; align-items: center; gap: .35rem; font-size: .76rem; font-weight: 600; cursor: pointer;
+    background: #fff; border: 1px solid #e2e8f0; color: #475569; border-radius: 999px; padding: .3rem .7rem; }
+.pg-filter button.on { border-color: #6d5dfc; color: #4c1d95; background: #f5f3ff; }
+.pg-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #94a3b8; font-style: normal; }
+.pg-dot.c { background: #6d5dfc; } .pg-dot.r { background: #0ea5e9; } .pg-dot.o { background: #94a3b8; }
+
+.pg-glance { background: linear-gradient(135deg, #faf5ff, #ecfeff); border: 1px solid #ddd6fe; border-radius: 16px; padding: 1rem 1.2rem; margin-bottom: 1.1rem; }
+.pg-glance h3 { margin: 0 0 .7rem; font-size: 1rem; color: #3b0764; display: flex; flex-wrap: wrap; gap: .4rem; align-items: baseline; }
+.pg-glance h3 small { font-weight: 400; color: #64748b; font-size: .74rem; }
+.pg-glance-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem; }
+.pg-glance h4 { margin: 0 0 .35rem; font-size: .74rem; text-transform: uppercase; letter-spacing: .05em; color: #6d28d9; }
+.pg-glance ul, .pg-glance ol { margin: 0; padding-left: 1.1rem; font-size: .86rem; color: #334155; display: flex; flex-direction: column; gap: .25rem; }
+.pg-surprise { margin: .7rem 0 0; font-size: .85rem; color: #334155; }
+
+.pg-cal { display: grid; grid-template-columns: repeat(4, 1fr); gap: .75rem; }
+.pg-month { background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; padding: .6rem; display: flex;
+    flex-direction: column; gap: .45rem; min-height: 138px; }
+.pg-month.empty { background: transparent; border-style: dashed; }
+.pg-month-name { font-family: ui-monospace, Consolas, monospace; font-size: .72rem; font-weight: 700; color: #94a3b8;
+    text-transform: uppercase; letter-spacing: .08em; padding: 0 .2rem; }
+.pg-none { margin: auto; font-size: .76rem; color: #cbd5e1; }
+.pg-ep { position: relative; display: flex; flex-direction: column; gap: .3rem; text-decoration: none; color: var(--text); flex: 1;
+    border-radius: 10px; padding: .55rem .65rem .55rem .8rem; background: #f8fafc; border: 1px solid #eef2f7; overflow: hidden;
+    transition: transform .15s, box-shadow .15s, border-color .15s; }
+.pg-ep::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: #94a3b8; }
+.pg-ep.t-classification::before { background: linear-gradient(#6d5dfc, #a78bfa); }
+.pg-ep.t-regression::before { background: linear-gradient(#0ea5e9, #22d3ee); }
+.pg-ep:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(15,12,41,.1); border-color: #c4b5fd; color: var(--text); }
+.pg-ep.s-live { background: #fff1f2; border-color: #fecdd3; }
+.pg-ep.hidden { display: none; }
+.pg-ep-top { display: flex; justify-content: space-between; align-items: center; gap: .3rem; }
+.pg-code { font-family: ui-monospace, Consolas, monospace; font-size: .7rem; font-weight: 700; color: #6d28d9; }
+.pg-badge { font-size: .64rem; font-weight: 700; border-radius: 999px; padding: .05rem .45rem; white-space: nowrap; }
+.pg-badge.live { color: #fff; background: #ef4444; }
+.pg-badge.done { color: #92400e; background: #fef3c7; }
+.pg-badge.soon { color: #64748b; background: #f1f5f9; }
+.pg-title { font-size: .84rem; font-weight: 700; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.pg-meta { display: flex; align-items: center; gap: .35rem; font-size: .7rem; color: #64748b; margin-top: auto;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pg-note { margin: 1.2rem 0 0; font-size: .76rem; color: var(--text-muted); text-align: center; }
+
+@media (max-width: 1000px) { .pg-cal { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 700px) {
+    .pg-wrap { margin: -1rem -12px 0; }
+    .pg-head-inner, .pg-body { padding-left: 12px; padding-right: 12px; }
+    .pg-head h1 { font-size: 1.4rem; }
+    .pg-cal { grid-template-columns: 1fr 1fr; gap: .5rem; }
+    .pg-month { min-height: 0; }
+    .pg-month.empty { display: none; }
+    .pg-live { flex-wrap: wrap; }
+    .pg-live-go { margin-left: 1.4rem; }
+}
+@media (prefers-reduced-motion: reduce) { .pg-live-dot { animation: none; } .pg-ep { transition: none; } }
+</style>
+<script>
+document.querySelectorAll('.pg-filter button').forEach(function (b) {
+    b.addEventListener('click', function () {
+        document.querySelectorAll('.pg-filter button').forEach(function (x) { x.classList.toggle('on', x === b); });
+        var t = b.dataset.task;
+        document.querySelectorAll('.pg-ep').forEach(function (e) { e.classList.toggle('hidden', !!t && e.dataset.task !== t); });
+    });
+});
+</script>
+{% endblock %}
