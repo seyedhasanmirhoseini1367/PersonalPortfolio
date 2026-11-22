@@ -8,12 +8,26 @@
 
     <!-- ── Back breadcrumb ───────────────────────────────────────────────── -->
     <div class="kwd-breadcrumb">
+        {% if competition.series == 'playground' %}
+        <a href="{% url 'kaggle_archive:playground' %}{% if competition.start_date %}?year={{ competition.start_date.year }}{% endif %}">
+            <i class="fas fa-arrow-left"></i> Playground Series{% if competition.start_date %} {{ competition.start_date.year }}{% endif %}
+        </a>
+        {% else %}
         <a href="{% url 'kaggle_archive:competition_list' %}">
             <i class="fas fa-arrow-left"></i> Kaggle Winners Archive
         </a>
+        {% endif %}
         <span class="breadcrumb-sep">/</span>
         <span>{{ competition.name|truncatechars:60 }}</span>
     </div>
+
+    {% if competition.series == 'playground' and not competition.analyzed_at %}
+    <div style="max-width:1100px;margin:.8rem auto 0;padding:.7rem 1rem;border-radius:12px;background:#f5f3ff;border:1px solid #ddd6fe;color:#4c1d95;font-size:.88rem;">
+        <i class="fas fa-hourglass-half"></i> The winners of this Playground episode are in the analysis queue (a few episodes are analysed each day).
+        Meanwhile, see the <a href="{{ competition.kaggle_url }}/leaderboard" target="_blank" rel="noopener">leaderboard</a> and
+        <a href="{{ competition.kaggle_url }}/discussion" target="_blank" rel="noopener">discussions</a> on Kaggle.
+    </div>
+    {% endif %}
 
     <!-- ── Competition Hero ─────────────────────────────────────────────── -->
     <div class="kwd-hero">

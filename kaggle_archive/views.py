@@ -1,7 +1,7 @@
 from django.conf import settings
 from django.utils import timezone
 from django.views.generic import ListView, DetailView
-from django.db.models import Q, Prefetch
+from django.db.models import Q, Prefetch, Count
 from django.contrib.admin.views.decorators import staff_member_required
 from django.shortcuts import render, get_object_or_404, redirect
 from django.http import JsonResponse
@@ -17,7 +17,8 @@ class CompetitionListView(ListView):
 
     def get_queryset(self):
         top3_qs = Solution.objects.filter(rank__lte=3).prefetch_related('techniques').order_by('rank')
-        qs = Competition.objects.prefetch_related(
+        # Featured / Research only; the monthly Playground Series has its own calendar page.
+        qs = Competition.objects.exclude(series=Competition.SERIES_PLAYGROUND).prefetch_related(
             Prefetch('solutions', queryset=top3_qs)
         )
 
@@ -62,12 +63,15 @@ class CompetitionListView(ListView):
         ctx['domains']           = Competition.DOMAIN_CHOICES
         ctx['techniques']        = Technique.objects.all().order_by('name')
         ctx['years']             = (
-            Competition.objects
+            Competition.objects.exclude(series=Competition.SERIES_PLAYGROUND)
             .exclude(end_date__isnull=True)
             .dates('end_date', 'year', order='DESC')
         )
-        ctx['total_competitions'] = Competition.objects.count()
-        ctx['total_solutions']    = Solution.objects.count()
+        featured = Competition.objects.exclude(series=Competition.SERIES_PLAYGROUND)
+        ctx['total_competitions'] = featured.count()
+        ctx['total_solutions']    = Solution.objects.filter(competition__in=featured).count()
+        ctx['playground_count']   = Competition.objects.filter(series=Competition.SERIES_PLAYGROUND).count()
+        ctx['tab'] = 'featured'
         ctx['total_techniques']   = Technique.objects.count()
         ctx['current_filters'] = {
             'q':         self.request.GET.get('q', ''),
@@ -132,9 +136,14 @@ class CompetitionDetailView(DetailView):
         ctx['top_solutions']        = solutions[:3]
         ctx['solutions']            = solutions
         ctx['technique_frequency']  = sorted(technique_counts.items(), key=lambda x: -x[1])
-        ctx['related_competitions'] = Competition.objects.filter(
-            competition_type=competition.competition_type
-        ).exclude(id=competition.id)[:4]
+        if competition.series == Competition.SERIES_PLAYGROUND:
+            ctx['related_competitions'] = Competition.objects.filter(
+                series=Competition.SERIES_PLAYGROUND, season=competition.season
+            ).exclude(id=competition.id).order_by('-episode')[:4]
+        else:
+            ctx['related_competitions'] = Competition.objects.filter(
+                competition_type=competition.competition_type
+            ).exclude(series=Competition.SERIES_PLAYGROUND).exclude(id=competition.id)[:4]
         return ctx
 
 
@@ -208,8 +217,8 @@ def trends_view(request):
                       .values_list('competition_id', 'lesson_key'))
 
     groups = []
-    comps = (Competition.objects.prefetch_related('solutions__techniques')
-             .order_by('-end_date', 'name'))
+    comps = (Competition.objects.exclude(series=Competition.SERIES_PLAYGROUND)
+             .prefetch_related('solutions__techniques').order_by('-end_date', 'name'))
     by_type = {}
     for comp in comps:
         by_type.setdefault(comp.competition_type, []).append(comp)
@@ -242,6 +251,8 @@ def trends_view(request):
         })
     groups.sort(key=lambda g: -len(g['competitions']))
     return render(request, 'kaggle_archive/trends.html', {
+        'tab': 'trends',
+        'playground_count': Competition.objects.filter(series=Competition.SERIES_PLAYGROUND).count(),
         'groups': groups,
         'total_lessons': total_lessons,
         'done_lessons': done_lessons,
@@ -267,3 +278,65 @@ def toggle_lesson(request, slug):
     if not created:
         obj.delete()
     return JsonResponse({'learned': created})
+
+
+# ── Playground Series: a 12-month calendar per year ─────────────────────────
+
+MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+
+def playground_view(request):
+    from .models import PlaygroundYear
+    today = timezone.now().date()
+    episodes = list(Competition.objects.filter(series=Competition.SERIES_PLAYGROUND)
+                    .annotate(n_solutions=Count('solutions', distinct=True),
+                              n_writeups=Count('solutions', filter=~Q(solutions__writeup_content=''), distinct=True))
+                    .order_by('start_date', 'episode'))
+
+    from .playground import calendar_month as month_of
+
+    years = sorted({month_of(c)[0] for c in episodes if month_of(c)[0]}, reverse=True)
+    try:
+        year = int(request.GET.get('year') or 0)
+    except ValueError:
+        year = 0
+    if year not in years:
+        year = years[0] if years else today.year
+
+    def state(c):
+        if c.start_date and c.end_date and c.start_date <= today <= c.end_date:
+            return 'live'
+        if c.start_date and c.start_date > today:
+            return 'upcoming'
+        if c.analyzed_at:
+            return 'analysed'
+        return 'pending'
+
+    months = [{'num': i + 1, 'name': n, 'episodes': []} for i, n in enumerate(MONTH_NAMES)]
+    season = None
+    for c in episodes:
+        y, m = month_of(c)
+        if y == year:
+            c.state = state(c)
+            c.days_left = (c.end_date - today).days if c.state == 'live' else None
+            months[m - 1]['episodes'].append(c)
+            season = season or c.season
+    for m in months:
+        m['future'] = not m['episodes'] and (year > today.year or (year == today.year and m['num'] > today.month))
+
+    live = next((c for c in reversed(episodes) if state(c) == 'live'), None)
+    if live:
+        live.days_left = (live.end_date - today).days
+    in_year = [c for m in months for c in m['episodes']]
+    return render(request, 'kaggle_archive/playground.html', {
+        'tab': 'playground',
+        'years': years, 'year': year, 'season': season, 'months': months,
+        'year_summary': PlaygroundYear.objects.filter(season=season).first() if season else None,
+        'year_total': len(in_year),
+        'year_analysed': sum(1 for c in in_year if c.analyzed_at),
+        'live': live,
+        'total_episodes': len(episodes),
+        'total_analysed': sum(1 for c in episodes if c.analyzed_at),
+        'first_year': min(years) if years else None,
+        'task_counts': {t: sum(1 for c in in_year if c.task == t) for t in ('classification', 'regression', 'other')},
+    })

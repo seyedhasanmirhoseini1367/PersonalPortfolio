@@ -1,0 +1,19 @@
+{# Tabs shared by the archive pages: Featured competitions / Playground Series / Trends. #}
+<nav class="ka-tabs" aria-label="Archive sections">
+    <a href="{% url 'kaggle_archive:competition_list' %}" class="{% if tab == 'featured' %}on{% endif %}">
+        <i class="fas fa-trophy"></i> Featured competitions</a>
+    <a href="{% url 'kaggle_archive:playground' %}" class="{% if tab == 'playground' %}on{% endif %}">
+        <i class="fas fa-calendar-days"></i> Playground Series{% if playground_count %} <span>{{ playground_count }}</span>{% endif %}</a>
+    <a href="{% url 'kaggle_archive:trends' %}" class="{% if tab == 'trends' %}on{% endif %}">
+        <i class="fas fa-chart-line"></i> Trends &amp; lessons</a>
+</nav>
+<style>
+.ka-tabs { display: flex; gap: .4rem; flex-wrap: wrap; max-width: 1300px; margin: 1rem auto 0; padding: 0 20px; }
+.ka-tabs a { display: inline-flex; align-items: center; gap: .45rem; font-size: .85rem; font-weight: 600; text-decoration: none;
+    color: #475569; background: #fff; border: 1px solid #e2e8f0; border-radius: 999px; padding: .45rem .95rem; transition: all .15s; }
+.ka-tabs a:hover { border-color: #a78bfa; color: #5b21b6; }
+.ka-tabs a.on { color: #fff; border-color: transparent; background: linear-gradient(120deg, #302b63, #6d5dfc); box-shadow: 0 4px 14px rgba(109,93,252,.25); }
+.ka-tabs a span { font-size: .7rem; background: rgba(109,93,252,.12); color: #5b21b6; border-radius: 999px; padding: 0 .45rem; }
+.ka-tabs a.on span { background: rgba(255,255,255,.2); color: #fff; }
+@media (max-width: 640px) { .ka-tabs { padding: 0 12px; } .ka-tabs a { font-size: .78rem; padding: .4rem .75rem; } }
+</style>

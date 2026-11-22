@@ -59,6 +59,15 @@ class Competition(models.Model):
     # Comparison of the top writeups (kaggle_archive/summarizer.py)
     insights              = models.JSONField(null=True, blank=True)
     insights_generated_at = models.DateTimeField(null=True, blank=True)
+    # Monthly Playground Series (kaggle_archive/playground.py); blank for Featured/Research.
+    SERIES_PLAYGROUND = 'playground'
+    series            = models.CharField(max_length=20, blank=True, db_index=True)
+    season            = models.PositiveSmallIntegerField(null=True, blank=True)
+    episode           = models.PositiveSmallIntegerField(null=True, blank=True)
+    start_date        = models.DateField(null=True, blank=True)
+    task              = models.CharField(max_length=20, blank=True, help_text='classification / regression / other')
+    analyzed_at       = models.DateTimeField(null=True, blank=True, help_text='Winners and write-ups fetched')
+    analysis_attempts = models.PositiveSmallIntegerField(default=0)
 
     class Meta:
         ordering = ['-end_date', '-created_at']
@@ -201,3 +210,18 @@ class LearnedLesson(models.Model):
 
     class Meta:
         unique_together = ["user", "competition", "lesson_key"]
+
+
+class PlaygroundYear(models.Model):
+    """"The year at a glance" for one Playground season, compared across its episodes."""
+    season       = models.PositiveSmallIntegerField(unique=True)
+    year         = models.PositiveSmallIntegerField()
+    summary      = models.JSONField(default=dict, blank=True)
+    based_on     = models.PositiveSmallIntegerField(default=0, help_text='Analysed episodes it was built from')
+    generated_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-year']
+
+    def __str__(self):
+        return f'Playground {self.year} (season {self.season})'
