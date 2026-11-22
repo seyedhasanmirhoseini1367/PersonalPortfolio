@@ -238,7 +238,8 @@ class Story(models.Model):
         labels = {'Research papers': ('paper', 'papers'),
                   'From the labs and newsrooms': ('news item', 'news items'),
                   'Discussed on Hacker News': ('discussion', 'discussions'),
-                  'Top stories of the week': ('top story', 'top stories')}
+                  'Top stories of the week': ('top story', 'top stories'),
+                  "Editor's picks": ('pick', 'picks'), 'Open source to try': ('repo', 'repos')}
         parts = _re.split(r'<h2>(.*?)</h2>', self.content or '')
         sections, lead, total = [], '', 0
         for name, body in zip(parts[1::2], parts[2::2]):
@@ -470,6 +471,9 @@ class DigestItem(models.Model):
     why         = models.TextField(blank=True)
     score       = models.FloatField(default=0)
     also        = models.JSONField(default=list, blank=True, help_text="Other outlets covering the same story")
+    angle       = models.CharField(max_length=40, blank=True)   # label of the "why" line, varies per item
+    fa_title    = models.CharField(max_length=300, blank=True)  # Persian, for the Telegram channel
+    fa_summary  = models.TextField(blank=True)
 
     class Meta:
         ordering = ["-digest_date"]
@@ -477,12 +481,13 @@ class DigestItem(models.Model):
 
 class NewsSource(models.Model):
     """Where the daily digest looks for news. Managed in the admin."""
-    KIND_RSS, KIND_HF, KIND_HN = 'rss', 'hf_papers', 'hn'
-    KIND_CHOICES = [(KIND_RSS, 'RSS / Atom feed'), (KIND_HF, 'Hugging Face Daily Papers'),
-                    (KIND_HN, 'Hacker News top stories')]
+    KIND_RSS, KIND_HF, KIND_HN, KIND_GITHUB = 'rss', 'hf_papers', 'hn', 'github'
+    KIND_CHOICES = [(KIND_RSS, 'Website or RSS / Atom feed'), (KIND_HF, 'Hugging Face Daily Papers'),
+                    (KIND_HN, 'Hacker News top stories'), (KIND_GITHUB, 'GitHub: new trending AI repos')]
     name      = models.CharField(max_length=100, unique=True)
     kind      = models.CharField(max_length=10, choices=KIND_CHOICES, default=KIND_RSS)
-    url       = models.URLField(max_length=500, blank=True, help_text="Feed URL (RSS / Atom sources)")
+    url       = models.URLField(max_length=500, blank=True,
+                                help_text="A website or its RSS / Atom feed (the feed is found automatically)")
     ai_filter = models.BooleanField(default=False, help_text="Only keep items that mention AI / ML")
     active    = models.BooleanField(default=True)
 
@@ -537,3 +542,20 @@ class TelegramPost(models.Model):
 
     def __str__(self):
         return f'{self.story.title} ({self.status})'
+
+
+class SuggestedLink(models.Model):
+    """A link the editor wants in the next daily digest (an article, repo, paper...)."""
+    PENDING, USED, FAILED = 'pending', 'used', 'failed'
+    url         = models.URLField(max_length=500)
+    note        = models.CharField(max_length=300, blank=True, help_text="Optional: what it is / why it is interesting")
+    status      = models.CharField(max_length=10, default=PENDING)
+    error       = models.CharField(max_length=300, blank=True)
+    digest_date = models.DateField(null=True, blank=True)
+    created_at  = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'{self.url} ({self.status})'

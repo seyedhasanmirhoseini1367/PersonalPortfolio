@@ -67,8 +67,12 @@
                                 <h2 class="section-title">
                                     <i class="fas fa-bolt me-2"></i>Latest AI News
                                 </h2>
+                                <span class="digest-actions">
+                                {% if user.is_staff %}<a class="digest-rss digest-desk" href="{% url 'stories:telegram_review' %}">
+                                    <i class="fas fa-newspaper"></i> News desk</a>{% endif %}
                                 <a class="digest-rss" href="{% url 'stories:digest_feed' %}" title="Subscribe with any RSS reader">
                                     <i class="fas fa-rss"></i> RSS</a>
+                                </span>
                             </div>
                             {% if digest_topics %}
                                 <nav class="digest-topics" aria-label="News topics">
@@ -505,6 +509,8 @@
         /* Section Header */
         .digest-rss { font-size: .75rem; font-weight: 600; color: #ea580c; text-decoration: none;
             border: 1px solid #fed7aa; background: #fff7ed; border-radius: 999px; padding: .2rem .65rem; }
+        .digest-actions { display: flex; gap: .4rem; flex-wrap: wrap; justify-content: flex-end; }
+        .digest-desk { color: #6d28d9; border-color: #ddd6fe; background: #f5f3ff; }
         .digest-rss:hover { background: #ffedd5; color: #c2410c; }
         .digest-topics { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; margin: -.3rem 0 .9rem; font-size: .75rem; }
         .digest-topics span { color: #64748b; font-weight: 600; }

@@ -552,6 +552,7 @@
                 <a role="menuitem" href="{% url 'content_generator:history' %}"><i class="fas fa-clock-rotate-left"></i> Content History</a>
                 {% if user.is_staff %}
                 <div class="hx-menu-sep">Admin</div>
+                <a role="menuitem" href="{% url 'stories:telegram_review' %}"><i class="fas fa-newspaper"></i> News Desk</a>
                 <a role="menuitem" href="{% url 'kaggle_archive:manage' %}"><i class="fas fa-sliders"></i> Manage Archive</a>
                 <a role="menuitem" href="{% url 'roadmap' %}"><i class="fas fa-route"></i> Roadmap</a>
                 <a role="menuitem" href="{% url 'monitoring:dashboard' %}"><i class="fas fa-chart-line"></i> Model Monitoring</a>

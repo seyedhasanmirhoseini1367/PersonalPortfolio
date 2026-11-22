@@ -157,7 +157,7 @@ class NewsUpgradeTests(TestCase):
         self.assertTrue({'Hugging Face Daily Papers', 'Hacker News', 'OpenAI', 'MIT News'} <= names)
         NewsSource.objects.update(active=False)
         with mock.patch('stories.digest._get') as get:
-            self.assertEqual(collect(log=lambda m: None), {'papers': [], 'news': [], 'hn': []})
+            self.assertEqual(collect(log=lambda m: None), {'papers': [], 'news': [], 'repos': [], 'hn': []})
             get.assert_not_called()   # inactive sources are not fetched
 
     def test_finance_news_is_dropped(self):
@@ -287,9 +287,11 @@ class TelegramTests(TestCase):
             if method == 'getMe':
                 return {'username': 'hasanainews_bot'}
             return {'message_id': len(self.calls)}
-        patcher = mock.patch('stories.telegram.api', side_effect=fake_api)
-        patcher.start()
-        self.addCleanup(patcher.stop)
+        for target, kw in (('stories.telegram.api', {'side_effect': fake_api}),
+                           ('stories.digest.translate_fa', {'return_value': 0})):
+            patcher = mock.patch(target, **kw)
+            patcher.start()
+            self.addCleanup(patcher.stop)
         self.user = get_user_model().objects.create_user('w4', 'w4@example.test', 'pw-writer-123!')
         self.story = Story.objects.create(
             author=self.user, title='AI & ML Digest — 22 Nov 2026', slug='ai-ml-digest-2026-11-22',
@@ -312,11 +314,19 @@ class TelegramTests(TestCase):
         with override_settings(TELEGRAM_CHANNEL_ID='-1001234'):
             self.assertEqual(telegram.channel(), '-1001234')
 
-    def test_text_lists_items_with_links_and_story_url(self):
+    def test_text_is_persian_with_a_source_per_item(self):
+        from datetime import date
+        from .models import DigestItem
         from .telegram import build_text
+        text = build_text(self.story)   # no Persian yet: English title, still with its source
+        self.assertIn('🔹 <b>Paper &amp; one</b>\n🔗 منبع: <a href="https://arxiv.org/abs/1">منبع</a>', text)
+        DigestItem.objects.create(url='https://arxiv.org/abs/1', title='Paper & one', source='arXiv (via Hugging Face Daily Papers)',
+                                  digest_date=date(2026, 11, 22), summary='s', fa_title='مقاله یک',
+                                  fa_summary='این مقاله روشی تازه معرفی می‌کند.')
         text = build_text(self.story)
-        self.assertIn('<b>AI &amp; ML Digest — 22 Nov 2026</b>', text)
-        self.assertIn('• <a href="https://arxiv.org/abs/1">Paper &amp; one</a> <i>· LLMs</i>', text)
+        self.assertIn('خلاصهٔ خبرهای هوش مصنوعی', text)
+        self.assertIn('🔹 <b>مقاله یک</b>\nاین مقاله روشی تازه معرفی می‌کند.\n'
+                      '🔗 منبع: <a href="https://arxiv.org/abs/1">arXiv</a>', text)
         self.assertIn('https://hasanai.net/stories/story/ai-ml-digest-2026-11-22/', text)
         self.assertIn('#LLMs', text)
 
@@ -392,3 +402,130 @@ class TelegramTests(TestCase):
             rec = run_today()
         self.assertEqual(TelegramPost.objects.get(story=rec.story).status, 'pending')
         self.assertFalse([s for s in self._sent('sendMessage') if s['chat_id'] == '@AIFrontiers'])
+
+
+class NewsDeskTests(TestCase):
+    """Editor's links, website sources, varied style labels, Persian translation."""
+
+    def setUp(self):
+        get_user_model().objects.create_superuser('seyed', 'a@example.test', 'pw-admin-123!')
+
+    def test_feed_found_from_a_website(self):
+        from unittest import mock
+        from .digest import discover_feed, feed_items
+        from .models import NewsSource
+        page = b'<html><head><link rel="alternate" type="application/rss+xml" href="/feed.xml"></head><body>x</body></html>'
+        self.assertEqual(discover_feed('https://site.example/blog/', page), 'https://site.example/feed.xml')
+        src = NewsSource.objects.create(name='Site', url='https://site.example/blog/')
+        with mock.patch('stories.digest._get', side_effect=[page, RSS]):
+            items = feed_items(src)
+        self.assertEqual(items[0]['url'], 'https://example.com/a')
+        src.refresh_from_db()
+        self.assertEqual(src.url, 'https://site.example/feed.xml')   # remembered
+
+    def test_github_link_is_read_via_api(self):
+        from unittest import mock
+        from .digest import link_info
+        with mock.patch('stories.digest._github_api', return_value={'full_name': 'VectifyAI/PageIndex',
+                                                                     'description': 'Reasoning-based RAG without vectors'}), \
+             mock.patch('stories.digest._get', return_value=b'# PageIndex\nA document index for reasoning-based retrieval.'):
+            info = link_info('https://github.com/VectifyAI/PageIndex')
+        self.assertEqual(info['title'], 'VectifyAI/PageIndex: Reasoning-based RAG without vectors')
+        self.assertEqual(info['source'], 'GitHub')
+        self.assertIn('document index', info['text'])
+
+    def _fake_summarize(self, items, log=print):
+        return [{**i, 'summary': f'About {i["title"]}.', 'why': 'Try it out today.', 'angle': 'Try it', 'topic': 'LLMs'}
+                for i in items]
+
+    def test_editor_links_lead_the_digest(self):
+        from unittest import mock
+        from .digest import run_today
+        from .models import SuggestedLink
+        link = SuggestedLink.objects.create(url='https://github.com/VectifyAI/PageIndex', note='Vectorless RAG.')
+        news = [{'section': 'news', 'title': 'Lab ships model', 'url': 'https://lab.example/z', 'source': 'Lab',
+                 'text': 't', 'date': None}]
+        info = {'title': 'VectifyAI/PageIndex: Reasoning-based RAG', 'text': 'A tree index of long documents for retrieval.', 'source': 'GitHub'}
+        with mock.patch('stories.digest.collect', return_value={'papers': [], 'news': news, 'repos': [], 'hn': []}), \
+             mock.patch('stories.digest.link_info', return_value=info), \
+             mock.patch('stories.digest.summarize', side_effect=self._fake_summarize):
+            rec = run_today()
+        content = rec.story.content
+        self.assertLess(content.index("Editor&#x27;s picks"), content.index('From the labs'))
+        self.assertIn('<strong>Try it:</strong>', content)   # the label varies per item
+        link.refresh_from_db()
+        self.assertEqual(link.status, 'used')
+        self.assertEqual(rec.story.digest_overview['sections'][0], '1 pick')
+
+    def test_add_picks_now_to_todays_digest(self):
+        from unittest import mock
+        from .digest import add_picks_now, publish
+        from .models import SuggestedLink
+        from django.utils import timezone
+        from zoneinfo import ZoneInfo
+        today = timezone.now().astimezone(ZoneInfo('Europe/Helsinki')).date()
+        publish([{'section': 'news', 'title': 'Old item', 'url': 'https://lab.example/old', 'source': 'Lab',
+                  'text': 't', 'date': None, 'summary': 'An earlier item of the day.', 'why': ''}], today)
+        SuggestedLink.objects.create(url='https://blog.example/post')
+        info = {'title': 'A good post', 'text': 'A long enough description of the post for a summary.', 'source': 'blog.example'}
+        with mock.patch('stories.digest.link_info', return_value=info), \
+             mock.patch('stories.digest.summarize', side_effect=self._fake_summarize):
+            story, n = add_picks_now()
+        self.assertEqual(n, 1)
+        self.assertLess(story.content.index('A good post'), story.content.index('Old item'))
+
+    def test_unreadable_link_is_reported(self):
+        from unittest import mock
+        from .digest import editor_picks
+        from .models import SuggestedLink
+        link = SuggestedLink.objects.create(url='https://blog.example/empty')
+        with mock.patch('stories.digest.link_info', return_value={'title': 'x', 'text': '', 'source': 'blog.example'}):
+            self.assertEqual(editor_picks(log=lambda m: None), [])
+        link.refresh_from_db()
+        self.assertEqual(link.status, 'failed')
+        self.assertIn('add a note', link.error)
+
+    def test_persian_translation_is_grounded(self):
+        import json
+        from datetime import date
+        from unittest import mock
+        from .digest import translate_fa
+        from .models import DigestItem
+        r = DigestItem.objects.create(url='https://a.example', title='Model X', source='Lab', digest_date=date(2026, 11, 22),
+                                      summary='Model X is 2 times faster.', why='Cheaper.')
+        reply = json.dumps({'items': [{'n': 0, 'title': 'مدل X', 'summary': 'مدل X دو برابر سریع‌تر است. هزینه را ۵۰ درصد کم می‌کند.'}]})
+        with mock.patch('content_generator.pipeline.agents.gemini_client.generate', return_value=reply):
+            self.assertEqual(translate_fa([r]), 1)
+        r.refresh_from_db()
+        self.assertEqual(r.fa_title, 'مدل X')
+        self.assertNotIn('۵۰', r.fa_summary)   # invented number dropped
+
+    def test_news_desk_page(self):
+        from unittest import mock
+        from .models import NewsSource, SuggestedLink
+        self.assertEqual(self.client.get('/stories/telegram/').status_code, 302)
+        self.client.force_login(get_user_model().objects.get(username='seyed'))
+        r = self.client.get('/stories/telegram/')
+        self.assertContains(r, 'News desk')
+        self.assertContains(r, 'GitHub trending AI repos')
+        self.assertContains(self.client.get('/'), 'News Desk')   # in the profile menu for staff
+        self.client.post('/stories/telegram/', {'action': 'add_link', 'url': 'https://github.com/VectifyAI/PageIndex'})
+        self.client.post('/stories/telegram/', {'action': 'add_link', 'url': 'not a url'})
+        self.assertEqual(list(SuggestedLink.objects.values_list('url', flat=True)), ['https://github.com/VectifyAI/PageIndex'])
+        with mock.patch('stories.digest.feed_items', return_value=[{}]):
+            self.client.post('/stories/telegram/', {'action': 'add_source', 'name': 'The Batch',
+                                                    'url': 'https://www.deeplearning.ai/the-batch/', 'ai_filter': 'on'})
+        src = NewsSource.objects.get(name='The Batch')
+        self.assertTrue(src.ai_filter and src.active)
+        self.client.post('/stories/telegram/', {'action': 'toggle_source', 'source': src.pk})
+        src.refresh_from_db()
+        self.assertFalse(src.active)
+
+
+class GithubSpamTests(TestCase):
+    def test_star_spam_filtered(self):
+        from .digest import _looks_like_star_spam
+        self.assertTrue(_looks_like_star_spam({'created_at': '2026-11-19T14:43:10Z', 'pushed_at': '2026-11-19T14:44:11Z',
+                                               'stargazers_count': 2706, 'forks_count': 36}))
+        self.assertFalse(_looks_like_star_spam({'created_at': '2026-11-09T00:50:28Z', 'pushed_at': '2026-11-22T05:21:25Z',
+                                                'stargazers_count': 1917, 'forks_count': 368}))

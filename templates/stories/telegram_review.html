@@ -1,19 +1,70 @@
 {% extends 'base.html' %}
-{% block title %}Telegram posts — Stories{% endblock %}
+{% block title %}News desk — Stories{% endblock %}
 
 {% block content %}
 <div class="tg-wrap">
     <div class="tg-head">
         <div class="tg-eyebrow"><i class="fas fa-shield-alt"></i> Staff only</div>
-        <h1><i class="fab fa-telegram"></i> Telegram channel posts</h1>
-        <p>New AI news digests are drafted here and sent to your private chat with <b>Publish</b> / <b>Skip</b> buttons.
+        <h1><i class="fas fa-newspaper"></i> News desk</h1>
+        <p>Add your own links and sources to the daily AI digest, and approve its posts for the Telegram channel.
            Nothing goes to the channel until you approve it.</p>
     </div>
 
     {% for m in messages %}<div class="tg-msg tg-{{ m.tags }}">{{ m }}</div>{% endfor %}
 
     <section class="tg-card">
-        <h2>Setup</h2>
+        <div class="tg-row">
+            <h2><i class="fas fa-link"></i> Your links</h2>
+            <form method="post">{% csrf_token %}<input type="hidden" name="action" value="picks_now">
+                <button class="tg-btn tg-light" title="Summarise the pending links now and add them to today's digest">Add to today’s digest now</button></form>
+        </div>
+        <p class="tg-note">An article, paper or GitHub repo you want in the digest. It appears under “Editor’s picks” in the next
+           daily digest (07:00), or right away with the button above.</p>
+        <form method="post" class="tg-addlink">{% csrf_token %}<input type="hidden" name="action" value="add_link">
+            <input type="url" name="url" placeholder="https://github.com/VectifyAI/PageIndex" required>
+            <input type="text" name="note" maxlength="300" placeholder="Optional note: what it is / why it is interesting">
+            <button class="tg-btn">Add link</button>
+        </form>
+        {% if links %}
+        <ul class="tg-list">
+            {% for l in links %}
+            <li><span class="tg-pill tg-{{ l.status }}">{{ l.status }}</span>
+                <a href="{{ l.url }}" target="_blank" rel="noopener">{{ l.url|truncatechars:70 }}</a>
+                {% if l.digest_date %}<span class="tg-note">· in the digest of {{ l.digest_date|date:"d M" }}</span>{% endif %}
+                {% if l.error %}<span class="tg-err">· {{ l.error }}</span>{% endif %}
+                {% if l.status != 'used' %}
+                <form method="post" class="tg-inline">{% csrf_token %}<input type="hidden" name="action" value="remove_link">
+                    <input type="hidden" name="link" value="{{ l.pk }}"><button class="tg-x" title="Remove">✕</button></form>{% endif %}
+            </li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+    </section>
+
+    <section class="tg-card">
+        <h2><i class="fas fa-rss"></i> Sources</h2>
+        <p class="tg-note">Where the digest looks every morning. Add any website: its RSS feed is found automatically.
+           Untick a source to stop using it. More options in the <a href="/admin/stories/newssource/" target="_blank">admin</a>.</p>
+        <ul class="tg-list tg-sources">
+            {% for src in sources %}
+            <li class="{% if not src.active %}tg-off{% endif %}">
+                <form method="post" class="tg-inline">{% csrf_token %}<input type="hidden" name="action" value="toggle_source">
+                    <input type="hidden" name="source" value="{{ src.pk }}">
+                    <button class="tg-toggle" title="{% if src.active %}Turn off{% else %}Turn on{% endif %}">{% if src.active %}✅{% else %}⬜{% endif %}</button></form>
+                <b>{{ src.name }}</b> <span class="tg-note">{{ src.get_kind_display }}</span>
+            </li>
+            {% endfor %}
+        </ul>
+        <form method="post" class="tg-addlink">{% csrf_token %}<input type="hidden" name="action" value="add_source">
+            <input type="text" name="name" maxlength="100" placeholder="Name, e.g. The Batch" required>
+            <input type="url" name="url" placeholder="Website or feed address, https://…" required>
+            <label class="tg-note"><input type="checkbox" name="ai_filter"> only AI items (for general tech sites)</label>
+            <button class="tg-btn">Add source</button>
+        </form>
+    </section>
+
+    <section class="tg-card">
+        <h2><i class="fab fa-telegram"></i> Telegram setup</h2>
         <ul class="tg-status">
             <li>{% if configured %}✅{% else %}❌{% endif %} Bot token and channel
                 {% if configured %}<code>{{ channel }}</code>{% else %}— set <code>TELEGRAM_BOT_TOKEN</code> and
@@ -37,7 +88,7 @@
 
     <section class="tg-card">
         <div class="tg-row">
-            <h2>Drafts</h2>
+            <h2><i class="fab fa-telegram"></i> Channel posts</h2>
             {% if configured %}
             <form method="post">{% csrf_token %}<input type="hidden" name="action" value="queue">
                 <button class="tg-btn tg-light">Draft the latest digest</button></form>
@@ -89,6 +140,15 @@
 .tg-pill { font-size: .72rem; font-weight: 700; border-radius: 999px; padding: .1rem .6rem; background: #f1f5f9; color: #475569; }
 .tg-pill.tg-pending { background: #fef3c7; color: #92400e; } .tg-pill.tg-sent { background: #dcfce7; color: #166534; }
 .tg-pill.tg-failed { background: #fee2e2; color: #991b1b; }
+.tg-addlink { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; margin: .7rem 0 .2rem; }
+.tg-addlink input[type=url], .tg-addlink input[type=text] { flex: 1 1 240px; border: 1px solid #e2e8f0; border-radius: 10px;
+    padding: .45rem .65rem; font-size: .88rem; min-width: 0; }
+.tg-list { list-style: none; padding: 0; margin: .6rem 0 0; display: flex; flex-direction: column; gap: .35rem; font-size: .86rem; }
+.tg-list li { display: flex; flex-wrap: wrap; gap: .35rem; align-items: center; word-break: break-all; }
+.tg-sources { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: .3rem .8rem; }
+.tg-off { opacity: .55; }
+.tg-x, .tg-toggle { border: 0; background: none; cursor: pointer; padding: 0 .2rem; font-size: .9rem; color: #94a3b8; }
+.tg-pill.tg-used { background: #dcfce7; color: #166534; }
 .tg-note { font-size: .8rem; color: #64748b; margin: .4rem 0 0; }
 .tg-err { font-size: .82rem; color: #b91c1c; margin: .4rem 0 0; }
 .tg-link { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: .6rem .8rem; font-size: .88rem; word-break: break-all; }
