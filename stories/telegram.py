@@ -237,6 +237,7 @@ def handle_update(update: dict):
             cfg.admin_name = (chat.get('username') or chat.get('first_name') or '')[:100]
             cfg.link_code = ''
             cfg.save()
+            set_owner_commands(cfg.admin_chat_id)
             api('sendMessage', chat_id=chat['id'],
                 text='✅ Connected. New digest announcements will come here for your approval before they '
                      'go to the channel.')
@@ -244,11 +245,43 @@ def handle_update(update: dict):
             api('sendMessage', chat_id=chat['id'],
                 text=f'This bot posts the HasanAI AI & ML news digest. Read it at {site_url()}/stories/')
         return
+    chat_id = (msg.get('chat') or {}).get('id')
+    if text.startswith('/') and chat_id:
+        if not cfg.admin_chat_id or chat_id != cfg.admin_chat_id:
+            return   # commands are for the owner only
+        command = text.split()[0].split('@')[0].lower()
+        if command == '/news':
+            from .newsinbox import find_and_send_in_background
+            started = find_and_send_in_background(chat_id)
+            api('sendMessage', chat_id=chat_id, text='🔎 Looking for fresh AI news… the list arrives in about a minute.'
+                if started else '⏳ Already working on it, one moment.')
+        elif command == '/radar':
+            from .radar import start_in_background
+            started = start_in_background()
+            api('sendMessage', chat_id=chat_id, text='🛰 Running the Repo Radar… the list arrives in a few minutes.'
+                if started else '⏳ The Repo Radar is already running.')
+        else:
+            api('sendMessage', chat_id=chat_id, text='Commands:\n/news — find fresh AI news to pick and publish\n'
+                                                     '/radar — run the GitHub Repo Radar now')
+        return
     cb = update.get('callback_query')
     if not cb:
         return
     who = (cb.get('from') or {}).get('id')
     data = cb.get('data') or ''
+    inbox = re.fullmatch(r'nc:(add|pub)(?::(\d+))?', data)
+    if inbox and cfg.admin_chat_id and who == cfg.admin_chat_id:
+        from .models import NewsCandidate
+        from . import newsinbox
+        if inbox.group(1) == 'add':
+            cand = NewsCandidate.objects.filter(pk=int(inbox.group(2) or 0)).first()
+            note = ('➕ Picked: ' + cand.title if cand and newsinbox.pick(cand)
+                    else 'Already picked.' if cand else 'This item is no longer in the inbox.')
+        else:
+            note = ('🚀 Publishing your picks… you will get a message when done.'
+                    if newsinbox.publish_in_background(cfg.admin_chat_id) else '⏳ Already working on it.')
+        api('answerCallbackQuery', callback_query_id=cb['id'], text=note[:190])
+        return
     radar = re.fullmatch(r'rr:add:(\d+)', data)
     if radar and cfg.admin_chat_id and who == cfg.admin_chat_id:
         # Repo Radar: add a repository to the next daily digest; the keyboard stays for the others.
@@ -284,6 +317,18 @@ def handle_update(update: dict):
             pass
 
 
+def set_owner_commands(chat_id):
+    """Show /news and /radar in the owner's command menu (only in their chat)."""
+    if not chat_id:
+        return
+    try:
+        api('setMyCommands', scope={'type': 'chat', 'chat_id': chat_id}, commands=[
+            {'command': 'news', 'description': 'Find fresh AI news to pick and publish'},
+            {'command': 'radar', 'description': 'Run the GitHub Repo Radar now'}])
+    except TelegramError as exc:
+        logger.warning('setMyCommands failed: %s', exc)
+
+
 _webhook_ok = False
 
 
@@ -296,6 +341,7 @@ def ensure_webhook(force=False) -> bool:
     url = site_url() + reverse('stories:telegram_webhook')
     api('setWebhook', url=url, secret_token=webhook_secret(), allowed_updates=['message', 'callback_query'])
     cfg = TelegramConfig.get()
+    set_owner_commands(cfg.admin_chat_id)
     if cfg.webhook_url != url:
         cfg.webhook_url = url
         cfg.save(update_fields=['webhook_url'])

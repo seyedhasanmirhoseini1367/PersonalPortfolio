@@ -558,6 +558,24 @@ def telegram_review(request):
                     messages.info(request, 'Repo Radar is running; the list arrives in your Telegram and here in a minute or two.')
                 else:
                     messages.warning(request, 'Repo Radar is already running.')
+            elif action == 'inbox_find':
+                from .newsinbox import find_in_background
+                if find_in_background():
+                    messages.info(request, 'Looking for fresh AI news… refresh this page in about a minute.')
+                else:
+                    messages.warning(request, 'The news inbox is already busy; try again in a minute.')
+            elif action == 'inbox_pick':
+                from .models import NewsCandidate
+                from .newsinbox import pick
+                cand = NewsCandidate.objects.filter(pk=request.POST.get('cand')).first()
+                if cand and pick(cand):
+                    messages.success(request, f'Picked: {cand.title}')
+            elif action == 'inbox_publish':
+                from .newsinbox import publish_in_background
+                if publish_in_background():
+                    messages.info(request, 'Publishing your picks into today’s digest… refresh AI News in a minute.')
+                else:
+                    messages.warning(request, 'The news inbox is already busy; try again in a minute.')
             elif action == 'radar_rewrite':
                 import threading
                 from .radar import rewrite_latest
@@ -590,7 +608,10 @@ def _radar_context():
     if last and last.picked:
         found = {r.pk: r for r in RadarRepo.objects.filter(pk__in=last.picked)}
         repos = [found[i] for i in last.picked if i in found]
-    return {'radar_cfg': RadarConfig.get(), 'radar_run': last, 'radar_repos': repos}
+    from .models import NewsCandidate, SuggestedLink
+    return {'radar_cfg': RadarConfig.get(), 'radar_run': last, 'radar_repos': repos,
+            'inbox': NewsCandidate.objects.all()[:15],
+            'picks_waiting': SuggestedLink.objects.filter(status='pending').count()}
 
 
 def _valid_url(value: str) -> str:
