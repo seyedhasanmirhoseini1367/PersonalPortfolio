@@ -163,7 +163,6 @@
 .hm-follow p { margin: 0; font-size: .82rem; color: rgba(231,234,255,.75); line-height: 1.5; }
 .hm-follow .hm-btn { justify-content: center; }
 .hm-btn.tg { background: #229ED9; border: 0; }
-.hm-btn.rss { background: rgba(234,88,12,.18); border-color: rgba(251,146,60,.5); color: #fed7aa; }
 
 /* ML Explained */
 .hm-learn { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
@@ -397,10 +396,9 @@
         </div>
         <div class="hm-card hm-follow">
             <h3><i class="fas fa-bolt"></i> {{ latest_digest.title }}</h3>
-            <p>Get the digest where you read: a Persian summary on Telegram every morning, or the full English digest by RSS.</p>
+            <p>Read the full digest here, or get a short Persian summary on Telegram every morning.</p>
             <a class="hm-btn primary" href="{{ latest_digest.get_absolute_url }}"><i class="fas fa-newspaper"></i> Read today’s digest</a>
             {% if telegram_url %}<a class="hm-btn tg" href="{{ telegram_url }}" target="_blank" rel="noopener"><i class="fab fa-telegram"></i> Telegram channel</a>{% endif %}
-            <a class="hm-btn rss" href="{% url 'stories:digest_feed' %}"><i class="fas fa-rss"></i> RSS feed</a>
         </div>
     </div>
 </section>
