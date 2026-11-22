@@ -232,7 +232,7 @@
 
 {% block content %}
 <div class="hmw-header">
-    <div class="hmw-breadcrumb"><a href="{% url 'model_internals:walkthrough_list' %}">← How Models Work</a></div>
+    <div class="hmw-breadcrumb"><a href="{% url 'model_internals:walkthrough_list' %}">← ML Explained</a></div>
     <h1>{{ walkthrough.icon|default:"🧠" }} {{ walkthrough.title }}</h1>
     {% if walkthrough.tagline %}<div class="hmw-tagline">{{ walkthrough.tagline }}</div>{% endif %}
     <div class="hmw-badges">
@@ -302,7 +302,7 @@
 </div>
 
 <div class="hmw-footer-nav">
-    <a href="{% url 'model_internals:walkthrough_list' %}">← Back to How Models Work</a>
+    <a href="{% url 'model_internals:walkthrough_list' %}">← Back to ML Explained</a>
 </div>
 {% endblock %}
 

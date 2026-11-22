@@ -9,7 +9,8 @@ from django.urls import reverse_lazy
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
 from django.core.paginator import Paginator
-from .models import Story, Comment, Tag, StoryView, StoryLike
+from .models import Story, Comment, Tag, StoryView, StoryLike, digest_q
+from .digest import TOPICS
 from .forms import StoryForm, CommentForm, StorySearchForm, ReplyForm
 from django.utils import timezone
 from django.http import JsonResponse, HttpResponseForbidden
@@ -59,11 +60,14 @@ class StoryListView(ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['search_form'] = StorySearchForm(self.request.GET)
+        # Featured = the latest news digests (daily and weekly).
         context['featured_stories'] = Story.objects.filter(
             status=Story.Status.PUBLISHED,
-            is_featured=True,
-            published_at__lte=timezone.now()
-        )[:3]
+            published_at__lte=timezone.now(),
+        ).filter(digest_q()).order_by('-published_at')[:3]
+        # Topic chips: browse the news by topic (tag pages).
+        context['digest_topics'] = Tag.objects.filter(
+            name__in=TOPICS, stories__status=Story.Status.PUBLISHED).distinct().order_by('name')
         context['popular_tags'] = Tag.objects.annotate(
             num_stories=Count('stories')
         ).filter(num_stories__gt=0).order_by('-num_stories')[:10]

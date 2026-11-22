@@ -65,14 +65,24 @@
                         <div class="featured-section">
                             <div class="section-header">
                                 <h2 class="section-title">
-                                    <i class="fas fa-star me-2"></i>Featured Stories
+                                    <i class="fas fa-bolt me-2"></i>Latest AI News
                                 </h2>
+                                <a class="digest-rss" href="{% url 'stories:digest_feed' %}" title="Subscribe with any RSS reader">
+                                    <i class="fas fa-rss"></i> RSS</a>
                             </div>
+                            {% if digest_topics %}
+                                <nav class="digest-topics" aria-label="News topics">
+                                    <span>Topics:</span>
+                                    {% for t in digest_topics %}<a href="{% url 'stories:tag_stories' t.slug %}">{{ t.name }}</a>{% endfor %}
+                                </nav>
+                            {% endif %}
 
                             <div class="featured-grid">
                                 {% for story in featured_stories %}
                                     <article class="featured-card">
-                                        {% if story.featured_image %}
+                                        {% if story.is_digest %}
+                                            <div class="featured-image-wrapper featured-digest">{% include "stories/_digest_cover.html" %}</div>
+                                        {% elif story.featured_image %}
                                             <div class="featured-image-wrapper">
                                                 <img src="{{ story.featured_image.url }}"
                                                      alt="{{ story.title }}"
@@ -92,7 +102,8 @@
                                                 <a href="{% url 'stories:story_detail' story.slug %}">{{ story.title }}</a>
                                             </h3>
 
-                                            <p class="featured-excerpt">{{ story.get_excerpt }}</p>
+                                            {% if story.is_digest %}{% include "stories/_digest_overview.html" %}
+                                            {% else %}<p class="featured-excerpt">{{ story.get_excerpt }}</p>{% endif %}
 
                                             <div class="featured-meta">
                                                 <div class="author-info">
@@ -492,6 +503,14 @@
         }
 
         /* Section Header */
+        .digest-rss { font-size: .75rem; font-weight: 600; color: #ea580c; text-decoration: none;
+            border: 1px solid #fed7aa; background: #fff7ed; border-radius: 999px; padding: .2rem .65rem; }
+        .digest-rss:hover { background: #ffedd5; color: #c2410c; }
+        .digest-topics { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; margin: -.3rem 0 .9rem; font-size: .75rem; }
+        .digest-topics span { color: #64748b; font-weight: 600; }
+        .digest-topics a { color: #5b21b6; background: #f5f3ff; border: 1px solid #ddd6fe; border-radius: 999px;
+            padding: .15rem .6rem; text-decoration: none; }
+        .digest-topics a:hover { background: #ede9fe; }
         .section-header {
             display: flex;
             justify-content: space-between;
@@ -1184,5 +1203,6 @@
                 grid-template-columns: 1fr;
             }
         }
-    </style>
+    .featured-digest .digest-cover { height: 100%; }
+</style>
 {% endblock %}

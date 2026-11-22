@@ -1,4 +1,4 @@
-"""Load the portfolio's public content (projects, stories, Kaggle archive).
+"""Load the portfolio's public content (projects, Kaggle archive).
 
 The content lives in projects/fixtures/site_content.json (text only: no users,
 comments or uploaded files). Run on every start-up with --if-empty: each
@@ -22,7 +22,6 @@ FIXTURE = Path(__file__).resolve().parents[2] / 'fixtures' / 'site_content.json'
 
 # section name -> (models it contains, model whose table decides "empty")
 SECTIONS = {
-    'stories': (('stories.tag', 'stories.story'), 'stories.story'),
     'projects': (('projects.projects',), 'projects.projects'),
     'kaggle': (('kaggle_archive.technique', 'kaggle_archive.competition', 'kaggle_archive.solution'),
                'kaggle_archive.competition'),

@@ -8,6 +8,15 @@ from django.core.validators import MinLengthValidator, MaxLengthValidator
 from django.utils import timezone
 
 
+# Slug prefixes of the automatic news stories (stories/digest.py).
+DIGEST_PREFIXES = ('ai-ml-digest-', 'ai-weekly-')
+
+
+def digest_q():
+    """Filter for the daily digests and weekly roundups."""
+    return models.Q(slug__startswith=DIGEST_PREFIXES[0]) | models.Q(slug__startswith=DIGEST_PREFIXES[1])
+
+
 class Story(models.Model):
     """
     A story/blog post written by a user.
@@ -198,18 +207,38 @@ class Story(models.Model):
             return True
         return False
 
-    # ── Daily AI & ML digest (stories/digest.py) ─────────────────────────────
+    # ── Daily AI & ML digest and weekly roundup (stories/digest.py) ─────────
     @property
     def is_digest(self):
-        return (self.slug or '').startswith('ai-ml-digest-')
+        return (self.slug or '').startswith(DIGEST_PREFIXES)
+
+    @property
+    def is_weekly(self):
+        return (self.slug or '').startswith('ai-weekly-')
+
+    @property
+    def digest_cover(self):
+        """Text for the generated card cover: kicker, big line, small line."""
+        from datetime import date, timedelta
+        try:
+            d = date.fromisoformat((self.slug or '')[-10:])
+        except ValueError:
+            d = (self.published_at or timezone.now()).date()
+        if self.is_weekly:
+            end = d + timedelta(days=6)
+            return {'kicker': 'Weekly roundup', 'big': f'W{d.isocalendar()[1]}',
+                    'small': f'{d.day} {d:%b} – {end.day} {end:%b}'}
+        return {'kicker': 'Daily digest', 'big': f'{d:%d}', 'small': f'{d:%b %Y}'}
 
     @property
     def digest_overview(self):
         """For list cards: item counts per section and the first headline."""
         import html as _html
         import re as _re
-        labels = {'Research papers': 'paper', 'From the labs and newsrooms': 'news item',
-                  'Discussed on Hacker News': 'discussion'}
+        labels = {'Research papers': ('paper', 'papers'),
+                  'From the labs and newsrooms': ('news item', 'news items'),
+                  'Discussed on Hacker News': ('discussion', 'discussions'),
+                  'Top stories of the week': ('top story', 'top stories')}
         parts = _re.split(r'<h2>(.*?)</h2>', self.content or '')
         sections, lead, total = [], '', 0
         for name, body in zip(parts[1::2], parts[2::2]):
@@ -217,8 +246,8 @@ class Story(models.Model):
             if not n:
                 continue
             total += n
-            word = labels.get(_html.unescape(name), 'item')
-            sections.append(f"{n} {word}{'' if n == 1 else 's'}")
+            one, many = labels.get(_html.unescape(name), ('item', 'items'))
+            sections.append(f"{n} {one if n == 1 else many}")
             if not lead:
                 m = _re.search(r'<h3>(.*?)</h3>', body, _re.S)
                 lead = _html.unescape(_re.sub(r'<[^>]+>', '', m.group(1))).strip() if m else ''
@@ -276,7 +305,7 @@ class Tag(models.Model):
         super().save(*args, **kwargs)
 
     def get_absolute_url(self):
-        return reverse('stories:tag_detail', args=[self.slug])
+        return reverse('stories:tag_stories', args=[self.slug])
 
 
 class Comment(models.Model):
@@ -430,11 +459,48 @@ class DailyDigest(models.Model):
 
 
 class DigestItem(models.Model):
-    """A source already used in a digest, so it is never repeated."""
+    """A source used in a digest (never repeated); kept for the weekly roundup."""
     url         = models.URLField(max_length=500, unique=True)
     title       = models.CharField(max_length=300)
     source      = models.CharField(max_length=100)
     digest_date = models.DateField()
+    section     = models.CharField(max_length=10, blank=True)   # papers / news / hn
+    topic       = models.CharField(max_length=40, blank=True)
+    summary     = models.TextField(blank=True)
+    why         = models.TextField(blank=True)
+    score       = models.FloatField(default=0)
+    also        = models.JSONField(default=list, blank=True, help_text="Other outlets covering the same story")
 
     class Meta:
         ordering = ["-digest_date"]
+
+
+class NewsSource(models.Model):
+    """Where the daily digest looks for news. Managed in the admin."""
+    KIND_RSS, KIND_HF, KIND_HN = 'rss', 'hf_papers', 'hn'
+    KIND_CHOICES = [(KIND_RSS, 'RSS / Atom feed'), (KIND_HF, 'Hugging Face Daily Papers'),
+                    (KIND_HN, 'Hacker News top stories')]
+    name      = models.CharField(max_length=100, unique=True)
+    kind      = models.CharField(max_length=10, choices=KIND_CHOICES, default=KIND_RSS)
+    url       = models.URLField(max_length=500, blank=True, help_text="Feed URL (RSS / Atom sources)")
+    ai_filter = models.BooleanField(default=False, help_text="Only keep items that mention AI / ML")
+    active    = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ['kind', 'name']
+
+    def __str__(self):
+        return f"{self.name} ({'on' if self.active else 'off'})"
+
+
+class WeeklyDigest(models.Model):
+    """The Monday roundup of the past week's digests (stories/digest.py)."""
+    week_start = models.DateField(unique=True, help_text="Monday of the week covered")
+    status     = models.CharField(max_length=10, default='running')
+    attempts   = models.PositiveSmallIntegerField(default=0)
+    story      = models.ForeignKey(Story, on_delete=models.SET_NULL, null=True, blank=True, related_name='+')
+    log        = models.TextField(blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-week_start']
