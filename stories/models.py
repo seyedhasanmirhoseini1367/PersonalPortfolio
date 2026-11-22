@@ -559,3 +559,55 @@ class SuggestedLink(models.Model):
 
     def __str__(self):
         return f'{self.url} ({self.status})'
+
+
+class RadarConfig(models.Model):
+    """One row: what the weekly Repo Radar looks for (stories/radar.py)."""
+    topics   = models.CharField(max_length=500, default='rag, mlops, llm, ai-agents, llm-inference, machine-learning, kaggle, tabular',
+                                help_text='GitHub topics / keywords, comma separated')
+    profile  = models.TextField(default='ML/AI engineer building production ML systems: RAG assistants, LLM apps and agents, '
+                                        'MLOps (deployment, monitoring, CI/CD, Azure), deep learning (EEG, time series) and '
+                                        'Kaggle competitions (tabular, gradient boosting).',
+                                help_text='Who the summaries are written for')
+    max_items = models.PositiveSmallIntegerField(default=8)
+    enabled   = models.BooleanField(default=True)
+
+    @classmethod
+    def get(cls):
+        return cls.objects.get_or_create(pk=1)[0]
+
+    def topic_list(self):
+        return [t.strip().lower() for t in (self.topics or '').split(',') if t.strip()][:12]
+
+
+class RadarRepo(models.Model):
+    """A GitHub repository seen by the Repo Radar, with a star snapshot for weekly growth."""
+    full_name    = models.CharField(max_length=200, unique=True)
+    description  = models.TextField(blank=True)
+    stars        = models.PositiveIntegerField(default=0)
+    checked_at   = models.DateTimeField(null=True, blank=True)
+    weekly_gain  = models.IntegerField(default=0)
+    what         = models.TextField(blank=True)
+    for_you      = models.TextField(blank=True)
+    sent_at      = models.DateTimeField(null=True, blank=True)
+    added        = models.BooleanField(default=False, help_text='Added to the news digest')
+
+    class Meta:
+        ordering = ['-sent_at', '-weekly_gain']
+
+    def __str__(self):
+        return self.full_name
+
+    @property
+    def url(self):
+        return f'https://github.com/{self.full_name}'
+
+
+class RadarRun(models.Model):
+    started_at = models.DateTimeField(auto_now_add=True)
+    status     = models.CharField(max_length=10, default='running')
+    picked     = models.JSONField(default=list, blank=True)   # RadarRepo ids, best first
+    log        = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ['-started_at']

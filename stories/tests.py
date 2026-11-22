@@ -529,3 +529,124 @@ class GithubSpamTests(TestCase):
                                                'stargazers_count': 2706, 'forks_count': 36}))
         self.assertFalse(_looks_like_star_spam({'created_at': '2026-11-09T00:50:28Z', 'pushed_at': '2026-11-22T05:21:25Z',
                                                 'stargazers_count': 1917, 'forks_count': 368}))
+
+
+TRENDING_HTML = '''<html><article class="Box-row"><h2 class="h3 lh-condensed">
+<a data-x="1" href="/VectifyAI/PageIndex" class="Link"><span>VectifyAI /</span> PageIndex</a></h2>
+<p class="col-9 color-fg-muted my-1">Document index for vectorless, reasoning-based RAG</p>
+<a href="/VectifyAI/PageIndex/stargazers" class="Link"><svg></svg>
+        40,712</a>
+<span class="d-inline-block float-sm-right"><svg></svg> 2,345 stars this week</span></article>
+<article class="Box-row"><h2><a href="/someone/web-ui-kit" class="Link">kit</a></h2>
+<p class="col-9">A design system for web apps</p><span>99 stars this week</span></article></html>'''
+
+
+@override_settings(TELEGRAM_BOT_TOKEN='123:test-token', TELEGRAM_CHANNEL_ID='AIFrontiers', SITE_URL='https://hasanai.net')
+class RepoRadarTests(TestCase):
+    """Weekly personal GitHub radar: collect, rank by weekly growth, summarise, deliver to the owner."""
+
+    def setUp(self):
+        from unittest import mock
+        self.calls = []
+
+        def fake_api(method, **params):
+            self.calls.append((method, params))
+            return {'message_id': len(self.calls)}
+        p = mock.patch('stories.telegram.api', side_effect=fake_api)
+        p.start()
+        self.addCleanup(p.stop)
+
+    def test_parse_trending(self):
+        from .radar import parse_trending
+        rows = parse_trending(TRENDING_HTML)
+        self.assertEqual(rows[0], {'full_name': 'VectifyAI/PageIndex', 'stars': 40712, 'weekly_gain': 2345,
+                                   'description': 'Document index for vectorless, reasoning-based RAG'})
+        self.assertEqual(rows[1]['weekly_gain'], 99)
+
+    def test_rank_keeps_relevant_growing_repos_and_snapshots(self):
+        from datetime import timedelta
+        from django.utils import timezone
+        from .models import RadarConfig, RadarRepo
+        from .radar import rank
+        cfg = RadarConfig.get()
+        found = {
+            'VectifyAI/PageIndex': {'full_name': 'VectifyAI/PageIndex', 'description': 'vectorless RAG',
+                                    'weekly_gain': 2345, 'stars': 40712, 'topics': []},
+            'someone/web-ui-kit': {'full_name': 'someone/web-ui-kit', 'description': 'A design system',
+                                   'weekly_gain': 99, 'stars': 500, 'topics': []},
+            'org/mlops-kit': {'full_name': 'org/mlops-kit', 'description': 'Model serving and monitoring',
+                              'weekly_gain': 0, 'stars': 1300, 'topics': ['mlops']},
+        }
+        RadarRepo.objects.create(full_name='org/mlops-kit', stars=1000, checked_at=timezone.now() - timedelta(days=7))
+        out = rank(found, cfg, measure=0)
+        self.assertEqual([c['full_name'] for c in out], ['VectifyAI/PageIndex', 'org/mlops-kit'])   # off-topic dropped
+        self.assertEqual(out[1]['weekly_gain'], 300)   # from last week's snapshot
+        self.assertEqual(RadarRepo.objects.get(full_name='org/mlops-kit').stars, 1300)
+
+    def test_spread_takes_turns_across_topics(self):
+        from .radar import spread
+        cands = [{'full_name': f'a/{i}', 'matched': ['ai-agents']} for i in range(5)] + \
+                [{'full_name': 'b/rag', 'matched': ['rag']}]
+        self.assertEqual([c['full_name'] for c in spread(cands, ['rag', 'ai-agents'], 3)], ['b/rag', 'a/0', 'a/1'])
+
+    def test_run_sends_to_owner_and_button_adds_to_digest(self):
+        import json
+        from unittest import mock
+        from .models import RadarRepo, RadarRun, SuggestedLink, TelegramConfig
+        from .radar import run
+        from .telegram import handle_update
+        TelegramConfig.objects.update_or_create(pk=1, defaults={'admin_chat_id': 42})
+        found = {'VectifyAI/PageIndex': {'full_name': 'VectifyAI/PageIndex', 'description': 'vectorless RAG for long documents',
+                                         'weekly_gain': 2345, 'stars': 40712, 'topics': []}}
+        reply = json.dumps({'items': [{'n': 0, 'what': 'A tree index that lets an LLM reason its way to the right pages.',
+                                       'for_you': 'Try it on long PDFs instead of a vector store.', 'relevant': True}]})
+        with mock.patch('stories.radar.collect', return_value=found), \
+             mock.patch('stories.digest.github_text', return_value='vectorless RAG for long documents'), \
+             mock.patch('content_generator.pipeline.agents.gemini_client.generate', return_value=reply):
+            rec = run()
+        self.assertEqual(rec.status, 'done')
+        repo = RadarRepo.objects.get(full_name='VectifyAI/PageIndex')
+        self.assertEqual(rec.picked, [repo.pk])
+        sent = [p for m, p in self.calls if m == 'sendMessage']
+        self.assertEqual(sent[0]['chat_id'], 42)   # the owner's private chat, never the channel
+        self.assertIn('VectifyAI/PageIndex', sent[0]['text'])
+        self.assertIn('+2,345 this week', sent[0]['text'])
+        self.assertEqual(sent[0]['reply_markup']['inline_keyboard'][0][0]['callback_data'], f'rr:add:{repo.pk}')
+        handle_update({'callback_query': {'id': 'c', 'from': {'id': 7}, 'data': f'rr:add:{repo.pk}'}})   # stranger
+        self.assertFalse(SuggestedLink.objects.exists())
+        handle_update({'callback_query': {'id': 'c', 'from': {'id': 42}, 'data': f'rr:add:{repo.pk}'}})
+        self.assertEqual(SuggestedLink.objects.get().url, 'https://github.com/VectifyAI/PageIndex')
+        self.assertTrue(RadarRepo.objects.get(pk=repo.pk).added)
+        self.assertEqual(RadarRun.objects.count(), 1)
+
+    def test_due_on_monday_morning_once(self):
+        from datetime import datetime
+        from zoneinfo import ZoneInfo
+        from .models import RadarRun
+        from .radar import is_due
+        hel = ZoneInfo('Europe/Helsinki')
+        self.assertFalse(is_due(datetime(2026, 11, 23, 8, 0, tzinfo=hel)))    # Monday, too early
+        self.assertTrue(is_due(datetime(2026, 11, 23, 9, 30, tzinfo=hel)))
+        self.assertFalse(is_due(datetime(2026, 11, 24, 9, 30, tzinfo=hel)))   # Tuesday
+        RadarRun.objects.create()
+        self.assertFalse(is_due(timezone_now_monday()))
+
+    def test_news_desk_section(self):
+        from unittest import mock
+        from .models import RadarConfig
+        staff = get_user_model().objects.create_user('st2', 'st2@example.test', 'pw-staff-123!', is_staff=True)
+        self.client.force_login(staff)
+        r = self.client.get('/stories/telegram/')
+        self.assertContains(r, 'Repo Radar')
+        self.client.post('/stories/telegram/', {'action': 'radar_save', 'topics': 'rag, mlops', 'profile': 'Me.'})
+        cfg = RadarConfig.get()
+        self.assertEqual((cfg.topics, cfg.profile, cfg.enabled), ('rag, mlops', 'Me.', False))
+        with mock.patch('stories.radar.start_in_background', return_value=True) as start:
+            self.client.post('/stories/telegram/', {'action': 'radar_run'})
+        start.assert_called_once()
+
+
+def timezone_now_monday():
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    return datetime(2026, 11, 23, 10, 0, tzinfo=ZoneInfo('Europe/Helsinki'))

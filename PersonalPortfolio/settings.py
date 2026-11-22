@@ -254,6 +254,8 @@ NEWS_DIGEST_HOUR = config('NEWS_DIGEST_HOUR', default=7, cast=int)
 TELEGRAM_BOT_TOKEN = config('TELEGRAM_BOT_TOKEN', default='')
 TELEGRAM_CHANNEL_ID = config('TELEGRAM_CHANNEL_ID', default='')
 SITE_URL = config('SITE_URL', default='https://hasanai.net')
+# Optional: a GitHub token raises the API rate limit for the Repo Radar (stories/radar.py).
+GITHUB_TOKEN = config('GITHUB_TOKEN', default='')
 # Run the queue worker thread inside the web process (content_generator/worker.py).
 CONTENT_GENERATOR_RUN_WORKER = config('CONTENT_GENERATOR_RUN_WORKER', default=True, cast=bool)
 

@@ -162,6 +162,11 @@ def _idle_tasks() -> None:
         ensure_webhook()   # once per process, only when the Telegram bot is configured
     except Exception:
         logger.exception('Telegram webhook setup failed')
+    try:
+        from stories.radar import maybe_run as radar_maybe_run
+        radar_maybe_run()   # Repo Radar: Mondays after 09:00 Helsinki
+    except Exception:
+        logger.exception('Repo radar check failed')
 
 
 def _loop() -> None:
