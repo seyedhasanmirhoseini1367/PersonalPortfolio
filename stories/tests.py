@@ -650,3 +650,26 @@ def timezone_now_monday():
     from datetime import datetime
     from zoneinfo import ZoneInfo
     return datetime(2026, 11, 23, 10, 0, tzinfo=ZoneInfo('Europe/Helsinki'))
+
+
+@override_settings(TELEGRAM_BOT_TOKEN='', TELEGRAM_CHANNEL_ID='')
+class RadarPostTests(TestCase):
+    def test_weekly_radar_post_on_ai_news(self):
+        from datetime import date
+        from .models import RadarRepo, DigestItem
+        from .radar import publish
+        get_user_model().objects.create_superuser('seyed', 'a@example.test', 'pw-admin-123!')
+        repos = [RadarRepo.objects.create(full_name=f'org/repo{i}', stars=1000 + i, weekly_gain=500 - i,
+                                          what=f'Tool number {i} for RAG.', why='Saves time.') for i in range(3)]
+        self.assertIsNone(publish(repos[:2], date(2026, 11, 23)))   # fewer than 3: no post
+        story = publish(repos, date(2026, 11, 23))
+        self.assertEqual(story.slug, 'ai-repos-2026-11-23')
+        self.assertTrue(story.is_digest and story.is_repos)
+        self.assertEqual(story.digest_overview['sections'], ['3 repos'])
+        self.assertEqual(story.digest_cover['kicker'], 'Open-source radar')
+        self.assertIn('+500 stars this week', story.content)
+        self.assertEqual(DigestItem.objects.filter(section='repos').count(), 3)
+        r = self.client.get('/stories/')
+        self.assertContains(r, 'Open-source radar')
+        self.assertContains(r, '/stories/story/ai-repos-2026-11-23/')
+        self.assertContains(self.client.get(story.get_absolute_url()), 'Worth a look')

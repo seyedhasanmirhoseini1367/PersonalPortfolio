@@ -9,12 +9,15 @@ from django.utils import timezone
 
 
 # Slug prefixes of the automatic news stories (stories/digest.py).
-DIGEST_PREFIXES = ('ai-ml-digest-', 'ai-weekly-')
+DIGEST_PREFIXES = ('ai-ml-digest-', 'ai-weekly-', 'ai-repos-')
 
 
 def digest_q():
-    """Filter for the daily digests and weekly roundups."""
-    return models.Q(slug__startswith=DIGEST_PREFIXES[0]) | models.Q(slug__startswith=DIGEST_PREFIXES[1])
+    """Filter for the daily digests, weekly roundups and the weekly open-source radar."""
+    q = models.Q()
+    for prefix in DIGEST_PREFIXES:
+        q |= models.Q(slug__startswith=prefix)
+    return q
 
 
 class Story(models.Model):
@@ -213,6 +216,10 @@ class Story(models.Model):
         return (self.slug or '').startswith(DIGEST_PREFIXES)
 
     @property
+    def is_repos(self):
+        return (self.slug or '').startswith('ai-repos-')
+
+    @property
     def is_weekly(self):
         return (self.slug or '').startswith('ai-weekly-')
 
@@ -228,6 +235,8 @@ class Story(models.Model):
             end = d + timedelta(days=6)
             return {'kicker': 'Weekly roundup', 'big': f'W{d.isocalendar()[1]}',
                     'small': f'{d.day} {d:%b} – {end.day} {end:%b}'}
+        if self.is_repos:
+            return {'kicker': 'Open-source radar', 'big': f'W{d.isocalendar()[1]}', 'small': f'{d:%d %b %Y}'}
         return {'kicker': 'Daily digest', 'big': f'{d:%d}', 'small': f'{d:%b %Y}'}
 
     @property
@@ -239,7 +248,8 @@ class Story(models.Model):
                   'From the labs and newsrooms': ('news item', 'news items'),
                   'Discussed on Hacker News': ('discussion', 'discussions'),
                   'Top stories of the week': ('top story', 'top stories'),
-                  "Editor's picks": ('pick', 'picks'), 'Open source to try': ('repo', 'repos')}
+                  "Editor's picks": ('pick', 'picks'), 'Open source to try': ('repo', 'repos'),
+                  'Trending on GitHub this week': ('repo', 'repos')}
         parts = _re.split(r'<h2>(.*?)</h2>', self.content or '')
         sections, lead, total = [], '', 0
         for name, body in zip(parts[1::2], parts[2::2]):
@@ -588,6 +598,7 @@ class RadarRepo(models.Model):
     checked_at   = models.DateTimeField(null=True, blank=True)
     weekly_gain  = models.IntegerField(default=0)
     what         = models.TextField(blank=True)
+    why          = models.TextField(blank=True, help_text='Public line for the AI News post')
     for_you      = models.TextField(blank=True)
     sent_at      = models.DateTimeField(null=True, blank=True)
     added        = models.BooleanField(default=False, help_text='Added to the news digest')

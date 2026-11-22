@@ -109,6 +109,7 @@ def build_text(story, translate=True) -> str:
         except Exception as exc:
             logger.warning('Persian translation failed: %s', exc)
     head = ('🏆 <b>مهم‌ترین خبرهای هوش مصنوعی این هفته</b>' if story.is_weekly
+            else '🛰 <b>پروژه‌های متن‌باز هوش مصنوعی که این هفته در GitHub داغ شدند</b>' if story.is_repos
             else '📰 <b>خلاصهٔ خبرهای هوش مصنوعی و یادگیری ماشین</b>')
     lines = [head, f'<i>{e(story.title)}</i>', '']
     tail = ['📖 خلاصهٔ کامل و همهٔ منابع (انگلیسی):', url]

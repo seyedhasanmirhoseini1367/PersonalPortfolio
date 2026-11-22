@@ -1,17 +1,19 @@
 {# Generated cover for the daily digest / weekly roundup (no image file needed). #}
-<a href="{% url 'stories:story_detail' story.slug %}" class="digest-cover{% if story.is_weekly %} weekly{% endif %}" aria-hidden="true" tabindex="-1">
+<a href="{% url 'stories:story_detail' story.slug %}" class="digest-cover{% if story.is_weekly %} weekly{% elif story.is_repos %} repos{% endif %}" aria-hidden="true" tabindex="-1">
 {% with c=story.digest_cover %}
     <span class="digest-cover-kicker">{{ c.kicker }}</span>
     <span class="digest-cover-day">{{ c.big }}</span>
     <span class="digest-cover-month">{{ c.small }}</span>
 {% endwith %}
-    <i class="fas {% if story.is_weekly %}fa-trophy{% else %}fa-newspaper{% endif %} digest-cover-icon"></i>
+    <i class="{% if story.is_weekly %}fas fa-trophy{% elif story.is_repos %}fab fa-github{% else %}fas fa-newspaper{% endif %} digest-cover-icon"></i>
 </a>
 <style>
 .digest-cover { position: relative; display: flex; flex-direction: column; justify-content: center; align-items: flex-start;
     gap: .1rem; padding: .9rem 1rem; min-height: 100%; text-decoration: none; color: #fff; overflow: hidden;
     background: radial-gradient(circle at 1px 1px, rgba(255,255,255,.12) 1px, transparent 0) 0 0 / 14px 14px,
                 linear-gradient(140deg, #1a1640, #6d5dfc 70%, #00b8e6); }
+.digest-cover.repos { background: radial-gradient(circle at 1px 1px, rgba(255,255,255,.12) 1px, transparent 0) 0 0 / 14px 14px,
+                linear-gradient(140deg, #0b1f1a, #0f766e 60%, #22c55e); }
 .digest-cover.weekly { background: radial-gradient(circle at 1px 1px, rgba(255,255,255,.12) 1px, transparent 0) 0 0 / 14px 14px,
                 linear-gradient(140deg, #1a1640, #b4329a 65%, #f59e0b); }
 .digest-cover-kicker { font-size: .62rem; letter-spacing: .12em; text-transform: uppercase; opacity: .8; }
