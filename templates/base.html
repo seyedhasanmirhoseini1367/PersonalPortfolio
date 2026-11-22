@@ -374,6 +374,37 @@
         @keyframes hxBlink { 50% { opacity: 0; } }
         .hx-burger, .hx-top-brand { display: none; }
 
+        /* Middle of the top bar: search field + live chip */
+        .hx-mid { flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center; gap: 10px; }
+        .hx-search {
+            display: flex; align-items: center; gap: 10px; width: min(380px, 100%); height: 38px; padding: 0 8px 0 14px;
+            border-radius: 12px; border: 1px solid var(--border); background: var(--bg-card); color: var(--text-muted);
+            font: 500 .84rem/1 'Segoe UI', system-ui, sans-serif; cursor: text; transition: border-color .15s, box-shadow .15s;
+        }
+        .hx-search:hover { border-color: #a78bfa; box-shadow: 0 0 0 3px rgba(167,139,250,.14); }
+        .hx-search i { color: #6d5dfc; }
+        .hx-search span { flex: 1; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .hx-search kbd { font: 600 .66rem/1 ui-monospace, Consolas, monospace; color: var(--text-muted); border: 1px solid var(--border);
+            border-bottom-width: 2px; border-radius: 5px; padding: 3px 5px; background: transparent; }
+        .hx-icon-btn.hx-search-icon { display: none; }
+        .hx-live { position: relative; height: 34px; width: min(330px, 34vw); flex-shrink: 1; min-width: 0; }
+        .hx-live-item {
+            position: absolute; inset: 0; display: flex; align-items: center; gap: 7px; padding: 0 12px; border-radius: 999px;
+            text-decoration: none; font: 500 .76rem/1 'Segoe UI', system-ui, sans-serif; color: var(--text); white-space: nowrap;
+            background: linear-gradient(90deg, rgba(109,93,252,.1), rgba(0,212,255,.08)); border: 1px solid rgba(109,93,252,.22);
+            opacity: 0; transform: translateY(6px); pointer-events: none; transition: opacity .35s, transform .35s;
+        }
+        .hx-live-item.on { opacity: 1; transform: none; pointer-events: auto; }
+        .hx-live-item:hover { border-color: #a78bfa; color: var(--text); }
+        .hx-live-item b { font-weight: 700; color: #6d28d9; flex-shrink: 0; }
+        .hx-live-item span { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+        .hx-live-dot { flex: 0 0 7px; height: 7px; border-radius: 50%; background: #22c55e; animation: hxPing 1.8s infinite; }
+        .hx-live-item.k-kaggle { background: linear-gradient(90deg, rgba(239,68,68,.09), rgba(251,146,60,.06)); border-color: rgba(239,68,68,.25); }
+        .hx-live-item.k-kaggle b { color: #b91c1c; }
+        .hx-live-item.k-kaggle .hx-live-dot { background: #ef4444; }
+        @keyframes hxPing { 0% { box-shadow: 0 0 0 0 rgba(34,197,94,.55); } 70%, 100% { box-shadow: 0 0 0 6px rgba(34,197,94,0); } }
+        @media (max-width: 1240px) { .hx-live { display: none; } }
+
         .hx-account { margin-left: auto; display: flex; align-items: center; gap: 8px; }
         .hx-icon-btn {
             width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--border); background: var(--bg-card);
@@ -443,6 +474,12 @@
         .hx-cmd-list li small { margin-left: auto; font: .7rem ui-monospace, Consolas, monospace; color: rgba(226,232,255,.4); }
         .hx-cmd-list li.on { background: linear-gradient(90deg, rgba(0,212,255,.16), rgba(167,139,250,.08)); color: #fff; }
         .hx-cmd-list li.empty { cursor: default; color: rgba(226,232,255,.45); }
+        .hx-cmd-list li.group { cursor: default; padding: 10px 12px 4px; font: 700 .64rem/1 'Segoe UI', sans-serif; letter-spacing: .08em;
+            text-transform: uppercase; color: rgba(226,232,255,.4); }
+        .hx-cmd-list li .t { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .hx-cmd-list li small { flex-shrink: 0; max-width: 45%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .hx-cmd-list li.ask { color: #b8f1ff; }
+        .hx-cmd-list li.ask i { color: var(--hx-cyan); }
         .hx-cmd-foot { display: flex; gap: 16px; padding: 9px 14px; border-top: 1px solid rgba(255,255,255,.07); font-size: .72rem; color: rgba(226,232,255,.5); }
         .hx-cmd-foot kbd { margin: 0 3px 0 0; }
 
@@ -458,6 +495,8 @@
             .hx-top-brand .hx-mark { flex-basis: 30px; width: 30px; height: 30px; border-radius: 9px; font-size: .9rem; }
             .hx-top-brand .hx-mark i { display: none; }
             .hx-path { display: none; }
+            .hx-mid { display: none; }
+            .hx-icon-btn.hx-search-icon { display: grid; }
             .hx-icon-btn { background: rgba(255,255,255,.05); border-color: rgba(255,255,255,.14); color: #e2e8ff; }
             .hx-user-btn { background: rgba(255,255,255,.05); border-color: rgba(255,255,255,.14); color: #fff; padding-right: 8px; }
             .hx-user-name { display: none; }
@@ -471,7 +510,7 @@
         }
         @media (prefers-reduced-motion: reduce) {
             .hx-rail, .hx-menu, .hx-item span, .hx-brand-text { transition: none; }
-            .hx-mark i, .hx-caret { animation: none; }
+            .hx-mark i, .hx-caret, .hx-live-dot { animation: none; }
         }
     </style>
     {% block extra_css %}{% endblock %}
@@ -527,8 +566,23 @@
     <a class="hx-top-brand" href="{% url 'home' %}"><span class="hx-mark" aria-hidden="true">H<i></i></span>HasanAI</a>
     <div class="hx-path" aria-hidden="true"><span>hasanai.net</span>{{ request.path|truncatechars:60 }}<em class="hx-caret"></em></div>
 
+    <div class="hx-mid">
+        <button class="hx-search" type="button" data-cmd-open aria-label="Search the site or ask the AI assistant">
+            <i class="fas fa-magnifying-glass" aria-hidden="true"></i><span>Search or ask AI…</span><kbd>Ctrl K</kbd>
+        </button>
+        {% if live_chip %}
+        <div class="hx-live" id="hxLive">
+            {% for it in live_chip %}
+            <a href="{{ it.url }}" class="hx-live-item k-{{ it.kind }}{% if forloop.first %} on{% endif %}" title="{{ it.label }}: {{ it.text }}">
+                <i class="hx-live-dot" aria-hidden="true"></i><b>{{ it.label }}</b><span>{{ it.text }}</span>
+            </a>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+
     <div class="hx-account">
-        <button class="hx-icon-btn" type="button" data-cmd-open aria-label="Search pages"><i class="fas fa-magnifying-glass" aria-hidden="true"></i></button>
+        <button class="hx-icon-btn hx-search-icon" type="button" data-cmd-open aria-label="Search the site"><i class="fas fa-magnifying-glass" aria-hidden="true"></i></button>
         {% if user.is_authenticated %}
         <div class="hx-user" id="hxUser">
             <button class="hx-user-btn" id="hxUserBtn" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="hxMenu">
@@ -570,10 +624,10 @@
     </div>
 </div>
 
-<div class="hx-cmd" id="hxCmd" role="dialog" aria-modal="true" aria-label="Jump to a page" hidden>
+<div class="hx-cmd" id="hxCmd" role="dialog" aria-modal="true" aria-label="Search the site" hidden>
     <div class="hx-cmd-box">
         <div class="hx-cmd-input"><i class="fas fa-magnifying-glass" aria-hidden="true"></i>
-            <input id="hxCmdInput" type="text" placeholder="Jump to a page…" autocomplete="off" spellcheck="false" aria-controls="hxCmdList">
+            <input id="hxCmdInput" type="text" placeholder="Search projects, AI news, lessons, Kaggle… or ask AI" autocomplete="off" spellcheck="false" aria-controls="hxCmdList">
             <kbd>Esc</kbd></div>
         <ul class="hx-cmd-list" id="hxCmdList" role="listbox"></ul>
         <div class="hx-cmd-foot"><span><kbd>↑</kbd><kbd>↓</kbd> move</span><span><kbd>Enter</kbd> open</span></div>
@@ -670,24 +724,45 @@
             icon: (a.querySelector('i') || {}).className || 'fas fa-arrow-right',
             blank: a.target === '_blank',
         })).filter((e, i, all) => all.findIndex((x) => x.href === e.href) === i);
-        let shown = [], sel = 0, lastFocus = null;
-        const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+        let shown = [], sel = 0, lastFocus = null, remote = [], timer = null, seq = 0;
+        const SEARCH_URL = '{% url "site_search" %}', ASK_URL = '{% url "rag_system:chat" %}';
+        const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
         const render = () => {
-            const q = input.value.trim().toLowerCase();
-            shown = entries.filter((e) => !q || e.label.toLowerCase().includes(q) || e.href.toLowerCase().includes(q));
+            const raw = input.value.trim(), q = raw.toLowerCase();
+            const pages = entries.filter((e) => !q || e.label.toLowerCase().includes(q) || e.href.toLowerCase().includes(q))
+                .map((e) => ({ ...e, group: 'Pages', sub: e.href }));
+            shown = (q ? pages.slice(0, 5) : pages).concat(remote);
+            if (raw.length >= 2) shown.push({ label: `Ask the AI assistant: “${raw}”`, href: ASK_URL + '?q=' + encodeURIComponent(raw),
+                                              icon: 'fas fa-robot', group: 'AI', sub: 'opens the chat', ask: true });
             sel = Math.min(sel, Math.max(0, shown.length - 1));
-            list.innerHTML = shown.length
-                ? shown.map((e, i) => `<li role="option" data-i="${i}" class="${i === sel ? 'on' : ''}" aria-selected="${i === sel}"><i class="${esc(e.icon)}"></i>${esc(e.label)}<small>${esc(e.href)}</small></li>`).join('')
-                : '<li class="empty">No page matches</li>';
+            let html = '', group = null;
+            shown.forEach((e, i) => {
+                if (q && e.group !== group) { group = e.group; html += `<li class="group" aria-hidden="true">${esc(group)}</li>`; }
+                html += `<li role="option" data-i="${i}" class="${i === sel ? 'on' : ''}${e.ask ? ' ask' : ''}" aria-selected="${i === sel}"><i class="${esc(e.icon)}"></i><span class="t">${esc(e.label)}</span><small>${esc(e.sub || '')}</small></li>`;
+            });
+            list.innerHTML = html || '<li class="empty">Nothing matches</li>';
+        };
+        const fetchRemote = () => {
+            const raw = input.value.trim(), mine = ++seq;
+            if (raw.length < 2) { remote = []; render(); return; }
+            fetch(SEARCH_URL + '?q=' + encodeURIComponent(raw), { headers: { 'Accept': 'application/json' } })
+                .then((r) => r.ok ? r.json() : { groups: [] })
+                .then((data) => {
+                    if (mine !== seq) return;
+                    remote = [];
+                    (data.groups || []).forEach((g) => g.items.forEach((it) => remote.push(
+                        { label: it.title, href: it.url, icon: it.icon, group: g.label, sub: it.sub })));
+                    render();
+                }).catch(() => {});
         };
         const go = (e) => { if (!e) return; if (e.blank) window.open(e.href, '_blank', 'noopener'); else location.href = e.href; };
         const openCmd = () => {
             lastFocus = document.activeElement; setDrawer(false); setMenu(false);
-            cmd.hidden = false; input.value = ''; sel = 0; render(); input.focus();
+            cmd.hidden = false; input.value = ''; sel = 0; remote = []; render(); input.focus();
         };
         const closeCmd = () => { cmd.hidden = true; if (lastFocus) lastFocus.focus(); };
         document.querySelectorAll('[data-cmd-open]').forEach((b) => b.addEventListener('click', openCmd));
-        input.addEventListener('input', () => { sel = 0; render(); });
+        input.addEventListener('input', () => { sel = 0; remote = []; render(); clearTimeout(timer); timer = setTimeout(fetchRemote, 180); });
         list.addEventListener('click', (e) => { const li = e.target.closest('li[data-i]'); if (li) go(shown[+li.dataset.i]); });
         cmd.addEventListener('click', (e) => { if (e.target === cmd) closeCmd(); });
         input.addEventListener('keydown', (e) => {
@@ -702,6 +777,14 @@
             if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); cmd.hidden ? openCmd() : closeCmd(); }
             else if (e.key === 'Escape') { if (!cmd.hidden) closeCmd(); else { setDrawer(false); setMenu(false); } }
         });
+    })();
+
+    // Live chip: rotate between "Today in AI" and the running Kaggle episode.
+    (function () {
+        const items = document.querySelectorAll('#hxLive .hx-live-item');
+        if (items.length < 2 || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+        let i = 0;
+        setInterval(() => { items[i].classList.remove('on'); i = (i + 1) % items.length; items[i].classList.add('on'); }, 6000);
     })();
 
     // Auto-hide alerts after 5 seconds

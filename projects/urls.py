@@ -7,6 +7,7 @@ from .views import (
     seizure_realtime_view, seizure_realtime_load, seizure_realtime_predict_chunk,
     seizure_realtime_models, editor_image_upload,
 )
+from . import site_search
 from .api import api_model_list, api_model_detail, api_predict, api_docs
 
 urlpatterns = [
@@ -31,6 +32,7 @@ urlpatterns = [
     path('seizure-realtime/predict-chunk/', seizure_realtime_predict_chunk, name='seizure_realtime_predict_chunk'),
 
     path('roadmap/', roadmap, name='roadmap'),
+    path('search/', site_search.search_api, name='site_search'),
     path('upload-image/', editor_image_upload, name='editor_image_upload'),
 
     # Public REST API
