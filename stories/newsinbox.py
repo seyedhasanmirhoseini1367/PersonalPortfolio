@@ -68,7 +68,8 @@ def telegram_text(cands) -> str:
     e = lambda s: html.escape(s or '', quote=True)
     lines = ['📡 <b>News inbox</b> — fresh AI news right now', '<i>Tap ➕ to pick, then 🚀 to publish your picks.</i>', '']
     for i, c in enumerate(cands, 1):
-        block = f'{i}. {SECTION_ICON.get(c.section, "•")} <a href="{e(c.url)}">{e(c.title)}</a> <i>({e(c.source.split(' (')[0])})</i>'
+        source = c.source.split(' (')[0]
+        block = f'{i}. {SECTION_ICON.get(c.section, "•")} <a href="{e(c.url)}">{e(c.title)}</a> <i>({e(source)})</i>'
         if len('\n'.join(lines + [block])) > 3800:
             break
         lines.append(block)
