@@ -544,6 +544,26 @@ def telegram_review(request):
                 if src:
                     src.active = not src.active
                     src.save(update_fields=['active'])
+            elif action == 'radar_save':
+                from .models import RadarConfig
+                rc = RadarConfig.get()
+                rc.topics = request.POST.get('topics', rc.topics).strip()[:500] or rc.topics
+                rc.profile = request.POST.get('profile', rc.profile).strip()[:2000] or rc.profile
+                rc.enabled = bool(request.POST.get('enabled'))
+                rc.save()
+                messages.success(request, 'Repo Radar settings saved.')
+            elif action == 'radar_run':
+                from .radar import start_in_background
+                if start_in_background():
+                    messages.info(request, 'Repo Radar is running; the list arrives in your Telegram and here in a minute or two.')
+                else:
+                    messages.warning(request, 'Repo Radar is already running.')
+            elif action == 'radar_add':
+                from .models import RadarRepo
+                from .radar import add_to_digest
+                repo = RadarRepo.objects.filter(pk=request.POST.get('repo')).first()
+                if repo and add_to_digest(repo):
+                    messages.success(request, f'{repo.full_name} goes into the next digest.')
         except telegram.TelegramError as exc:
             messages.error(request, f'Telegram: {exc}')
         return redirect('stories:telegram_review')
@@ -554,7 +574,18 @@ def telegram_review(request):
         'posts': TelegramPost.objects.select_related('story')[:20],
         'links': SuggestedLink.objects.all()[:15],
         'sources': NewsSource.objects.all(),
+        **_radar_context(),
     })
+
+
+def _radar_context():
+    from .models import RadarConfig, RadarRepo, RadarRun
+    last = RadarRun.objects.first()
+    repos = []
+    if last and last.picked:
+        found = {r.pk: r for r in RadarRepo.objects.filter(pk__in=last.picked)}
+        repos = [found[i] for i in last.picked if i in found]
+    return {'radar_cfg': RadarConfig.get(), 'radar_run': last, 'radar_repos': repos}
 
 
 def _valid_url(value: str) -> str:

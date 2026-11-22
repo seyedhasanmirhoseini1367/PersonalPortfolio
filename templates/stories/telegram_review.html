@@ -42,6 +42,45 @@
     </section>
 
     <section class="tg-card">
+        <div class="tg-row">
+            <h2><i class="fas fa-satellite-dish"></i> Repo Radar <small class="tg-note">just for you</small></h2>
+            <form method="post">{% csrf_token %}<input type="hidden" name="action" value="radar_run">
+                <button class="tg-btn tg-light">Run now</button></form>
+        </div>
+        <p class="tg-note">Every Monday at 09:00 the GitHub projects that grew fastest this week on your topics are summarised
+           for you and sent to your Telegram (not the channel). Tap ➕ to put one in the next AI digest.</p>
+        {% if radar_repos %}
+        <ol class="rr-list">
+            {% for r in radar_repos %}
+            <li>
+                <div class="tg-row"><a href="{{ r.url }}" target="_blank" rel="noopener"><b>{{ r.full_name }}</b></a>
+                    <span class="tg-pill">⭐ +{{ r.weekly_gain }} this week</span></div>
+                {% if r.what %}<div>{{ r.what }}</div>{% endif %}
+                {% if r.for_you %}<div class="rr-you">→ {{ r.for_you }}</div>{% endif %}
+                {% if r.added %}<span class="tg-pill tg-used">in the digest queue</span>{% else %}
+                <form method="post" class="tg-inline">{% csrf_token %}<input type="hidden" name="action" value="radar_add">
+                    <input type="hidden" name="repo" value="{{ r.pk }}"><button class="tg-btn tg-light">➕ Add to digest</button></form>{% endif %}
+            </li>
+            {% endfor %}
+        </ol>
+        <p class="tg-note">Last run: {{ radar_run.started_at|date:"d M Y H:i" }}</p>
+        {% elif radar_run %}
+        <p class="tg-note">Last run {{ radar_run.started_at|date:"d M H:i" }}: {{ radar_run.status }}. {{ radar_run.log|linebreaksbr|truncatechars:300 }}</p>
+        {% endif %}
+        <details class="rr-settings">
+            <summary>Topics and profile</summary>
+            <form method="post">{% csrf_token %}<input type="hidden" name="action" value="radar_save">
+                <label class="tg-note">Topics (GitHub topics or keywords, comma separated)</label>
+                <input type="text" name="topics" value="{{ radar_cfg.topics }}" maxlength="500">
+                <label class="tg-note">About you (the summaries are written for this)</label>
+                <textarea name="profile" rows="3" maxlength="2000">{{ radar_cfg.profile }}</textarea>
+                <label class="tg-note"><input type="checkbox" name="enabled" {% if radar_cfg.enabled %}checked{% endif %}> Run every Monday</label>
+                <button class="tg-btn">Save</button>
+            </form>
+        </details>
+    </section>
+
+    <section class="tg-card">
         <h2><i class="fas fa-rss"></i> Sources</h2>
         <p class="tg-note">Where the digest looks every morning. Add any website: its RSS feed is found automatically.
            Untick a source to stop using it. More options in the <a href="/admin/stories/newssource/" target="_blank">admin</a>.</p>
@@ -149,6 +188,14 @@
 .tg-off { opacity: .55; }
 .tg-x, .tg-toggle { border: 0; background: none; cursor: pointer; padding: 0 .2rem; font-size: .9rem; color: #94a3b8; }
 .tg-pill.tg-used { background: #dcfce7; color: #166534; }
+.rr-list { margin: .6rem 0 0; padding-left: 1.3rem; display: flex; flex-direction: column; gap: .7rem; font-size: .88rem; }
+.rr-list li > div { margin-top: .15rem; }
+.rr-you { color: #166534; }
+.rr-settings { margin-top: .8rem; font-size: .86rem; }
+.rr-settings summary { cursor: pointer; color: #6d28d9; font-weight: 600; }
+.rr-settings form { display: flex; flex-direction: column; gap: .4rem; margin-top: .6rem; }
+.rr-settings input[type=text], .rr-settings textarea { border: 1px solid #e2e8f0; border-radius: 10px; padding: .45rem .65rem; font-size: .86rem; width: 100%; }
+.rr-settings .tg-btn { align-self: flex-start; }
 .tg-note { font-size: .8rem; color: #64748b; margin: .4rem 0 0; }
 .tg-err { font-size: .82rem; color: #b91c1c; margin: .4rem 0 0; }
 .tg-link { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: .6rem .8rem; font-size: .88rem; word-break: break-all; }

@@ -247,7 +247,18 @@ def handle_update(update: dict):
     if not cb:
         return
     who = (cb.get('from') or {}).get('id')
-    m = re.fullmatch(r'tg:(pub|skip):(\d+)', cb.get('data') or '')
+    data = cb.get('data') or ''
+    radar = re.fullmatch(r'rr:add:(\d+)', data)
+    if radar and cfg.admin_chat_id and who == cfg.admin_chat_id:
+        # Repo Radar: add a repository to the next daily digest; the keyboard stays for the others.
+        from .models import RadarRepo
+        from .radar import add_to_digest
+        repo = RadarRepo.objects.filter(pk=int(radar.group(1))).first()
+        note = ('➕ Added to the next digest: ' + repo.full_name if repo and add_to_digest(repo)
+                else 'Already added.' if repo else 'Not found.')
+        api('answerCallbackQuery', callback_query_id=cb['id'], text=note[:190])
+        return
+    m = re.fullmatch(r'tg:(pub|skip):(\d+)', data)
     if not cfg.admin_chat_id or who != cfg.admin_chat_id or not m:
         api('answerCallbackQuery', callback_query_id=cb['id'], text='Not allowed.')
         return
