@@ -9,7 +9,7 @@ from django.urls import reverse_lazy
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
 from django.core.paginator import Paginator
-from .models import Story, Comment, Tag, StoryView, StoryLike, digest_q
+from .models import Story, Comment, Tag, StoryView, StoryLike, NewsSource, SuggestedLink, digest_q
 from .digest import TOPICS
 from .forms import StoryForm, CommentForm, StorySearchForm, ReplyForm
 from django.utils import timezone
@@ -522,6 +522,28 @@ def telegram_review(request):
             elif post and action == 'skip':
                 telegram.skip_post(post)
                 messages.info(request, 'Skipped.')
+            elif action == 'add_link':
+                _news_desk_add_link(request)
+            elif action == 'remove_link':
+                SuggestedLink.objects.filter(pk=request.POST.get('link'), status__in=['pending', 'failed']).delete()
+                messages.info(request, 'Link removed.')
+            elif action == 'picks_now':
+                from .digest import add_picks_now
+                story, n = add_picks_now(log=lambda m: None)
+                if story:
+                    messages.success(request, f'Added {n} link(s) to “{story.title}”.')
+                    if telegram.configured():
+                        telegram.queue_post(story)   # refresh the pending channel draft
+                else:
+                    messages.warning(request, 'Nothing was added: no pending link could be summarised right now '
+                                              '(see the list below, or try again later).')
+            elif action == 'add_source':
+                _news_desk_add_source(request)
+            elif action == 'toggle_source':
+                src = NewsSource.objects.filter(pk=request.POST.get('source')).first()
+                if src:
+                    src.active = not src.active
+                    src.save(update_fields=['active'])
         except telegram.TelegramError as exc:
             messages.error(request, f'Telegram: {exc}')
         return redirect('stories:telegram_review')
@@ -530,4 +552,45 @@ def telegram_review(request):
         'configured': telegram.configured(), 'channel': telegram.channel(), 'cfg': cfg,
         'link': f'https://t.me/{cfg.bot_username}?start={cfg.link_code}' if cfg.link_code and cfg.bot_username else '',
         'posts': TelegramPost.objects.select_related('story')[:20],
+        'links': SuggestedLink.objects.all()[:15],
+        'sources': NewsSource.objects.all(),
     })
+
+
+def _valid_url(value: str) -> str:
+    from django.core.validators import URLValidator
+    from django.core.exceptions import ValidationError
+    value = (value or '').strip()
+    try:
+        URLValidator(schemes=['http', 'https'])(value)
+    except ValidationError:
+        return ''
+    return value
+
+
+def _news_desk_add_link(request):
+    url = _valid_url(request.POST.get('url'))
+    if not url:
+        messages.error(request, 'Please paste a full link starting with https://')
+        return
+    SuggestedLink.objects.create(url=url[:500], note=request.POST.get('note', '').strip()[:300])
+    messages.success(request, 'Link added. It goes into the next daily digest, or press “Add to today’s digest now”.')
+
+
+def _news_desk_add_source(request):
+    url, name = _valid_url(request.POST.get('url')), request.POST.get('name', '').strip()[:100]
+    if not url or not name:
+        messages.error(request, 'A source needs a name and a full https:// address.')
+        return
+    if NewsSource.objects.filter(name=name).exists():
+        messages.error(request, 'A source with that name already exists.')
+        return
+    from . import digest
+    src = NewsSource.objects.create(name=name, url=url, kind=NewsSource.KIND_RSS,
+                                    ai_filter=bool(request.POST.get('ai_filter')))
+    try:
+        items = digest.feed_items(src)   # finds the site's feed and remembers it
+        messages.success(request, f'Source added: {len(items)} item(s) found in its feed.')
+    except Exception as exc:
+        messages.warning(request, f'Source added, but no feed could be read yet ({exc}). '
+                                  'It is skipped until one is found; you can change its address in the admin.')

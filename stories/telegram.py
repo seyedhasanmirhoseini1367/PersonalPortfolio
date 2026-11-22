@@ -93,22 +93,40 @@ def _plain(s: str) -> str:
     return html.unescape(re.sub(r'<[^>]+>', '', s or '')).strip()
 
 
-def build_text(story) -> str:
-    e = lambda s: html.escape(s, quote=True)
+def build_text(story, translate=True) -> str:
+    """The channel post, in Persian: each item with a short Persian summary and its source.
+    Items without a Persian version (translation unavailable) fall back to the English title."""
+    from .digest import translate_fa
+    from .models import DigestItem
+    e = lambda s: html.escape(s or '', quote=True)
     url = site_url() + reverse('stories:story_detail', args=[story.slug])
-    icon = '🏆' if story.is_weekly else '📰'
-    lines = [f'{icon} <b>{e(story.title)}</b>', '']
+    found = [(html.unescape(src), _plain(title), _plain(topic))
+             for src, title, topic in _ITEM.findall(story.content or '')][:MAX_ITEMS]
+    rows = {r.url: r for r in DigestItem.objects.filter(url__in=[f[0] for f in found])}
+    if translate:
+        try:
+            translate_fa([rows[u] for u, _, _ in found if u in rows])
+        except Exception as exc:
+            logger.warning('Persian translation failed: %s', exc)
+    head = ('🏆 <b>مهم‌ترین خبرهای هوش مصنوعی این هفته</b>' if story.is_weekly
+            else '📰 <b>خلاصهٔ خبرهای هوش مصنوعی و یادگیری ماشین</b>')
+    lines = [head, f'<i>{e(story.title)}</i>', '']
+    tail = ['📖 خلاصهٔ کامل و همهٔ منابع (انگلیسی):', url]
     topics = []
-    for src, title, topic in _ITEM.findall(story.content or '')[:MAX_ITEMS]:
-        topic = _plain(topic)
+    for src, title, topic in found:
+        r = rows.get(src)
+        source = (r.source if r else '').split(' (')[0] or 'منبع'
+        if r and r.fa_summary:
+            block = f'🔹 <b>{e(r.fa_title or title)}</b>\n{e(r.fa_summary)}\n🔗 منبع: <a href="{e(src)}">{e(source)}</a>'
+        else:
+            block = f'🔹 <b>{e(title)}</b>\n🔗 منبع: <a href="{e(src)}">{e(source)}</a>'
+        if len('\n'.join(lines + [block] + tail)) > 3800:
+            break
+        lines += [block, '']
         if topic and topic not in topics:
             topics.append(topic)
-        tag = f' <i>· {e(topic)}</i>' if topic else ''
-        lines.append(f'• <a href="{e(html.unescape(src))}">{e(_plain(title))}</a>{tag}')
-    lines += ['', f'Short summaries, why each matters, and all sources: {url}']
-    hashtags = ['#AI', '#MachineLearning'] + ['#' + re.sub(r'[^A-Za-z0-9]', '', t) for t in topics[:3]]
-    lines.append(' '.join(dict.fromkeys(h for h in hashtags if len(h) > 1)))
-    return '\n'.join(lines)[:4000]
+    hashtags = ['#هوش_مصنوعی', '#یادگیری_ماشین', '#AI'] + ['#' + re.sub(r'[^A-Za-z0-9]', '', t) for t in topics[:3]]
+    return '\n'.join(lines + tail + [' '.join(dict.fromkeys(h for h in hashtags if len(h) > 1))])[:4096]
 
 
 def _story_url(post) -> str:

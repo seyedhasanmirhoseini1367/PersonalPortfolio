@@ -63,10 +63,26 @@ _TOPIC_GUESS = [
     ('Tools & Open Source', r'\b(open[- ]source|library|framework|sdk|api|release|github|toolkit)\b'),
     ('LLMs', r'\b(llm|llms|language model|chatbot|gpt|reasoning|token|tokens|prompt|agents?)\b'),
 ]
-MAX_PAPERS, MAX_NEWS, MAX_HN, WEEKLY_TOP = 3, 4, 2, 5
+MAX_PAPERS, MAX_NEWS, MAX_REPOS, MAX_HN, WEEKLY_TOP = 3, 4, 2, 2, 5
 NEWS_WINDOW = timedelta(hours=36)
 HN_MIN_SCORE = 100
+GITHUB_MIN_STARS = 100
+GITHUB_TOPICS = ('llm', 'machine-learning', 'ai-agents')
 _NUM = re.compile(r'\d+(?:[.,]\d+)*')
+_FA_DIGITS = str.maketrans('۰۱۲۳۴۵۶۷۸۹٠١٢٣٤٥٦٧٨٩', '01234567890123456789')
+_SENTENCE = re.compile(r'(?<=[.!?؟])\s+')
+SECTION_ORDER = ('picks', 'papers', 'news', 'repos', 'hn')
+
+# Each item is written in a different way, so a digest does not read like a form.
+STYLES = [
+    'Open with the problem it tackles, then say what is new.',
+    'Open with the concrete result or capability, then briefly how it works.',
+    'Open with a short question an engineer might ask, then answer it.',
+    'Open with a brief everyday analogy, then the specifics.',
+    'Open by contrasting it with how this was usually done before.',
+    'Open with who released it and what a reader can try or use.',
+]
+ANGLES = ['Why it matters', 'The catch', 'Try it', 'Big picture', 'In practice', 'Worth watching', 'Who should care']
 
 
 # ── fetching ─────────────────────────────────────────────────────────────────
@@ -146,6 +162,139 @@ def _meta_description(url: str) -> str:
     return ''
 
 
+_FEED_LINK = re.compile(r'<link\b[^>]*type=["\']application/(?:rss|atom)\+xml["\'][^>]*>', re.I)
+
+
+def discover_feed(page_url: str, page: bytes) -> str:
+    """The RSS / Atom feed a web page advertises in its <head>."""
+    from urllib.parse import urljoin
+    for tag in _FEED_LINK.findall(page.decode('utf-8', 'replace')):
+        m = re.search(r'href=["\']([^"\']+)', tag)
+        if m:
+            return urljoin(page_url, html.unescape(m.group(1)))
+    return ''
+
+
+def feed_items(src) -> list[dict]:
+    """Items of a source given as a feed URL or as any website (its feed is found and remembered)."""
+    data = _get(src.url)
+    try:
+        return parse_feed(data)
+    except ET.ParseError:
+        pass
+    feed = discover_feed(src.url, data)
+    if not feed:
+        raise ValueError('no RSS / Atom feed found on that page')
+    items = parse_feed(_get(feed))
+    src.url = feed[:500]
+    src.save(update_fields=['url'])
+    return items
+
+
+def _github_api(path: str):
+    return json.loads(_get('https://api.github.com/' + path.lstrip('/'), timeout=15))
+
+
+def github_text(full_name: str, description='') -> str:
+    """Repo description plus the start of its README, as plain text."""
+    text = description or ''
+    try:
+        readme = _get(f'https://raw.githubusercontent.com/{full_name}/HEAD/README.md', timeout=10).decode('utf-8', 'replace')
+        readme = re.sub(r'```.*?```', ' ', readme, flags=re.S)
+        readme = re.sub(r'!\[[^\]]*\]\([^)]*\)|<[^>]+>|[#>*_`|]', ' ', readme)
+        readme = re.sub(r'\[([^\]]*)\]\([^)]*\)', r'\1', readme)
+        text += ' ' + re.sub(r'\s+', ' ', html.unescape(readme))
+    except Exception:
+        pass
+    return text.strip()[:1800]
+
+
+def _looks_like_star_spam(repo: dict) -> bool:
+    """Bought-star repos: pushed once and never touched again, or stars far out of line with forks."""
+    created, pushed = _date(repo.get('created_at') or ''), _date(repo.get('pushed_at') or '')
+    if created and pushed and pushed - created < timedelta(days=1):
+        return True
+    return repo.get('stargazers_count', 0) > 40 * max(repo.get('forks_count', 0), 1)
+
+
+def collect_github(now, log=print) -> list[dict]:
+    """New repos (last 14 days) on AI topics that already have many stars."""
+    since = (now - timedelta(days=14)).date().isoformat()
+    seen, out = set(), []
+    for topic in GITHUB_TOPICS:
+        try:
+            data = _github_api(f'search/repositories?q=topic:{topic}+created:%3E{since}'
+                               f'+stars:%3E%3D{GITHUB_MIN_STARS}&sort=stars&order=desc&per_page=10')
+        except Exception as exc:
+            log(f'  github {topic}: {exc}')
+            continue
+        for r in data.get('items', []):
+            if r['full_name'] in seen or r.get('fork') or not r.get('description') or _looks_like_star_spam(r):
+                continue
+            seen.add(r['full_name'])
+            out.append({'section': 'repos', 'title': _text(f"{r['full_name']}: {r['description']}", 300),
+                        'url': r['html_url'], 'source': 'GitHub', 'repo': r['full_name'],
+                        'text': _text(r['description'], 500), 'date': _date(r.get('created_at') or ''),
+                        'score': r.get('stargazers_count', 0)})
+    return out
+
+
+def link_info(url: str) -> dict:
+    """Title, text and source name for a link the editor added (GitHub repos read via the API)."""
+    from urllib.parse import urlparse
+    m = re.match(r'https?://(?:www\.)?github\.com/([\w.-]+)/([\w.-]+?)(?:\.git)?/?(?:[#?].*)?$', url)
+    if m:
+        full = f'{m.group(1)}/{m.group(2)}'
+        repo = _github_api(f'repos/{full}')
+        desc = repo.get('description') or ''
+        return {'title': _text(f"{repo.get('full_name', full)}: {desc}" if desc else full, 300),
+                'text': github_text(repo.get('full_name', full), desc), 'source': 'GitHub'}
+    page = _get(url, timeout=15).decode('utf-8', 'replace')
+    title = ''
+    for pat in (r'<meta[^>]+property=["\']og:title["\'][^>]+content=["\']([^"\']+)', r'<title[^>]*>(.*?)</title>'):
+        t = re.search(pat, page, re.I | re.S)
+        if t:
+            title = _text(t.group(1), 300)
+            break
+    desc = ''
+    for pat in (r'<meta[^>]+property=["\']og:description["\'][^>]+content=["\']([^"\']+)',
+                r'<meta[^>]+name=["\']description["\'][^>]+content=["\']([^"\']+)'):
+        d = re.search(pat, page, re.I)
+        if d:
+            desc = _text(d.group(1), 1500)
+            break
+    host = urlparse(url).netloc.removeprefix('www.')
+    return {'title': title or host, 'text': desc, 'source': host}
+
+
+def editor_picks(log=print) -> list[dict]:
+    """Links the editor added on the news desk page, ready to summarise."""
+    from .models import SuggestedLink
+    out = []
+    for s in SuggestedLink.objects.filter(status=SuggestedLink.PENDING).order_by('created_at')[:6]:
+        try:
+            info = link_info(s.url)
+        except Exception as exc:
+            s.status, s.error = SuggestedLink.FAILED, f'Could not read the page: {exc}'[:300]
+            s.save(update_fields=['status', 'error'])
+            continue
+        text = (s.note + ' ' + info['text']).strip()
+        if len(text) < 40:
+            s.status, s.error = SuggestedLink.FAILED, 'The page has no description to summarise; add a note.'
+            s.save(update_fields=['status', 'error'])
+            continue
+        out.append({'section': 'picks', 'title': info['title'], 'url': s.url, 'source': info['source'],
+                    'text': text, 'date': None, 'score': 0, 'suggestion': s.pk})
+    log(f'editor picks: {len(out)}')
+    return out
+
+
+def mark_picks_used(items, day):
+    from .models import SuggestedLink
+    ids = [i['suggestion'] for i in items if i.get('suggestion')]
+    SuggestedLink.objects.filter(pk__in=ids).update(status=SuggestedLink.USED, digest_date=day, error='')
+
+
 def is_finance(item: dict) -> bool:
     return bool(FINANCE.search(item.get('title', '') + ' ' + item.get('text', '')))
 
@@ -159,7 +308,7 @@ def collect(now=None, log=print) -> dict:
     """Candidate items per section from the active NewsSources, best first."""
     from .models import NewsSource
     now = now or timezone.now()
-    papers, news, hn = [], [], []
+    papers, news, hn, repos = [], [], [], []
     for src in _sources():
         try:
             if src.kind == NewsSource.KIND_HF:
@@ -187,8 +336,10 @@ def collect(now=None, log=print) -> dict:
                                'discussion': f'https://news.ycombinator.com/item?id={sid}',
                                'text': '', 'date': datetime.fromtimestamp(item.get('time', 0), dt_timezone.utc),
                                'score': item['score']})
+            elif src.kind == NewsSource.KIND_GITHUB:
+                repos += collect_github(now, log)
             elif src.url:
-                for it in parse_feed(_get(src.url)):
+                for it in feed_items(src):
                     if not it['date'] or now - it['date'] > NEWS_WINDOW or it['date'] > now + timedelta(hours=2):
                         continue
                     if src.ai_filter and not AI_WORDS.search(it['title'] + ' ' + it['text']):
@@ -201,9 +352,10 @@ def collect(now=None, log=print) -> dict:
     papers.sort(key=lambda i: -i['score'])
     news.sort(key=lambda i: -i['score'])
     hn.sort(key=lambda i: -i['score'])
+    repos.sort(key=lambda i: -i['score'])
     news = [i for i in news if not is_finance(i)]
     hn = [i for i in hn if not is_finance(i)]
-    return {'papers': papers, 'news': news, 'hn': hn}
+    return {'papers': papers, 'news': news, 'repos': repos, 'hn': hn}
 
 
 # ── duplicates ───────────────────────────────────────────────────────────────
@@ -243,7 +395,7 @@ def select(candidates: dict, used_urls: set, recent_titles=()) -> list[dict]:
     at most 2 news items per publisher."""
     picked, per_source = [], {}
     recent = list(recent_titles)
-    for section, limit in (('papers', MAX_PAPERS), ('news', MAX_NEWS), ('hn', MAX_HN)):
+    for section, limit in (('papers', MAX_PAPERS), ('news', MAX_NEWS), ('repos', MAX_REPOS), ('hn', MAX_HN)):
         n = 0
         for it in candidates.get(section, []):
             if n >= limit:
@@ -258,6 +410,8 @@ def select(candidates: dict, used_urls: set, recent_titles=()) -> list[dict]:
                 it['text'] = _meta_description(it['url'])
                 if len(it['text']) < 60:
                     continue
+            if section == 'repos':
+                it['text'] = github_text(it['repo'], it['text'])
             used_urls.add(it['url'])
             recent.append(it['title'])
             per_source[it['source']] = per_source.get(it['source'], 0) + 1
@@ -269,13 +423,14 @@ def select(candidates: dict, used_urls: set, recent_titles=()) -> list[dict]:
 # ── summarising ──────────────────────────────────────────────────────────────
 
 def _numbers(text: str) -> set:
-    return {n.replace(',', '.').rstrip('.').lstrip('0') or '0' for n in _NUM.findall(text or '')}
+    text = (text or '').translate(_FA_DIGITS)
+    return {n.replace(',', '.').rstrip('.').lstrip('0') or '0' for n in _NUM.findall(text)}
 
 
 def _grounded(text: str, source: str) -> str:
     """Drop sentences containing numbers that are not in the source text."""
     known = _numbers(source)
-    keep = [s for s in re.split(r'(?<=[.!?])\s+', (text or '').strip()) if s and _numbers(s) <= known]
+    keep = [s for s in _SENTENCE.split((text or '').strip()) if s and _numbers(s) <= known]
     return ' '.join(keep)
 
 
@@ -299,16 +454,21 @@ def summarize(items: list[dict], log=print) -> list[dict]:
     from content_generator.pipeline.agents.gemini_client import generate
     done = []
     topics = ', '.join(f'"{t}"' for t in TOPICS)
+    angles = ', '.join(f'"{a}"' for a in ANGLES)
+    shift = timezone.now().toordinal()   # a different style rotation every day
     for start in range(0, len(items), 4):
         batch = items[start:start + 4]
         listing = '\n\n'.join(
-            f'[{i}] TITLE: {it["title"]}\nSOURCE: {it["source"]}\nTEXT: {it["text"][:1500]}'
+            f'[{i}] TITLE: {it["title"]}\nSOURCE: {it["source"]}\n'
+            f'STYLE: {STYLES[(shift + start + i) % len(STYLES)]}\nTEXT: {it["text"][:1500]}'
             for i, it in enumerate(batch))
-        prompt = f"""You write a daily AI & machine-learning news digest for engineers.
+        prompt = f"""You write a daily AI & machine-learning news digest for engineers. It should read like a
+good newsletter written by a person: every item phrased differently, never the same template twice.
 
 For each item below write:
-- "summary": 2-3 sentences, in your own words, saying what it is and what is new
-- "why": 1 sentence on why it matters to an ML practitioner
+- "summary": 2-3 sentences, in your own words, following the item's STYLE
+- "angle": the label that fits this item best, one of {angles}; use different labels across items
+- "why": 1 sentence that fits that label (why it matters / the limitation / how to try it / ...)
 - "topic": exactly one of {topics}
 
 Rules:
@@ -320,7 +480,7 @@ Rules:
 ITEMS:
 {listing}
 
-Return JSON: {{"items": [{{"n": <index>, "summary": str, "why": str, "topic": str}}, ...]}}
+Return JSON: {{"items": [{{"n": <index>, "summary": str, "angle": str, "why": str, "topic": str}}, ...]}}
 Return ONLY the JSON."""
         try:
             data = json.loads(generate(prompt))
@@ -338,7 +498,9 @@ Return ONLY the JSON."""
             summary = _grounded(row.get('summary', ''), it['text'] + ' ' + it['title'])
             why = _grounded(row.get('why', ''), it['text'] + ' ' + it['title'])
             if len(summary) >= 40:
-                done.append({**it, 'summary': summary, 'why': why, 'topic': _topic(row.get('topic'), it)})
+                angle = next((a for a in ANGLES if a.lower() == str(row.get('angle', '')).strip().lower()), ANGLES[0])
+                done.append({**it, 'summary': summary, 'why': why, 'angle': angle,
+                             'topic': _topic(row.get('topic'), it)})
     return done
 
 
@@ -412,7 +574,8 @@ def learn_links(item: dict, patterns, limit=2) -> list[dict]:
 
 # ── publishing ───────────────────────────────────────────────────────────────
 
-SECTION_TITLES = {'papers': 'Research papers', 'news': 'From the labs and newsrooms', 'hn': 'Discussed on Hacker News'}
+SECTION_TITLES = {'picks': "Editor's picks", 'papers': 'Research papers', 'news': 'From the labs and newsrooms',
+                  'repos': 'Open source to try', 'hn': 'Discussed on Hacker News'}
 WEEKLY_TOP_TITLE = 'Top stories of the week'
 DISCLAIMER = ('<hr><p><em>Summaries are generated automatically from each source\'s own abstract or '
               'description and may simplify. Always check the original before relying on a detail.</em></p>')
@@ -430,7 +593,7 @@ def render_item(it: dict, show_day=False) -> list[str]:
                      f'{e(it["topic"])}</a></p>')
     parts.append(f'<p>{e(it["summary"])}</p>')
     if it.get('why'):
-        parts.append(f'<p><strong>Why it matters:</strong> {e(it["why"])}</p>')
+        parts.append(f'<p><strong>{e(it.get("angle") or ANGLES[0])}:</strong> {e(it["why"])}</p>')
     if it.get('learn'):
         links = ' · '.join(f'<a href="{e(l["url"])}">{e(l["title"])}</a>' for l in it['learn'])
         parts.append(f'<p class="digest-learn"><strong>Learn the basics:</strong> {links}</p>')
@@ -449,16 +612,21 @@ def render_item(it: dict, show_day=False) -> list[str]:
     return parts
 
 
+def render_section(items, section) -> list[str]:
+    rows = [i for i in items if i['section'] == section]
+    if not rows:
+        return []
+    parts = [f'<h2>{html.escape(SECTION_TITLES[section])}</h2>']
+    for it in rows:
+        parts += render_item(it)
+    return parts
+
+
 def render_html(items: list[dict], day) -> str:
     parts = ['<p>The day\'s notable AI and machine-learning papers and news, summarised. '
              'Each item links to its source; read the original for the full details.</p>']
-    for section in ('papers', 'news', 'hn'):
-        rows = [i for i in items if i['section'] == section]
-        if not rows:
-            continue
-        parts.append(f'<h2>{SECTION_TITLES[section]}</h2>')
-        for it in rows:
-            parts += render_item(it)
+    for section in SECTION_ORDER:
+        parts += render_section(items, section)
     parts.append(DISCLAIMER)
     return '\n'.join(parts)
 
@@ -478,28 +646,42 @@ def _tag(story, names):
         story.tags.add(tag)
 
 
-def publish(items: list[dict], day):
-    from .models import DigestItem, Story
-    patterns = _walkthrough_patterns()
-    for it in items:
-        it['learn'] = learn_links(it, patterns)
-    title = f'AI & ML Digest — {day.strftime("%d %b %Y")}'
-    counts = {k: sum(1 for i in items if i['section'] == k) for k in ('papers', 'news', 'hn')}
-    lead = (f"{counts['papers']} papers, {counts['news']} news items and {counts['hn']} discussions. "
-            f"Top: {items[0]['title']}")
-    story, _ = Story.objects.update_or_create(
-        slug=f'ai-ml-digest-{day.isoformat()}',
-        defaults=dict(author=_author(), title=title, excerpt=lead[:290],
-                      content=render_html(items, day), status=Story.Status.PUBLISHED,
-                      published_at=timezone.now()))
-    _tag(story, ['AI News', 'Digest'] + sorted({i['topic'] for i in items if i.get('topic')}))
+def _save_items(items, day):
+    from .models import DigestItem
     for rank, it in enumerate(items):
         DigestItem.objects.update_or_create(url=it['url'][:500], defaults={
             'title': it['title'][:300], 'source': it['source'][:100], 'digest_date': day,
             'section': it['section'], 'topic': it.get('topic', ''), 'summary': it['summary'],
-            'why': it.get('why', ''), 'also': it.get('also', []),
+            'why': it.get('why', ''), 'angle': it.get('angle', ''), 'also': it.get('also', []),
             # rank within its section on the day: lower is better, used by the weekly fallback
             'score': float(sum(1 for j in items[:rank] if j['section'] == it['section']))})
+    mark_picks_used(items, day)
+
+
+def _excerpt(items) -> str:
+    words = {'picks': ('pick', 'picks'), 'papers': ('paper', 'papers'), 'news': ('news item', 'news items'),
+             'repos': ('repo', 'repos'), 'hn': ('discussion', 'discussions')}
+    parts = []
+    for k in SECTION_ORDER:
+        n = sum(1 for i in items if i['section'] == k)
+        if n:
+            parts.append(f'{n} {words[k][0] if n == 1 else words[k][1]}')
+    return (', '.join(parts) + f'. Top: {items[0]["title"]}')[:290]
+
+
+def publish(items: list[dict], day):
+    from .models import Story
+    patterns = _walkthrough_patterns()
+    for it in items:
+        it['learn'] = learn_links(it, patterns)
+    items = sorted(items, key=lambda i: SECTION_ORDER.index(i['section']))
+    story, _ = Story.objects.update_or_create(
+        slug=f'ai-ml-digest-{day.isoformat()}',
+        defaults=dict(author=_author(), title=f'AI & ML Digest — {day.strftime("%d %b %Y")}',
+                      excerpt=_excerpt(items), content=render_html(items, day), status=Story.Status.PUBLISHED,
+                      published_at=timezone.now()))
+    _tag(story, ['AI News', 'Digest'] + sorted({i['topic'] for i in items if i.get('topic')}))
+    _save_items(items, day)
     return story
 
 
@@ -511,8 +693,8 @@ def make_digest(day=None, dry_run=False, log=print):
     recent = list(DigestItem.objects.filter(digest_date__gte=day - timedelta(days=4))
                   .values_list('title', flat=True))
     candidates = merge_duplicates(collect(log=log))
-    log(f'candidates: {len(candidates["papers"])} papers, {len(candidates["news"])} news, {len(candidates["hn"])} HN')
-    picked = select(candidates, used, recent)
+    log('candidates: ' + ', '.join(f'{len(v)} {k}' for k, v in candidates.items()))
+    picked = ([] if dry_run else editor_picks(log)) + select(candidates, used, recent)
     log(f'picked {len(picked)}: ' + '; '.join(f'[{i["section"]}] {i["title"][:60]}' for i in picked))
     if dry_run or not picked:
         return None, picked
@@ -523,6 +705,80 @@ def make_digest(day=None, dry_run=False, log=print):
     return publish(items, day), items
 
 
+def add_picks_now(log=print):
+    """Summarise the editor's pending links and add them to today's digest right away.
+    Returns (story or None, number of items added)."""
+    from .models import Story
+    day = timezone.now().astimezone(HELSINKI).date()
+    items = summarize(editor_picks(log), log=log)
+    if not items:
+        return None, 0
+    story = Story.objects.filter(slug=f'ai-ml-digest-{day.isoformat()}').first()
+    if story is None:
+        return publish(items, day), len(items)
+    patterns = _walkthrough_patterns()
+    for it in items:
+        it['learn'] = learn_links(it, patterns)
+    picks_h2 = render_section(items, 'picks')[0]
+    content = story.content.replace(picks_h2, '')   # earlier picks today: one section on top
+    head = '\n'.join(render_section(items, 'picks')) + '\n'
+    cut = content.find('<h2>')
+    story.content = (content[:cut] + head + content[cut:]) if cut >= 0 else content + head
+    story.save(update_fields=['content'])
+    _tag(story, sorted({i['topic'] for i in items if i.get('topic')}))
+    _save_items(items, day)
+    return story, len(items)
+
+
+# ── Persian, for the Telegram channel ────────────────────────────────────────
+
+def translate_fa(rows, log=print) -> int:
+    """Fill fa_title / fa_summary on DigestItems that lack them. Returns how many were filled."""
+    from content_generator.pipeline.agents.gemini_client import generate
+    from content_generator.pipeline.config import GROQ_MODEL_LARGE
+    todo = [r for r in rows if not r.fa_summary and r.summary]
+    done = 0
+    for start in range(0, len(todo), 3):
+        batch = todo[start:start + 3]
+        listing = '\n\n'.join(f'[{i}] TITLE: {r.title}\nSUMMARY: {r.summary} {r.why}' for i, r in enumerate(batch))
+        prompt = f"""Translate these AI news items for a Persian-speaking (Farsi) Telegram channel.
+
+For each item write:
+- "title": a short, natural Persian headline (keep product, model and company names in English)
+- "summary": 2-3 fluent Persian sentences that explain the item to a curious reader
+
+Rules:
+- Use ONLY what the TITLE and SUMMARY say; add no facts, names or numbers.
+- Write numbers with Latin digits (0-9). Keep common technical terms (LLM, GPU, Transformer) in English.
+- Natural modern Persian, not a word-for-word translation.
+
+{listing}
+
+Return JSON: {{"items": [{{"n": <index>, "title": str, "summary": str}}, ...]}}
+Return ONLY the JSON."""
+        try:
+            data = json.loads(generate(prompt, model=GROQ_MODEL_LARGE))
+        except Exception as exc:
+            log(f'  persian batch failed: {exc}')
+            continue
+        out = data.get('items', data) if isinstance(data, dict) else data
+        for row in out if isinstance(out, list) else []:
+            if not isinstance(row, dict):
+                continue
+            try:
+                r = batch[int(row.get('n'))]
+            except (TypeError, ValueError, IndexError):
+                continue
+            source = f'{r.title} {r.summary} {r.why}'
+            summary = _grounded(str(row.get('summary', '')), source)
+            title = str(row.get('title', '')).strip()
+            if len(summary) >= 20 and title and _numbers(title) <= _numbers(source):
+                r.fa_title, r.fa_summary = title[:300], summary
+                r.save(update_fields=['fa_title', 'fa_summary'])
+                done += 1
+    return done
+
+
 # ── weekly roundup ───────────────────────────────────────────────────────────
 
 def _week_items(week_start):
@@ -530,7 +786,7 @@ def _week_items(week_start):
     rows = DigestItem.objects.filter(digest_date__gte=week_start, digest_date__lt=week_start + timedelta(days=7)
                                      ).exclude(summary='').order_by('digest_date', 'score', 'pk')
     return [{'title': r.title, 'url': r.url, 'source': r.source, 'section': r.section or 'news',
-             'topic': r.topic, 'summary': r.summary, 'why': r.why, 'also': r.also or [],
+             'topic': r.topic, 'summary': r.summary, 'why': r.why, 'angle': r.angle, 'also': r.also or [],
              'day': r.digest_date, 'rank': r.score} for r in rows]
 
 
