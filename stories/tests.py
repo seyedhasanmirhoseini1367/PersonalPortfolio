@@ -673,3 +673,35 @@ class RadarPostTests(TestCase):
         self.assertContains(r, 'Open-source radar')
         self.assertContains(r, '/stories/story/ai-repos-2026-11-23/')
         self.assertContains(self.client.get(story.get_absolute_url()), 'Worth a look')
+
+
+@override_settings(TELEGRAM_BOT_TOKEN='', TELEGRAM_CHANNEL_ID='')
+class RadarVarietyTests(TestCase):
+    def test_varied_labels_topics_and_quick_start(self):
+        import json
+        from datetime import date
+        from unittest import mock
+        from django.utils import timezone
+        from .models import RadarRepo, RadarRun
+        from .radar import quick_start, rewrite_latest
+        get_user_model().objects.create_superuser('seyed', 'a@example.test', 'pw-admin-123!')
+        with mock.patch('stories.radar._get', return_value=b'# X\n```bash\npip install -U pageindex\n```\n'):
+            self.assertEqual(quick_start('a/b'), 'pip install -U pageindex')
+        with mock.patch('stories.radar._get', return_value=b'# X\nNo commands here.'):
+            self.assertEqual(quick_start('a/b'), '')
+        repos = [RadarRepo.objects.create(full_name=f'org/r{i}', stars=900, weekly_gain=300 - i, what='old') for i in range(3)]
+        RadarRun.objects.create(status='done', picked=[r.pk for r in repos])
+        reply = json.dumps({'items': [
+            {'n': 0, 'what': 'A RAG engine.', 'for_you': 'x', 'angle': 'The catch', 'why': 'Needs a strong model.', 'topic': 'LLMs', 'relevant': True},
+            {'n': 1, 'what': 'A serving tool.', 'for_you': 'x', 'angle': 'Use it for', 'why': 'Fast APIs.', 'topic': 'Tools & Open Source', 'relevant': True},
+            {'n': 2, 'what': 'A vision model.', 'for_you': 'x', 'angle': 'Nonsense', 'why': 'Good demos.', 'topic': 'Computer Vision', 'relevant': True}]})
+        with mock.patch('content_generator.pipeline.agents.gemini_client.generate', return_value=reply), \
+             mock.patch('stories.digest.github_text', return_value='text'), \
+             mock.patch('stories.radar._get', return_value=b'docker run -p 8000:8000 org/tool'):
+            story = rewrite_latest(log=lambda m: None)
+        c = story.content
+        self.assertIn('<strong>The catch:</strong> Needs a strong model.', c)
+        self.assertIn('<strong>Use it for:</strong>', c)
+        self.assertIn('<strong>Worth a look:</strong> Good demos.', c)   # unknown label falls back
+        self.assertIn('>Computer Vision</a>', c)
+        self.assertIn('<code>docker run -p 8000:8000 org/tool</code>', c)

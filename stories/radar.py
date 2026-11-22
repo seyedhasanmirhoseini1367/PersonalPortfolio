@@ -206,30 +206,60 @@ def rank(found, cfg, now=None, measure=25) -> list[dict]:
     return out
 
 
+REPO_STYLES = [
+    'Open with the pain it removes, then what it does.',
+    'Open with what you can build or run with it today.',
+    'Open with a short question a practitioner might ask, then answer it.',
+    'Open with how it works under the hood, in plain words.',
+    'Open by comparing it with the usual way of doing this.',
+    'Open with who made it and who it is for.',
+]
+REPO_ANGLES = ['Worth a look', 'Use it for', 'Try it if', 'The catch', 'Learn from it', 'Who it’s for', 'Under the hood']
+_CMD = re.compile(r'^\s*(?:\$\s*)?((?:pip3?|uv|pipx|conda|npm|npx|pnpm|yarn|docker|brew|cargo|go)\s+'
+                  r'(?:install|add|run|pull|get|tool install)\b[^\n`#|]{1,90})', re.M)
+
+
+def quick_start(full_name) -> str:
+    """The first install / run command in the README, copied verbatim (or '')."""
+    try:
+        readme = _get(f'https://raw.githubusercontent.com/{full_name}/HEAD/README.md', timeout=10).decode('utf-8', 'replace')
+    except Exception:
+        return ''
+    m = _CMD.search(readme)
+    return m.group(1).strip().rstrip('\\').strip()[:200] if m else ''
+
+
 def describe(cands, cfg, log=print) -> list[dict]:
     """Two short lines per repo, written for the owner's profile; drops the irrelevant ones."""
     from content_generator.pipeline.agents.gemini_client import generate
     from .digest import _grounded, github_text
     if not cands:
         return []
+    from .digest import TOPICS, _topic
     for c in cands:
         c['text'] = github_text(c['full_name'], c.get('description', ''))[:1200]
+    shift = timezone.now().isocalendar()[1]   # a different style rotation every week
     listing = '\n\n'.join(f'[{i}] {c["full_name"]} (+{c["weekly_gain"]} stars this week; topics: {", ".join(c["matched"])})\n'
-                          f'{c["text"]}' for i, c in enumerate(cands))
+                          f'STYLE: {REPO_STYLES[(shift + i) % len(REPO_STYLES)]}\n{c["text"]}' for i, c in enumerate(cands))
+    angles = ', '.join(f'"{a}"' for a in REPO_ANGLES)
+    topics = ', '.join(f'"{t}"' for t in TOPICS)
     prompt = f"""You pick GitHub projects for one engineer. Their profile:
 {cfg.profile}
 
+Write like a good newsletter by a person: every repository phrased differently, never the same template twice.
 For each repository below write:
-- "what": one plain sentence: what it is / does
+- "what": 1-2 plain sentences on what it is / does, following its STYLE
 - "for_you": one sentence: how this engineer could use it or what they could learn from it
-- "why": one sentence for a public news post: why it is worth a look for ML practitioners
+- "angle": the label that fits best for the public line, one of {angles}; use different labels across repositories
+- "why": one sentence for a public news post that fits that label (e.g. "The catch" = a limitation stated in the text)
+- "topic": exactly one of {topics}
 - "relevant": true if it is genuinely useful for this profile, false if it is off-topic, a list of links, or hype
 
 Use ONLY the text given for each repository; add no numbers or claims that are not in it.
 
 {listing}
 
-Return JSON: {{"items": [{{"n": <index>, "what": str, "for_you": str, "why": str, "relevant": bool}}, ...]}}
+Return JSON: {{"items": [{{"n": <index>, "what": str, "for_you": str, "angle": str, "why": str, "topic": str, "relevant": bool}}, ...]}}
 Return ONLY the JSON."""
     try:
         data = json.loads(generate(prompt))
@@ -249,6 +279,8 @@ Return ONLY the JSON."""
         c['what'] = _grounded(str(row.get('what', '')), source) or c.get('description', '')
         c['for_you'] = _grounded(str(row.get('for_you', '')), source)
         c['why'] = _grounded(str(row.get('why', '')), source)
+        c['angle'] = next((a for a in REPO_ANGLES if a.lower() == str(row.get('angle', '')).strip().lower()), REPO_ANGLES[0])
+        c['topic'] = _topic(row.get('topic'), {'title': c['full_name'], 'text': c['text']})
         out.append(c)
     out.sort(key=lambda c: -c['weekly_gain'])
     return out[:cfg.max_items]
@@ -309,11 +341,13 @@ def render_post(repos, day) -> str:
              'with what each one does. Every item links to its repository.</p>', '<h2>Trending on GitHub this week</h2>']
     for r in repos:
         parts.append(f'<h3><a href="{e(r.url)}" target="_blank">{e(r.full_name)}</a></h3>')
-        parts.append('<p class="digest-meta"><a class="digest-topic" href="' + _topic_url('Tools & Open Source')
-                     + '">Tools &amp; Open Source</a></p>')
+        topic = r.topic or 'Tools & Open Source'
+        parts.append(f'<p class="digest-meta"><a class="digest-topic" href="{_topic_url(topic)}">{e(topic)}</a></p>')
         parts.append(f'<p>{e(r.what or r.description)}</p>')
         if r.why:
-            parts.append(f'<p><strong>Worth a look:</strong> {e(r.why)}</p>')
+            parts.append(f'<p><strong>{e(r.angle or REPO_ANGLES[0])}:</strong> {e(r.why)}</p>')
+        if r.try_cmd:
+            parts.append(f'<p class="digest-try"><strong>Quick start:</strong> <code>{e(r.try_cmd)}</code></p>')
         parts.append(f'<p><em>Source: <a href="{e(r.url)}" target="_blank">GitHub</a> · +{r.weekly_gain:,} stars this week'
                      f' · {r.stars:,} in total</em></p>')
     parts.append(DISCLAIMER)
@@ -332,11 +366,12 @@ def publish(repos, day):
         defaults=dict(author=_author(), title=f'Open-Source Radar — week of {day:%d %b %Y}',
                       excerpt=f'{len(repos)} trending AI repos this week. Top: {repos[0].full_name}'[:290],
                       content=render_post(repos, day), status=Story.Status.PUBLISHED, published_at=timezone.now()))
-    _tag(story, ['AI News', 'Open Source', 'Tools & Open Source'])
+    _tag(story, ['AI News', 'Open Source'] + sorted({r.topic or 'Tools & Open Source' for r in repos}))
     for r in repos:   # also stops the daily digest repeating them, and gives the Telegram post its text
         DigestItem.objects.update_or_create(url=r.url, defaults={
             'title': r.full_name, 'source': 'GitHub', 'digest_date': day, 'section': 'repos',
-            'topic': 'Tools & Open Source', 'summary': r.what or r.description, 'why': r.why, 'score': 0})
+            'topic': r.topic or 'Tools & Open Source', 'summary': r.what or r.description, 'why': r.why,
+            'angle': r.angle, 'score': 0})
     try:
         from .telegram import configured, queue_post
         if configured():
@@ -347,6 +382,27 @@ def publish(repos, day):
 
 
 # ── run & schedule ───────────────────────────────────────────────────────────
+
+def rewrite_latest(log=print):
+    """Write the last run's repos again (new wording, labels, quick start) and republish its post."""
+    from .models import RadarConfig, RadarRepo, RadarRun
+    last = RadarRun.objects.filter(status='done').first()
+    if not last or not last.picked:
+        return None
+    found = {r.pk: r for r in RadarRepo.objects.filter(pk__in=last.picked)}
+    repos = [found[i] for i in last.picked if i in found]
+    cfg = RadarConfig.get()
+    cands = [{'full_name': r.full_name, 'description': r.description, 'weekly_gain': r.weekly_gain,
+              'matched': [], 'id': r.pk} for r in repos]
+    for c in describe(cands, cfg, log):
+        r = found[c['id']]
+        r.what, r.for_you = c.get('what', r.what)[:600], c.get('for_you', r.for_you)[:600]
+        r.why, r.angle, r.topic = c.get('why', '')[:600], c.get('angle', '')[:40], c.get('topic', '')[:40]
+        r.try_cmd = quick_start(r.full_name)
+        r.save(update_fields=['what', 'for_you', 'why', 'angle', 'topic', 'try_cmd'])
+    day = last.started_at.astimezone(HELSINKI).date()
+    return publish([found[i] for i in last.picked if i in found], day)
+
 
 def run(log=None):
     from .models import RadarConfig, RadarRepo, RadarRun
@@ -368,8 +424,9 @@ def run(log=None):
         for c in picked:
             r = RadarRepo.objects.get(pk=c['id'])
             r.what, r.for_you, r.sent_at = c.get('what', '')[:600], c.get('for_you', '')[:600], now
-            r.why = c.get('why', '')[:600]
-            r.save(update_fields=['what', 'for_you', 'why', 'sent_at'])
+            r.why, r.angle, r.topic = c.get('why', '')[:600], c.get('angle', '')[:40], c.get('topic', '')[:40]
+            r.try_cmd = quick_start(r.full_name)
+            r.save(update_fields=['what', 'for_you', 'why', 'angle', 'topic', 'try_cmd', 'sent_at'])
             repos.append(r)
         rec.picked = [r.pk for r in repos]
         try:
