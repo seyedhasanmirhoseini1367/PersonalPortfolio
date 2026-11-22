@@ -625,3 +625,21 @@ class RadarRun(models.Model):
 
     class Meta:
         ordering = ['-started_at']
+
+
+class NewsCandidate(models.Model):
+    """A fresh news item found on demand ("News inbox"), waiting for the editor to pick it."""
+    NEW, PICKED = 'new', 'picked'
+    url        = models.URLField(max_length=500, unique=True)
+    title      = models.CharField(max_length=300)
+    source     = models.CharField(max_length=100)
+    section    = models.CharField(max_length=10)
+    text       = models.TextField(blank=True)
+    status     = models.CharField(max_length=10, default=NEW)
+    found_at   = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ['-found_at', 'pk']
+
+    def __str__(self):
+        return self.title

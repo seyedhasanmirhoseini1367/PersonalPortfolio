@@ -14,6 +14,36 @@
 
     <section class="tg-card">
         <div class="tg-row">
+            <h2><i class="fas fa-satellite"></i> News inbox</h2>
+            <span>
+                <form method="post" class="tg-inline">{% csrf_token %}<input type="hidden" name="action" value="inbox_find">
+                    <button class="tg-btn tg-light">🔎 Find news now</button></form>
+                <form method="post" class="tg-inline">{% csrf_token %}<input type="hidden" name="action" value="inbox_publish">
+                    <button class="tg-btn" {% if not picks_waiting %}disabled title="Pick something first"{% endif %}>🚀 Publish picks now{% if picks_waiting %} ({{ picks_waiting }}){% endif %}</button></form>
+            </span>
+        </div>
+        <p class="tg-note">Fresh AI news from your sources right now (no finance, nothing already published). Pick what you like
+           and publish it into today’s digest at once. The same works in Telegram: send <code>/news</code> to the bot.</p>
+        {% if inbox %}
+        <ol class="rr-list">
+            {% for c in inbox %}
+            <li>
+                <div class="tg-row"><a href="{{ c.url }}" target="_blank" rel="noopener"><b>{{ c.title }}</b></a>
+                    <span class="tg-pill">{{ c.source }}</span></div>
+                {% if c.status == 'picked' %}<span class="tg-pill tg-used">picked</span>{% else %}
+                <form method="post" class="tg-inline">{% csrf_token %}<input type="hidden" name="action" value="inbox_pick">
+                    <input type="hidden" name="cand" value="{{ c.pk }}"><button class="tg-btn tg-light">➕ Pick</button></form>{% endif %}
+            </li>
+            {% endfor %}
+        </ol>
+        <p class="tg-note">Found {{ inbox.0.found_at|timesince }} ago.</p>
+        {% else %}
+        <p class="tg-note">Press “Find news now” to fill the inbox.</p>
+        {% endif %}
+    </section>
+
+    <section class="tg-card">
+        <div class="tg-row">
             <h2><i class="fas fa-link"></i> Your links</h2>
             <form method="post">{% csrf_token %}<input type="hidden" name="action" value="picks_now">
                 <button class="tg-btn tg-light" title="Summarise the pending links now and add them to today's digest">Add to today’s digest now</button></form>
@@ -200,6 +230,8 @@
 .rr-settings form { display: flex; flex-direction: column; gap: .4rem; margin-top: .6rem; }
 .rr-settings input[type=text], .rr-settings textarea { border: 1px solid #e2e8f0; border-radius: 10px; padding: .45rem .65rem; font-size: .86rem; width: 100%; }
 .rr-settings .tg-btn { align-self: flex-start; }
+.tg-btn[disabled] { opacity: .5; cursor: not-allowed; }
+.tg-note code { font-size: .78rem; background: #f1f5f9; padding: 0 .3rem; border-radius: 4px; }
 .tg-note { font-size: .8rem; color: #64748b; margin: .4rem 0 0; }
 .tg-err { font-size: .82rem; color: #b91c1c; margin: .4rem 0 0; }
 .tg-link { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: .6rem .8rem; font-size: .88rem; word-break: break-all; }

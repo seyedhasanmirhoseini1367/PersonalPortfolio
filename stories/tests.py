@@ -705,3 +705,83 @@ class RadarVarietyTests(TestCase):
         self.assertIn('<strong>Worth a look:</strong> Good demos.', c)   # unknown label falls back
         self.assertIn('>Computer Vision</a>', c)
         self.assertIn('<code>docker run -p 8000:8000 org/tool</code>', c)
+
+
+@override_settings(TELEGRAM_BOT_TOKEN='123:test-token', TELEGRAM_CHANNEL_ID='AIFrontiers', SITE_URL='https://hasanai.net')
+class NewsInboxTests(TestCase):
+    """Find fresh news on demand, pick with ➕, publish with 🚀 — on the News desk and in Telegram."""
+
+    def setUp(self):
+        from unittest import mock
+        from .models import TelegramConfig
+        self.calls = []
+
+        def fake_api(method, **params):
+            self.calls.append((method, params))
+            return {'message_id': len(self.calls)}
+        for target, kw in (('stories.telegram.api', {'side_effect': fake_api}),
+                           ('stories.newsinbox._background', {'side_effect': lambda fn: fn() or True})):
+            p = mock.patch(target, **kw)
+            p.start()
+            self.addCleanup(p.stop)
+        TelegramConfig.objects.update_or_create(pk=1, defaults={'admin_chat_id': 42})
+        self.items = {'papers': [{'section': 'papers', 'title': 'A new attention trick', 'url': 'https://arxiv.org/abs/9',
+                                  'source': 'arXiv', 'text': 'Abstract.'}],
+                      'news': [{'section': 'news', 'title': 'Lab releases open model', 'url': 'https://lab.example/n',
+                                'source': 'Lab', 'text': 'A lab released a model.'}],
+                      'repos': [], 'hn': []}
+
+    def _sent(self):
+        return [p for m, p in self.calls if m == 'sendMessage']
+
+    def test_find_skips_used_and_stores_candidates(self):
+        from datetime import date
+        from unittest import mock
+        from .models import DigestItem, NewsCandidate
+        from .newsinbox import find
+        DigestItem.objects.create(url='https://arxiv.org/abs/9', title='x', source='arXiv', digest_date=date.today())
+        with mock.patch('stories.digest.collect', return_value=self.items):
+            out = find(log=lambda m: None)
+        self.assertEqual([c.url for c in out], ['https://lab.example/n'])
+        self.assertEqual(NewsCandidate.objects.count(), 1)
+
+    def test_telegram_news_command_pick_and_publish(self):
+        from unittest import mock
+        from .models import NewsCandidate, SuggestedLink
+        from .telegram import handle_update
+        handle_update({'message': {'text': '/news', 'chat': {'id': 7, 'type': 'private'}}})   # stranger: ignored
+        self.assertEqual(self._sent(), [])
+        with mock.patch('stories.digest.collect', return_value=self.items):
+            handle_update({'message': {'text': '/news', 'chat': {'id': 42, 'type': 'private'}}})
+        lists = [p for p in self._sent() if 'News inbox' in p.get('text', '')]
+        self.assertEqual(len(lists), 1)
+        kb = lists[0]['reply_markup']['inline_keyboard']
+        cand = NewsCandidate.objects.get(url='https://lab.example/n')
+        self.assertIn({'text': '➕ 2', 'callback_data': f'nc:add:{cand.pk}'}, kb[0])
+        self.assertEqual(kb[1][0]['callback_data'], 'nc:pub')
+        handle_update({'callback_query': {'id': 'c', 'from': {'id': 42}, 'data': f'nc:add:{cand.pk}'}})
+        self.assertEqual(SuggestedLink.objects.get().url, 'https://lab.example/n')
+        handle_update({'callback_query': {'id': 'c', 'from': {'id': 42}, 'data': f'nc:add:{cand.pk}'}})   # twice: once
+        self.assertEqual(SuggestedLink.objects.count(), 1)
+        with mock.patch('stories.digest.add_picks_now', return_value=(None, 0)) as add:
+            handle_update({'callback_query': {'id': 'c', 'from': {'id': 42}, 'data': 'nc:pub'}})
+        add.assert_called_once()
+        self.assertIn('Nothing was published', self._sent()[-1]['text'])
+
+    def test_news_desk_inbox(self):
+        from unittest import mock
+        from .models import NewsCandidate, SuggestedLink
+        staff = get_user_model().objects.create_user('st3', 'st3@example.test', 'pw-staff-123!', is_staff=True)
+        self.client.force_login(staff)
+        with mock.patch('stories.digest.collect', return_value=self.items):
+            self.client.post('/stories/telegram/', {'action': 'inbox_find'})
+        r = self.client.get('/stories/telegram/')
+        self.assertContains(r, 'News inbox')
+        self.assertContains(r, 'Lab releases open model')
+        cand = NewsCandidate.objects.get(url='https://lab.example/n')
+        self.client.post('/stories/telegram/', {'action': 'inbox_pick', 'cand': cand.pk})
+        self.assertTrue(SuggestedLink.objects.filter(url=cand.url).exists())
+        self.assertContains(self.client.get('/stories/telegram/'), 'Publish picks now (1)')
+        with mock.patch('stories.digest.add_picks_now', return_value=(None, 0)) as add:
+            self.client.post('/stories/telegram/', {'action': 'inbox_publish'})
+        add.assert_called_once()
