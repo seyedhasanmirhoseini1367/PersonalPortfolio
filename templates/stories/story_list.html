@@ -69,8 +69,6 @@
                                 <span class="digest-actions">
                                 {% if user.is_staff %}<a class="digest-rss digest-desk" href="{% url 'stories:telegram_review' %}">
                                     <i class="fas fa-newspaper"></i> News desk</a>{% endif %}
-                                <a class="digest-rss" href="{% url 'stories:digest_feed' %}" title="Subscribe with any RSS reader">
-                                    <i class="fas fa-rss"></i> RSS</a>
                                 </span>
                             </div>
                             {% if digest_topics %}
