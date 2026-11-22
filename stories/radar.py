@@ -222,13 +222,14 @@ def describe(cands, cfg, log=print) -> list[dict]:
 For each repository below write:
 - "what": one plain sentence: what it is / does
 - "for_you": one sentence: how this engineer could use it or what they could learn from it
+- "why": one sentence for a public news post: why it is worth a look for ML practitioners
 - "relevant": true if it is genuinely useful for this profile, false if it is off-topic, a list of links, or hype
 
 Use ONLY the text given for each repository; add no numbers or claims that are not in it.
 
 {listing}
 
-Return JSON: {{"items": [{{"n": <index>, "what": str, "for_you": str, "relevant": bool}}, ...]}}
+Return JSON: {{"items": [{{"n": <index>, "what": str, "for_you": str, "why": str, "relevant": bool}}, ...]}}
 Return ONLY the JSON."""
     try:
         data = json.loads(generate(prompt))
@@ -247,6 +248,7 @@ Return ONLY the JSON."""
         source = c['text'] + ' ' + c['full_name']
         c['what'] = _grounded(str(row.get('what', '')), source) or c.get('description', '')
         c['for_you'] = _grounded(str(row.get('for_you', '')), source)
+        c['why'] = _grounded(str(row.get('why', '')), source)
         out.append(c)
     out.sort(key=lambda c: -c['weekly_gain'])
     return out[:cfg.max_items]
@@ -295,6 +297,55 @@ def add_to_digest(repo) -> bool:
     return True
 
 
+# ── public post on AI News ───────────────────────────────────────────────────
+
+MIN_PUBLIC = 3
+
+
+def render_post(repos, day) -> str:
+    from .digest import DISCLAIMER, _topic_url
+    e = html.escape
+    parts = ['<p>The open-source AI and machine-learning projects that gained the most GitHub stars this week, '
+             'with what each one does. Every item links to its repository.</p>', '<h2>Trending on GitHub this week</h2>']
+    for r in repos:
+        parts.append(f'<h3><a href="{e(r.url)}" target="_blank">{e(r.full_name)}</a></h3>')
+        parts.append('<p class="digest-meta"><a class="digest-topic" href="' + _topic_url('Tools & Open Source')
+                     + '">Tools &amp; Open Source</a></p>')
+        parts.append(f'<p>{e(r.what or r.description)}</p>')
+        if r.why:
+            parts.append(f'<p><strong>Worth a look:</strong> {e(r.why)}</p>')
+        parts.append(f'<p><em>Source: <a href="{e(r.url)}" target="_blank">GitHub</a> · +{r.weekly_gain:,} stars this week'
+                     f' · {r.stars:,} in total</em></p>')
+    parts.append(DISCLAIMER)
+    return '\n'.join(parts)
+
+
+def publish(repos, day):
+    """The weekly "Open-Source Radar" post on AI News (also drafted for the Telegram channel)."""
+    from .digest import _author, _tag
+    from .models import DigestItem, Story
+    repos = [r for r in repos if r.what or r.description]
+    if len(repos) < MIN_PUBLIC:
+        return None
+    story, _ = Story.objects.update_or_create(
+        slug=f'ai-repos-{day.isoformat()}',
+        defaults=dict(author=_author(), title=f'Open-Source Radar — week of {day:%d %b %Y}',
+                      excerpt=f'{len(repos)} trending AI repos this week. Top: {repos[0].full_name}'[:290],
+                      content=render_post(repos, day), status=Story.Status.PUBLISHED, published_at=timezone.now()))
+    _tag(story, ['AI News', 'Open Source', 'Tools & Open Source'])
+    for r in repos:   # also stops the daily digest repeating them, and gives the Telegram post its text
+        DigestItem.objects.update_or_create(url=r.url, defaults={
+            'title': r.full_name, 'source': 'GitHub', 'digest_date': day, 'section': 'repos',
+            'topic': 'Tools & Open Source', 'summary': r.what or r.description, 'why': r.why, 'score': 0})
+    try:
+        from .telegram import configured, queue_post
+        if configured():
+            queue_post(story)   # draft for the channel; sent only after approval
+    except Exception as exc:
+        logger.warning('Telegram draft for the radar failed: %s', exc)
+    return story
+
+
 # ── run & schedule ───────────────────────────────────────────────────────────
 
 def run(log=None):
@@ -317,9 +368,15 @@ def run(log=None):
         for c in picked:
             r = RadarRepo.objects.get(pk=c['id'])
             r.what, r.for_you, r.sent_at = c.get('what', '')[:600], c.get('for_you', '')[:600], now
-            r.save(update_fields=['what', 'for_you', 'sent_at'])
+            r.why = c.get('why', '')[:600]
+            r.save(update_fields=['what', 'for_you', 'why', 'sent_at'])
             repos.append(r)
         rec.picked = [r.pk for r in repos]
+        try:
+            story = publish(repos, now.astimezone(HELSINKI).date())
+            say(f'published {story.slug}' if story else 'not published (fewer than 3 repos)')
+        except Exception as exc:
+            say(f'publishing failed: {exc}')
         try:
             sent = send_to_owner(repos, now.astimezone(HELSINKI).date())
             say('sent to your Telegram' if sent else 'not sent to Telegram (not linked or nothing to send)')
