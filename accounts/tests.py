@@ -112,3 +112,19 @@ class CloudinaryUrlCleaningTests(SimpleTestCase):
         for v in ('https://cloudinary.com/console', 'cloudinary://<your_api_key>', '427292211492217'):
             with mock.patch.dict(os.environ, {'CLOUDINARY_URL': v}):
                 self.assertIs(image_storage(), default_storage, v)
+
+
+class ProfilePageTests(TestCase):
+    def test_own_profile_renders_new_layout(self):
+        from django.contrib.auth import get_user_model
+        u = get_user_model().objects.create_user('pf', 'pf@example.test', 'pw-profile-123!', is_staff=True)
+        self.client.force_login(u)
+        r = self.client.get('/accounts/profile/')
+        self.assertEqual(r.status_code, 200)
+        for text in ('pf-hero', '@pf', 'Staff', '~/profile.json', 'Quick actions', 'News desk', 'Edit profile'):
+            self.assertContains(r, text)
+        other = get_user_model().objects.create_user('other', 'o@example.test', 'pw-other-123!')
+        r = self.client.get('/accounts/profile/other/')
+        self.assertEqual(r.status_code, 200)
+        self.assertNotContains(r, 'Quick actions')
+        self.assertNotContains(r, 'o@example.test')   # e-mail stays private
