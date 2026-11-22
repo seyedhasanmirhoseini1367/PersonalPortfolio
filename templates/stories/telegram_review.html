@@ -44,8 +44,12 @@
     <section class="tg-card">
         <div class="tg-row">
             <h2><i class="fas fa-satellite-dish"></i> Repo Radar <small class="tg-note">just for you</small></h2>
-            <form method="post">{% csrf_token %}<input type="hidden" name="action" value="radar_run">
+            <span>
+            {% if radar_repos %}<form method="post" class="tg-inline">{% csrf_token %}<input type="hidden" name="action" value="radar_rewrite">
+                <button class="tg-btn tg-light" title="Write this week's post again">Rewrite post</button></form>{% endif %}
+            <form method="post" class="tg-inline">{% csrf_token %}<input type="hidden" name="action" value="radar_run">
                 <button class="tg-btn tg-light">Run now</button></form>
+            </span>
         </div>
         <p class="tg-note">Every Monday at 09:00 the GitHub projects that grew fastest this week on your topics are summarised
            for you and sent to your Telegram (not the channel). Tap ➕ to put one in the next AI digest.</p>

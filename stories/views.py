@@ -558,6 +558,11 @@ def telegram_review(request):
                     messages.info(request, 'Repo Radar is running; the list arrives in your Telegram and here in a minute or two.')
                 else:
                     messages.warning(request, 'Repo Radar is already running.')
+            elif action == 'radar_rewrite':
+                import threading
+                from .radar import rewrite_latest
+                threading.Thread(target=rewrite_latest, kwargs={'log': lambda m: None}, daemon=True).start()
+                messages.info(request, 'Rewriting this week’s Open-Source Radar post; refresh AI News in a minute.')
             elif action == 'radar_add':
                 from .models import RadarRepo
                 from .radar import add_to_digest

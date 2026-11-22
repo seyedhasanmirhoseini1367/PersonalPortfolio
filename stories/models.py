@@ -599,6 +599,9 @@ class RadarRepo(models.Model):
     weekly_gain  = models.IntegerField(default=0)
     what         = models.TextField(blank=True)
     why          = models.TextField(blank=True, help_text='Public line for the AI News post')
+    angle        = models.CharField(max_length=40, blank=True)   # label of that line, varies per repo
+    topic        = models.CharField(max_length=40, blank=True)
+    try_cmd      = models.CharField(max_length=200, blank=True, help_text='Install / run command found in the README')
     for_you      = models.TextField(blank=True)
     sent_at      = models.DateTimeField(null=True, blank=True)
     added        = models.BooleanField(default=False, help_text='Added to the news digest')
