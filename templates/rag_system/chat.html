@@ -924,6 +924,15 @@ class PortfolioChat {
 document.addEventListener('DOMContentLoaded', () => {
     new PortfolioChat();
 
+    // Arriving from the site search ("Ask the AI assistant"): put the question in the box.
+    const asked = new URLSearchParams(location.search).get('q');
+    const box = document.getElementById('messageInput');
+    if (asked && box) {
+        box.value = asked.slice(0, 500);
+        box.dispatchEvent(new Event('input', { bubbles: true }));
+        box.focus();
+    }
+
     // Mobile sidebar toggle
     const sidebar  = document.getElementById('chatSidebar');
     const overlay  = document.getElementById('sidebarOverlay');
