@@ -42,3 +42,24 @@ class PopulateContentTests(TestCase):
 
         for url in ['/projects/', '/stories/', '/kaggle-winners-archive/']:
             self.assertEqual(self.client.get(url).status_code, 200, url)
+
+
+class HomePageTests(TestCase):
+    """The redesigned home page: hero, demos, numbers, news, ML Explained, Kaggle, contact band."""
+
+    def test_sections_in_order(self):
+        from datetime import date
+        from django.contrib.auth import get_user_model
+        from stories.digest import publish
+        get_user_model().objects.create_superuser('seyed', 'a@example.test', 'pw-admin-123!')
+        publish([{'section': 'news', 'title': 'Lab ships a model', 'url': 'https://lab.example/h', 'source': 'Lab',
+                  'text': 't', 'date': None, 'summary': 'A lab shipped a new open model.', 'why': '', 'topic': 'LLMs'}],
+                date(2026, 11, 22))
+        r = self.client.get('/')
+        self.assertEqual(r.status_code, 200)
+        html = r.content.decode()
+        order = ['hm-hero', 'AI demos you can use right now', 'ML models built', 'AI News</h2>', 'A lab shipped a new open model.',
+                 'let’s work together']
+        positions = [html.index(s) for s in order]
+        self.assertEqual(positions, sorted(positions))
+        self.assertIn('<span>AI News</span>', html)   # nav renamed from Stories

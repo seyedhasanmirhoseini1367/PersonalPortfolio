@@ -110,16 +110,37 @@ def home(request):
     portfolio_owner = User.objects.filter(is_superuser=True).first()
     resume_setting = ResumeSetting.objects.prefetch_related('quick_facts').first()
 
+    from django.utils import timezone
+    from kaggle_archive.models import Competition
+    from model_internals.models import Walkthrough
+    from stories.models import DigestItem, digest_q
+    from stories import telegram
+
+    # Latest AI news: the newest digest and its first items (with topic chips).
+    latest_digest = (Story.objects.filter(status=Story.Status.PUBLISHED, published_at__lte=timezone.now())
+                     .filter(slug__startswith='ai-ml-digest-').order_by('-published_at').first())
+    news_items = []
+    if latest_digest:
+        news_items = list(DigestItem.objects.filter(digest_date=latest_digest.slug[-10:])
+                          .exclude(summary='').order_by('score', 'pk')[:4])
+    walkthroughs = Walkthrough.objects.filter(is_published=True)
+    competitions = Competition.objects.prefetch_related('solutions')
+
+    channel = telegram.channel()
     return render(request, 'home.html', {
-        'featured_projects': Projects.objects.filter(is_featured=True, is_public=True)[:6],
+        'featured_projects': Projects.objects.filter(is_featured=True, is_public=True)[:3],
         'total_projects':    Projects.objects.filter(is_public=True).count(),
-        'kaggle_projects':   Projects.objects.filter(project_type='KAGGLE_COMPETITION', is_public=True).count(),
         'top_skills':        sorted(skill_count.items(), key=lambda x: x[1], reverse=True)[:10],
-        'skill_choices':     dict(Projects.SKILL_CHOICES),
-        'latest_stories':    Story.objects.filter(status=Story.Status.PUBLISHED).order_by('-published_at')[:4],
         'portfolio_owner':   portfolio_owner,
         'resume_setting':    resume_setting,
-        'quick_facts':       resume_setting.quick_facts.all() if resume_setting else [],
+        'latest_digest':     latest_digest,
+        'news_items':        news_items,
+        'digest_count':      Story.objects.filter(status=Story.Status.PUBLISHED).filter(digest_q()).count(),
+        'walkthrough_count': walkthroughs.count(),
+        'walkthroughs':      walkthroughs.order_by('-created_at')[:3],
+        'competition_count': competitions.count(),
+        'competitions':      competitions[:3],
+        'telegram_url':      f'https://t.me/{channel.lstrip("@")}' if channel.startswith('@') else '',
     })
 
 
