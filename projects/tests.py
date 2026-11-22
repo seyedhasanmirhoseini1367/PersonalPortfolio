@@ -29,18 +29,16 @@ class PopulateContentTests(TestCase):
         call_command('populate_content', if_empty=True, verbosity=0)
         self.assertTrue(Projects.objects.exists())
         self.assertTrue(Competition.objects.exists())
-        self.assertEqual({s.author_id for s in Story.objects.all()}, {self.owner.pk})
-        counts = (Projects.objects.count(), Story.objects.count())
+        self.assertFalse(Story.objects.exists())   # sample stories are no longer seeded
+        counts = (Projects.objects.count(), Competition.objects.count())
 
-        Story.objects.update(title='Edited in admin')
+        Projects.objects.update(title='Edited in admin')
         call_command('populate_content', if_empty=True, verbosity=0)
-        self.assertEqual((Projects.objects.count(), Story.objects.count()), counts)
-        self.assertFalse(Story.objects.exclude(title='Edited in admin').exists())
+        self.assertEqual((Projects.objects.count(), Competition.objects.count()), counts)
+        self.assertFalse(Projects.objects.exclude(title='Edited in admin').exists())
 
         # Ids continue after the loaded rows.
         self.assertGreater(Projects.objects.create(title='New').pk, max(Projects.objects.values_list('pk', flat=True)[:counts[0]]))
 
         for url in ['/projects/', '/stories/', '/kaggle-winners-archive/']:
             self.assertEqual(self.client.get(url).status_code, 200, url)
-        story = Story.objects.first()
-        self.assertEqual(self.client.get(story.get_absolute_url()).status_code, 200)

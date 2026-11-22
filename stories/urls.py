@@ -1,6 +1,7 @@
 # stories/urls.py - FIXED VERSION
 from django.urls import path
 from . import views
+from .feeds import DigestFeed
 
 app_name = 'stories'
 
@@ -17,6 +18,9 @@ urlpatterns = [
 
     # User stories
     path('my-stories/', views.UserStoryListView.as_view(), name='user_stories'),
+
+    # RSS feed of the daily digests and weekly roundups
+    path('feed/', DigestFeed(), name='digest_feed'),
 
     # Tag views
     path('tag/<slug:slug>/', views.TagStoryListView.as_view(), name='tag_stories'),

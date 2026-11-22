@@ -10,6 +10,7 @@
 
     <!-- SEO & Open Graph -->
     <meta name="description" content="{% block meta_description %}Hasan's portfolio — Data Science, Machine Learning, and AI projects with live demos and an AI Assistant.{% endblock %}">
+    <link rel="alternate" type="application/rss+xml" title="AI & ML News Digest" href="{% url 'stories:digest_feed' %}">
     <meta property="og:title"       content="{% block og_title %}HasanPortfolio — Data Science & ML{% endblock %}">
     <meta property="og:description" content="{% block og_description %}Explore ML projects, AI demos, technical stories, and chat with an AI assistant about the portfolio.{% endblock %}">
     <meta property="og:type"        content="website">
@@ -493,7 +494,7 @@
         <a href="{% url 'projects_list' %}" class="hx-item{% if rm.url_name == 'projects_list' or rm.url_name == 'project_detail' %} is-active{% endif %}">
             <i class="fas fa-cubes" aria-hidden="true"></i><span>ML Models</span></a>
         <a href="{% url 'model_internals:walkthrough_list' %}" class="hx-item{% if rm.app_name == 'model_internals' %} is-active{% endif %}">
-            <i class="fas fa-square-root-variable" aria-hidden="true"></i><span>How Models Work</span></a>
+            <i class="fas fa-square-root-variable" aria-hidden="true"></i><span>ML Explained</span></a>
         <a href="{% url 'kaggle_archive:competition_list' %}" class="hx-item{% if rm.app_name == 'kaggle_archive' %} is-active{% endif %}">
             <i class="fas fa-trophy" aria-hidden="true"></i><span>Winners Archive</span></a>
         <a href="{% url 'rag_system:chat' %}" class="hx-item{% if rm.url_name == 'chat' %} is-active{% endif %}">

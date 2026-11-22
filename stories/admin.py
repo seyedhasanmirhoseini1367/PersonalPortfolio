@@ -3,7 +3,7 @@ from django.contrib import admin
 from django.utils.html import format_html
 from django.utils import timezone
 from django.contrib import messages
-from .models import Story, Tag, Comment, StoryView, StoryLike
+from .models import Story, Tag, Comment, StoryView, StoryLike, NewsSource, DailyDigest, WeeklyDigest
 
 
 class TagInline(admin.TabularInline):
@@ -164,3 +164,22 @@ class StoryLikeAdmin(admin.ModelAdmin):
 
     def has_add_permission(self, request):
         return False  # Likes should be created via the UI, not admin
+
+@admin.register(NewsSource)
+class NewsSourceAdmin(admin.ModelAdmin):
+    """Where the daily AI & ML digest looks for news. Untick 'active' to stop using a source."""
+    list_display = ('name', 'kind', 'url', 'ai_filter', 'active')
+    list_editable = ('ai_filter', 'active')
+    list_filter = ('kind', 'active')
+
+
+@admin.register(DailyDigest)
+class DailyDigestAdmin(admin.ModelAdmin):
+    list_display = ('date', 'status', 'items', 'attempts', 'updated_at')
+    readonly_fields = ('log',)
+
+
+@admin.register(WeeklyDigest)
+class WeeklyDigestAdmin(admin.ModelAdmin):
+    list_display = ('week_start', 'status', 'attempts', 'updated_at')
+    readonly_fields = ('log',)
