@@ -20,7 +20,7 @@ def resume_page(request):
         return render(request, 'resume/resume_unavailable.html')
 
     # Group skills by category in CV-defined order (technical only)
-    _CATEGORY_ORDER = ['PROGRAMMING', 'TOOLS', 'CLOUD', 'ML_FRAMEWORKS', 'DATA_ANALYSIS', 'DATABASES']
+    _CATEGORY_ORDER = [c for c, _ in Skill.CATEGORY_CHOICES if c != 'SOFT_SKILLS']
     raw = defaultdict(list)
     for skill in Skill.objects.all().order_by('category', 'display_order', 'name'):
         raw[skill.category].append(skill)
@@ -53,10 +53,15 @@ def download_resume_pdf(request):
         return HttpResponse("Resume not available", status=404)
 
     # Prefer the uploaded PDF — always higher quality than generated
+    pdf = None
     if resume_settings.cv_pdf:
-        import os
-        filename = os.path.basename(resume_settings.cv_pdf.name)
-        response = HttpResponse(resume_settings.cv_pdf.read(), content_type='application/pdf')
+        try:
+            pdf = resume_settings.cv_pdf.read()
+        except Exception:   # the file is gone (e.g. an old upload on Render's wiped disk)
+            pdf = None
+    if pdf:
+        filename = 'Seyedhasan_Mirhosseini_CV.pdf'
+        response = HttpResponse(pdf, content_type='application/pdf')
         response['Content-Disposition'] = f'attachment; filename="{filename}"'
         return response
 
