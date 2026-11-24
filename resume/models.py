@@ -1,4 +1,5 @@
 from django.db import models
+from .storage import cv_storage
 from django.core.validators import MinValueValidator, MaxValueValidator
 
 
@@ -40,7 +41,7 @@ class ResumeSetting(models.Model):
 
     # Resume PDF — upload your CV here to enable the "Download CV" button
     cv_pdf = models.FileField(
-        upload_to='resume/',
+        upload_to='resume/', storage=cv_storage,
         blank=True,
         null=True,
         help_text='Upload your CV as PDF to enable the Download CV button on the resume page',
@@ -148,14 +149,18 @@ class Skill(models.Model):
     """
     Technical and professional skills
     """
+    # Rows of the CV's "Core skills" table, in its order (resume/views.py).
     CATEGORY_CHOICES = [
-        ('PROGRAMMING', 'Languages'),
-        ('TOOLS', 'LLM / Agents'),
-        ('CLOUD', 'MLOps / Deploy'),
-        ('ML_FRAMEWORKS', 'ML / DL'),
-        ('DATA_ANALYSIS', 'Data'),
+        ('PROGRAMMING', 'Programming Languages'),
+        ('ML_FRAMEWORKS', 'Machine Learning'),
+        ('DEEP_LEARNING', 'Deep Learning'),
+        ('TOOLS', 'LLMs, RAG & Agents'),
+        ('CLOUD', 'Tools & Deployment'),
+        ('DATA_VISUALIZATION', 'Visualization & Reporting'),
+        ('DATA_ANALYSIS', 'Data Science & Analytics'),
+        ('STATISTICS', 'Statistics'),
+        ('TECHNOLOGIES', 'Technologies'),
         ('DATABASES', 'Web / Backend'),
-        ('DATA_VISUALIZATION', 'Data Visualization'),
         ('SOFT_SKILLS', 'Soft Skills'),
     ]
 
@@ -324,3 +329,17 @@ class QuickFact(models.Model):
 
     def __str__(self):
         return self.text[:60]
+
+class StoredFile(models.Model):
+    """A small uploaded file kept in the database (resume/storage.py).
+
+    Render's disk is wiped on every deploy, so the CV PDF uploaded in the admin
+    lives here instead and survives deploys.
+    """
+    name         = models.CharField(max_length=255, unique=True)
+    data         = models.BinaryField()
+    content_type = models.CharField(max_length=100, default='application/pdf')
+    uploaded_at  = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.name
