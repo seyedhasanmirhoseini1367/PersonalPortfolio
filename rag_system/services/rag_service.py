@@ -56,7 +56,7 @@ class RAGService:
                 f"{t['role'].upper()}: {t['content'][:300]}" for t in history[-6:]
             )
             prompt = (
-                "You are a retrieval planner for a portfolio chatbot about Hasan Mirhoseini, an ML/AI engineer.\n"
+                "You are a retrieval planner for a portfolio chatbot about Hasan Mirhoseini, a data scientist.\n"
                 "Given conversation history and a new message, decide:\n"
                 "1. needs_retrieval: true if the message asks for new information from the portfolio "
                 "(skills, projects, CV, experience, job fit). false if it is a greeting, thank-you, "
