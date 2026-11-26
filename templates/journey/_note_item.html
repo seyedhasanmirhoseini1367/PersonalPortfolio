@@ -1,0 +1,7 @@
+<div class="lj-item {{ i.confidence }}">
+    {% include 'journey/_item_top.html' %}
+    <label class="wide">Title<input class="lj-input" name="{{ i.pk }}-front" value="{{ i.front }}"></label>
+    <label class="wide">Explanation<textarea class="lj-input" name="{{ i.pk }}-body">{{ i.body }}</textarea></label>
+    {% if i.data.examples %}<p class="wide muted fi">{{ i.data.examples|join:" · " }}</p>{% endif %}
+    {% if i.data.quote %}<p class="wide lj-quote">“{{ i.data.quote }}”</p>{% endif %}
+</div>

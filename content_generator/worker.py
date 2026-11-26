@@ -143,6 +143,11 @@ def run_pending(limit=None) -> int:
 def _idle_tasks() -> None:
     """Scheduled work that runs while no generation job is waiting."""
     try:
+        from journey.pipeline import run_pending
+        run_pending()   # LearningJourney lessons waiting to be built (first: a learner is watching)
+    except Exception:
+        logger.exception('LearningJourney lesson build failed')
+    try:
         from kaggle_archive.auto import maybe_run
         maybe_run()   # monthly Kaggle archive update (checks at most hourly)
     except Exception:

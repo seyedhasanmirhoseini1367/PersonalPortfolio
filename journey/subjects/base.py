@@ -21,11 +21,16 @@ class Subject:
                    'Return only the transcribed text.')
     title_placeholder = 'Lesson 1'
     text_placeholder = ''
+    icon = 'fa-book-open'
+    max_chars = 9000          # how much of the material the agents read
+    text_lang = ''            # language of the material, for the lang attribute ('' = not a language course)
+    levels = ('beginner', 'intermediate', 'advanced')
 
-    def build(self, source, lookup=None, note=lambda msg: None):
+    def build(self, source, lookup=None, note=lambda msg: None, context=None):
         """Turn the lesson text into (items, summary).
 
         items is a list of dicts with StudyItem fields (kind, order, front, meaning_en, ...).
+        context: {"level": "A1" | "beginner" | "", "focus": "what the learner wants"}.
         Raise RuntimeError with a readable message when nothing useful can be built.
         """
         raise NotImplementedError

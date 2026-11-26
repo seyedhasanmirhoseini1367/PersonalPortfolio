@@ -10,35 +10,55 @@
 .lj-item textarea.lj-input{min-height:90px}
 .lj-item .wide{grid-column:1/-1}
 .lj-item-top{grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
-.lj-del{display:inline-flex;flex-direction:row!important;align-items:center;gap:6px;font-size:.85rem!important;color:var(--lj-berry)!important}
+.lj-item-top .tags{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.lj-tick{display:inline-flex;flex-direction:row!important;align-items:center;gap:6px;font-size:.85rem!important}
+.lj-del{color:var(--lj-berry)!important}
+.lj-ok{color:var(--lj-moss)!important}
+.lj-opt-row{display:flex;gap:6px;align-items:center}
+.lj-opt-row input[type=radio]{width:18px;height:18px;flex:none}
 .lj-bar{position:sticky;bottom:0;background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:12px;
   display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;padding-bottom:calc(12px + env(safe-area-inset-bottom,0px))}
 details.lj-src summary{cursor:pointer;font-weight:700}
 details.lj-src pre{white-space:pre-wrap;font-size:.9rem;margin:8px 0 0;max-height:320px;overflow:auto}
+.lj-section-tools{display:flex;gap:12px;flex-wrap:wrap}
+.lj-section-tools button{background:none;border:0;color:var(--lj-lake);cursor:pointer;font:inherit;font-size:.85rem;padding:0}
 </style>{% endblock %}
 
 {% block content %}
 <div class="lj">
+    {% include 'journey/_nav.html' %}
     <header class="lj-head">
         <a class="lj-eyebrow" href="{{ group.get_absolute_url }}"><i class="fas fa-arrow-left"></i> {{ group.name }}</a>
         <h1>Check “{{ pack.title }}”</h1>
-        <p class="muted">Only you and the group owner can see this draft. Fix anything wrong,
-           tick “Remove” on what you don’t need, then publish it to the group. Check the English here: after publishing,
-           each member’s optional second language is translated from it automatically.</p>
-        {% if n_low %}<p><span class="lj-chip low">Unsure</span> {{ n_low }} word{{ n_low|pluralize }} could not be confirmed. Check those first.</p>{% endif %}
+        <p class="muted">Only you{% if not group.is_personal %} and the group owner{% endif %} can see this draft. Fix anything wrong,
+           tick “Remove” on what you don’t need, then publish it. Each item shows how sure the app is:
+           <span class="lj-chip high">Verified</span> found in your material and checked,
+           <span class="lj-chip medium">Needs review</span> probably right,
+           <span class="lj-chip low">Low confidence</span> look at it first. Editing an item marks it verified.</p>
+        {% if cut %}<p class="lj-msg"><i class="fas fa-scissors"></i> This material is long, so the AI read the first
+            {{ subject.max_chars }} characters. Add the rest as another lesson.</p>{% endif %}
     </header>
 
     {% if pack.summary %}<section class="lj-card"><h2>About this lesson</h2><p>{{ pack.summary }}</p></section>{% endif %}
 
-    <form method="post" action="{% url 'journey:pack_edit' pack.pk %}" class="lj-form">{% csrf_token %}
+    <form method="post" action="{% url 'journey:pack_edit' pack.pk %}" class="lj-form" id="lj-edit">{% csrf_token %}
+
+    {% if n_low or n_unchecked %}
+    <section class="lj-card">
+        <div class="lj-row"><span>{% if n_low %}<span class="lj-chip low">{{ n_low }} low confidence</span>{% endif %}
+            {% if n_unchecked %}<span class="lj-chip medium">{{ n_unchecked }} to review</span>{% endif %}</span>
+            <span class="lj-inline">
+                {% if n_low %}<button class="lj-btn ghost" name="action" value="remove_low" formnovalidate><i class="fas fa-broom"></i> Remove all low confidence</button>{% endif %}
+            </span></div>
+    </section>
+    {% endif %}
 
     {% if by_kind.word %}
-    <section class="lj-card"><h2>Words ({{ by_kind.word|length }})</h2>
+    <section class="lj-card" data-section><div class="lj-row"><h2>Words ({{ by_kind.word|length }})</h2>{% include 'journey/_section_tools.html' %}</div>
         <div class="lj-items">
         {% for i in by_kind.word %}
             <div class="lj-item {{ i.confidence }}">
-                <div class="lj-item-top"><span class="lj-chip {{ i.confidence }}">{{ i.get_confidence_display }}</span>
-                    <label class="lj-del"><input type="checkbox" name="{{ i.pk }}-delete"> Remove</label></div>
+                {% include 'journey/_item_top.html' %}
                 <label>Base form<input class="lj-input fi" name="{{ i.pk }}-front" value="{{ i.front }}" lang="fi"></label>
                 <label>In the text<input class="lj-input fi" name="{{ i.pk }}-form_in_text" value="{{ i.form_in_text }}" lang="fi"></label>
                 <label>Grammar<input class="lj-input" name="{{ i.pk }}-grammar" value="{{ i.grammar }}"></label>
@@ -50,16 +70,30 @@ details.lj-src pre{white-space:pre-wrap;font-size:.9rem;margin:8px 0 0;max-heigh
     </section>
     {% endif %}
 
+    {% if by_kind.concept %}
+    <section class="lj-card" data-section><div class="lj-row"><h2>Concepts ({{ by_kind.concept|length }})</h2>{% include 'journey/_section_tools.html' %}</div>
+        <div class="lj-items">
+        {% for i in by_kind.concept %}
+            <div class="lj-item {{ i.confidence }}">
+                {% include 'journey/_item_top.html' %}
+                <label>Term<input class="lj-input" name="{{ i.pk }}-front" value="{{ i.front }}"></label>
+                <label class="wide">Definition<textarea class="lj-input" name="{{ i.pk }}-meaning_en" style="min-height:60px">{{ i.meaning_en }}</textarea></label>
+                {% if i.data.quote %}<p class="wide lj-quote">“{{ i.data.quote }}”</p>{% endif %}
+            </div>
+        {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
     {% if by_kind.sentence %}
-    <section class="lj-card"><h2>Cloze sentences ({{ by_kind.sentence|length }})</h2>
+    <section class="lj-card" data-section><div class="lj-row"><h2>Fill in the blank ({{ by_kind.sentence|length }})</h2>{% include 'journey/_section_tools.html' %}</div>
         <div class="lj-items">
         {% for i in by_kind.sentence %}
-            <div class="lj-item">
-                <div class="lj-item-top"><span class="muted">The hidden word becomes a blank in review.</span>
-                    <label class="lj-del"><input type="checkbox" name="{{ i.pk }}-delete"> Remove</label></div>
-                <label class="wide">Sentence<input class="lj-input fi" name="{{ i.pk }}-front" value="{{ i.front }}" lang="fi"></label>
-                <label>Hidden word<input class="lj-input fi" name="{{ i.pk }}-cloze" value="{{ i.data.cloze }}" lang="fi"></label>
-                <label>English<input class="lj-input" name="{{ i.pk }}-meaning_en" value="{{ i.meaning_en }}"></label>
+            <div class="lj-item {{ i.confidence }}">
+                {% include 'journey/_item_top.html' %}
+                <label class="wide">Sentence<input class="lj-input{% if tl %} fi{% endif %}" name="{{ i.pk }}-front" value="{{ i.front }}"{% if tl %} lang="{{ tl }}"{% endif %}></label>
+                <label>Hidden word<input class="lj-input{% if tl %} fi{% endif %}" name="{{ i.pk }}-cloze" value="{{ i.data.cloze }}"{% if tl %} lang="{{ tl }}"{% endif %}></label>
+                {% if tl %}<label>English<input class="lj-input" name="{{ i.pk }}-meaning_en" value="{{ i.meaning_en }}"></label>{% endif %}
             </div>
         {% endfor %}
         </div>
@@ -67,11 +101,11 @@ details.lj-src pre{white-space:pre-wrap;font-size:.9rem;margin:8px 0 0;max-heigh
     {% endif %}
 
     {% if by_kind.phrase %}
-    <section class="lj-card"><h2>Useful phrases ({{ by_kind.phrase|length }})</h2>
+    <section class="lj-card" data-section><div class="lj-row"><h2>Useful phrases ({{ by_kind.phrase|length }})</h2>{% include 'journey/_section_tools.html' %}</div>
         <div class="lj-items">
         {% for i in by_kind.phrase %}
-            <div class="lj-item">
-                <div class="lj-item-top"><span></span><label class="lj-del"><input type="checkbox" name="{{ i.pk }}-delete"> Remove</label></div>
+            <div class="lj-item {{ i.confidence }}">
+                {% include 'journey/_item_top.html' %}
                 <label>Finnish<input class="lj-input fi" name="{{ i.pk }}-front" value="{{ i.front }}" lang="fi"></label>
                 <label>English<input class="lj-input" name="{{ i.pk }}-meaning_en" value="{{ i.meaning_en }}"></label>
             </div>
@@ -80,34 +114,43 @@ details.lj-src pre{white-space:pre-wrap;font-size:.9rem;margin:8px 0 0;max-heigh
     </section>
     {% endif %}
 
-    {% if by_kind.grammar %}
-    <section class="lj-card"><h2>Grammar notes ({{ by_kind.grammar|length }})</h2>
+    {% if by_kind.grammar or by_kind.note %}
+    <section class="lj-card" data-section><div class="lj-row"><h2>{% if by_kind.grammar %}Grammar notes{% else %}Key ideas{% endif %}</h2>{% include 'journey/_section_tools.html' %}</div>
         <div class="lj-items">
-        {% for i in by_kind.grammar %}
-            <div class="lj-item">
-                <div class="lj-item-top"><span></span><label class="lj-del"><input type="checkbox" name="{{ i.pk }}-delete"> Remove</label></div>
-                <label class="wide">Title<input class="lj-input" name="{{ i.pk }}-front" value="{{ i.front }}"></label>
-                <label class="wide">Explanation<textarea class="lj-input" name="{{ i.pk }}-body">{{ i.body }}</textarea></label>
-                {% if i.data.examples %}<p class="wide muted fi">{{ i.data.examples|join:" · " }}</p>{% endif %}
+        {% for i in by_kind.grammar %}{% include 'journey/_note_item.html' %}{% endfor %}
+        {% for i in by_kind.note %}{% include 'journey/_note_item.html' %}{% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
+    {% if by_kind.question %}
+    <section class="lj-card" data-section><div class="lj-row"><h2>Questions ({{ by_kind.question|length }})</h2>{% include 'journey/_section_tools.html' %}</div>
+        <p class="muted">These go into practice as multiple choice. Pick the right answer with the round button.</p>
+        <div class="lj-items">
+        {% for i in by_kind.question %}
+            <div class="lj-item {{ i.confidence }}">
+                {% include 'journey/_item_top.html' %}
+                <label class="wide">Question<input class="lj-input{% if tl %} fi{% endif %}" name="{{ i.pk }}-front" value="{{ i.front }}"{% if tl %} lang="{{ tl }}"{% endif %}></label>
+                {% for o in i.data.options %}
+                <label class="lj-opt-row">
+                    <input type="radio" name="{{ i.pk }}-answer" value="{{ forloop.counter0 }}"{% if forloop.counter0 == i.data.answer %} checked{% endif %} aria-label="Correct answer">
+                    <input class="lj-input" name="{{ i.pk }}-opt{{ forloop.counter0 }}" value="{{ o }}" aria-label="Answer {{ forloop.counter }}"></label>
+                {% endfor %}
+                <label class="wide">Why (shown after answering)<textarea class="lj-input" name="{{ i.pk }}-body" style="min-height:60px">{{ i.body }}</textarea></label>
+                {% if i.data.quote %}<p class="wide lj-quote">“{{ i.data.quote }}”</p>{% endif %}
             </div>
         {% endfor %}
         </div>
     </section>
     {% endif %}
 
-    {% if by_kind.question or by_kind.table %}
-    <section class="lj-card"><h2>Questions and verb tables</h2>
+    {% if by_kind.table %}
+    <section class="lj-card" data-section><div class="lj-row"><h2>Verb tables</h2>{% include 'journey/_section_tools.html' %}</div>
         <div class="lj-items">
-        {% for i in by_kind.question %}
-            <div class="lj-item">
-                <div class="lj-item-top"><b>Question</b><label class="lj-del"><input type="checkbox" name="{{ i.pk }}-delete"> Remove</label></div>
-                <label class="wide">Question<input class="lj-input fi" name="{{ i.pk }}-front" value="{{ i.front }}" lang="fi"></label>
-                <p class="wide muted">Answers: {% for o in i.data.options %}<span class="fi">{% if forloop.counter0 == i.data.answer %}✔ {% endif %}{{ o }}</span>{% if not forloop.last %} · {% endif %}{% endfor %}</p>
-            </div>
-        {% endfor %}
         {% for i in by_kind.table %}
             <div class="lj-item">
-                <div class="lj-item-top"><b>Verb table: <span class="fi">{{ i.front }}</span></b><label class="lj-del"><input type="checkbox" name="{{ i.pk }}-delete"> Remove</label></div>
+                <div class="lj-item-top"><b>Verb table: <span class="fi">{{ i.front }}</span></b>
+                    <label class="lj-tick lj-del"><input type="checkbox" name="{{ i.pk }}-delete" data-del> Remove</label></div>
                 <p class="wide fi">{% for r in i.data.rows %}{{ r.0 }} {{ r.1 }}{% if not forloop.last %} · {% endif %}{% endfor %}</p>
             </div>
         {% endfor %}
@@ -115,13 +158,38 @@ details.lj-src pre{white-space:pre-wrap;font-size:.9rem;margin:8px 0 0;max-heigh
     </section>
     {% endif %}
 
-    <details class="lj-card lj-src"><summary>Lesson text the AI read</summary><pre lang="fi">{{ pack.source_text }}</pre></details>
+    <details class="lj-card lj-src"><summary>Text the AI read</summary><pre{% if tl %} lang="{{ tl }}"{% endif %}>{{ pack.source_text }}</pre></details>
 
     <div class="lj-bar">
-        <button class="lj-btn ghost" name="action" value="delete" formnovalidate><i class="fas fa-trash"></i> Delete lesson</button>
+        <button class="lj-btn ghost" name="action" value="delete" formnovalidate id="lj-del-pack"><i class="fas fa-trash"></i> Delete lesson</button>
         <button class="lj-btn ghost" name="action" value="save"><i class="fas fa-floppy-disk"></i> Save</button>
         <button class="lj-btn moss" name="action" value="publish"><i class="fas fa-paper-plane"></i> Save and publish</button>
     </div>
     </form>
+
+    <form method="post" action="{% url 'journey:pack_edit' pack.pk %}" class="lj-card lj-form">{% csrf_token %}
+        <h2>Add your own card</h2>
+        <div class="lj-grid">
+            <label for="lj-new-kind">Kind<select id="lj-new-kind" name="new-kind" class="lj-input">
+                {% for k, label in add_kinds %}<option value="{{ k }}">{{ label }}</option>{% endfor %}</select></label>
+            <label for="lj-new-front">{% if tl %}Finnish{% else %}Term or question{% endif %}<input id="lj-new-front" class="lj-input" name="new-front" maxlength="300" required></label>
+            <label for="lj-new-meaning">{% if tl %}English{% else %}Answer or definition{% endif %}<input id="lj-new-meaning" class="lj-input" name="new-meaning" maxlength="400" required></label>
+        </div>
+        <button class="lj-btn ghost" name="action" value="add" style="align-self:flex-start"><i class="fas fa-plus"></i> Add card</button>
+    </form>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.querySelectorAll('[data-section]').forEach(sec => {
+    sec.querySelectorAll('[data-all]').forEach(b => b.addEventListener('click', () => {
+        sec.querySelectorAll(b.dataset.all === 'ok' ? '[data-ok]' : '[data-del]').forEach(c => { c.checked = b.dataset.on === '1'; });
+        b.dataset.on = b.dataset.on === '1' ? '0' : '1';
+    }));
+});
+document.getElementById('lj-del-pack').addEventListener('click', e => {
+    if (!confirm('Delete this lesson? This cannot be undone.')) e.preventDefault();
+});
+</script>
 {% endblock %}

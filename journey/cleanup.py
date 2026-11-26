@@ -14,7 +14,7 @@ from datetime import timedelta
 from django.conf import settings
 from django.utils import timezone
 
-from .models import LessonPack
+from .models import LessonPack, PendingUpload
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +37,7 @@ def run(now=None):
                                           created_at__lt=now - timedelta(days=FAILED_DAYS)).delete()
     drafts, _ = LessonPack.objects.filter(status=LessonPack.DRAFT,
                                           created_at__lt=now - timedelta(days=DRAFT_DAYS)).delete()
+    PendingUpload.objects.filter(pack__status=LessonPack.FAILED).delete()   # files of failed builds are not kept
     counts = {'stuck': stuck, 'deleted': failed + drafts}
     if stuck or failed or drafts:
         logger.info('LearningJourney cleanup: %s', counts)

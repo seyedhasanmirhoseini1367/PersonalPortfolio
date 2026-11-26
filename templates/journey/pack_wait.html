@@ -9,6 +9,7 @@
 
 {% block content %}
 <div class="lj">
+    {% include 'journey/_nav.html' %}
     <header class="lj-head">
         <a class="lj-eyebrow" href="{{ pack.group.get_absolute_url }}"><i class="fas fa-arrow-left"></i> {{ pack.group.name }}</a>
         <h1>{{ pack.title }}</h1>
@@ -20,11 +21,16 @@
             <span class="lj-chip processing">usually under a minute</span></div>
         <p id="lj-note">{{ pack.progress_note|default:"Starting…" }}</p>
         <ul class="lj-steps">
-            <li>1. Reader: transcribes the photos</li>
+            <li>1. Reader: reads the photos, PDF or Word pages</li>
+            {% if pack.group.subject == 'finnish' %}
             <li>2. Linguist: words, base forms, cases and meanings</li>
             <li>3. Teacher: grammar notes, phrases, questions, verb tables</li>
             <li>4. Checker: looks each word up on Wiktionary</li>
-            <li>5. Quality: drops anything the lesson text does not support</li>
+            {% else %}
+            <li>2. Analyst: concepts, key ideas, questions and fill-in-the-blank sentences</li>
+            <li>3. Checker: answers every question again using only your material</li>
+            {% endif %}
+            <li>{% if pack.group.subject == 'finnish' %}5{% else %}4{% endif %}. Quality: marks anything your material does not support</li>
         </ul>
         <p class="muted">You can leave this page. The lesson keeps building and waits for you as a draft.</p>
     </section>

@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+{% block title %}Library — LearningJourney{% endblock %}
+{% block extra_css %}{% include 'journey/_style.html' %}
+<style>
+.lj-filter{display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:8px;align-items:end}
+@media (max-width:640px){.lj-filter{grid-template-columns:1fr 1fr}.lj-filter .q{grid-column:1/-1}}
+.lj-lib{display:flex;flex-direction:column;gap:8px}
+.lj-lib-row{display:flex;gap:12px;align-items:center;padding:12px 14px;border:1px solid var(--border);border-radius:12px;flex-wrap:wrap}
+.lj-lib-row>i{color:var(--lj-lake);width:22px;text-align:center;font-size:1.2rem}
+.lj-lib-row .main{flex:1;min-width:180px}
+.lj-lib-row .main a{font-weight:700;color:var(--text);text-decoration:none}
+.lj-lib-row .main a:hover{color:var(--lj-lake)}
+.lj-lib-row small{color:var(--text-muted)}
+.lj-lib-row form{display:inline}
+.lj-icon-btn{border:1px solid var(--border);background:transparent;color:var(--text-muted);border-radius:8px;width:36px;height:36px;cursor:pointer}
+.lj-icon-btn:hover{color:var(--text)}
+.lj-rename{display:flex;gap:6px;width:100%}
+.lj-rename .lj-input{min-height:36px;padding:6px 10px}
+</style>{% endblock %}
+
+{% block content %}
+<div class="lj">
+    {% include 'journey/_nav.html' %}
+    <header class="lj-head">
+        <h1>Library</h1>
+        <p class="muted">All your material in one place: what was built from it, its status, and where it lives.</p>
+    </header>
+
+    <form method="get" class="lj-card lj-filter" role="search">
+        <label class="q" for="lj-q">Search<input id="lj-q" class="lj-input" name="q" value="{{ q }}" placeholder="Title, summary or text"></label>
+        <label for="lj-space">Space or group
+            <select id="lj-space" name="space" class="lj-input"><option value="">All</option>
+                {% for p in places %}<option value="{{ p.invite_code }}"{% if p.invite_code == space %} selected{% endif %}>{{ p.name }}</option>{% endfor %}
+            </select></label>
+        <label for="lj-status">Status
+            <select id="lj-status" name="status" class="lj-input"><option value="">All</option>
+                {% for code, name in statuses %}<option value="{{ code }}"{% if code == status %} selected{% endif %}>{{ name }}</option>{% endfor %}
+            </select></label>
+        <button class="lj-btn" type="submit"><i class="fas fa-magnifying-glass"></i> Filter</button>
+    </form>
+
+    <section class="lj-card">
+        <div class="lj-row"><h2>{{ packs|length }} lesson{{ packs|pluralize }}</h2>
+            <a class="lj-btn moss" href="{% url 'journey:lesson_add' %}"><i class="fas fa-plus"></i> Add a lesson</a></div>
+        {% if packs %}
+        <div class="lj-lib">
+            {% for p in packs %}
+            <div class="lj-lib-row">
+                <i class="fas {% if p.source_kind == 'pdf' %}fa-file-pdf{% elif p.source_kind == 'docx' %}fa-file-word{% elif p.source_kind == 'photos' %}fa-camera{% elif p.source_kind == 'mixed' %}fa-layer-group{% else %}fa-align-left{% endif %}"
+                   title="{{ p.get_source_kind_display|default:'Text' }}"></i>
+                <div class="main"><a href="{{ p.get_absolute_url }}">{{ p.title }}</a><br>
+                    <small>{{ p.group.name }} · {{ p.n_items }} item{{ p.n_items|pluralize }} · {{ p.created_at|date:"j M Y" }} · by {{ p.created_by.username }}</small></div>
+                <span class="lj-chip {{ p.status }}">{{ p.get_status_display }}</span>
+                {% if p.editable %}
+                <button class="lj-icon-btn" type="button" data-rename="{{ p.pk }}" title="Rename" aria-label="Rename {{ p.title }}"><i class="fas fa-pen"></i></button>
+                <form method="post" action="{% url 'journey:pack_edit' p.pk %}" data-confirm="Delete “{{ p.title }}” and everyone’s progress on it?">{% csrf_token %}
+                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                    <button class="lj-icon-btn" name="action" value="delete" title="Delete" aria-label="Delete {{ p.title }}"><i class="fas fa-trash"></i></button></form>
+                <form method="post" action="{% url 'journey:pack_edit' p.pk %}" class="lj-rename" id="lj-rename-{{ p.pk }}" hidden>{% csrf_token %}
+                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                    <input class="lj-input" name="title" maxlength="120" value="{{ p.title }}" aria-label="New title">
+                    <button class="lj-btn" name="action" value="rename">Save</button></form>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="lj-empty">{% if q or space or status %}Nothing matches. Clear the filters to see everything.{% else %}No lessons yet. Add your first material.{% endif %}</div>
+        {% endif %}
+    </section>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.querySelectorAll('[data-rename]').forEach(b => b.addEventListener('click', () => {
+    const f = document.getElementById('lj-rename-' + b.dataset.rename);
+    f.hidden = !f.hidden;
+    if (!f.hidden) f.querySelector('input[name=title]').select();
+}));
+document.querySelectorAll('form[data-confirm]').forEach(f => f.addEventListener('submit', e => {
+    if (!confirm(f.dataset.confirm)) e.preventDefault();
+}));
+</script>
+{% endblock %}
