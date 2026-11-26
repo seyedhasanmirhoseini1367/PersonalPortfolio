@@ -147,16 +147,37 @@ def clean_grammar(notes, text):
     return out[:4]
 
 
-def clean_phrases(phrases):
+def clean_phrases(phrases, text=''):
+    """Phrases copied from the lesson are verified; ones the AI built "based on" it need a check."""
     out, seen = [], set()
     for p in phrases or []:
         if not isinstance(p, dict):
             continue
         fi = _s(p.get('fi'), 200)
-        if fi and fi.lower() not in seen:
-            seen.add(fi.lower())
-            out.append(dict(fi=fi, meaning_en=_s(p.get('meaning_en'), 400)))
+        if fi and norm(fi) not in seen:
+            seen.add(norm(fi))
+            grounded = in_text(fi, text)
+            out.append(dict(fi=fi, meaning_en=_s(p.get('meaning_en'), 400), grounded=grounded,
+                            confidence=StudyItem.HIGH if grounded else StudyItem.MEDIUM))
     return out[:10]
+
+
+def grade_question(q, text):
+    """Verified only when the right option is in the lesson and no other option is; otherwise it needs a look."""
+    present = [word_in(o, text) or in_text(o, text) for o in q['options']]
+    if present[q['answer']] and sum(present) == 1:
+        return StudyItem.HIGH, ''
+    if present[q['answer']]:
+        return StudyItem.MEDIUM, 'More than one option appears in the lesson: check the question is not ambiguous.'
+    if any(present):
+        return StudyItem.LOW, 'A wrong option appears in the lesson but the marked answer does not.'
+    return StudyItem.MEDIUM, 'The answer is not copied from the lesson: check it.'
+
+
+def grade_table(t, text):
+    """A verb table is made by the AI; it is verified only when at least three of its forms are in the lesson."""
+    seen = sum(1 for _, form in t['rows'] if word_in(form, text))
+    return StudyItem.HIGH if seen >= 3 else StudyItem.MEDIUM
 
 
 def clean_tables(tables, text):
@@ -174,7 +195,12 @@ def clean_tables(tables, text):
 # ── checker ──────────────────────────────────────────────────────────────────
 
 def _strip_html(s):
-    return re.sub(r'\s+', ' ', re.sub(r'<[^>]+>', '', s or '')).strip()
+    """Wiktionary definitions are HTML with inline <style> blocks and entities: keep only the words."""
+    import html
+    s = re.sub(r'<(style|script)\b.*?</\1>', ' ', s or '', flags=re.S | re.I)
+    s = html.unescape(re.sub(r'<[^>]+>', ' ', s))
+    s = re.sub(r'\.mw-parser-output[^{}]*\{[^}]*\}', ' ', s)   # stray CSS rules outside a <style> tag
+    return re.sub(r'\s+', ' ', s.replace('\xa0', ' ')).strip()
 
 
 def wiktionary_lookup(lemma, session=None):
@@ -197,18 +223,42 @@ def wiktionary_lookup(lemma, session=None):
     return bool(entries), ''
 
 
+STOP = set('to a an the of in on at for and or be is it its as by with from one some'.split())
+
+
+def _content(s):
+    return {w for w in re.findall(r"[a-z]+", (s or '').lower()) if len(w) > 1 and w not in STOP}
+
+
+def meaning_matches(meaning, definition):
+    """Does the given meaning share a content word with the dictionary definition? None if nothing to compare."""
+    a, b = _content(meaning), _content(definition)
+    if not a or not b:
+        return None
+    return bool(a & b) or any(x[:5] == y[:5] for x in a for y in b if len(x) >= 5 and len(y) >= 5)
+
+
 def check_words(words, lookup=None):
-    """Grade each word: high = found on Wiktionary as Finnish and in the text; low = not in the text."""
+    """Grade each word.
+
+    verified (high) - the form is in the text, Wiktionary knows the lemma as Finnish, and the
+                      meaning given agrees with the dictionary definition
+    needs review    - found, but the meanings cannot be compared or differ (the word may be used
+                      in another sense here), or the dictionary could not be reached
+    low             - the form is not in the text, or Wiktionary has no Finnish entry
+    A dictionary hit alone is not proof that the word is used in that sense in this text."""
     lookup = lookup or wiktionary_lookup
     session = requests.Session()
     for i, w in enumerate(words):
         found, definition = (lookup(w['lemma'], session) if i < MAX_LOOKUPS else (None, ''))
-        if not w['meaning_en'] and definition:
+        w['dictionary'] = definition
+        given = w['meaning_en']
+        if not given and definition:
             w['meaning_en'] = definition
         if not w['grounded']:
             w['confidence'] = StudyItem.LOW
         elif found:
-            w['confidence'] = StudyItem.HIGH
+            w['confidence'] = StudyItem.HIGH if given and meaning_matches(given, definition) else StudyItem.MEDIUM
         elif found is False:
             w['confidence'] = StudyItem.LOW
         else:
@@ -337,7 +387,7 @@ class Finnish(Subject):
         words = check_words(words, lookup)
         sentences = clean_sentences(ling.get('sentences'), source)
         grammar = clean_grammar(teach.get('grammar'), source)
-        phrases = clean_phrases(teach.get('phrases'))
+        phrases = clean_phrases(teach.get('phrases'), source)
         questions = clean_questions(teach.get('questions'))
         tables = clean_tables(teach.get('tables'), source)
         if not words and not sentences:
@@ -348,21 +398,25 @@ class Finnish(Subject):
             label = ' · '.join(x for x in (w['pos'], w['grammar']) if x)
             items.append(dict(kind=StudyItem.WORD, order=i, front=w['lemma'], form_in_text=w['form_in_text'],
                               grammar=label[:160], meaning_en=w['meaning_en'], example=w['example'],
-                              confidence=w['confidence']))
+                              confidence=w['confidence'], data={'dictionary': w.get('dictionary', '')}))
         for i, s in enumerate(sentences):
             items.append(dict(kind=StudyItem.SENTENCE, order=i, front=s['sentence'], meaning_en=s['meaning_en'],
                               data={'cloze': s['cloze']}, confidence=StudyItem.HIGH))
         for i, p in enumerate(phrases):
-            items.append(dict(kind=StudyItem.PHRASE, order=i, front=p['fi'], meaning_en=p['meaning_en']))
+            items.append(dict(kind=StudyItem.PHRASE, order=i, front=p['fi'], meaning_en=p['meaning_en'],
+                              confidence=p['confidence'], data={'grounded': p['grounded']}))
         for i, g in enumerate(grammar):
             items.append(dict(kind=StudyItem.GRAMMAR, order=i, front=g['title'], body=g['explanation_en'],
-                              data={'examples': g['examples']}))
+                              data={'examples': g['examples']},
+                              confidence=StudyItem.HIGH if g['examples'] else StudyItem.MEDIUM))
         for i, q in enumerate(questions):
+            status, why = grade_question(q, source)
             items.append(dict(kind=StudyItem.QUESTION, order=i, front=q['question'], meaning_en=q['question_en'],
-                              body=q['explanation_en'], data={'options': q['options'], 'answer': q['answer']}))
+                              body=q['explanation_en'], confidence=status,
+                              data={'options': q['options'], 'answer': q['answer'], 'check': why}))
         for i, t in enumerate(tables):
             items.append(dict(kind=StudyItem.TABLE, order=i, front=t['lemma'], meaning_en=t['meaning_en'],
-                              data={'rows': t['rows']}))
+                              data={'rows': t['rows']}, confidence=grade_table(t, source)))
         return items, _s(teach.get('summary_en'), 1500)
 
     def build_scenes(self, source, note=lambda msg: None):

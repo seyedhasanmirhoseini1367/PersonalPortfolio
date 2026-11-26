@@ -944,3 +944,147 @@ class VisionFallbackTests(TestCase):
         with mock.patch.object(pipeline, '_gemini_read', side_effect=RuntimeError('429')), \
              mock.patch.object(pipeline, '_groq_read', return_value='Teksti'):
             self.assertEqual(pipeline.read_images([b'x'], 'read'), 'Teksti', 'Groq is the last fallback')
+
+
+# ── P0: subject registry, honest quality checks, duplicates, photo batches ──
+
+from . import subjects as subject_registry  # noqa: E402
+
+
+class SubjectRegistryTests(TestCase):
+    def setUp(self):
+        self.me = User.objects.create_user('reg', 'reg@example.test', 'x')
+        self.client.force_login(self.me)
+
+    def test_every_registered_subject_can_start_a_space_and_shows_in_the_form(self):
+        home = self.client.get(reverse('journey:home'))
+        for key, name in subject_registry.choices():
+            self.assertContains(home, f'value="{key}"')
+            self.client.post(reverse('journey:space_create'), {'subject': key, 'name': f'S-{key}'})
+            self.assertEqual(StudyGroup.objects.get(name=f'S-{key}').subject, key)
+        self.assertEqual(set(subject_registry.SUBJECTS), {'finnish', 'general', 'math', 'programming', 'science'})
+
+    def test_an_unknown_subject_is_refused_never_turned_into_finnish(self):
+        with self.assertRaises(subject_registry.UnknownSubject):
+            subject_registry.get('astrology')
+        r = self.client.post(reverse('journey:space_create'), {'subject': 'astrology'}, follow=True)
+        self.assertContains(r, 'is not supported')
+        self.assertFalse(StudyGroup.objects.exists())
+
+    @override_settings(JOURNEY_RUN_INLINE=True)
+    def test_a_space_whose_subject_was_removed_still_opens_but_builds_nothing(self):
+        space = jviews._new_space(self.me, 'science')
+        pack = LessonPack.objects.create(group=space, title='Old', created_by=self.me)
+        StudyGroup.objects.filter(pk=space.pk).update(subject='astrology')
+        space.refresh_from_db()
+        self.assertContains(self.client.get(space.get_absolute_url()), 'Unsupported subject (astrology)')
+        r = self.client.get(reverse('journey:pack_new', args=[space.invite_code]), follow=True)
+        self.assertContains(r, 'is not supported')
+        pipeline.queue(pack, (), GTEXT)
+        pack.refresh_from_db()
+        self.assertEqual(pack.status, LessonPack.FAILED)
+        self.assertIn('“astrology” is not supported', pack.error)
+
+
+class FinnishQualityTests(TestCase):
+    def test_a_dictionary_hit_with_a_different_meaning_needs_review(self):
+        words = [dict(lemma='kuusi', form_in_text='kuusi', meaning_en='six', grounded=True, example='', pos='', grammar=''),
+                 dict(lemma='talo', form_in_text='talo', meaning_en='house', grounded=True, example='', pos='', grammar='')]
+        lookup = {'kuusi': (True, 'spruce (tree of genus Picea)'), 'talo': (True, 'house, building')}
+        graded = {w['lemma']: w for w in finnish.check_words(words, lambda lemma, s=None: lookup[lemma])}
+        self.assertEqual(graded['kuusi']['confidence'], StudyItem.MEDIUM, 'a found word used in another sense')
+        self.assertEqual(graded['talo']['confidence'], StudyItem.HIGH)
+        self.assertEqual(graded['kuusi']['dictionary'], 'spruce (tree of genus Picea)')
+
+    def test_phrases_questions_and_tables_get_honest_statuses(self):
+        phrases = finnish.clean_phrases([{'fi': 'Asun Tampereella.', 'meaning_en': 'I live in Tampere.'},
+                                         {'fi': 'Asun Turussa.', 'meaning_en': 'I live in Turku.'}], TEXT)
+        self.assertEqual([p['confidence'] for p in phrases], [StudyItem.HIGH, StudyItem.MEDIUM])
+        q = {'options': ['Helsingissä', 'Tampereella', 'Turussa', 'Oulussa'], 'answer': 1}
+        self.assertEqual(finnish.grade_question(q, TEXT)[0], StudyItem.HIGH)
+        self.assertEqual(finnish.grade_question(dict(q, answer=0), TEXT)[0], StudyItem.LOW)
+        both = {'options': ['keittiössä', 'Tampereella', 'Turussa', 'Oulussa'], 'answer': 1}
+        status, why = finnish.grade_question(both, TEXT)
+        self.assertEqual(status, StudyItem.MEDIUM)
+        self.assertIn('ambiguous', why)
+        table = {'rows': [['minä', 'asun'], ['sinä', 'asut'], ['hän', 'asuu'], ['me', 'asumme'], ['te', 'asutte'], ['he', 'asuvat']]}
+        self.assertEqual(finnish.grade_table(table, TEXT), StudyItem.MEDIUM, 'only one form is in the lesson')
+        self.assertEqual(finnish.grade_table(table, TEXT + ' Sinä asut. Hän asuu.'), StudyItem.HIGH)
+
+    @override_settings(JOURNEY_RUN_INLINE=True)
+    def test_the_draft_shows_why_an_item_needs_a_look(self):
+        me = User.objects.create_user('fq', 'fq@example.test', 'x')
+        self.client.force_login(me)
+        space = jviews._new_space(me, 'finnish')
+        with patched_pipeline():
+            self.client.post(reverse('journey:pack_new', args=[space.invite_code]), {'title': 'L', 'text': TEXT})
+        page = self.client.get(LessonPack.objects.get().get_absolute_url())
+        self.assertContains(page, 'Wiktionary: kitchen')
+        self.assertContains(page, 'Verb table')
+
+
+class DuplicateTests(TestCase):
+    def test_the_same_text_is_practised_once_across_kinds(self):
+        rows = [dict(kind=StudyItem.PHRASE, order=0, front='Asun Tampereella.'),
+                dict(kind=StudyItem.SENTENCE, order=0, front='asun tampereella'),
+                dict(kind=StudyItem.CONCEPT, order=0, front='Glucose'),
+                dict(kind=StudyItem.CONCEPT, order=1, front='glucose.'),
+                dict(kind=StudyItem.GRAMMAR, order=0, front='Glucose')]
+        kept = pipeline.drop_duplicates(rows)
+        self.assertEqual([(r['kind'], r['front']) for r in kept],
+                         [(StudyItem.CONCEPT, 'Glucose'), (StudyItem.SENTENCE, 'asun tampereella'),
+                          (StudyItem.GRAMMAR, 'Glucose')])
+
+
+class PhotoBatchTests(TestCase):
+    def test_photos_are_read_in_batches_and_keep_their_numbers(self):
+        def reader(images, prompt):
+            return '\n'.join(f'=== Photo {i} ===\nText {i}' for i in range(1, len(images) + 1))
+        with mock.patch.object(pipeline, 'read_images', side_effect=reader) as calls:
+            parts = pipeline.read_photo_batches([b'a'] * 6, 'read')
+        self.assertEqual(calls.call_count, 2, '6 photos: two calls of up to 4, not six')
+        self.assertEqual([p[0] for p in parts], [f'Photo {i}' for i in range(1, 7)])
+        self.assertEqual(parts[5][1], 'Text 2')
+
+    def test_without_markers_the_text_is_kept_for_the_whole_batch(self):
+        with mock.patch.object(pipeline, 'read_images', return_value='All the text'):
+            self.assertEqual(pipeline.read_photo_batches([b'a', b'b'], 'read'), [('Photos 1–2', 'All the text')])
+
+    @override_settings(JOURNEY_RUN_INLINE=True)
+    def test_a_failed_photo_read_does_not_retry_from_the_typed_text_alone(self):
+        me = User.objects.create_user('pb', 'pb@example.test', 'x')
+        self.client.force_login(me)
+        space = jviews._new_space(me, 'science')
+        img = SimpleUploadedFile('p.png', png_bytes(), content_type='image/png')
+        with mock.patch.object(pipeline, 'read_images', side_effect=RuntimeError('busy')):
+            self.client.post(reverse('journey:pack_new', args=[space.invite_code]),
+                             {'title': 'P', 'files': [img], 'text': 'Some typed notes about cells and energy.'})
+        pack = LessonPack.objects.get()
+        self.assertEqual(pack.status, LessonPack.FAILED)
+        self.assertEqual(pack.source_text, '')
+        r = self.client.post(reverse('journey:pack_edit', args=[pack.pk]), {'action': 'retry'}, follow=True)
+        self.assertContains(r, 'add the lesson again')
+
+
+class StreakTests(TestCase):
+    def test_streak_counts_consecutive_days_up_to_today(self):
+        me = User.objects.create_user('st', 'st@example.test', 'x')
+        space = jviews._new_space(me, 'science')
+        pack = LessonPack.objects.create(group=space, title='S', created_by=me, status=LessonPack.PUBLISHED)
+        item = StudyItem.objects.create(pack=pack, kind=StudyItem.CONCEPT, front='A', meaning_en='B')
+        now = timezone.now()
+        for days in (0, 1, 2, 4):
+            log = ReviewLog.objects.create(user=me, item=item, grade=4)
+            ReviewLog.objects.filter(pk=log.pk).update(at=now - timedelta(days=days))
+        summary = jviews.progress_summary(me)
+        self.assertEqual(summary['streak'], 3)
+        self.assertEqual(summary['week_total'], 4)
+
+
+class WiktionaryCleanTests(TestCase):
+    def test_definitions_lose_styles_and_entities_and_short_meanings_compare(self):
+        raw = ('to go <style>.mw-parser-output .x{font-style:italic}</style> .mw-parser-output .deprecated{color:red}'
+               '[with <i>illative</i>]&nbsp;(somewhere)')
+        self.assertEqual(finnish._strip_html(raw), 'to go [with illative ] (somewhere)')
+        self.assertTrue(finnish.meaning_matches('to go', 'to go [with illative]'))
+        self.assertFalse(finnish.meaning_matches('six', 'spruce'))

@@ -145,12 +145,38 @@ def _note(pack, note):
     pack.save(update_fields=['progress_note', 'started_at'])
 
 
+PHOTOS_PER_CALL = 4   # Groq takes at most 5 images per request; 4 keeps answers short enough
+
+
+def read_photo_batches(images, prompt):
+    """Read photos a few at a time, asking for a marker before each one so every part keeps its photo number."""
+    parts = []
+    for start in range(0, len(images), PHOTOS_PER_CALL):
+        batch = images[start:start + PHOTOS_PER_CALL]
+        if len(batch) == 1:
+            parts.append((f'Photo {start + 1}', read_images(batch, prompt)))
+            continue
+        text = read_images(batch, prompt + f' There are {len(batch)} photos: start each one with a line '
+                                           '"=== Photo N ===" (N = 1, 2, ...).')
+        found = extract.split_marked(text, 'Photo')
+        if len(found) == len(batch):
+            parts += [(f'Photo {start + int(n)}', body) for n, body in found]
+        else:   # the model ignored the markers: keep the text, with a label for the whole batch
+            parts.append((f'Photos {start + 1}–{start + len(batch)}', extract.clean(text)))
+    return parts
+
+
 def _gather(pack, subject):
     """Read every queued file into labelled parts, add the typed text, then drop the files."""
     uploads = list(pack.uploads.all())
     documents = sum(1 for u in uploads if u.kind != 'image')
     parts, kinds, seen = [], set(), {}
-    for n, up in enumerate(uploads, 1):
+    photos = [u for u in uploads if u.kind == 'image']
+    if photos:   # several photos per AI call: far fewer requests against the free quotas
+        _note(pack, f'Reading {len(photos)} photo(s)…')
+        parts += read_photo_batches([bytes(u.data) for u in photos], subject.read_prompt)
+        kinds.add('photos')
+    for n, up in enumerate([u for u in uploads if u.kind != 'image'], 1):
         ex = extract.EXTRACTORS[up.kind]
         _note(pack, f'Reading {up.name or ex.label} ({n} of {len(uploads)})…')
         seen[up.kind] = seen.get(up.kind, 0) + 1
@@ -206,6 +232,25 @@ def locate(pack, rows):
     return rows
 
 
+# Practised kinds, in the order a duplicate is kept: a sentence beats a phrase with the same text, etc.
+KEEP_ORDER = [StudyItem.WORD, StudyItem.CONCEPT, StudyItem.SENTENCE, StudyItem.PHRASE, StudyItem.QUESTION]
+
+
+def drop_duplicates(rows):
+    """Remove practised items whose text repeats another one (any kind, any section of the material)."""
+    from .subjects.base import norm
+    seen, out = set(), []
+    rank = {k: i for i, k in enumerate(KEEP_ORDER)}
+    for row in sorted(rows, key=lambda r: (rank.get(r['kind'], 99), r.get('order', 0))):
+        if row['kind'] in rank:
+            key = norm(row['front'])
+            if key in seen:
+                continue
+            seen.add(key)
+        out.append(row)
+    return out
+
+
 def _build(subject, source, lookup, note, context):
     kwargs = {'lookup': lookup, 'note': note}
     if 'context' in inspect.signature(subject.build).parameters:
@@ -215,8 +260,8 @@ def _build(subject, source, lookup, note, context):
 
 def build_pack(pack, lookup=None):
     """Fill a pack with draft items. Leaves it DRAFT, or FAILED with an error message."""
-    subject = subjects.get(pack.group.subject)
     try:
+        subject = subjects.get(pack.group.subject)   # an unknown subject fails the build, never falls back
         if pack.uploads.exists() or not pack.source_parts:
             source = _gather(pack, subject)
         else:
@@ -227,7 +272,7 @@ def build_pack(pack, lookup=None):
         rows, summary = _build(subject, source, lookup, lambda msg: _note(pack, msg), context)
         if not rows:
             raise RuntimeError('Nothing could be built from this material. Try clearer photos or paste the text.')
-        rows = locate(pack, rows)
+        rows = locate(pack, drop_duplicates(rows))
         with transaction.atomic():
             pack.items.all().delete()
             StudyItem.objects.bulk_create([StudyItem(pack=pack, **row) for row in rows])
@@ -239,6 +284,11 @@ def build_pack(pack, lookup=None):
             pack.save(update_fields=['summary', 'translations', 'status', 'progress_note', 'error'])
     except Exception as exc:
         logger.exception('LearningJourney pack %s failed', pack.pk)
+        if pack.uploads.exists():
+            # The files could not all be read. They are deleted now, so a retry would build from the
+            # typed text alone and silently miss the photos: clear the text so "Try again" asks for them.
+            pack.source_text, pack.source_parts = '', []
+            pack.save(update_fields=['source_text', 'source_parts'])
         pack.uploads.all().delete()
         pack.status = LessonPack.FAILED
         pack.error = str(exc)[:1000]
