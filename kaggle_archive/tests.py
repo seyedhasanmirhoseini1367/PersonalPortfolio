@@ -93,8 +93,13 @@ class AutoSyncTests(TestCase):
                 comp = Competition.objects.create(name=self.url, slug=self.url)
                 return {'competition': comp, 'saved': 10}
 
-        import kaggle
-        with mock.patch.object(kaggle, 'api', api, create=True), \
+        # Importing the real `kaggle` package authenticates at import time and
+        # exits without credentials (as in CI), so the test supplies a stand-in.
+        import sys
+        import types
+        fake_kaggle = types.ModuleType('kaggle')
+        fake_kaggle.api = api
+        with mock.patch.dict(sys.modules, {'kaggle': fake_kaggle}), \
              mock.patch.object(api, 'authenticate', lambda: None, create=True), \
              mock.patch('kaggle_archive.extractor.KaggleExtractor', FakeExtractor):
             run = run_sync('manual', limit=3)
