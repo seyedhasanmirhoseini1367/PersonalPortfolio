@@ -431,3 +431,46 @@ class SubjectTests(TestCase):
             card = self.client.get(reverse('journey:api_due')).json()['cards'][0]
             self.assertEqual(card['speech'], '', 'a subject without a speech language gets no read-aloud')
             self.assertContains(self.client.get(group.get_absolute_url()), 'Biology')
+
+
+class CleanupTests(TestCase):
+    def setUp(self):
+        self.me = User.objects.create_user('hasan', 'h@example.test', 'pw-hasan-123!')
+        self.group = StudyGroup.objects.create(name='Suomi', created_by=self.me)
+        Membership.objects.create(group=self.group, user=self.me, role=Membership.OWNER)
+
+    def _pack(self, status, age):
+        p = LessonPack.objects.create(group=self.group, title=f'{status} {age}', created_by=self.me, status=status)
+        LessonPack.objects.filter(pk=p.pk).update(created_at=timezone.now() - age)
+        return p
+
+    def test_only_leftovers_are_removed(self):
+        from . import cleanup
+        keep = [self._pack(LessonPack.PUBLISHED, timedelta(days=400)),
+                self._pack(LessonPack.FAILED, timedelta(days=2)),
+                self._pack(LessonPack.DRAFT, timedelta(days=10)),
+                self._pack(LessonPack.PROCESSING, timedelta(minutes=5))]
+        published = keep[0]
+        item = StudyItem.objects.create(pack=published, kind=StudyItem.WORD, front='talo', meaning_en='house')
+        Progress.objects.create(user=self.me, item=item, lapses=2)
+        old_failed = self._pack(LessonPack.FAILED, timedelta(days=8))
+        old_draft = self._pack(LessonPack.DRAFT, timedelta(days=31))
+        stuck = self._pack(LessonPack.PROCESSING, timedelta(hours=2))
+
+        self.assertEqual(cleanup.run(), {'stuck': 1, 'deleted': 2})
+        remaining = set(LessonPack.objects.values_list('pk', flat=True))
+        self.assertTrue({p.pk for p in keep} <= remaining)
+        self.assertNotIn(old_failed.pk, remaining)
+        self.assertNotIn(old_draft.pk, remaining)
+        stuck.refresh_from_db()
+        self.assertEqual(stuck.status, LessonPack.FAILED)
+        self.assertIn('interrupted', stuck.error)
+        self.assertTrue(Progress.objects.filter(item=item, lapses=2).exists(), 'progress on published lessons stays')
+        # A stuck lesson is only deleted after the normal failed period.
+        self.assertEqual(cleanup.run(), {'stuck': 0, 'deleted': 0})
+
+    def test_maybe_run_checks_at_most_hourly(self):
+        from . import cleanup
+        cleanup._last_check = 0.0
+        self.assertIsNotNone(cleanup.maybe_run())
+        self.assertIsNone(cleanup.maybe_run())
