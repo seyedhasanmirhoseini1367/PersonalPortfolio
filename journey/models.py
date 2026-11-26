@@ -110,7 +110,7 @@ class StudyGroup(models.Model):
     @property
     def subject_info(self):
         from . import subjects
-        return subjects.get(self.subject)
+        return subjects.display(self.subject)
 
     def is_member(self, user):
         return user.is_authenticated and self.memberships.filter(user=user).exists()

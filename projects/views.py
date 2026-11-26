@@ -125,7 +125,7 @@ def home(request):
                           .exclude(summary='').order_by('score', 'pk')[:4])
     walkthroughs = Walkthrough.objects.filter(is_published=True)
     competitions = Competition.objects.exclude(series=Competition.SERIES_PLAYGROUND).prefetch_related('solutions')
-    today = timezone.now().date()
+    today = timezone.localdate()   # Helsinki date: a Playground episode starts and ends on local days
     live_playground = (Competition.objects.filter(series=Competition.SERIES_PLAYGROUND, start_date__lte=today,
                                                   end_date__gte=today).order_by('-start_date').first())
     if live_playground:

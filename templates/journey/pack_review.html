@@ -64,6 +64,7 @@ details.lj-src pre{white-space:pre-wrap;font-size:.9rem;margin:8px 0 0;max-heigh
                 <label>Grammar<input class="lj-input" name="{{ i.pk }}-grammar" value="{{ i.grammar }}"></label>
                 <label>English<input class="lj-input" name="{{ i.pk }}-meaning_en" value="{{ i.meaning_en }}"></label>
                 <label class="wide">Example from the lesson<input class="lj-input fi" name="{{ i.pk }}-example" value="{{ i.example }}" lang="fi"></label>
+                {% if i.data.dictionary %}<p class="wide lj-quote">Wiktionary: {{ i.data.dictionary }}</p>{% endif %}
             </div>
         {% endfor %}
         </div>
@@ -106,6 +107,7 @@ details.lj-src pre{white-space:pre-wrap;font-size:.9rem;margin:8px 0 0;max-heigh
         {% for i in by_kind.phrase %}
             <div class="lj-item {{ i.confidence }}">
                 {% include 'journey/_item_top.html' %}
+                {% if i.data.grounded is False %}<p class="wide muted">Not copied from the lesson: the AI built it from the lesson’s words.</p>{% endif %}
                 <label>Finnish<input class="lj-input fi" name="{{ i.pk }}-front" value="{{ i.front }}" lang="fi"></label>
                 <label>English<input class="lj-input" name="{{ i.pk }}-meaning_en" value="{{ i.meaning_en }}"></label>
             </div>
@@ -136,6 +138,7 @@ details.lj-src pre{white-space:pre-wrap;font-size:.9rem;margin:8px 0 0;max-heigh
                     <input type="radio" name="{{ i.pk }}-answer" value="{{ forloop.counter0 }}"{% if forloop.counter0 == i.data.answer %} checked{% endif %} aria-label="Correct answer">
                     <input class="lj-input" name="{{ i.pk }}-opt{{ forloop.counter0 }}" value="{{ o }}" aria-label="Answer {{ forloop.counter }}"></label>
                 {% endfor %}
+                {% if i.data.check %}<p class="wide muted"><i class="fas fa-triangle-exclamation"></i> {{ i.data.check }}</p>{% endif %}
                 <label class="wide">Why (shown after answering)<textarea class="lj-input" name="{{ i.pk }}-body" style="min-height:60px">{{ i.body }}</textarea></label>
                 {% if i.data.quote %}<p class="wide lj-quote">“{{ i.data.quote }}”</p>{% endif %}
             </div>
@@ -149,7 +152,8 @@ details.lj-src pre{white-space:pre-wrap;font-size:.9rem;margin:8px 0 0;max-heigh
         <div class="lj-items">
         {% for i in by_kind.table %}
             <div class="lj-item">
-                <div class="lj-item-top"><b>Verb table: <span class="fi">{{ i.front }}</span></b>
+                <div class="lj-item-top"><b>Verb table: <span class="fi">{{ i.front }}</span>
+                    <span class="lj-chip {{ i.confidence }}">{{ i.get_confidence_display }}</span></b>
                     <label class="lj-tick lj-del"><input type="checkbox" name="{{ i.pk }}-delete" data-del> Remove</label></div>
                 <p class="wide fi">{% for r in i.data.rows %}{{ r.0 }} {{ r.1 }}{% if not forloop.last %} · {% endif %}{% endfor %}</p>
             </div>

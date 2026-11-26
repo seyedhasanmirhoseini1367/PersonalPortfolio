@@ -111,12 +111,14 @@ def progress_summary(user, group=None):
     logs = ReviewLog.objects.filter(user=user)
     if group is not None:
         logs = logs.filter(item__pack__group=group)
-    week = []
-    for d in range(6, -1, -1):
-        start = today - timedelta(days=d)
-        week.append({'day': start, 'n': logs.filter(at__gte=start, at__lt=start + timedelta(days=1)).count()})
-    streak, day = 0, today
-    while logs.filter(at__gte=day, at__lt=day + timedelta(days=1)).exists():
+    per_day = {}
+    for at in logs.filter(at__gte=today - timedelta(days=365)).values_list('at', flat=True):
+        d = timezone.localtime(at).date()
+        per_day[d] = per_day.get(d, 0) + 1
+    week = [{'day': today - timedelta(days=d), 'n': per_day.get((today - timedelta(days=d)).date(), 0)}
+            for d in range(6, -1, -1)]
+    streak, day = 0, today.date()
+    while per_day.get(day):
         streak += 1
         day -= timedelta(days=1)
     top = max([w['n'] for w in week] + [1])
@@ -151,8 +153,10 @@ def recommendations(user, spaces):
         tips.append({'icon': 'fa-seedling', 'text': _n(counts['new'], 'new card is', 'new cards are') + ' ready to learn.',
                      'url': 'journey:review', 'cta': 'Learn new cards'})
     week_ago = timezone.now() - timedelta(days=7)
+    recent = set(ReviewLog.objects.filter(user=user, at__gte=week_ago, item__pack__group__in=spaces)
+                 .values_list('item__pack__group', flat=True).distinct())
     for s in spaces:
-        if s.n_packs and not ReviewLog.objects.filter(user=user, item__pack__group=s, at__gte=week_ago).exists():
+        if s.n_packs and s.pk not in recent:
             tips.append({'icon': 'fa-clock-rotate-left', 'text': f'You have not practised {s.name} for a week.',
                          'href': s.get_absolute_url(), 'cta': 'Open'})
     drafts = LessonPack.objects.filter(created_by=user, status=LessonPack.DRAFT).count()
@@ -214,8 +218,8 @@ def set_language(request):
 @require_POST
 def space_create(request):
     subject = request.POST.get('subject', subjects.DEFAULT)
-    if subject not in subjects.SUBJECTS:
-        messages.error(request, 'Pick a subject from the list.')
+    if not subjects.is_supported(subject):
+        messages.error(request, str(subjects.UnknownSubject(subject)))
         return redirect('journey:home')
     if StudyGroup.objects.filter(created_by=request.user, is_personal=True).count() >= MAX_SPACES:
         messages.error(request, f'You can have up to {MAX_SPACES} learning spaces.')
@@ -233,8 +237,8 @@ def group_create(request):
         messages.error(request, 'Give the group a name, for example “Suomi A1 – Tuesday class”.')
         return redirect('journey:home')
     subject = request.POST.get('subject', subjects.DEFAULT)
-    if subject not in subjects.SUBJECTS:
-        messages.error(request, 'Pick a subject from the list.')
+    if not subjects.is_supported(subject):
+        messages.error(request, str(subjects.UnknownSubject(subject)))
         return redirect('journey:home')
     if StudyGroup.objects.filter(created_by=request.user, is_personal=False).count() >= 10:
         messages.error(request, 'You can create up to 10 groups.')
@@ -333,6 +337,9 @@ def lesson_add(request):
 @login_required
 def pack_new(request, code, places=None):
     group = _group_for(request.user, code)
+    if not subjects.is_supported(group.subject):
+        messages.error(request, str(subjects.UnknownSubject(group.subject)))
+        return redirect(group)
     n_packs, n_images = _uploads_today(request.user)
     ctx = {'group': group, 'images_left': max(0, DAILY_IMAGES - n_images), 'max_files': pipeline.MAX_FILES,
            'packs_left': max(0, DAILY_PACKS - n_packs), 'subject': group.subject_info, 'places': places,

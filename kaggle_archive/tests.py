@@ -207,7 +207,7 @@ class PlaygroundTests(TestCase):
     def test_calendar_page(self):
         from datetime import date
         from .models import Competition
-        today = timezone.now().date()
+        today = timezone.localdate()
         self._comp('playground-series-s6e1', 6, 1, date(today.year, 1, 1), date(today.year, 1, 31), name='Podcast listening time',
                    metric='RMSE', task='regression', analyzed_at=timezone.now())
         live = self._comp('playground-series-s6e99', 6, 99, today, today, name='Live episode now')

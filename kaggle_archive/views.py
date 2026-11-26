@@ -287,7 +287,7 @@ MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'O
 
 def playground_view(request):
     from .models import PlaygroundYear
-    today = timezone.now().date()
+    today = timezone.localdate()
     episodes = list(Competition.objects.filter(series=Competition.SERIES_PLAYGROUND)
                     .annotate(n_solutions=Count('solutions', distinct=True),
                               n_writeups=Count('solutions', filter=~Q(solutions__writeup_content=''), distinct=True))

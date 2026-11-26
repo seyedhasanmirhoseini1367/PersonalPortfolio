@@ -154,13 +154,19 @@ def clean(text):
     return re.sub(r'\n{3,}', '\n\n', text).strip()
 
 
-def split_pages(text):
-    chunks = re.split(r'^\s*=+\s*Page\s+(\d+)\s*=+\s*$', text or '', flags=re.M | re.I)
-    if len(chunks) < 3:
-        return [('Page 1', clean(text))] if (text or '').strip() else []
+def split_marked(text, word):
+    """Split text the vision model marked with "=== <word> N ===" lines into [(N, body)]."""
+    chunks = re.split(r'^\s*=+\s*' + word + r'\s+(\d+)\s*=+\s*$', text or '', flags=re.M | re.I)
     out = []
     for i in range(1, len(chunks) - 1, 2):
         body = clean(chunks[i + 1])
         if body:
-            out.append((f'Page {chunks[i]}', body))
+            out.append((chunks[i], body))
     return out
+
+
+def split_pages(text):
+    found = split_marked(text, 'Page')
+    if not found:
+        return [('Page 1', clean(text))] if (text or '').strip() else []
+    return [(f'Page {n}', body) for n, body in found]
