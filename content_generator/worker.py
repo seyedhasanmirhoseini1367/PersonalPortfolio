@@ -167,6 +167,11 @@ def _idle_tasks() -> None:
         radar_maybe_run()   # Repo Radar: Mondays after 09:00 Helsinki
     except Exception:
         logger.exception('Repo radar check failed')
+    try:
+        from journey.cleanup import maybe_run as journey_cleanup
+        journey_cleanup()   # LearningJourney: drop failed lessons and old unpublished drafts (hourly)
+    except Exception:
+        logger.exception('LearningJourney cleanup failed')
 
 
 def _loop() -> None:
