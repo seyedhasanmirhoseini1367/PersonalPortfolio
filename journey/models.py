@@ -54,6 +54,8 @@ class LearnerProfile(models.Model):
                                        help_text='Optional second language shown next to English.')
     avatar = models.JSONField(default=dict, blank=True,
                               help_text='Cartoon character: {"skin","hair","hair_color","shirt","extra"}; see AVATAR_PARTS.')
+    town = models.JSONField(default=dict, blank=True,
+                            help_text='Town game progress: {"coins": int, "done": {quest: stars}, "sprite": frame}.')
 
     def __str__(self):
         return f'{self.user} ({self.helper_language or "English only"})'

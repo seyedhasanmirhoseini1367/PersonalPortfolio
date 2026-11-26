@@ -1,0 +1,147 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Kaupunki — LearningJourney{% endblock %}
+{% block extra_css %}
+<style>
+/* The town: pixel-art world (Kenney CC0 tiles) with a calm, game-like interface on top. */
+.tw{--tw-ink:#14202b;--tw-panel:rgba(16,24,32,.9);--tw-line:rgba(255,255,255,.12);--tw-text:#eef3f6;--tw-muted:#a9b6c0;
+    --tw-gold:#f2c14e;--tw-green:#5fd08a;--tw-red:#ff7a85;--tw-blue:#6cb6ff;
+    position:relative;width:100%;height:calc(100vh - 150px);min-height:460px;border-radius:16px;overflow:hidden;
+    background:#7ec46b;font-family:"Inter",system-ui,sans-serif;color:var(--tw-text);user-select:none;-webkit-user-select:none;touch-action:none}
+@media (max-width:700px){.tw{height:calc(100vh - 120px);border-radius:12px}.tw-quests{min-width:0;max-width:52vw}.tw-quests li{font-size:.8rem}.tw-btn{min-width:36px;height:36px;padding:0 8px}.tw-hud{inset:8px 8px auto 8px}}
+.tw canvas{display:block;image-rendering:pixelated}
+.tw [hidden]{display:none!important}
+.tw-hud{position:absolute;inset:10px 10px auto 10px;display:flex;justify-content:space-between;align-items:flex-start;gap:8px;pointer-events:none;z-index:5}
+.tw-hud>*{pointer-events:auto}
+.tw-left{display:flex;flex-direction:column;align-items:flex-start;gap:8px;flex:0 1 auto;min-width:0}
+.tw-right{flex:none}
+.tw-chip{background:var(--tw-panel);border:1px solid var(--tw-line);border-radius:12px;padding:7px 11px;display:flex;align-items:center;gap:8px;
+    font-weight:700;font-size:.92rem;backdrop-filter:blur(6px)}
+.tw-coin{width:18px;height:18px;image-rendering:pixelated}
+.tw-quests{background:var(--tw-panel);border:1px solid var(--tw-line);border-radius:12px;padding:8px 10px;min-width:210px;max-width:min(300px,60vw);backdrop-filter:blur(6px)}
+.tw-quests summary{cursor:pointer;font-weight:800;font-size:.85rem;letter-spacing:.06em;text-transform:uppercase;color:var(--tw-gold);list-style:none}
+.tw-quests summary::-webkit-details-marker{display:none}
+.tw-quests ul{list-style:none;margin:6px 0 0;padding:0;display:flex;flex-direction:column;gap:4px}
+.tw-quests li{display:flex;gap:8px;align-items:baseline;font-size:.86rem;line-height:1.35;cursor:pointer;padding:3px 4px;border-radius:6px}
+.tw-quests li:hover{background:rgba(255,255,255,.06)}
+.tw-quests li.done{color:var(--tw-muted);text-decoration:line-through}
+.tw-quests li.target b{color:var(--tw-blue)}
+.tw-quests li i{font-style:normal;width:14px;flex:none}
+.tw-quests small{color:var(--tw-muted);font-weight:400}
+.tw-right{display:flex;gap:6px}
+.tw-btn{background:var(--tw-panel);border:1px solid var(--tw-line);color:var(--tw-text);border-radius:12px;min-width:40px;height:40px;
+    display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:0 10px;cursor:pointer;font:inherit;font-weight:700;backdrop-filter:blur(6px)}
+.tw-btn:hover{border-color:rgba(255,255,255,.35)}
+.tw-btn:focus-visible{outline:2px solid var(--tw-blue);outline-offset:2px}
+.tw-btn.on{border-color:var(--tw-blue);color:var(--tw-blue)}
+.tw-arrow{position:absolute;width:34px;height:34px;margin:-17px 0 0 -17px;z-index:4;pointer-events:none;color:var(--tw-gold);
+    filter:drop-shadow(0 2px 2px rgba(0,0,0,.5));font-size:28px;display:flex;align-items:center;justify-content:center}
+.tw-talk{position:absolute;right:16px;bottom:18px;z-index:6;width:72px;height:72px;border-radius:50%;border:2px solid rgba(255,255,255,.3);
+    background:var(--tw-panel);color:var(--tw-text);font-weight:800;font-size:.9rem;cursor:pointer}
+.tw-talk.ready{border-color:var(--tw-gold);color:var(--tw-gold);box-shadow:0 0 0 4px rgba(242,193,78,.25)}
+.tw-stick{position:absolute;width:110px;height:110px;margin:-55px 0 0 -55px;border-radius:50%;border:2px solid rgba(255,255,255,.35);
+    background:rgba(16,24,32,.35);z-index:4;pointer-events:none}
+.tw-stick i{position:absolute;left:50%;top:50%;width:46px;height:46px;margin:-23px 0 0 -23px;border-radius:50%;background:rgba(255,255,255,.75)}
+.tw-toast{position:absolute;left:50%;top:64px;transform:translateX(-50%);z-index:7;background:var(--tw-panel);border:1px solid var(--tw-gold);
+    border-radius:12px;padding:10px 16px;font-weight:700;text-align:center;max-width:90%}
+.tw-dialog{position:absolute;inset:auto 10px 10px 10px;z-index:8;background:var(--tw-panel);border:1px solid var(--tw-line);border-radius:16px;
+    padding:14px;display:grid;grid-template-columns:auto 1fr;gap:6px 14px;max-height:70%;overflow:auto;backdrop-filter:blur(8px)}
+.tw-portrait{grid-row:span 2;width:72px;height:72px;border-radius:12px;background:#2a3a48;image-rendering:pixelated}
+.tw-who b{font-size:1rem}
+.tw-who small{color:var(--tw-muted);margin-inline-start:6px}
+.tw-line{font-size:1.15rem;line-height:1.45;min-height:1.6em}
+.tw-line .en{display:block;color:var(--tw-muted);font-size:.9rem;margin-top:2px}
+.tw-dialog-actions{grid-column:1/-1;display:flex;flex-direction:column;gap:8px;margin-top:4px}
+.tw-opt{text-align:start;background:rgba(255,255,255,.06);border:1px solid var(--tw-line);color:var(--tw-text);border-radius:10px;padding:11px 13px;
+    font:inherit;font-size:1rem;cursor:pointer;display:flex;gap:10px;align-items:center}
+.tw-opt kbd{font-size:.72rem;border:1px solid var(--tw-line);border-radius:5px;padding:0 5px;color:var(--tw-muted)}
+.tw-opt:hover{border-color:rgba(255,255,255,.35)}
+.tw-opt.right{border-color:var(--tw-green);background:rgba(95,208,138,.16)}
+.tw-opt.wrong{border-color:var(--tw-red);background:rgba(255,122,133,.14);animation:twshake .28s}
+.tw-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:space-between}
+.tw-small{font-size:.82rem;color:var(--tw-muted)}
+.tw-link{background:none;border:0;color:var(--tw-blue);cursor:pointer;font:inherit;font-size:.85rem;padding:0}
+.tw-next{align-self:flex-end}
+@keyframes twshake{25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+.tw-modal{position:absolute;inset:0;z-index:9;background:rgba(10,16,22,.72);display:flex;align-items:center;justify-content:center;padding:16px}
+.tw-card{background:#16212a;border:1px solid var(--tw-line);border-radius:16px;padding:20px;max-width:460px;width:100%;display:flex;flex-direction:column;gap:12px}
+.tw-card h2{margin:0;font-size:1.25rem;color:var(--tw-text)}
+.tw-card p{margin:0;color:var(--tw-muted);line-height:1.5}
+.tw-picks{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}
+.tw-pick{background:#223140;border:2px solid transparent;border-radius:12px;padding:6px;cursor:pointer}
+.tw-pick.sel{border-color:var(--tw-gold)}
+.tw-pick canvas{width:100%;image-rendering:pixelated}
+.tw-keys{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:.9rem;color:var(--tw-muted)}
+.tw-keys b{color:var(--tw-text)}
+.tw-stars{font-size:2rem;letter-spacing:.15em;color:var(--tw-gold);text-align:center}
+.tw-stars .off{color:#3a4855}
+.tw-loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-weight:700;color:#14202b}
+@media (prefers-reduced-motion:reduce){.tw-opt.wrong{animation:none}}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="tw" id="tw" aria-label="LearningJourney town">
+    <div class="tw-loading" id="tw-loading">Loading the town…</div>
+
+    <div class="tw-hud">
+        <div class="tw-left">
+            <div class="tw-chip" title="Coins"><canvas class="tw-coin" id="tw-coin-icon" width="16" height="16"></canvas><span id="tw-coins">0</span></div>
+            <details class="tw-quests" id="tw-quests" open><summary>Quests</summary><ul id="tw-quest-list"></ul></details>
+        </div>
+        <div class="tw-right">
+            <span class="tw-chip" id="tw-online" hidden></span>
+            <button class="tw-btn" type="button" id="tw-wave" title="Wave (Q)">👋</button>
+            <button class="tw-btn" type="button" id="tw-sound" aria-pressed="false" title="Read Finnish lines aloud">🔇</button>
+            <button class="tw-btn" type="button" id="tw-help" title="Controls">?</button>
+            <a class="tw-btn" href="{% url 'journey:home' %}" title="Back to LearningJourney">✕</a>
+        </div>
+    </div>
+
+    <div class="tw-arrow" id="tw-arrow" hidden aria-hidden="true">➤</div>
+    <div class="tw-stick" id="tw-stick" hidden><i id="tw-stick-knob"></i></div>
+    <button class="tw-talk" type="button" id="tw-talk" hidden>Talk</button>
+    <div class="tw-toast" id="tw-toast" hidden role="status"></div>
+
+    <section class="tw-dialog" id="tw-dialog" hidden aria-live="polite">
+        <canvas class="tw-portrait" id="tw-portrait" width="16" height="16"></canvas>
+        <div class="tw-row"><span class="tw-who"><b id="tw-npc-name"></b><small id="tw-npc-role"></small></span>
+            <span class="tw-small" id="tw-dialog-meta"></span></div>
+        <div class="tw-line" id="tw-line"></div>
+        <div class="tw-dialog-actions" id="tw-actions"></div>
+    </section>
+
+    <div class="tw-modal" id="tw-start" hidden>
+        <div class="tw-card">
+            <h2>Tervetuloa kaupunkiin!</h2>
+            <p>Welcome to the town. Walk around, talk to people and practise Finnish. Pick your character:</p>
+            <div class="tw-picks" id="tw-picks"></div>
+            <div class="tw-keys">
+                <b>Move</b><span>Arrow keys or WASD · on a phone, drag anywhere</span>
+                <b>Talk</b><span>E, Space or Enter near someone · on a phone, the Talk button</span>
+                <b>Answer</b><span>Click an answer or press 1–3</span>
+                <b>Wave</b><span>Q or 👋 · classmates in your groups see you walk around</span>
+            </div>
+            <button class="tw-btn on" type="button" id="tw-go" style="align-self:flex-end">Start ▸</button>
+        </div>
+    </div>
+</div>
+<p class="muted" style="margin-top:8px;font-size:.8rem">Prototype. Pixel art: Tiny Town and Tiny Dungeon by Kenney (CC0).</p>
+{{ town|json_script:"town-data" }}
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/3.80.1/phaser.min.js"></script>
+<script>
+window.TOWN_URLS = {
+    town: '{% static "journey/game/tiny_town.png" %}',
+    people: '{% static "journey/game/tiny_dungeon.png" %}',
+    finish: '{% url "journey:scene_finish" 0 %}',
+    state: '{% url "journey:town_state" %}',
+    presence: '{% url "journey:town_presence" %}',
+    csrf: '{{ csrf_token }}',
+    user: '{{ request.user.pk }}',
+};
+</script>
+<script src="{% static 'journey/town.js' %}"></script>
+{% endblock %}

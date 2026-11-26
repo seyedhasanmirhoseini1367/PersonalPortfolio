@@ -1,0 +1,4 @@
+Tiny Town (1.1) and Tiny Dungeon by Kenney (www.kenney.nl)
+License: Creative Commons Zero (CC0) - http://creativecommons.org/publicdomain/zero/1.0/
+Free to use in personal, educational and commercial projects. Credit is not required; thank you, Kenney.
+Files: tiny_town.png = Tiny Town Tilemap/tilemap_packed.png, tiny_dungeon.png = Tiny Dungeon Tilemap/tilemap_packed.png
