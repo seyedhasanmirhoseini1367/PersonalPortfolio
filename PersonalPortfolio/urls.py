@@ -31,6 +31,7 @@ urlpatterns = [
     path('robots.txt', include('projects.robots_urls')),
     re_path(r'^media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),
     path('sports/', include('sports.urls')),
+    path('learn/', include('journey.urls')),
 ]
 
 handler404 = 'projects.views.error_404'

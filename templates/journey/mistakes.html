@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+{% block title %}Mistake notebook — LearningJourney{% endblock %}
+{% block extra_css %}{% include 'journey/_style.html' %}{% endblock %}
+
+{% block content %}
+<div class="lj">
+    <header class="lj-head">
+        <a class="lj-eyebrow" href="{% url 'journey:home' %}"><i class="fas fa-arrow-left"></i> LearningJourney</a>
+        <h1>Mistake notebook</h1>
+        <p class="muted">Everything you have forgotten at least once, most-forgotten first. These cards also come back sooner in your daily review.</p>
+        {% if rows %}<div class="lj-inline"><a class="lj-btn berry" href="{% url 'journey:review' %}?mode=mistakes"><i class="fas fa-dumbbell"></i> Practise these now</a></div>{% endif %}
+    </header>
+
+    <section class="lj-card">
+        {% if rows %}
+        <ul class="lj-list">
+            {% for p in rows %}
+            <li class="lj-row" style="border-bottom:1px solid var(--border);padding-bottom:8px">
+                <span><span class="fi" lang="fi">{{ p.item.front }}</span>
+                    {% if p.item.form_in_text %}<small class="muted"> · {{ p.item.form_in_text }}</small>{% endif %}<br>
+                    <small class="muted">{% if p.item.meaning_fa %}<span class="fa" dir="rtl">{{ p.item.meaning_fa }}</span> · {% endif %}{{ p.item.meaning_en }} · {{ p.item.pack.title }}</small></span>
+                <span class="lj-chip low">forgot {{ p.lapses }}×</span>
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <div class="lj-empty">No mistakes yet. Cards you mark “Again” after learning them land here.</div>
+        {% endif %}
+    </section>
+</div>
+{% endblock %}

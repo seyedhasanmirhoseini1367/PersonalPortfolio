@@ -1,0 +1,135 @@
+{% extends 'base.html' %}
+{% block title %}{{ pack.title }} — LearningJourney{% endblock %}
+{% block extra_css %}{% include 'journey/_style.html' %}
+<style>
+.lj-words{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
+.lj-word{border:1px solid var(--border);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.lj-word .top{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.lj-word .fi.big{font-size:1.15rem;font-weight:700}
+.lj-word small{color:var(--text-muted)}
+.lj-note{border-inline-start:3px solid var(--lj-lake);padding-inline-start:12px;display:flex;flex-direction:column;gap:6px}
+.lj-table{border-collapse:collapse;width:100%;max-width:340px}
+.lj-table td{padding:4px 10px;border-bottom:1px solid var(--border)}
+.lj-tables{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+.lj-q{display:flex;flex-direction:column;gap:8px}
+.lj-opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px}
+.lj-opt{border:1px solid var(--border);background:transparent;color:var(--text);border-radius:10px;padding:10px;text-align:start;cursor:pointer;min-height:44px}
+.lj-opt.right{border-color:var(--lj-moss);background:color-mix(in srgb,var(--lj-moss) 15%,transparent)}
+.lj-opt.wrong{border-color:var(--lj-berry);background:color-mix(in srgb,var(--lj-berry) 15%,transparent)}
+.lj-text{white-space:pre-wrap;line-height:1.8;margin:0;max-height:360px;overflow:auto;font-size:1rem}
+</style>{% endblock %}
+
+{% block content %}
+<div class="lj">
+    <header class="lj-head">
+        <a class="lj-eyebrow" href="{{ group.get_absolute_url }}"><i class="fas fa-arrow-left"></i> {{ group.name }}</a>
+        <h1>{{ pack.title }}</h1>
+        <div class="lj-inline">
+            <a class="lj-btn" href="{% url 'journey:review' %}?group={{ group.invite_code }}"><i class="fas fa-layer-group"></i> Review cards</a>
+            <button class="lj-btn ghost" type="button" data-speak-text><i class="fas fa-volume-high"></i> Listen to the text</button>
+        </div>
+    </header>
+
+    {% if pack.summary %}<section class="lj-card"><h2>About this lesson</h2><p class="fa" dir="rtl">{{ pack.summary }}</p></section>{% endif %}
+
+    {% if by_kind.grammar %}
+    <section class="lj-card"><h2>Grammar</h2>
+        {% for g in by_kind.grammar %}
+        <div class="lj-note"><b>{{ g.front }}</b>
+            {% if g.body %}<p class="fa" dir="rtl">{{ g.body }}</p>{% endif %}
+            {% for e in g.data.examples %}<span class="fi" lang="fi">{{ e }}</span>{% endfor %}
+        </div>
+        {% endfor %}
+    </section>
+    {% endif %}
+
+    {% if by_kind.word %}
+    <section class="lj-card"><h2>Words ({{ by_kind.word|length }})</h2>
+        <div class="lj-words">
+        {% for w in by_kind.word %}
+            <div class="lj-word">
+                <div class="top"><span class="fi big" lang="fi">{{ w.front }}</span>
+                    <button class="lj-speak" type="button" data-speak="{{ w.front }}" aria-label="Listen to {{ w.front }}"><i class="fas fa-volume-high"></i></button></div>
+                {% if w.form_in_text %}<small>in the text: <span class="fi" lang="fi">{{ w.form_in_text }}</span></small>{% endif %}
+                {% if w.grammar %}<small>{{ w.grammar }}</small>{% endif %}
+                {% if w.meaning_fa %}<span class="fa" dir="rtl">{{ w.meaning_fa }}</span>{% endif %}
+                {% if w.meaning_en %}<span>{{ w.meaning_en }}</span>{% endif %}
+                {% if w.example %}<small class="fi" lang="fi">“{{ w.example }}”</small>{% endif %}
+            </div>
+        {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
+    {% if by_kind.phrase %}
+    <section class="lj-card"><h2>Useful phrases</h2>
+        <ul class="lj-list">
+        {% for p in by_kind.phrase %}
+            <li class="lj-row" style="border-bottom:1px solid var(--border);padding-bottom:8px">
+                <span><span class="fi" lang="fi">{{ p.front }}</span><br>
+                    <small class="muted">{% if p.meaning_fa %}<span class="fa" dir="rtl">{{ p.meaning_fa }}</span>{% endif %}{% if p.meaning_fa and p.meaning_en %} · {% endif %}{{ p.meaning_en }}</small></span>
+                <button class="lj-speak" type="button" data-speak="{{ p.front }}" aria-label="Listen"><i class="fas fa-volume-high"></i></button>
+            </li>
+        {% endfor %}
+        </ul>
+    </section>
+    {% endif %}
+
+    {% if by_kind.table %}
+    <section class="lj-card"><h2>Verb tables (present tense)</h2>
+        <div class="lj-tables">
+        {% for t in by_kind.table %}
+            <div><b class="fi" lang="fi">{{ t.front }}</b> <small class="muted">{{ t.meaning_en }}</small>
+                <table class="lj-table" lang="fi">{% for r in t.data.rows %}<tr><td class="muted">{{ r.0 }}</td><td class="fi">{{ r.1 }}</td></tr>{% endfor %}</table></div>
+        {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
+    {% if questions %}
+    <section class="lj-card"><h2>Check your understanding</h2>
+        <div id="lj-quiz" class="lj-form"></div>
+    </section>
+    {% endif %}
+
+    <section class="lj-card"><h2>Lesson text</h2><pre class="lj-text fi" lang="fi" id="lj-source">{{ pack.source_text }}</pre></section>
+
+    {% if can_edit %}
+    <form method="post" action="{% url 'journey:pack_edit' pack.pk %}">{% csrf_token %}
+        <button class="lj-btn ghost" name="action" value="delete"><i class="fas fa-trash"></i> Delete this lesson</button></form>
+    {% endif %}
+</div>
+{{ questions|json_script:"lj-questions" }}
+{% endblock %}
+
+{% block extra_js %}
+{% include 'journey/_speak.html' %}
+<script>
+(() => {
+    document.querySelectorAll('[data-speak]').forEach(b => b.addEventListener('click', () => ljSpeak(b.dataset.speak)));
+    const all = document.querySelector('[data-speak-text]');
+    if (all) all.addEventListener('click', () => ljSpeak(document.getElementById('lj-source').textContent));
+
+    const box = document.getElementById('lj-quiz');
+    if (!box) return;
+    const qs = JSON.parse(document.getElementById('lj-questions').textContent);
+    qs.forEach((q, n) => {
+        const wrap = document.createElement('div'); wrap.className = 'lj-q';
+        const h = document.createElement('b'); h.lang = 'fi'; h.textContent = (n + 1) + '. ' + q.q; wrap.appendChild(h);
+        if (q.fa) { const fa = document.createElement('small'); fa.className = 'fa muted'; fa.dir = 'rtl'; fa.textContent = q.fa; wrap.appendChild(fa); }
+        const opts = document.createElement('div'); opts.className = 'lj-opts';
+        const why = document.createElement('p'); why.className = 'fa muted'; why.dir = 'rtl'; why.hidden = true; why.textContent = q.why || '';
+        q.options.forEach((o, i) => {
+            const b = document.createElement('button'); b.type = 'button'; b.className = 'lj-opt'; b.lang = 'fi'; b.textContent = o;
+            b.addEventListener('click', () => {
+                opts.querySelectorAll('button').forEach((x, j) => { x.disabled = true; if (j === q.answer) x.classList.add('right'); });
+                if (i !== q.answer) b.classList.add('wrong');
+                why.hidden = !q.why;
+            });
+            opts.appendChild(b);
+        });
+        wrap.append(opts, why); box.appendChild(wrap);
+    });
+})();
+</script>
+{% endblock %}

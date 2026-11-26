@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     'kaggle_archive',
     'model_internals',
     'sports',
+    'journey',
 
     'storages',
 ]

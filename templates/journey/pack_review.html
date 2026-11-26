@@ -1,0 +1,129 @@
+{% extends 'base.html' %}
+{% block title %}Check: {{ pack.title }} — LearningJourney{% endblock %}
+{% block extra_css %}{% include 'journey/_style.html' %}
+<style>
+.lj-items{display:flex;flex-direction:column;gap:10px}
+.lj-item{border:1px solid var(--border);border-radius:12px;padding:12px;display:grid;gap:8px;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));align-items:end}
+.lj-item.low{border-color:var(--lj-berry)}
+.lj-item label{font-size:.75rem;font-weight:700;color:var(--text-muted)}
+.lj-item .lj-input{min-height:38px;padding:7px 10px;font-size:.93rem}
+.lj-item textarea.lj-input{min-height:90px}
+.lj-item .wide{grid-column:1/-1}
+.lj-item-top{grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.lj-del{display:inline-flex;flex-direction:row!important;align-items:center;gap:6px;font-size:.85rem!important;color:var(--lj-berry)!important}
+.lj-bar{position:sticky;bottom:0;background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:12px;
+  display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;padding-bottom:calc(12px + env(safe-area-inset-bottom,0px))}
+details.lj-src summary{cursor:pointer;font-weight:700}
+details.lj-src pre{white-space:pre-wrap;font-size:.9rem;margin:8px 0 0;max-height:320px;overflow:auto}
+</style>{% endblock %}
+
+{% block content %}
+<div class="lj">
+    <header class="lj-head">
+        <a class="lj-eyebrow" href="{{ group.get_absolute_url }}"><i class="fas fa-arrow-left"></i> {{ group.name }}</a>
+        <h1>Check “{{ pack.title }}”</h1>
+        <p class="muted">Only you and the group owner can see this draft. Fix anything wrong,
+           tick “Remove” on what you don’t need, then publish it to the group.</p>
+        {% if n_low %}<p><span class="lj-chip low">Unsure</span> {{ n_low }} word{{ n_low|pluralize }} could not be confirmed. Check those first.</p>{% endif %}
+    </header>
+
+    {% if pack.summary %}<section class="lj-card"><h2>About this lesson</h2><p class="fa" dir="rtl">{{ pack.summary }}</p></section>{% endif %}
+
+    <form method="post" action="{% url 'journey:pack_edit' pack.pk %}" class="lj-form">{% csrf_token %}
+
+    {% if by_kind.word %}
+    <section class="lj-card"><h2>Words ({{ by_kind.word|length }})</h2>
+        <div class="lj-items">
+        {% for i in by_kind.word %}
+            <div class="lj-item {{ i.confidence }}">
+                <div class="lj-item-top"><span class="lj-chip {{ i.confidence }}">{{ i.get_confidence_display }}</span>
+                    <label class="lj-del"><input type="checkbox" name="{{ i.pk }}-delete"> Remove</label></div>
+                <label>Base form<input class="lj-input fi" name="{{ i.pk }}-front" value="{{ i.front }}" lang="fi"></label>
+                <label>In the text<input class="lj-input fi" name="{{ i.pk }}-form_in_text" value="{{ i.form_in_text }}" lang="fi"></label>
+                <label>Grammar<input class="lj-input" name="{{ i.pk }}-grammar" value="{{ i.grammar }}"></label>
+                <label>Persian<input class="lj-input fa" dir="rtl" name="{{ i.pk }}-meaning_fa" value="{{ i.meaning_fa }}"></label>
+                <label>English<input class="lj-input" name="{{ i.pk }}-meaning_en" value="{{ i.meaning_en }}"></label>
+                <label class="wide">Example from the lesson<input class="lj-input fi" name="{{ i.pk }}-example" value="{{ i.example }}" lang="fi"></label>
+            </div>
+        {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
+    {% if by_kind.sentence %}
+    <section class="lj-card"><h2>Cloze sentences ({{ by_kind.sentence|length }})</h2>
+        <div class="lj-items">
+        {% for i in by_kind.sentence %}
+            <div class="lj-item">
+                <div class="lj-item-top"><span class="muted">The hidden word becomes a blank in review.</span>
+                    <label class="lj-del"><input type="checkbox" name="{{ i.pk }}-delete"> Remove</label></div>
+                <label class="wide">Sentence<input class="lj-input fi" name="{{ i.pk }}-front" value="{{ i.front }}" lang="fi"></label>
+                <label>Hidden word<input class="lj-input fi" name="{{ i.pk }}-cloze" value="{{ i.data.cloze }}" lang="fi"></label>
+                <label>Persian<input class="lj-input fa" dir="rtl" name="{{ i.pk }}-meaning_fa" value="{{ i.meaning_fa }}"></label>
+                <label>English<input class="lj-input" name="{{ i.pk }}-meaning_en" value="{{ i.meaning_en }}"></label>
+            </div>
+        {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
+    {% if by_kind.phrase %}
+    <section class="lj-card"><h2>Useful phrases ({{ by_kind.phrase|length }})</h2>
+        <div class="lj-items">
+        {% for i in by_kind.phrase %}
+            <div class="lj-item">
+                <div class="lj-item-top"><span></span><label class="lj-del"><input type="checkbox" name="{{ i.pk }}-delete"> Remove</label></div>
+                <label>Finnish<input class="lj-input fi" name="{{ i.pk }}-front" value="{{ i.front }}" lang="fi"></label>
+                <label>Persian<input class="lj-input fa" dir="rtl" name="{{ i.pk }}-meaning_fa" value="{{ i.meaning_fa }}"></label>
+                <label>English<input class="lj-input" name="{{ i.pk }}-meaning_en" value="{{ i.meaning_en }}"></label>
+            </div>
+        {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
+    {% if by_kind.grammar %}
+    <section class="lj-card"><h2>Grammar notes ({{ by_kind.grammar|length }})</h2>
+        <div class="lj-items">
+        {% for i in by_kind.grammar %}
+            <div class="lj-item">
+                <div class="lj-item-top"><span></span><label class="lj-del"><input type="checkbox" name="{{ i.pk }}-delete"> Remove</label></div>
+                <label class="wide">Title<input class="lj-input" name="{{ i.pk }}-front" value="{{ i.front }}"></label>
+                <label class="wide">Explanation (Persian)<textarea class="lj-input fa" dir="rtl" name="{{ i.pk }}-body">{{ i.body }}</textarea></label>
+                {% if i.data.examples %}<p class="wide muted fi">{{ i.data.examples|join:" · " }}</p>{% endif %}
+            </div>
+        {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
+    {% if by_kind.question or by_kind.table %}
+    <section class="lj-card"><h2>Questions and verb tables</h2>
+        <div class="lj-items">
+        {% for i in by_kind.question %}
+            <div class="lj-item">
+                <div class="lj-item-top"><b>Question</b><label class="lj-del"><input type="checkbox" name="{{ i.pk }}-delete"> Remove</label></div>
+                <label class="wide">Question<input class="lj-input fi" name="{{ i.pk }}-front" value="{{ i.front }}" lang="fi"></label>
+                <p class="wide muted">Answers: {% for o in i.data.options %}<span class="fi">{% if forloop.counter0 == i.data.answer %}✔ {% endif %}{{ o }}</span>{% if not forloop.last %} · {% endif %}{% endfor %}</p>
+            </div>
+        {% endfor %}
+        {% for i in by_kind.table %}
+            <div class="lj-item">
+                <div class="lj-item-top"><b>Verb table: <span class="fi">{{ i.front }}</span></b><label class="lj-del"><input type="checkbox" name="{{ i.pk }}-delete"> Remove</label></div>
+                <p class="wide fi">{% for r in i.data.rows %}{{ r.0 }} {{ r.1 }}{% if not forloop.last %} · {% endif %}{% endfor %}</p>
+            </div>
+        {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
+    <details class="lj-card lj-src"><summary>Lesson text the AI read</summary><pre lang="fi">{{ pack.source_text }}</pre></details>
+
+    <div class="lj-bar">
+        <button class="lj-btn ghost" name="action" value="delete" formnovalidate><i class="fas fa-trash"></i> Delete lesson</button>
+        <button class="lj-btn ghost" name="action" value="save"><i class="fas fa-floppy-disk"></i> Save</button>
+        <button class="lj-btn moss" name="action" value="publish"><i class="fas fa-paper-plane"></i> Save and publish</button>
+    </div>
+    </form>
+</div>
+{% endblock %}

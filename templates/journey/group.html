@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+{% block title %}{{ group.name }} — LearningJourney{% endblock %}
+{% block extra_css %}{% include 'journey/_style.html' %}{% endblock %}
+
+{% block content %}
+<div class="lj">
+    <header class="lj-head">
+        <a class="lj-eyebrow" href="{% url 'journey:home' %}"><i class="fas fa-arrow-left"></i> LearningJourney</a>
+        <h1>{{ group.name }}</h1>
+        <p class="muted">Invite classmates with this code. They sign in on hasanai.net and choose “Join with a code”.</p>
+        <div class="lj-inline"><span class="lj-code" id="lj-code">{{ group.invite_code }}</span>
+            <button class="lj-btn ghost" type="button" id="lj-copy"><i class="fas fa-copy"></i> Copy code</button></div>
+    </header>
+
+
+    <section class="lj-card">
+        <div class="lj-row">
+            <div class="lj-stats">
+                <div class="lj-stat"><b>{{ counts.due }}</b><span>due in this group</span></div>
+                <div class="lj-stat"><b>{{ counts.new }}</b><span>new today</span></div>
+            </div>
+            <div class="lj-inline">
+                <a class="lj-btn" href="{% url 'journey:review' %}?group={{ group.invite_code }}"><i class="fas fa-layer-group"></i> Review this group</a>
+                <a class="lj-btn moss" href="{% url 'journey:pack_new' group.invite_code %}"><i class="fas fa-camera"></i> Add a lesson</a>
+            </div>
+        </div>
+    </section>
+
+    <section class="lj-card">
+        <h2>Lessons</h2>
+        {% if packs %}
+        <ul class="lj-list">
+            {% for p in packs %}
+            <li><a class="lj-li" href="{{ p.get_absolute_url }}">
+                <span><b>{{ p.title }}</b><br><small>added by {{ p.created_by.username }} · {{ p.created_at|date:"j M Y" }}</small></span>
+                <span class="lj-chip {{ p.status }}">{{ p.get_status_display }}</span></a></li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <div class="lj-empty">No lessons yet. After your next class, take photos of the pages and choose “Add a lesson”.</div>
+        {% endif %}
+    </section>
+
+    <section class="lj-card">
+        <h2>Members</h2>
+        <div class="lj-inline">
+            {% for m in members %}<span class="lj-chip">{{ m.user.username }}{% if m.role == 'owner' %} · owner{% endif %}</span>{% endfor %}
+        </div>
+        <form method="post" action="{% url 'journey:group_leave' group.invite_code %}">{% csrf_token %}
+            <button class="lj-btn ghost" type="submit"><i class="fas fa-door-open"></i> Leave group</button></form>
+    </section>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('lj-copy').addEventListener('click', async (e) => {
+    const code = document.getElementById('lj-code').textContent.trim();
+    try { await navigator.clipboard.writeText(code); e.currentTarget.innerHTML = '<i class="fas fa-check"></i> Copied'; }
+    catch (err) { const r = document.createRange(); r.selectNode(document.getElementById('lj-code'));
+        const s = getSelection(); s.removeAllRanges(); s.addRange(r); }
+});
+</script>
+{% endblock %}

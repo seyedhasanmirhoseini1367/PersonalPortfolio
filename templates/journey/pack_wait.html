@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+{% block title %}{{ pack.title }} — LearningJourney{% endblock %}
+{% block extra_css %}{% include 'journey/_style.html' %}
+<style>
+.lj-steps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;color:var(--text-muted);font-size:.93rem}
+.lj-pulse{width:12px;height:12px;border-radius:50%;background:var(--lj-lake);display:inline-block;animation:ljp 1.2s ease-in-out infinite}
+@keyframes ljp{50%{opacity:.25;transform:scale(.7)}}
+</style>{% endblock %}
+
+{% block content %}
+<div class="lj">
+    <header class="lj-head">
+        <a class="lj-eyebrow" href="{{ pack.group.get_absolute_url }}"><i class="fas fa-arrow-left"></i> {{ pack.group.name }}</a>
+        <h1>{{ pack.title }}</h1>
+    </header>
+
+    {% if pack.status == 'processing' %}
+    <section class="lj-card" aria-live="polite">
+        <div class="lj-row"><b><span class="lj-pulse" aria-hidden="true"></span> Building your lesson</b>
+            <span class="lj-chip processing">usually under a minute</span></div>
+        <p id="lj-note">{{ pack.progress_note|default:"Starting…" }}</p>
+        <ul class="lj-steps">
+            <li>1. Reader: transcribes the photos</li>
+            <li>2. Linguist: words, base forms, cases and meanings</li>
+            <li>3. Teacher: grammar notes, phrases, questions, verb tables</li>
+            <li>4. Checker: looks each word up on Wiktionary</li>
+            <li>5. Quality: drops anything the lesson text does not support</li>
+        </ul>
+        <p class="muted">You can leave this page. The lesson keeps building and waits for you as a draft.</p>
+    </section>
+    {% elif pack.status == 'failed' %}
+    <section class="lj-card">
+        <b class="lj-chip failed" style="align-self:flex-start">Could not build this lesson</b>
+        <p>{{ pack.error }}</p>
+        {% if can_edit %}
+        <div class="lj-inline">
+            {% if pack.source_text %}
+            <form method="post" action="{% url 'journey:pack_edit' pack.pk %}">{% csrf_token %}
+                <button class="lj-btn" name="action" value="retry"><i class="fas fa-rotate"></i> Try again</button></form>
+            {% endif %}
+            <a class="lj-btn ghost" href="{% url 'journey:pack_new' pack.group.invite_code %}"><i class="fas fa-camera"></i> Add it again</a>
+            <form method="post" action="{% url 'journey:pack_edit' pack.pk %}">{% csrf_token %}
+                <button class="lj-btn ghost" name="action" value="delete"><i class="fas fa-trash"></i> Delete</button></form>
+        </div>
+        {% endif %}
+    </section>
+    {% else %}
+    <section class="lj-card"><p>{{ pack.created_by.username }} is checking this lesson. It appears here once it is published.</p></section>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% if pack.status == 'processing' %}
+<script>
+(() => {
+    const note = document.getElementById('lj-note');
+    async function poll() {
+        try {
+            const r = await fetch('{% url "journey:pack_status" pack.pk %}', {headers: {'Accept': 'application/json'}});
+            const d = await r.json();
+            if (d.status !== 'processing') { location.reload(); return; }
+            if (d.note) note.textContent = d.note;
+        } catch (e) { /* network blip: try again */ }
+        setTimeout(poll, 2500);
+    }
+    setTimeout(poll, 2500);
+})();
+</script>
+{% endif %}
+{% endblock %}
