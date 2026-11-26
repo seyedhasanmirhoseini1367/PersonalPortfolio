@@ -1,0 +1,15 @@
+<script>
+/* Finnish text-to-speech with the phone's or browser's own voice (free, no AI tokens). */
+window.ljSpeak = function (text) {
+    if (!('speechSynthesis' in window) || !text) return false;
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'fi-FI';
+    u.rate = 0.9;
+    const voice = speechSynthesis.getVoices().find(v => (v.lang || '').toLowerCase().startsWith('fi'));
+    if (voice) u.voice = voice;
+    speechSynthesis.speak(u);
+    return true;
+};
+if ('speechSynthesis' in window) speechSynthesis.getVoices();
+</script>

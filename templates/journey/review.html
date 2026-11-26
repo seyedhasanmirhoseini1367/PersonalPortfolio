@@ -1,0 +1,176 @@
+{% extends 'base.html' %}
+{% block title %}Review — LearningJourney{% endblock %}
+{% block extra_css %}{% include 'journey/_style.html' %}
+<style>
+.lj-rv{max-width:620px;width:100%;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+.lj-bar-p{height:6px;border-radius:99px;background:var(--border);overflow:hidden}
+.lj-bar-p i{display:block;height:100%;width:0;background:var(--lj-lake);transition:width .25s}
+.lj-flash{background:var(--bg-card);border:1px solid var(--border);border-radius:18px;padding:26px 20px;min-height:280px;
+  display:flex;flex-direction:column;gap:12px;align-items:center;justify-content:center;text-align:center;cursor:pointer}
+.lj-flash:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+.lj-front{font-size:clamp(1.6rem,6vw,2.3rem);font-weight:800;line-height:1.3;overflow-wrap:anywhere}
+.lj-front.sentence{font-size:clamp(1.15rem,4.5vw,1.45rem);font-weight:600}
+.lj-blank{display:inline-block;min-width:4ch;color:var(--lj-lake);letter-spacing:.05em}
+.lj-hit{color:var(--lj-moss);font-weight:800}
+.lj-back{display:flex;flex-direction:column;gap:6px;align-items:center;border-top:1px solid var(--border);padding-top:12px;width:100%}
+.lj-back .lj-extra{font-size:1.05rem}
+.lj-kind{font-size:.72rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted)}
+.lj-grades{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.lj-grades button{flex-direction:column;gap:2px;padding:8px 6px}
+.lj-grades small{font-weight:400;font-size:.72rem;opacity:.85}
+.lj-g-again{background:var(--lj-berry)!important}
+.lj-g-hard{background:var(--lj-amber)!important;color:#1a1a1a!important}
+.lj-g-good{background:var(--lj-lake)!important}
+.lj-g-easy{background:var(--lj-moss)!important}
+.lj-keys{font-size:.8rem;color:var(--text-muted);text-align:center}
+@media (max-width:420px){.lj-grades{grid-template-columns:repeat(2,1fr)}}
+</style>{% endblock %}
+
+{% block content %}
+<div class="lj">
+    <header class="lj-head">
+        <a class="lj-eyebrow" href="{% if group %}{{ group.get_absolute_url }}{% else %}{% url 'journey:home' %}{% endif %}">
+            <i class="fas fa-arrow-left"></i> {% if group %}{{ group.name }}{% else %}LearningJourney{% endif %}</a>
+        <h1>{% if mode == 'mistakes' %}Mistake notebook{% else %}Today’s review{% endif %}</h1>
+    </header>
+
+    <div class="lj-rv">
+        <div class="lj-row"><span class="muted" id="lj-left">Loading…</span>
+            <button class="lj-speak" type="button" id="lj-say" aria-label="Listen"><i class="fas fa-volume-high"></i></button></div>
+        <div class="lj-bar-p" aria-hidden="true"><i id="lj-progress"></i></div>
+
+        <div class="lj-flash" id="lj-card" tabindex="0" role="button" aria-label="Show the answer">
+            <span class="muted">Loading your cards…</span>
+        </div>
+
+        <button class="lj-btn" type="button" id="lj-show">Show answer</button>
+        <div class="lj-grades" id="lj-grades" hidden>
+            <button class="lj-btn lj-g-again" data-grade="again">Again<small>forgot</small></button>
+            <button class="lj-btn lj-g-hard" data-grade="hard">Hard<small>slow</small></button>
+            <button class="lj-btn lj-g-good" data-grade="good">Good<small>knew it</small></button>
+            <button class="lj-btn lj-g-easy" data-grade="easy">Easy<small>instant</small></button>
+        </div>
+        <p class="lj-keys">Keyboard: Space shows the answer, 1–4 grades it.</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% include 'journey/_speak.html' %}
+<script>
+(() => {
+    const API_DUE = '{% url "journey:api_due" %}?{% if group %}group={{ group.invite_code }}&{% endif %}mode={{ mode|urlencode }}';
+    const API_GRADE = '{% url "journey:api_grade" %}';
+    const CSRF = '{{ csrf_token }}';
+    const HOME = '{% if group %}{{ group.get_absolute_url }}{% else %}{% url "journey:home" %}{% endif %}';
+    const card = document.getElementById('lj-card');
+    const show = document.getElementById('lj-show');
+    const grades = document.getElementById('lj-grades');
+    const left = document.getElementById('lj-left');
+    const bar = document.getElementById('lj-progress');
+    let queue = [], cur = null, revealed = false, done = 0, total = 0, again = 0;
+
+    const el = (tag, cls, text, attrs = {}) => {
+        const e = document.createElement(tag);
+        if (cls) e.className = cls;
+        if (text != null) e.textContent = text;
+        Object.entries(attrs).forEach(([k, v]) => e.setAttribute(k, v));
+        return e;
+    };
+    function sentenceNode(sentence, word, mode) {
+        const span = el('span', 'lj-front sentence', null, {lang: 'fi'});
+        const i = word ? sentence.toLowerCase().indexOf(word.toLowerCase()) : -1;
+        if (i < 0) { span.textContent = sentence; return span; }
+        span.append(sentence.slice(0, i));
+        span.append(mode === 'blank'
+            ? el('span', 'lj-blank', '_'.repeat(Math.max(4, word.length)), {'aria-label': 'blank'})
+            : el('span', 'lj-hit', sentence.slice(i, i + word.length)));
+        span.append(sentence.slice(i + word.length));
+        return span;
+    }
+    let LANG = '', DIR = 'ltr';
+    const extra = c => el('span', 'lj-extra', c.extra, {dir: DIR, lang: LANG});
+    function meaning(c) {
+        const box = el('div', 'lj-back');
+        if (c.en) box.append(el('span', '', c.en));
+        if (c.extra) box.append(extra(c));
+        return box;
+    }
+    function draw() {
+        card.innerHTML = '';
+        revealed = false;
+        grades.hidden = true; show.hidden = false;
+        left.textContent = (total - done) + ' card' + (total - done === 1 ? '' : 's') + ' left · ' + cur.pack;
+        bar.style.width = (total ? Math.round(100 * done / total) : 0) + '%';
+        const kinds = {word: 'Word', sentence: 'Fill the blank', phrase: 'Say it in Finnish'};
+        card.append(el('span', 'lj-kind', kinds[cur.kind] || ''));
+        if (cur.kind === 'word') card.append(el('span', 'lj-front fi', cur.front, {lang: 'fi'}));
+        else if (cur.kind === 'sentence') { card.append(sentenceNode(cur.front, cur.cloze, 'blank')); card.append(meaning(cur)); }
+        else card.append(meaning(cur));
+    }
+    function reveal() {
+        if (revealed || !cur) return;
+        revealed = true;
+        const back = el('div', 'lj-back');
+        if (cur.kind === 'word') {
+            if (cur.en) back.append(el('span', '', cur.en));
+            if (cur.extra) back.append(extra(cur));
+            if (cur.form) back.append(el('small', 'muted', 'in the text: ' + cur.form));
+            if (cur.grammar) back.append(el('small', 'muted', cur.grammar));
+            if (cur.example) back.append(el('small', 'fi', '“' + cur.example + '”', {lang: 'fi'}));
+            ljSpeak(cur.front);
+        } else if (cur.kind === 'sentence') {
+            card.querySelector('.lj-front').replaceWith(sentenceNode(cur.front, cur.cloze, 'hit'));
+            ljSpeak(cur.front);
+        } else {
+            back.append(el('span', 'lj-front sentence fi', cur.front, {lang: 'fi'}));
+            ljSpeak(cur.front);
+        }
+        card.append(back);
+        show.hidden = true; grades.hidden = false;
+        grades.querySelector('[data-grade="good"]').focus({preventScroll: true});
+    }
+    async function grade(g) {
+        if (!revealed || !cur) return;
+        const c = cur;
+        const body = new URLSearchParams({item: c.id, grade: g});
+        fetch(API_GRADE, {method: 'POST', body, headers: {'X-CSRFToken': CSRF}}).catch(() => {});
+        if (g === 'again') { queue.push(c); again++; } else { done++; }
+        next();
+    }
+    function finish() {
+        card.innerHTML = '';
+        bar.style.width = '100%';
+        show.hidden = true; grades.hidden = true;
+        left.textContent = 'All done';
+        card.append(el('span', 'lj-front', total ? 'Hyvää työtä! 🎉' : 'Nothing to review'));
+        card.append(el('span', 'muted', total
+            ? done + ' card' + (done === 1 ? '' : 's') + ' reviewed' + (again ? ', ' + again + ' repeated' : '') + '. Come back tomorrow for the next ones.'
+            : ('{{ mode|escapejs }}' === 'mistakes'
+                ? 'Your mistake notebook is empty. Cards you forget after learning them show up here.'
+                : 'No cards are due. Add a lesson, or come back tomorrow.')));
+        const a = el('a', 'lj-btn ghost', 'Back', {href: HOME});
+        card.append(a);
+        cur = null;
+    }
+    function next() { cur = queue.shift(); cur ? draw() : finish(); }
+
+    card.addEventListener('click', reveal);
+    card.addEventListener('keydown', e => { if (e.key === 'Enter') reveal(); });
+    show.addEventListener('click', reveal);
+    grades.querySelectorAll('button').forEach(b => b.addEventListener('click', () => grade(b.dataset.grade)));
+    document.getElementById('lj-say').addEventListener('click', () => cur && ljSpeak(cur.front));
+    document.addEventListener('keydown', e => {
+        if (e.target.matches('input,textarea')) return;
+        if (e.code === 'Space') { e.preventDefault(); reveal(); }
+        const map = {'1': 'again', '2': 'hard', '3': 'good', '4': 'easy'};
+        if (map[e.key]) grade(map[e.key]);
+    });
+
+    fetch(API_DUE, {headers: {'Accept': 'application/json'}})
+        .then(r => r.json())
+        .then(d => { LANG = d.lang || ''; DIR = d.lang_dir || 'ltr'; queue = d.cards || []; total = queue.length; next(); })
+        .catch(() => { card.innerHTML = ''; card.append(el('span', 'muted', 'Could not load your cards. Check your connection and reload.')); });
+})();
+</script>
+{% endblock %}
