@@ -94,7 +94,7 @@ def _live_items():
     from kaggle_archive.models import Competition
     from stories.models import DigestItem, Story
     items = []
-    today = timezone.now().date()
+    today = timezone.localdate()
     digest = (Story.objects.filter(status=Story.Status.PUBLISHED, published_at__lte=timezone.now(),
                                    slug__startswith='ai-ml-digest-').order_by('-published_at').first())
     if digest:

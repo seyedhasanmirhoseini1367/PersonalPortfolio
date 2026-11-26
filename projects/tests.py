@@ -69,14 +69,14 @@ class SiteSearchTests(TestCase):
     """Top-bar search across the site, and the live chip."""
 
     def test_search_groups_and_ranking(self):
-        from datetime import date
+        from django.utils import timezone
         from django.core.cache import cache
         from model_internals.models import Walkthrough
         from kaggle_archive.models import Competition
         cache.clear()
         Walkthrough.objects.create(title='Exploratory Data Analysis', slug='eda', category='foundations', summary='x')
         Walkthrough.objects.create(title='LoRA: Low-Rank Adaptation', slug='lora', category='papers', summary='y')
-        today = date.today()
+        today = timezone.localdate()
         Competition.objects.create(name='Predicting Credit Card Fraud', slug='playground-series-s6e11', series='playground',
                                    season=6, episode=11, start_date=today, end_date=today)
         data = self.client.get('/search/', {'q': 'lora'}).json()
