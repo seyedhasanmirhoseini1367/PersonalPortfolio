@@ -26,13 +26,44 @@ HELPER_NAMES = {code: name.split(' · ')[0] for code, name in HELPER_LANGUAGES i
 RTL_LANGUAGES = {'ar', 'fa', 'ur', 'he'}
 
 
+# Parts a cartoon character is drawn from (static/journey/avatar.js draws them).
+AVATAR_PARTS = {
+    'skin': ['#f6d7c3', '#eac09a', '#d39b6a', '#a86b3c', '#6e4527'],
+    'hair': ['short', 'long', 'curly', 'bun', 'bald', 'cap'],
+    'hair_color': ['#2b2118', '#5a3a22', '#a5672f', '#e0b45a', '#c2c2c2', '#b8473a', '#3b5bdb'],
+    'shirt': ['#2f8fd8', '#d9546b', '#3fae74', '#e0a43a', '#7c5cd6', '#33414d'],
+    'extra': ['none', 'glasses', 'scarf', 'earrings', 'beard'],
+}
+
+
+def clean_avatar(spec, seed=''):
+    """Keep only known parts; fill gaps deterministically from seed so everyone has a character."""
+    spec = spec if isinstance(spec, dict) else {}
+    h = sum(ord(c) * (i + 1) for i, c in enumerate(seed or 'x'))
+    out = {}
+    for n, (part, options) in enumerate(AVATAR_PARTS.items()):
+        out[part] = spec.get(part) if spec.get(part) in options else options[(h // (n + 1)) % len(options)]
+    if not spec.get('extra'):
+        out['extra'] = 'none'
+    return out
+
+
 class LearnerProfile(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='journey_profile')
     helper_language = models.CharField(max_length=8, choices=HELPER_LANGUAGES, blank=True, default='',
                                        help_text='Optional second language shown next to English.')
+    avatar = models.JSONField(default=dict, blank=True,
+                              help_text='Cartoon character: {"skin","hair","hair_color","shirt","extra"}; see AVATAR_PARTS.')
 
     def __str__(self):
         return f'{self.user} ({self.helper_language or "English only"})'
+
+    @classmethod
+    def for_user(cls, user):
+        return cls.objects.get_or_create(user=user)[0]
+
+    def avatar_spec(self):
+        return clean_avatar(self.avatar, seed=self.user.username)
 
     @classmethod
     def language_of(cls, user):
@@ -187,3 +218,76 @@ class Progress(models.Model):
 
     def __str__(self):
         return f'{self.user} · {self.item}'
+
+
+SETTINGS = {
+    # key: (label, Font Awesome icon, two backdrop colours)
+    'cafe': ('Café', 'fa-mug-hot', '#f3e1cf', '#c98b5a'),
+    'market': ('Market', 'fa-basket-shopping', '#e5f2dc', '#6aa84f'),
+    'shop': ('Shop', 'fa-store', '#e3eefb', '#4a86c5'),
+    'station': ('Station', 'fa-train', '#e7e9f2', '#5b6b9a'),
+    'doctor': ('Health centre', 'fa-stethoscope', '#e3f4f4', '#3c9d9b'),
+    'classroom': ('Classroom', 'fa-chalkboard-user', '#f1ecdd', '#9b7d3c'),
+    'home': ('Home', 'fa-house', '#f6e4e8', '#c06a80'),
+    'street': ('Street', 'fa-city', '#e6ecef', '#61788a'),
+    'party': ('Party', 'fa-champagne-glasses', '#efe4f6', '#8a5cb5'),
+    'office': ('Office', 'fa-briefcase', '#e4e7ea', '#56606b'),
+}
+
+
+class Scene(models.Model):
+    """A short role-play built from a lesson: the learner plays one role in a dialogue.
+
+    steps: [{"who": "npc", "fi": "...", "en": "..."},
+            {"who": "you", "fi": "correct line", "en": "...",
+             "options": ["...", "...", "..."], "answer": 0}]
+    """
+    pack = models.ForeignKey(LessonPack, on_delete=models.CASCADE, related_name='scenes')
+    order = models.PositiveSmallIntegerField(default=0)
+    title = models.CharField(max_length=120)
+    setting = models.CharField(max_length=20, default='street')
+    situation_en = models.CharField(max_length=300, blank=True, help_text='One line: who you are and what happens.')
+    npc_name = models.CharField(max_length=40, default='Aino')
+    npc_role = models.CharField(max_length=60, blank=True)
+    you_role = models.CharField(max_length=60, blank=True)
+    steps = models.JSONField(default=list)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['order', 'pk']
+
+    def __str__(self):
+        return f'{self.pack}: {self.title}'
+
+    def get_absolute_url(self):
+        return reverse('journey:scene', args=[self.pk])
+
+    @property
+    def setting_info(self):
+        label, icon, light, dark = SETTINGS.get(self.setting, SETTINGS['street'])
+        return {'key': self.setting if self.setting in SETTINGS else 'street', 'label': label, 'icon': icon,
+                'light': light, 'dark': dark}
+
+    @property
+    def turns(self):
+        return sum(1 for s in self.steps if s.get('who') == 'you')
+
+    @property
+    def max_score(self):
+        return self.turns * 150
+
+
+class SceneResult(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='journey_scene_results')
+    scene = models.ForeignKey(Scene, on_delete=models.CASCADE, related_name='results')
+    best_score = models.PositiveIntegerField(default=0)
+    best_stars = models.PositiveSmallIntegerField(default=0)
+    last_score = models.PositiveIntegerField(default=0)
+    plays = models.PositiveIntegerField(default=0)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = [('user', 'scene')]
+
+    def __str__(self):
+        return f'{self.user} · {self.scene}: {self.best_score}'

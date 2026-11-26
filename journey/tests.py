@@ -135,7 +135,7 @@ class patched_pipeline:
         self.patches = [
             mock.patch.object(pipeline, 'read_images', mock.Mock(return_value=TEXT)),
             mock.patch.multiple(finnish, linguist=mock.Mock(return_value=LING), teacher=mock.Mock(return_value=TEACH),
-                                wiktionary_lookup=fake_lookup),
+                                wiktionary_lookup=fake_lookup, scene_writer=mock.Mock(return_value={})),
         ]
         for p in self.patches:
             p.start()
@@ -474,3 +474,129 @@ class CleanupTests(TestCase):
         cleanup._last_check = None
         self.assertIsNotNone(cleanup.maybe_run())
         self.assertIsNone(cleanup.maybe_run())
+
+
+SCENE = {'scenes': [{
+    'title': 'Meeting a neighbour', 'setting': 'home', 'situation_en': 'You meet your neighbour Aino.',
+    'npc_name': 'Aino', 'npc_role': 'neighbour', 'you_role': 'new resident',
+    'steps': [
+        {'who': 'npc', 'fi': 'Hei! Missä sinä asut?', 'en': 'Hi! Where do you live?'},
+        {'who': 'you', 'fi': 'Minä asun Tampereella.', 'en': 'I live in Tampere.',
+         'wrong': ['Minä asua Tampere.', 'Sinä asun Tampereella?']},
+        {'who': 'npc', 'fi': 'Kiva! Onko keittiössä pöytä?', 'en': 'Nice! Is there a table in the kitchen?'},
+        {'who': 'you', 'fi': 'Keittiössä on pöytä ja kaksi tuolia.', 'en': 'There is a table and two chairs.',
+         'wrong': ['Keittiö on pöydän.', 'Keittiössä ei kahvia.']},
+        {'who': 'npc', 'fi': 'Mitä sinä juot aamulla?', 'en': 'What do you drink in the morning?'},
+        {'who': 'you', 'fi': 'Juon aamulla kahvia.', 'en': 'I drink coffee in the morning.',
+         'wrong': ['Juon aamulla kahvi.', 'Juot aamulla kahvia.']},
+    ]}, {
+    'title': 'Off topic', 'setting': 'spaceship',
+    'steps': [{'who': 'npc', 'fi': 'Lentokone lähtee huomenna Helsingistä.'},
+              {'who': 'you', 'fi': 'Haluan matkustaa Japaniin ensi vuonna.', 'wrong': ['x y', 'z w']}]}]}
+
+
+class SceneWriterTests(TestCase):
+    def test_grounded_scene_is_kept_with_shuffled_options(self):
+        import random
+        scene = finnish.clean_scene(SCENE['scenes'][0], TEXT, rng=random.Random(3))
+        self.assertIsNotNone(scene)
+        self.assertEqual(scene['setting'], 'home')
+        turns = [s for s in scene['steps'] if s['who'] == 'you']
+        self.assertEqual(len(turns), 3)
+        for t in turns:
+            self.assertEqual(len(t['options']), 3)
+            self.assertEqual(t['options'][t['answer']], t['fi'])
+
+    def test_scenes_that_stray_from_the_lesson_are_dropped(self):
+        self.assertIsNone(finnish.clean_scene(SCENE['scenes'][1], TEXT))
+        short = dict(SCENE['scenes'][0], steps=SCENE['scenes'][0]['steps'][:2])
+        self.assertIsNone(finnish.clean_scene(short, TEXT), 'fewer than three turns is not a scene')
+        bad_place = dict(SCENE['scenes'][0], setting='moon')
+        self.assertEqual(finnish.clean_scene(bad_place, TEXT)['setting'], 'street')
+
+    def test_a_turn_without_three_distinct_options_is_skipped(self):
+        steps = [dict(s) for s in SCENE['scenes'][0]['steps']]
+        steps[1]['wrong'] = ['Minä asun Tampereella.', '']
+        scene = finnish.clean_scene(dict(SCENE['scenes'][0], steps=steps), TEXT)
+        self.assertIsNone(scene, 'only two turns remain, so the scene is dropped')
+
+
+@override_settings(JOURNEY_RUN_INLINE=True)
+class SceneFlowTests(TestCase):
+    def setUp(self):
+        self.me = User.objects.create_user('hasan', 'h@example.test', 'pw-hasan-123!')
+        self.friend = User.objects.create_user('friend', 'f@example.test', 'pw-friend-123!')
+        self.stranger = User.objects.create_user('stranger', 's@example.test', 'pw-stranger-123!')
+        self.client.force_login(self.me)
+        self.client.post(reverse('journey:group_create'), {'name': 'Suomi A1'})
+        self.group = StudyGroup.objects.get()
+        Membership.objects.create(group=self.group, user=self.friend)
+        with patched_pipeline(), mock.patch.object(finnish, 'scene_writer', return_value=SCENE):
+            self.client.post(reverse('journey:pack_new', args=[self.group.invite_code]), {'title': 'K3', 'text': TEXT})
+        self.pack = LessonPack.objects.get()
+
+    def test_lesson_build_writes_the_scene(self):
+        from .models import Scene
+        self.assertEqual(self.pack.status, LessonPack.DRAFT, self.pack.error)
+        self.assertEqual(Scene.objects.filter(pack=self.pack).count(), 1, 'the off-topic scene is dropped')
+
+    def test_scene_failure_never_fails_the_lesson(self):
+        with patched_pipeline(), mock.patch.object(finnish, 'scene_writer', side_effect=RuntimeError('quota')):
+            self.client.post(reverse('journey:pack_new', args=[self.group.invite_code]), {'title': 'K4', 'text': TEXT})
+        pack = LessonPack.objects.get(title='K4')
+        self.assertEqual(pack.status, LessonPack.DRAFT)
+        self.assertFalse(pack.scenes.exists())
+
+    def test_playing_scores_best_result_and_sends_missed_words_to_review(self):
+        from .models import SceneResult
+        self.pack.publish()
+        scene = self.pack.scenes.get()
+        self.client.force_login(self.friend)
+        page = self.client.get(scene.get_absolute_url())
+        self.assertContains(page, 'Meeting a neighbour')
+        self.assertContains(page, 'avatar.js')
+        self.assertContains(self.client.get(self.pack.get_absolute_url()), 'Play a scene')
+
+        # Step 3 is "Keittiössä on pöytä ja kaksi tuolia." and keittiö is a word of this lesson.
+        r = self.client.post(reverse('journey:scene_finish', args=[scene.pk]), {'score': 99999, 'missed': ['3']}).json()
+        self.assertEqual(r['score'], scene.max_score, 'scores are capped at the maximum')
+        self.assertEqual(r['stars'], 3)
+        self.assertEqual(r['added'], 1)
+        keittio = self.pack.items.get(kind='word', front='keittiö')
+        self.assertLessEqual(Progress.objects.get(user=self.friend, item=keittio).due, timezone.now())
+
+        r = self.client.post(reverse('journey:scene_finish', args=[scene.pk]), {'score': 100}).json()
+        self.assertEqual((r['stars'], r['best'], r['new_best']), (1, scene.max_score, False))
+        res = SceneResult.objects.get(user=self.friend, scene=scene)
+        self.assertEqual((res.plays, res.best_stars, res.last_score), (2, 3, 100))
+
+        board = self.client.get(self.group.get_absolute_url())
+        self.assertContains(board, 'Scene points')
+        self.assertContains(board, str(scene.max_score))
+
+    def test_drafts_and_strangers(self):
+        scene = self.pack.scenes.get()
+        self.client.force_login(self.friend)
+        self.assertEqual(self.client.get(scene.get_absolute_url()).status_code, 404, 'draft scenes are hidden from members')
+        self.client.force_login(self.me)
+        self.assertEqual(self.client.get(scene.get_absolute_url()).status_code, 200, 'the author can try it first')
+        self.client.force_login(self.stranger)
+        self.assertEqual(self.client.post(reverse('journey:scene_finish', args=[scene.pk]), {'score': 10}).status_code, 404)
+
+    def test_make_scenes_for_an_existing_lesson(self):
+        self.pack.scenes.all().delete()
+        self.pack.publish()
+        self.client.force_login(self.friend)
+        self.assertContains(self.client.get(self.pack.get_absolute_url()), 'Make a scene')
+        with mock.patch.object(finnish, 'scene_writer', return_value=SCENE):
+            self.client.post(reverse('journey:scene_make', args=[self.pack.pk]))
+        self.assertEqual(self.pack.scenes.count(), 1)
+
+    def test_character_is_saved_and_cleaned(self):
+        from .models import AVATAR_PARTS, LearnerProfile
+        self.assertContains(self.client.get(reverse('journey:home')), 'Your character')
+        self.client.post(reverse('journey:avatar_save'), {'skin': '#a86b3c', 'hair': 'curly', 'hair_color': 'red;}<x>',
+                                                          'shirt': '#3fae74', 'extra': 'glasses'})
+        spec = LearnerProfile.objects.get(user=self.me).avatar_spec()
+        self.assertEqual((spec['skin'], spec['hair'], spec['extra']), ('#a86b3c', 'curly', 'glasses'))
+        self.assertIn(spec['hair_color'], AVATAR_PARTS['hair_color'], 'unknown values are replaced')

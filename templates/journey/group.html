@@ -43,6 +43,17 @@
     </section>
 
     <section class="lj-card">
+        <h2><i class="fas fa-trophy"></i> Scene points</h2>
+        {% if board %}
+        <ol class="lj-board">
+            {% for r in board %}<li><span>{{ r.user__username }}</span><small class="muted">{{ r.stars }} ★</small><b>{{ r.points }}</b></li>{% endfor %}
+        </ol>
+        {% else %}
+        <p class="muted">No scores yet. Open a lesson and play its scene; your best score per scene counts here.</p>
+        {% endif %}
+    </section>
+
+    <section class="lj-card">
         <h2>Members</h2>
         <div class="lj-inline">
             {% for m in members %}<span class="lj-chip">{{ m.user.username }}{% if m.role == 'owner' %} · owner{% endif %}</span>{% endfor %}

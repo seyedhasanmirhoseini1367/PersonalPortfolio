@@ -9,8 +9,8 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from . import pipeline, srs, subjects, translate
-from .models import (HELPER_LANGUAGES, HELPER_NAMES, RTL_LANGUAGES, LearnerProfile, LessonPack, Membership,
-                     Progress, StudyGroup, StudyItem)
+from .models import (AVATAR_PARTS, HELPER_LANGUAGES, HELPER_NAMES, RTL_LANGUAGES, LearnerProfile, LessonPack, Membership,
+                     Progress, Scene, SceneResult, StudyGroup, StudyItem, clean_avatar)
 
 MAX_IMAGE_BYTES = 12 * 1024 * 1024
 NEW_PER_DAY = getattr(settings, 'JOURNEY_NEW_PER_DAY', 20)
@@ -99,8 +99,18 @@ def home(request):
     return render(request, 'journey/home.html', {
         'groups': groups, 'recent': recent, 'counts': due_counts(request.user), 'mistakes': mistakes,
         'helper_choices': HELPER_LANGUAGES, 'subject_choices': subjects.choices(), 'default_subject': subjects.DEFAULT,
+        'avatar': (avatar := LearnerProfile.for_user(request.user).avatar_spec()), 'avatar_fields': _avatar_fields(avatar),
         **_language(request),
     })
+
+
+AVATAR_LABELS = {'skin': 'Skin', 'hair': 'Hair', 'hair_color': 'Hair colour', 'shirt': 'Shirt', 'extra': 'Extra'}
+
+
+def _avatar_fields(avatar):
+    return [{'part': part, 'label': AVATAR_LABELS[part],
+             'options': [{'value': o, 'checked': avatar.get(part) == o, 'color': o.startswith('#')} for o in options]}
+            for part, options in AVATAR_PARTS.items()]
 
 
 @login_required
@@ -158,6 +168,7 @@ def group(request, code):
     return render(request, 'journey/group.html', {
         'group': group, 'subject': group.subject_info, 'packs': visible, 'members': group.memberships.select_related('user'),
         'is_owner': group.is_owner(request.user), 'counts': due_counts(request.user, group),
+        'board': scene_board(group),
     })
 
 
@@ -252,6 +263,7 @@ def pack(request, pk):
         'n_low': sum(1 for i in items if i.confidence == StudyItem.LOW and i.kind == StudyItem.WORD),
         'summary_extra': (pack.translations or {}).get(lang, '') if lang else '',
         'translating': translating, 'speech_lang': pack.group.subject_info.speech_lang, **language,
+        'scenes': _scenes_with_results(pack, request.user), 'scenes_running': pipeline.scenes_running(pack),
     })
 
 
@@ -379,3 +391,119 @@ def mistakes(request):
     rows = list(rows)
     _with_helper([p.item for p in rows], language['lang'])
     return render(request, 'journey/mistakes.html', {'rows': rows, **language})
+
+
+# ── scenes: role-play games built from a lesson ─────────────────────────────
+
+def _scene_for(user, pk):
+    scene = get_object_or_404(Scene.objects.select_related('pack__group'), pk=pk)
+    pack = scene.pack
+    if not pack.group.is_member(user) or (pack.status != LessonPack.PUBLISHED and not pack.can_edit(user)):
+        raise Http404('Not available')
+    return scene
+
+
+def _scenes_with_results(pack, user):
+    scenes = list(pack.scenes.all())
+    results = {r.scene_id: r for r in SceneResult.objects.filter(user=user, scene__in=scenes)}
+    for sc in scenes:
+        sc.my_result = results.get(sc.pk)
+    return scenes
+
+
+def stars_for(score, max_score):
+    if score <= 0 or max_score <= 0:
+        return 0
+    ratio = score / max_score
+    return 3 if ratio >= 0.85 else 2 if ratio >= 0.55 else 1
+
+
+def scene_board(group):
+    """Members ranked by the sum of their best scene scores in this group."""
+    rows = (SceneResult.objects.filter(scene__pack__group=group, scene__pack__status=LessonPack.PUBLISHED)
+            .values('user__username').annotate(points=Sum('best_score'), stars=Sum('best_stars'))
+            .order_by('-points')[:20])
+    return list(rows)
+
+
+@login_required
+def scene(request, pk):
+    scene = _scene_for(request.user, pk)
+    me = LearnerProfile.for_user(request.user)
+    result = SceneResult.objects.filter(user=request.user, scene=scene).first()
+    return render(request, 'journey/scene.html', {
+        'scene': scene, 'pack': scene.pack, 'group': scene.pack.group, 'setting': scene.setting_info,
+        'result': result, 'speech_lang': scene.pack.group.subject_info.speech_lang,
+        'game': {'steps': scene.steps, 'max': scene.max_score, 'npc': clean_avatar({}, seed=scene.npc_name),
+                 'me': me.avatar_spec(), 'best': result.best_score if result else 0},
+    })
+
+
+@login_required
+@require_POST
+def scene_finish(request, pk):
+    scene = _scene_for(request.user, pk)
+    try:
+        score = max(0, min(int(request.POST.get('score', 0)), scene.max_score))
+        missed = [int(i) for i in request.POST.getlist('missed') if str(i).isdigit()]
+    except (TypeError, ValueError):
+        return JsonResponse({'error': 'Send score and missed steps.'}, status=400)
+    stars = stars_for(score, scene.max_score)
+    result, _ = SceneResult.objects.get_or_create(user=request.user, scene=scene)
+    result.plays += 1
+    result.last_score = score
+    new_best = score > result.best_score
+    if new_best:
+        result.best_score, result.best_stars = score, stars
+    result.save()
+    added = _review_missed_words(request.user, scene, missed)
+    return JsonResponse({'stars': stars, 'score': score, 'best': result.best_score, 'new_best': new_best,
+                         'added': added, 'plays': result.plays})
+
+
+def _review_missed_words(user, scene, missed):
+    """Words of this lesson that appear in lines the player got wrong come up in today's review."""
+    from .subjects.base import word_in
+    lines = [scene.steps[i].get('fi', '') for i in set(missed)
+             if 0 <= i < len(scene.steps) and scene.steps[i].get('who') == 'you']
+    if not lines or scene.pack.status != LessonPack.PUBLISHED:
+        return 0
+    added = 0
+    now = timezone.now()
+    for item in scene.pack.items.filter(kind=StudyItem.WORD):
+        forms = [f for f in (item.form_in_text, item.front) if f]
+        if not any(word_in(f, line) for f in forms for line in lines):
+            continue
+        progress, created = Progress.objects.get_or_create(user=user, item=item)
+        if not created and progress.reps > 0:
+            srs.schedule(progress, srs.AGAIN, now)
+        progress.due = min(progress.due, now)
+        progress.save()
+        added += 1
+    return added
+
+
+@login_required
+@require_POST
+def scene_make(request, pk):
+    pack = _pack_for(request.user, pk)
+    if pack.status != LessonPack.PUBLISHED and not pack.can_edit(request.user):
+        raise Http404('Not available')
+    if not pack.source_text:
+        messages.error(request, 'This lesson has no text to build a scene from.')
+    elif pipeline.start_scenes(pack):
+        messages.success(request, 'Writing scenes for this lesson. Reload in a minute.')
+    else:
+        messages.info(request, 'Scenes for this lesson are already being written.')
+    return redirect(pack)
+
+
+@login_required
+@require_POST
+def avatar_save(request):
+    profile = LearnerProfile.for_user(request.user)
+    profile.avatar = clean_avatar({part: request.POST.get(part) for part in AVATAR_PARTS}, seed=request.user.username)
+    profile.save(update_fields=['avatar'])
+    messages.success(request, 'Your character is saved.')
+    nxt = request.POST.get('next', '')
+    return redirect(nxt if nxt.startswith('/learn/') else 'journey:home')

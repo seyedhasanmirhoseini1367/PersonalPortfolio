@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load static %}
 {% block title %}LearningJourney{% endblock %}
 {% block meta_description %}Turn your language lesson photos into flashcards, grammar notes and daily review.{% endblock %}
 {% block extra_css %}{% include 'journey/_style.html' %}{% endblock %}
@@ -25,6 +26,29 @@
                 {% if mistakes %}<a class="lj-btn ghost" href="{% url 'journey:mistakes' %}"><i class="fas fa-book-medical"></i> Mistakes</a>{% endif %}
             </div>
         </div>
+    </section>
+
+    <section class="lj-card">
+        <h2>Your character</h2>
+        <form method="post" action="{% url 'journey:avatar_save' %}" class="lj-char" id="lj-char">{% csrf_token %}
+            <div class="lj-char-preview" id="lj-char-preview" aria-hidden="true"></div>
+            <div class="lj-char-parts">
+                {% for f in avatar_fields %}
+                <fieldset>
+                    <legend>{{ f.label }}</legend>
+                    <div class="lj-swatches">
+                    {% for o in f.options %}
+                        <label class="lj-swatch{% if o.color %} color{% endif %}" title="{{ o.value }}">
+                            <input type="radio" name="{{ f.part }}" value="{{ o.value }}"{% if o.checked %} checked{% endif %}>
+                            {% if o.color %}<span style="background:{{ o.value }}"></span>{% else %}<span>{{ o.value }}</span>{% endif %}
+                        </label>
+                    {% endfor %}
+                    </div>
+                </fieldset>
+                {% endfor %}
+                <button class="lj-btn ghost" type="submit" style="align-self:flex-start"><i class="fas fa-user-astronaut"></i> Save character</button>
+            </div>
+        </form>
     </section>
 
     <section class="lj-card">
@@ -84,4 +108,21 @@
     </section>
     {% endif %}
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'journey/avatar.js' %}"></script>
+<script>
+(() => {
+    const form = document.getElementById('lj-char');
+    const preview = document.getElementById('lj-char-preview');
+    const draw = () => {
+        const spec = {};
+        new FormData(form).forEach((v, k) => { if (k !== 'csrfmiddlewaretoken') spec[k] = v; });
+        preview.innerHTML = ljAvatar(spec, 'happy', 120);
+    };
+    form.addEventListener('change', draw);
+    draw();
+})();
+</script>
 {% endblock %}
