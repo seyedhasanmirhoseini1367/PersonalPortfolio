@@ -4,25 +4,31 @@
 
 {% block content %}
 <div class="lj">
+    {% include 'journey/_nav.html' %}
     <header class="lj-head">
         <a class="lj-eyebrow" href="{% url 'journey:home' %}"><i class="fas fa-arrow-left"></i> LearningJourney</a>
         <h1>{{ group.name }}</h1>
-        <span class="lj-chip" style="align-self:flex-start" title="{{ subject.description }}"><i class="fas fa-book-open"></i> {{ subject.name }}</span>
+        <div class="lj-inline">
+            <span class="lj-chip" title="{{ subject.description }}"><i class="fas {{ subject.icon }}"></i> {{ subject.name }}</span>
+            {% if group.level %}<span class="lj-chip">{{ group.get_level_display }}</span>{% endif %}
+            <span class="lj-chip">{% if group.is_personal %}<i class="fas fa-lock"></i> Private space{% else %}<i class="fas fa-users"></i> Group{% endif %}</span>
+        </div>
+        {% if not group.is_personal %}
         <p class="muted">Invite classmates with this code. They sign in on hasanai.net and choose “Join with a code”.</p>
         <div class="lj-inline"><span class="lj-code" id="lj-code">{{ group.invite_code }}</span>
             <button class="lj-btn ghost" type="button" id="lj-copy"><i class="fas fa-copy"></i> Copy code</button></div>
+        {% endif %}
     </header>
-
 
     <section class="lj-card">
         <div class="lj-row">
             <div class="lj-stats">
-                <div class="lj-stat"><b>{{ counts.due }}</b><span>due in this group</span></div>
+                <div class="lj-stat"><b>{{ counts.due }}</b><span>due here</span></div>
                 <div class="lj-stat"><b>{{ counts.new }}</b><span>new today</span></div>
             </div>
             <div class="lj-inline">
-                <a class="lj-btn" href="{% url 'journey:review' %}?group={{ group.invite_code }}"><i class="fas fa-layer-group"></i> Review this group</a>
-                <a class="lj-btn moss" href="{% url 'journey:pack_new' group.invite_code %}"><i class="fas fa-camera"></i> Add a lesson</a>
+                <a class="lj-btn" href="{% url 'journey:review' %}?group={{ group.invite_code }}"><i class="fas fa-layer-group"></i> Practise {{ group.kind_label|lower }}</a>
+                <a class="lj-btn moss" href="{% url 'journey:pack_new' group.invite_code %}"><i class="fas fa-plus"></i> Add a lesson</a>
             </div>
         </div>
     </section>
@@ -33,15 +39,21 @@
         <ul class="lj-list">
             {% for p in packs %}
             <li><a class="lj-li" href="{{ p.get_absolute_url }}">
-                <span><b>{{ p.title }}</b><br><small>added by {{ p.created_by.username }} · {{ p.created_at|date:"j M Y" }}</small></span>
+                <span><b>{{ p.title }}</b><br><small>{% if not group.is_personal %}added by {{ p.created_by.username }} · {% endif %}{{ p.n_items }} item{{ p.n_items|pluralize }} · {{ p.created_at|date:"j M Y" }}</small></span>
                 <span class="lj-chip {{ p.status }}">{{ p.get_status_display }}</span></a></li>
             {% endfor %}
         </ul>
         {% else %}
-        <div class="lj-empty">No lessons yet. After your next class, take photos of the pages and choose “Add a lesson”.</div>
+        <div class="lj-empty">No lessons yet. Choose “Add a lesson” and send photos, a PDF, a Word file or text.</div>
         {% endif %}
     </section>
 
+    <section class="lj-card">
+        <h2>Progress here</h2>
+        {% include 'journey/_progress.html' %}
+    </section>
+
+    {% if not group.is_personal %}
     <section class="lj-card">
         <h2>Members</h2>
         <div class="lj-inline">
@@ -50,16 +62,41 @@
         <form method="post" action="{% url 'journey:group_leave' group.invite_code %}">{% csrf_token %}
             <button class="lj-btn ghost" type="submit"><i class="fas fa-door-open"></i> Leave group</button></form>
     </section>
+    {% endif %}
+
+    {% if is_owner %}
+    <details class="lj-card lj-more"><summary>Settings</summary>
+        <form method="post" action="{% url 'journey:group_settings' group.invite_code %}" class="lj-form">{% csrf_token %}
+            <div class="lj-grid">
+                <label for="lj-g-name">Name<input id="lj-g-name" class="lj-input" name="name" maxlength="80" value="{{ group.name }}"></label>
+                <label for="lj-g-level">Level
+                    <select id="lj-g-level" name="level" class="lj-input">
+                        {% for code, name in levels %}<option value="{{ code }}"{% if code == group.level %} selected{% endif %}>{{ name }}</option>{% endfor %}
+                    </select>
+                    <span class="muted" style="font-weight:400">Used for new lessons.</span></label>
+            </div>
+            <div class="lj-inline">
+                <button class="lj-btn" name="action" value="save"><i class="fas fa-floppy-disk"></i> Save</button>
+                <button class="lj-btn ghost" name="action" value="delete" id="lj-delete-space" formnovalidate><i class="fas fa-trash"></i> Delete {{ group.kind_label|lower }}</button>
+            </div>
+        </form>
+    </details>
+    {% endif %}
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-document.getElementById('lj-copy').addEventListener('click', async (e) => {
-    const code = document.getElementById('lj-code').textContent.trim();
-    try { await navigator.clipboard.writeText(code); e.currentTarget.innerHTML = '<i class="fas fa-check"></i> Copied'; }
-    catch (err) { const r = document.createRange(); r.selectNode(document.getElementById('lj-code'));
-        const s = getSelection(); s.removeAllRanges(); s.addRange(r); }
-});
+(() => {
+    const copy = document.getElementById('lj-copy');
+    if (copy) copy.addEventListener('click', async () => {
+        const code = document.getElementById('lj-code').textContent.trim();
+        try { await navigator.clipboard.writeText(code); copy.textContent = 'Copied'; } catch (err) { copy.textContent = code; }
+    });
+    const del = document.getElementById('lj-delete-space');
+    if (del) del.addEventListener('click', e => {
+        if (!confirm('Delete “{{ group.name|escapejs }}”, all its lessons and the progress on them? This cannot be undone.')) e.preventDefault();
+    });
+})();
 </script>
 {% endblock %}

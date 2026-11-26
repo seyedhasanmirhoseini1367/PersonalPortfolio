@@ -1,0 +1,16 @@
+<div class="lj-row" style="align-items:flex-end">
+    <div class="lj-stats">
+        <div class="lj-stat"><b>{{ progress.streak }}</b><span>day streak</span></div>
+        <div class="lj-stat"><b>{{ progress.seen }}</b><span>of {{ progress.total }} cards started</span></div>
+        <div class="lj-stat"><b>{{ progress.mastered }}</b><span>mastered</span></div>
+        <div class="lj-stat"><b>{{ progress.produced }}</b><span>typed correctly</span></div>
+        <div class="lj-stat"><b>{{ progress.weak }}</b><span>weak</span></div>
+    </div>
+    <div style="flex:1;min-width:200px;max-width:320px">
+        <div class="lj-week" role="img" aria-label="Answers in the last 7 days: {{ progress.week_total }}">
+            {% for w in progress.week %}<div title="{{ w.n }} answer{{ w.n|pluralize }} on {{ w.day|date:'D j M' }}"><i style="height:{{ w.pct }}%"></i><small>{{ w.day|date:'D'|slice:':2' }}</small></div>{% endfor %}
+        </div>
+    </div>
+</div>
+<p class="muted" style="font-size:.82rem">Mastered: the next review is three weeks or more away. Typed correctly: you produced
+    the answer yourself at least once, not only recognised it. Weak: forgotten twice or more.</p>

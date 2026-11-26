@@ -1,0 +1,7 @@
+<div class="lj-item-top">
+    <span class="tags"><span class="lj-chip {{ i.confidence }}">{{ i.get_confidence_display }}</span>
+        {% if i.source_ref %}<span class="lj-ref"><i class="fas fa-location-dot"></i> {{ i.source_ref }}</span>{% endif %}</span>
+    <span class="tags">
+        {% if i.confidence != 'high' %}<label class="lj-tick lj-ok"><input type="checkbox" name="{{ i.pk }}-ok" data-ok> Checked</label>{% endif %}
+        <label class="lj-tick lj-del"><input type="checkbox" name="{{ i.pk }}-delete" data-del> Remove</label></span>
+</div>

@@ -3,44 +3,65 @@
 {% block extra_css %}{% include 'journey/_style.html' %}
 <style>
 .lj-drop{border:2px dashed var(--border);border-radius:14px;padding:22px;text-align:center;display:flex;flex-direction:column;gap:10px;align-items:center}
-.lj-drop.over{border-color:var(--lj-lake)}
-.lj-thumbs{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:8px;width:100%}
-.lj-thumbs img{width:100%;aspect-ratio:3/4;object-fit:cover;border-radius:8px;border:1px solid var(--border)}
+.lj-drop.over{border-color:var(--lj-lake);background:color-mix(in srgb,var(--lj-lake) 6%,transparent)}
+.lj-files{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px;width:100%}
+.lj-file{position:relative;border:1px solid var(--border);border-radius:10px;overflow:hidden;aspect-ratio:3/4;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:6px;padding:6px;background:var(--bg-card);cursor:pointer;font-size:.72rem;text-align:center}
+.lj-file img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.lj-file i{font-size:1.8rem;color:var(--lj-lake)}
+.lj-file span{overflow-wrap:anywhere;max-height:3.6em;overflow:hidden}
 .lj-pickers{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
 .lj-pickers input{position:absolute;width:1px;height:1px;opacity:0}
 </style>{% endblock %}
 
 {% block content %}
 <div class="lj">
+    {% include 'journey/_nav.html' %}
     <header class="lj-head">
         <a class="lj-eyebrow" href="{{ group.get_absolute_url }}"><i class="fas fa-arrow-left"></i> {{ group.name }}</a>
         <h1>Add a lesson</h1>
-        <p class="muted">Photos of the textbook, handout or whiteboard, or the text itself. You can send both.
-           The AI builds a draft; you check it before anyone else sees it. Photos are not stored.</p>
+        <p class="muted">Photos, PDF or Word files, or text: you can mix them. The AI builds a draft; you check it before it goes
+           into practice{% if not group.is_personal %} or anyone else sees it{% endif %}. Files are read and then deleted, not stored.</p>
     </header>
 
-    <form method="post" enctype="multipart/form-data" class="lj-card lj-form" id="lj-form">{% csrf_token %}
-        <label for="lj-title">Lesson title
-            <input id="lj-title" class="lj-input" name="title" maxlength="120" value="{{ title|default:'' }}"
-                   placeholder="{{ subject.title_placeholder }}" required></label>
+    <form method="post" enctype="multipart/form-data" class="lj-card lj-form" id="lj-form"
+          action="{% if places %}{% url 'journey:lesson_add' %}{% else %}{% url 'journey:pack_new' group.invite_code %}{% endif %}">{% csrf_token %}
+        {% if places %}
+        <label for="lj-space">Learning space
+            <select id="lj-space" name="space" class="lj-input">
+                {% for p in places %}<option value="{{ p.invite_code }}"{% if p.pk == group.pk %} selected{% endif %}>{{ p.name }} · {% if p.is_personal %}your space{% else %}group{% endif %}</option>{% endfor %}
+            </select>
+            <span class="muted" style="font-weight:400">The subject of the space ({{ subject.name }}) decides what the AI builds.</span></label>
+        {% endif %}
 
         <div class="lj-drop" id="lj-drop">
-            <b>Photos ({{ max_images }} at a time)</b>
+            <b>Photos and files</b>
             <div class="lj-pickers">
                 <label class="lj-btn" for="lj-camera"><i class="fas fa-camera"></i> Take photo
                     <input id="lj-camera" type="file" accept="image/*" capture="environment"></label>
-                <label class="lj-btn ghost" for="lj-files"><i class="fas fa-images"></i> Choose photos
-                    <input id="lj-files" type="file" accept="image/*" multiple></label>
+                <label class="lj-btn ghost" for="lj-pick"><i class="fas fa-file-arrow-up"></i> Choose files
+                    <input id="lj-pick" type="file" accept="{{ file_types }}" multiple></label>
             </div>
-            <input id="lj-images" name="images" type="file" accept="image/*" multiple hidden>
-            <div class="lj-thumbs" id="lj-thumbs"></div>
-            <small class="muted" id="lj-count">No photos yet. You can also drop them here.</small>
+            <input id="lj-files" name="files" type="file" multiple hidden>
+            <div class="lj-files" id="lj-list"></div>
+            <small class="muted" id="lj-count">Drop files here. JPG, PNG, PDF (up to {{ max_pages }} pages) or Word .docx, 12 MB each, {{ max_files }} at a time.</small>
         </div>
 
-        <label for="lj-text">Or paste the lesson text
+        <label for="lj-text">Or paste text
             <textarea id="lj-text" name="text" placeholder="{{ subject.text_placeholder }}">{{ text|default:'' }}</textarea></label>
 
-        <p class="muted">Today you can still send {{ images_left }} photo{{ images_left|pluralize }} and {{ packs_left }} lesson{{ packs_left|pluralize }}.</p>
+        <details class="lj-more"{% if title or focus %} open{% endif %}><summary>Title and focus (optional)</summary>
+            <div class="lj-form" style="margin-top:12px">
+                <label for="lj-title">Lesson title
+                    <input id="lj-title" class="lj-input" name="title" maxlength="120" value="{{ title|default:'' }}"
+                           placeholder="{{ subject.title_placeholder }} · empty: the file name"></label>
+                <label for="lj-focus">What do you want from it?
+                    <input id="lj-focus" class="lj-input" name="focus" maxlength="200" value="{{ focus|default:'' }}"
+                           placeholder="e.g. the past tense; only the definitions; exam questions"></label>
+            </div>
+        </details>
+
+        <p class="muted">Today you can still add {{ packs_left }} lesson{{ packs_left|pluralize }} and {{ images_left }} photo{{ images_left|pluralize }}.</p>
         <button class="lj-btn moss" type="submit" id="lj-submit"><i class="fas fa-wand-magic-sparkles"></i> Build the lesson</button>
     </form>
 </div>
@@ -49,43 +70,53 @@
 {% block extra_js %}
 <script>
 (() => {
-    const MAX = {{ max_images }};
+    const MAX = {{ max_files }}, MB = 12 * 1024 * 1024;
+    const OK = /\.(jpe?g|png|webp|heic|gif|pdf|docx)$/i;
     const picked = [];
-    const target = document.getElementById('lj-images');
-    const thumbs = document.getElementById('lj-thumbs');
+    const target = document.getElementById('lj-files');
+    const list = document.getElementById('lj-list');
     const count = document.getElementById('lj-count');
-    function render() {
+    const icon = f => /\.pdf$/i.test(f.name) ? 'fa-file-pdf' : /\.docx$/i.test(f.name) ? 'fa-file-word' : 'fa-file';
+    function render(note) {
         const dt = new DataTransfer();
         picked.forEach(f => dt.items.add(f));
         target.files = dt.files;
-        thumbs.innerHTML = '';
+        list.innerHTML = '';
         picked.forEach((f, i) => {
-            const img = document.createElement('img');
-            img.alt = 'Photo ' + (i + 1);
-            img.src = URL.createObjectURL(f);
-            img.title = 'Tap to remove';
-            img.addEventListener('click', () => { picked.splice(i, 1); render(); });
-            thumbs.appendChild(img);
+            const tile = document.createElement('button');
+            tile.type = 'button'; tile.className = 'lj-file'; tile.title = 'Remove ' + f.name;
+            if (f.type.startsWith('image/')) {
+                const img = document.createElement('img'); img.alt = f.name; img.src = URL.createObjectURL(f); tile.appendChild(img);
+            } else {
+                const ic = document.createElement('i'); ic.className = 'fas ' + icon(f); tile.appendChild(ic);
+                const s = document.createElement('span'); s.textContent = f.name; tile.appendChild(s);
+            }
+            tile.addEventListener('click', () => { picked.splice(i, 1); render(); });
+            list.appendChild(tile);
         });
-        count.textContent = picked.length
-            ? picked.length + ' of ' + MAX + ' photos. Tap a photo to remove it.'
-            : 'No photos yet. You can also drop them here.';
+        count.textContent = note || (picked.length
+            ? picked.length + ' of ' + MAX + ' files. Tap one to remove it.'
+            : 'Drop files here. JPG, PNG, PDF (up to {{ max_pages }} pages) or Word .docx, 12 MB each, ' + MAX + ' at a time.');
     }
     function add(files) {
+        let note = '';
         for (const f of files) {
-            if (!f.type.startsWith('image/')) continue;
-            if (picked.length >= MAX) { count.textContent = 'At most ' + MAX + ' photos at a time.'; break; }
+            if (!(f.type.startsWith('image/') || OK.test(f.name))) { note = '“' + f.name + '” is not a photo, PDF or .docx file.'; continue; }
+            if (f.size > MB) { note = '“' + f.name + '” is over 12 MB.'; continue; }
+            if (picked.length >= MAX) { note = 'At most ' + MAX + ' files at a time.'; break; }
             picked.push(f);
         }
-        render();
+        render(note);
     }
-    ['lj-camera', 'lj-files'].forEach(id => document.getElementById(id).addEventListener('change', e => {
+    ['lj-camera', 'lj-pick'].forEach(id => document.getElementById(id).addEventListener('change', e => {
         add(e.target.files); e.target.value = '';
     }));
     const drop = document.getElementById('lj-drop');
     drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('over'); });
     drop.addEventListener('dragleave', () => drop.classList.remove('over'));
     drop.addEventListener('drop', e => { e.preventDefault(); drop.classList.remove('over'); add(e.dataTransfer.files); });
+    const space = document.getElementById('lj-space');
+    if (space) space.addEventListener('change', () => { location.search = '?space=' + space.value; });
     document.getElementById('lj-form').addEventListener('submit', () => {
         const b = document.getElementById('lj-submit');
         b.disabled = true; b.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading…';

@@ -81,8 +81,16 @@ def new_invite_code():
     return ''.join(secrets.choice(CODE_ALPHABET) for _ in range(6))
 
 
+LEVELS = [('', 'Not set'), ('beginner', 'Beginner'), ('intermediate', 'Intermediate'), ('advanced', 'Advanced'),
+          ('A1', 'A1'), ('A2', 'A2'), ('B1', 'B1'), ('B2', 'B2'), ('C1', 'C1')]
+
+
 class StudyGroup(models.Model):
+    """A place lessons live in. Personal (a private learning space, one owner) or a shared group with an invite code."""
     name = models.CharField(max_length=80)
+    is_personal = models.BooleanField(default=False, help_text='A private learning space: nobody can join it.')
+    level = models.CharField(max_length=12, choices=LEVELS, blank=True, default='',
+                             help_text='Tells the AI who the lessons are for, e.g. A1 or beginner.')
     subject = models.CharField(max_length=24, default='finnish',
                                help_text='Which agents build its lessons; a key in journey.subjects.SUBJECTS.')
     invite_code = models.CharField(max_length=12, unique=True, default=new_invite_code)
@@ -110,6 +118,10 @@ class StudyGroup(models.Model):
     def is_owner(self, user):
         return user.is_authenticated and self.memberships.filter(user=user, role=Membership.OWNER).exists()
 
+    @property
+    def kind_label(self):
+        return 'Space' if self.is_personal else 'Group'
+
 
 class Membership(models.Model):
     OWNER, MEMBER = 'owner', 'member'
@@ -131,6 +143,7 @@ class Membership(models.Model):
 class LessonPack(models.Model):
     PROCESSING, DRAFT, PUBLISHED, FAILED = 'processing', 'draft', 'published', 'failed'
     STATUSES = [(PROCESSING, 'Processing'), (DRAFT, 'Draft'), (PUBLISHED, 'Published'), (FAILED, 'Failed')]
+    SOURCE_KINDS = [('text', 'Text'), ('photos', 'Photos'), ('pdf', 'PDF'), ('docx', 'Word document'), ('mixed', 'Mixed')]
 
     group = models.ForeignKey(StudyGroup, on_delete=models.CASCADE, related_name='packs')
     title = models.CharField(max_length=120)
@@ -140,6 +153,12 @@ class LessonPack(models.Model):
     error = models.TextField(blank=True)
     image_count = models.PositiveSmallIntegerField(default=0)
     source_text = models.TextField(blank=True, help_text='The lesson text, typed in or read from the photos.')
+    source_kind = models.CharField(max_length=8, choices=SOURCE_KINDS, blank=True, default='')
+    source_parts = models.JSONField(default=list, blank=True,
+                                    help_text='Where each part of source_text came from: [["Page 2", start offset], ...].')
+    focus = models.CharField(max_length=200, blank=True, help_text='Optional: what the learner wants from this material.')
+    attempts = models.PositiveSmallIntegerField(default=0, help_text='Build attempts by the background worker.')
+    started_at = models.DateTimeField(null=True, blank=True, help_text='When the worker last took this build.')
     summary = models.TextField(blank=True, help_text='In English.')
     translations = models.JSONField(default=dict, blank=True,
                                     help_text='Summary per helper language: {"fa": "..."}; a key means the whole pack is translated.')
@@ -158,21 +177,42 @@ class LessonPack(models.Model):
     def can_edit(self, user):
         return user.is_authenticated and (user == self.created_by or self.group.is_owner(user))
 
+    def part_at(self, offset):
+        label = ''
+        for name, start in self.source_parts or []:
+            if start <= offset:
+                label = name
+        return label
+
     def publish(self):
         self.status = self.PUBLISHED
         self.published_at = timezone.now()
         self.save(update_fields=['status', 'published_at'])
 
 
+class PendingUpload(models.Model):
+    """A file waiting for the background build. Deleted as soon as its text is read: originals are not kept."""
+    pack = models.ForeignKey(LessonPack, on_delete=models.CASCADE, related_name='uploads')
+    order = models.PositiveSmallIntegerField(default=0)
+    kind = models.CharField(max_length=8)   # image, pdf, docx: a key in journey.extract.EXTRACTORS
+    name = models.CharField(max_length=160, blank=True)
+    data = models.BinaryField()
+
+    class Meta:
+        ordering = ['order', 'pk']
+
+
 class StudyItem(models.Model):
     WORD, SENTENCE, PHRASE, GRAMMAR, QUESTION, TABLE = 'word', 'sentence', 'phrase', 'grammar', 'question', 'table'
+    CONCEPT, NOTE = 'concept', 'note'
     KINDS = [(WORD, 'Word'), (SENTENCE, 'Sentence'), (PHRASE, 'Useful phrase'),
-             (GRAMMAR, 'Grammar note'), (QUESTION, 'Comprehension question'), (TABLE, 'Inflection table')]
+             (GRAMMAR, 'Grammar note'), (QUESTION, 'Comprehension question'), (TABLE, 'Inflection table'),
+             (CONCEPT, 'Concept'), (NOTE, 'Key idea')]
     # Kinds that go into the daily spaced-repetition review.
-    REVIEWABLE = (WORD, SENTENCE, PHRASE)
+    REVIEWABLE = (WORD, SENTENCE, PHRASE, CONCEPT, QUESTION)
 
     HIGH, MEDIUM, LOW = 'high', 'medium', 'low'
-    CONFIDENCE = [(HIGH, 'Checked'), (MEDIUM, 'Likely'), (LOW, 'Unsure')]
+    CONFIDENCE = [(HIGH, 'Verified'), (MEDIUM, 'Needs review'), (LOW, 'Low confidence')]
 
     pack = models.ForeignKey(LessonPack, on_delete=models.CASCADE, related_name='items')
     kind = models.CharField(max_length=10, choices=KINDS)
@@ -187,6 +227,7 @@ class StudyItem(models.Model):
     translations = models.JSONField(default=dict, blank=True,
                                     help_text='Per helper language: {"fa": {"meaning": "...", "body": "..."}}')
     confidence = models.CharField(max_length=8, choices=CONFIDENCE, default=MEDIUM)
+    source_ref = models.CharField(max_length=60, blank=True, help_text='Where in the material it came from, e.g. Page 3.')
 
     class Meta:
         ordering = ['kind', 'order', 'pk']
@@ -220,6 +261,22 @@ class Progress(models.Model):
 
     def __str__(self):
         return f'{self.user} · {self.item}'
+
+
+class ReviewLog(models.Model):
+    """One answer in practice. Kept so progress can tell recognising something from producing it."""
+    FLASH, TYPE, CHOICE = 'flash', 'type', 'choice'
+    MODES = [(FLASH, 'Flashcard'), (TYPE, 'Typed answer'), (CHOICE, 'Multiple choice')]
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='journey_reviews')
+    item = models.ForeignKey(StudyItem, on_delete=models.CASCADE, related_name='reviews')
+    grade = models.PositiveSmallIntegerField()
+    mode = models.CharField(max_length=8, choices=MODES, default=FLASH)
+    correct = models.BooleanField(null=True, help_text='Checked by the app (typed or chosen); empty for self-graded cards.')
+    at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [models.Index(fields=['user', 'at'])]
 
 
 SETTINGS = {
