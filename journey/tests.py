@@ -919,3 +919,28 @@ class PracticeTests(TestCase):
         for url in (self.space.get_absolute_url(), self.pack.get_absolute_url()):
             self.assertEqual(self.client.get(url).status_code, 200, url)
         self.assertContains(self.client.get(self.pack.get_absolute_url()), 'Concepts')
+
+
+class VisionFallbackTests(TestCase):
+    def test_the_next_model_reads_when_one_is_out_of_quota_or_retired(self):
+        calls = []
+
+        def gemini(blobs, prompt, mime='image/jpeg', model=None):
+            calls.append(model)
+            if model != 'gemini-flash-lite-latest':
+                raise RuntimeError('429 RESOURCE_EXHAUSTED')
+            return 'Minä asun Tampereella.'
+        with mock.patch.object(pipeline, '_gemini_read', side_effect=gemini), \
+             mock.patch.object(pipeline, '_groq_read') as groq:
+            self.assertEqual(pipeline.read_images([b'x'], 'read'), 'Minä asun Tampereella.')
+        self.assertEqual(calls[-1], 'gemini-flash-lite-latest')
+        self.assertFalse(groq.called)
+
+    def test_when_every_model_is_busy_the_learner_gets_a_plain_message(self):
+        with mock.patch.object(pipeline, '_gemini_read', side_effect=RuntimeError('429 RESOURCE_EXHAUSTED')), \
+             mock.patch.object(pipeline, '_groq_read', side_effect=RuntimeError('503 UNAVAILABLE')):
+            with self.assertRaisesRegex(RuntimeError, 'busy or have used their free quota'):
+                pipeline.read_images([b'x'], 'read')
+        with mock.patch.object(pipeline, '_gemini_read', side_effect=RuntimeError('429')), \
+             mock.patch.object(pipeline, '_groq_read', return_value='Teksti'):
+            self.assertEqual(pipeline.read_images([b'x'], 'read'), 'Teksti', 'Groq is the last fallback')

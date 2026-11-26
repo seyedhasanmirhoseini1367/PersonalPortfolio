@@ -50,60 +50,91 @@ def prepare_image(raw: bytes) -> bytes:
     return out.getvalue()
 
 
-def _gemini_read(blobs, prompt, mime='image/jpeg'):
+# Vision models, tried in order. On the free tiers each model has its own quota, and models
+# get retired, so several are listed; JOURNEY_GEMINI_VISION / JOURNEY_GROQ_VISION (comma-separated)
+# replace the lists without a code change.
+GEMINI_VISION = ['gemini-2.5-flash', 'gemini-flash-lite-latest', 'gemini-flash-latest', 'gemma-4-31b-it']
+GROQ_VISION = ['qwen/qwen3.8-27b']
+
+
+def _models(env, default):
+    from content_generator.pipeline.config import GEMINI_MODEL
+    names = [m.strip() for m in os.getenv(env, '').split(',') if m.strip()] or default
+    if env == 'JOURNEY_GEMINI_VISION' and GEMINI_MODEL not in names:
+        names = [GEMINI_MODEL] + names
+    return list(dict.fromkeys(names))
+
+
+def _gemini_read(blobs, prompt, mime='image/jpeg', model=None):
     key = os.getenv('GEMINI_API_KEY', '')
     if not key:
         return None
     from google import genai
     from google.genai import types
-    from content_generator.pipeline.config import GEMINI_MODEL
     client = genai.Client(api_key=key)
     parts = [types.Part.from_bytes(data=b, mime_type=mime) for b in blobs] + [prompt]
-    resp = client.models.generate_content(
-        model=GEMINI_MODEL, contents=parts,
-        config=types.GenerateContentConfig(temperature=0.0,
-                                           thinking_config=types.ThinkingConfig(thinking_budget=0)))
+    config = {'temperature': 0.0}
+    if model.startswith('gemini-2.5'):
+        config['thinking_config'] = types.ThinkingConfig(thinking_budget=0)
+    resp = client.models.generate_content(model=model, contents=parts, config=types.GenerateContentConfig(**config))
     return (resp.text or '').strip() or None
 
 
-def _groq_read(images, prompt):
+def _groq_read(images, prompt, model=None):
     key = os.getenv('GROQ_API_KEY', '')
     if not key:
         return None
+    import re
     from groq import Groq
-    model = os.getenv('JOURNEY_VISION_MODEL', 'meta-llama/llama-4-scout-17b-16e-instruct')
     content = [{'type': 'text', 'text': prompt}] + [
         {'type': 'image_url', 'image_url': {'url': 'data:image/jpeg;base64,' + base64.b64encode(b).decode()}}
         for b in images[:5]]   # Groq accepts at most 5 images per request
     resp = Groq(api_key=key).chat.completions.create(
-        model=model, messages=[{'role': 'user', 'content': content}], temperature=0.0, max_tokens=2048)
-    return (resp.choices[0].message.content or '').strip() or None
+        model=model, messages=[{'role': 'user', 'content': content}], temperature=0.0, max_tokens=4096)
+    text = resp.choices[0].message.content or ''
+    return re.sub(r'<think>.*?</think>', '', text, flags=re.S).strip() or None
+
+
+def _readers():
+    return ([(f'gemini:{m}', lambda b, p, m=m: _gemini_read(b, p, model=m)) for m in _models('JOURNEY_GEMINI_VISION', GEMINI_VISION)] +
+            [(f'groq:{m}', lambda b, p, m=m: _groq_read(b, p, model=m)) for m in _models('JOURNEY_GROQ_VISION', GROQ_VISION)])
+
+
+def _busy(errors):
+    return errors and all(any(c in e for c in ('429', '503', 'RESOURCE_EXHAUSTED', 'UNAVAILABLE', 'rate')) for e in errors)
 
 
 def read_images(images, prompt=subjects.base.Subject.read_prompt):
-    """Return the text in the photos, or raise RuntimeError."""
+    """Return the text in the photos, or raise RuntimeError. Tries each vision model until one answers."""
     errors = []
-    for reader in (_gemini_read, _groq_read):
+    for name, reader in _readers():
         try:
             text = reader(images, prompt)
             if text:
                 return text
-        except Exception as exc:   # one provider failing should not stop the other
-            errors.append(f'{reader.__name__}: {str(exc)[:160]}')
-            logger.warning('LearningJourney reader failed: %s', exc)
-    raise RuntimeError('Could not read the photos. ' + ('; '.join(errors) or 'No vision model is configured.'))
+        except Exception as exc:   # one model failing (quota, retired) should not stop the next
+            errors.append(f'{name}: {str(exc)[:120]}')
+            logger.warning('LearningJourney reader %s failed: %s', name, str(exc)[:200])
+    if _busy(errors):
+        raise RuntimeError('The AI services that read photos are busy or have used their free quota for now. '
+                           'Wait a little and add the lesson again, or paste the text instead.')
+    raise RuntimeError('Could not read the photos. ' + ('; '.join(errors)[:600] or 'No vision model is configured.'))
 
 
 def read_pdf(data, prompt):
-    """A scanned PDF: only Gemini reads PDFs directly."""
-    try:
-        text = _gemini_read([data], prompt, mime='application/pdf')
-    except Exception as exc:
-        raise RuntimeError(f'Could not read the scanned PDF: {str(exc)[:160]}')
-    if not text:
-        raise RuntimeError('This PDF has no text layer (it is a scan) and no vision model could read it. '
-                           'Send the pages as photos instead.')
-    return text
+    """A scanned PDF: only Gemini models read PDFs directly."""
+    errors = []
+    for model in _models('JOURNEY_GEMINI_VISION', GEMINI_VISION):
+        try:
+            text = _gemini_read([data], prompt, mime='application/pdf', model=model)
+            if text:
+                return text
+        except Exception as exc:
+            errors.append(f'{model}: {str(exc)[:120]}')
+    if _busy(errors):
+        raise RuntimeError('The AI services that read scanned PDFs are busy or out of free quota for now. Try again later.')
+    raise RuntimeError('This PDF has no text layer (it is a scan) and no vision model could read it. '
+                       'Send the pages as photos instead.' + (f' ({"; ".join(errors)[:300]})' if errors else ''))
 
 
 # ── build ────────────────────────────────────────────────────────────────────
