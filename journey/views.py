@@ -1,7 +1,12 @@
 """LearningJourney pages and the small JSON API used by the review screen."""
+import json
+import re
+import time
+
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.cache import cache
 from django.db.models import Case, Count, Q, Sum, When
 from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -507,3 +512,87 @@ def avatar_save(request):
     messages.success(request, 'Your character is saved.')
     nxt = request.POST.get('next', '')
     return redirect(nxt if nxt.startswith('/learn/') else 'journey:home')
+
+
+# ── the town: a walkable world where lesson scenes become people ────────────
+
+@login_required
+def town(request):
+    from . import town as town_data
+    return render(request, 'journey/town.html', {'town': town_data.build(request.user)})
+
+
+# Town progress and live presence. Positions live a few seconds in the cache (one web
+# process), so classmates in the same groups see each other walk around.
+TOWN_W, TOWN_H, TILE = 36, 26, 16
+PRESENCE_TTL = 12           # seconds a position stays visible after the last update
+QUEST_KEY = re.compile(r'^(scene\d{1,9}|starter-[a-z]{2,20})$')
+
+
+def _clean_town(data, old=None):
+    """Merge saved progress: quests keep their best stars; coins never go down (no shop yet)."""
+    old = old if isinstance(old, dict) else {}
+    data = data if isinstance(data, dict) else {}
+    done = dict(old.get('done') or {})
+    for k, v in (data.get('done') or {}).items():
+        if isinstance(k, str) and QUEST_KEY.match(k) and isinstance(v, int) and 0 <= v <= 3:
+            done[k] = max(v, done.get(k, 0))
+    coins = old.get('coins', 0)
+    if isinstance(data.get('coins'), int):
+        coins = max(coins, min(data['coins'], 100000))
+    sprite = data.get('sprite') if data.get('sprite') in town_player_choices() else old.get('sprite')
+    return {'coins': coins, 'done': done, 'sprite': sprite}
+
+
+def town_player_choices():
+    from .town import PLAYER_CHOICES
+    return PLAYER_CHOICES
+
+
+@login_required
+def town_state(request):
+    profile = LearnerProfile.for_user(request.user)
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body or b'{}')
+        except ValueError:
+            return JsonResponse({'error': 'Send JSON.'}, status=400)
+        profile.town = _clean_town(data, profile.town)
+        profile.save(update_fields=['town'])
+    return JsonResponse(_clean_town(profile.town))
+
+
+def _peer_ids(user):
+    key = f'lj-peers-{user.pk}'
+    ids = cache.get(key)
+    if ids is None:
+        groups = Membership.objects.filter(user=user).values('group')
+        ids = list(Membership.objects.filter(group__in=groups).exclude(user=user)
+                   .values_list('user_id', flat=True).distinct())
+        cache.set(key, ids, 60)
+    return ids
+
+
+@login_required
+@require_POST
+def town_presence(request):
+    try:
+        data = json.loads(request.body or b'{}')
+        x = max(0.0, min(float(data.get('x', 0)), TOWN_W * TILE))
+        y = max(0.0, min(float(data.get('y', 0)), TOWN_H * TILE))
+    except (TypeError, ValueError):
+        return JsonResponse({'error': 'Send x and y.'}, status=400)
+    frame = data.get('f') if data.get('f') in town_player_choices() else town_player_choices()[0]
+    me = {'id': request.user.pk, 'name': request.user.username[:24], 'x': round(x, 1), 'y': round(y, 1), 'f': frame,
+          'flip': bool(data.get('flip')), 'moving': bool(data.get('moving')), 't': time.time()}
+    old = cache.get(f'lj-pos-{request.user.pk}') or {}
+    if data.get('emote') == 'wave':
+        me['emote'] = time.time()
+    elif old.get('emote') and time.time() - old['emote'] < 3:
+        me['emote'] = old['emote']
+    cache.set(f'lj-pos-{request.user.pk}', me, PRESENCE_TTL)
+    now = time.time()
+    peers = [p for p in cache.get_many([f'lj-pos-{i}' for i in _peer_ids(request.user)]).values()
+             if now - p.get('t', 0) < PRESENCE_TTL]
+    return JsonResponse({'peers': [{**p, 'emote_age': round(now - p['emote'], 1) if p.get('emote') else None}
+                                   for p in peers]})

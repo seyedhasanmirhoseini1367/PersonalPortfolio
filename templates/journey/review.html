@@ -119,13 +119,13 @@
             if (cur.form) back.append(el('small', 'muted', 'in the text: ' + cur.form));
             if (cur.grammar) back.append(el('small', 'muted', cur.grammar));
             if (cur.example) back.append(el('small', 'fi', '“' + cur.example + '”', {lang: 'fi'}));
-            ljSpeak(cur.front, cur.speech);
+
         } else if (cur.kind === 'sentence') {
             card.querySelector('.lj-front').replaceWith(sentenceNode(cur.front, cur.cloze, 'hit'));
-            ljSpeak(cur.front, cur.speech);
+
         } else {
             back.append(el('span', 'lj-front sentence fi', cur.front, {lang: 'fi'}));
-            ljSpeak(cur.front, cur.speech);
+
         }
         card.append(back);
         show.hidden = true; grades.hidden = false;

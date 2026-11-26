@@ -108,7 +108,7 @@
         const fi = el('span', 'fi', step.fi); fi.lang = 'fi';
         const en = el('small', '', step.en || ''); en.hidden = true;
         b.append(fi, en);
-        b.addEventListener('click', () => { en.hidden = !en.hidden; ljSpeak(step.fi); });
+        b.addEventListener('click', () => { en.hidden = !en.hidden; });
         line.append(f, b);
         chat.appendChild(line);
         line.scrollIntoView({block: 'nearest', behavior: 'smooth'});
@@ -128,7 +128,7 @@
         if (step.who === 'npc') {
             face('npc', 'talk');
             bubble(step, false);
-            ljSpeak(step.fi);
+
             i++;
             setTimeout(() => { face('npc', 'happy'); next(); }, 900);
             return;
@@ -162,7 +162,7 @@
             setTimeout(() => {
                 opts.innerHTML = '';
                 const line = bubble(step, true);
-                ljSpeak(step.fi);
+
                 setScore(base + speed, speed >= 25 ? 'fast' : '', line);
                 i++;
                 setTimeout(next, 700);
