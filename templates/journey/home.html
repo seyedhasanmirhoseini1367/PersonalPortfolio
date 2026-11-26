@@ -56,6 +56,11 @@
             <form method="post" action="{% url 'journey:group_create' %}" class="lj-form">{% csrf_token %}
                 <label for="lj-new-group">Create a group
                     <input id="lj-new-group" class="lj-input" name="name" maxlength="80" placeholder="Suomi A1 – Tuesday class" required></label>
+                <label for="lj-subject">Subject
+                    <select id="lj-subject" name="subject" class="lj-input">
+                        {% for key, name in subject_choices %}<option value="{{ key }}"{% if key == default_subject %} selected{% endif %}>{{ name }}</option>{% endfor %}
+                    </select>
+                    <span class="muted" style="font-weight:400">Decides what the AI builds from your lessons. More subjects are coming.</span></label>
                 <button class="lj-btn" type="submit"><i class="fas fa-plus"></i> Create</button>
             </form>
             <form method="post" action="{% url 'journey:group_join' %}" class="lj-form">{% csrf_token %}

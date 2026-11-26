@@ -109,9 +109,11 @@
 {% endblock %}
 
 {% block extra_js %}
+<script>window.LJ_SPEECH = '{{ speech_lang|escapejs }}';</script>
 {% include 'journey/_speak.html' %}
 <script>
 (() => {
+    if (!window.LJ_SPEECH) document.querySelectorAll('[data-speak],[data-speak-text]').forEach(b => { b.hidden = true; });
     document.querySelectorAll('[data-speak]').forEach(b => b.addEventListener('click', () => ljSpeak(b.dataset.speak)));
     const all = document.querySelector('[data-speak-text]');
     if (all) all.addEventListener('click', () => ljSpeak(document.getElementById('lj-source').textContent));

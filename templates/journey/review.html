@@ -99,6 +99,7 @@
     function draw() {
         card.innerHTML = '';
         revealed = false;
+        document.getElementById('lj-say').hidden = !cur.speech;
         grades.hidden = true; show.hidden = false;
         left.textContent = (total - done) + ' card' + (total - done === 1 ? '' : 's') + ' left · ' + cur.pack;
         bar.style.width = (total ? Math.round(100 * done / total) : 0) + '%';
@@ -118,13 +119,13 @@
             if (cur.form) back.append(el('small', 'muted', 'in the text: ' + cur.form));
             if (cur.grammar) back.append(el('small', 'muted', cur.grammar));
             if (cur.example) back.append(el('small', 'fi', '“' + cur.example + '”', {lang: 'fi'}));
-            ljSpeak(cur.front);
+            ljSpeak(cur.front, cur.speech);
         } else if (cur.kind === 'sentence') {
             card.querySelector('.lj-front').replaceWith(sentenceNode(cur.front, cur.cloze, 'hit'));
-            ljSpeak(cur.front);
+            ljSpeak(cur.front, cur.speech);
         } else {
             back.append(el('span', 'lj-front sentence fi', cur.front, {lang: 'fi'}));
-            ljSpeak(cur.front);
+            ljSpeak(cur.front, cur.speech);
         }
         card.append(back);
         show.hidden = true; grades.hidden = false;
@@ -159,7 +160,7 @@
     card.addEventListener('keydown', e => { if (e.key === 'Enter') reveal(); });
     show.addEventListener('click', reveal);
     grades.querySelectorAll('button').forEach(b => b.addEventListener('click', () => grade(b.dataset.grade)));
-    document.getElementById('lj-say').addEventListener('click', () => cur && ljSpeak(cur.front));
+    document.getElementById('lj-say').addEventListener('click', () => cur && ljSpeak(cur.front, cur.speech));
     document.addEventListener('keydown', e => {
         if (e.target.matches('input,textarea')) return;
         if (e.code === 'Space') { e.preventDefault(); reveal(); }

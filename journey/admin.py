@@ -11,7 +11,7 @@ class MembershipInline(admin.TabularInline):
 
 @admin.register(StudyGroup)
 class StudyGroupAdmin(admin.ModelAdmin):
-    list_display = ['name', 'language', 'invite_code', 'created_by', 'created_at']
+    list_display = ['name', 'subject', 'invite_code', 'created_by', 'created_at']
     search_fields = ['name', 'invite_code']
     inlines = [MembershipInline]
 

@@ -8,7 +8,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
-from . import pipeline, srs, translate
+from . import pipeline, srs, subjects, translate
 from .models import (HELPER_LANGUAGES, HELPER_NAMES, RTL_LANGUAGES, LearnerProfile, LessonPack, Membership,
                      Progress, StudyGroup, StudyItem)
 
@@ -67,6 +67,7 @@ def _card(item, lang=''):
         'id': item.pk, 'kind': item.kind, 'front': item.front, 'form': item.form_in_text,
         'grammar': item.grammar, 'en': item.meaning_en, 'extra': item.helper(lang), 'example': item.example,
         'cloze': (item.data or {}).get('cloze', ''), 'pack': item.pack.title,
+        'speech': item.pack.group.subject_info.speech_lang,
         'confidence': item.confidence,
     }
 
@@ -97,7 +98,8 @@ def home(request):
     mistakes = Progress.objects.filter(user=request.user, lapses__gt=0).count()
     return render(request, 'journey/home.html', {
         'groups': groups, 'recent': recent, 'counts': due_counts(request.user), 'mistakes': mistakes,
-        'helper_choices': HELPER_LANGUAGES, **_language(request),
+        'helper_choices': HELPER_LANGUAGES, 'subject_choices': subjects.choices(), 'default_subject': subjects.DEFAULT,
+        **_language(request),
     })
 
 
@@ -122,10 +124,14 @@ def group_create(request):
     if not name:
         messages.error(request, 'Give the group a name, for example “Suomi A1 – Tuesday class”.')
         return redirect('journey:home')
+    subject = request.POST.get('subject', subjects.DEFAULT)
+    if subject not in subjects.SUBJECTS:
+        messages.error(request, 'Pick a subject from the list.')
+        return redirect('journey:home')
     if StudyGroup.objects.filter(created_by=request.user).count() >= 10:
         messages.error(request, 'You can create up to 10 groups.')
         return redirect('journey:home')
-    group = StudyGroup.objects.create(name=name, created_by=request.user)
+    group = StudyGroup.objects.create(name=name, subject=subject, created_by=request.user)
     Membership.objects.create(group=group, user=request.user, role=Membership.OWNER)
     messages.success(request, f'Group created. Share the code {group.invite_code} with your classmates.')
     return redirect(group)
@@ -150,7 +156,7 @@ def group(request, code):
     packs = group.packs.select_related('created_by')
     visible = [p for p in packs if p.status == LessonPack.PUBLISHED or p.can_edit(request.user)]
     return render(request, 'journey/group.html', {
-        'group': group, 'packs': visible, 'members': group.memberships.select_related('user'),
+        'group': group, 'subject': group.subject_info, 'packs': visible, 'members': group.memberships.select_related('user'),
         'is_owner': group.is_owner(request.user), 'counts': due_counts(request.user, group),
     })
 
@@ -182,7 +188,7 @@ def pack_new(request, code):
     group = _group_for(request.user, code)
     n_packs, n_images = _uploads_today(request.user)
     ctx = {'group': group, 'images_left': max(0, DAILY_IMAGES - n_images), 'max_images': pipeline.MAX_IMAGES,
-           'packs_left': max(0, DAILY_PACKS - n_packs)}
+           'packs_left': max(0, DAILY_PACKS - n_packs), 'subject': group.subject_info}
     if request.method != 'POST':
         return render(request, 'journey/pack_new.html', ctx)
 
@@ -245,7 +251,7 @@ def pack(request, pk):
         'pack': pack, 'group': pack.group, 'can_edit': can_edit, 'by_kind': by_kind, 'questions': questions,
         'n_low': sum(1 for i in items if i.confidence == StudyItem.LOW and i.kind == StudyItem.WORD),
         'summary_extra': (pack.translations or {}).get(lang, '') if lang else '',
-        'translating': translating, **language,
+        'translating': translating, 'speech_lang': pack.group.subject_info.speech_lang, **language,
     })
 
 
@@ -327,14 +333,14 @@ def review(request):
 def api_due(request):
     code = request.GET.get('group', '')
     group = _group_for(request.user, code) if code else None
-    items = _reviewable(request.user, group).select_related('pack')
+    items = _reviewable(request.user, group).select_related('pack__group')
     now = timezone.now()
     if request.GET.get('mode') == 'mistakes':
         cards = [p.item for p in Progress.objects.filter(user=request.user, lapses__gt=0, item__in=items)
-                 .select_related('item__pack').order_by('-lapses', 'due')[:BATCH]]
+                 .select_related('item__pack__group').order_by('-lapses', 'due')[:BATCH]]
     else:
         due = [p.item for p in Progress.objects.filter(user=request.user, due__lte=now, item__in=items)
-               .select_related('item__pack').order_by('due')[:BATCH]]
+               .select_related('item__pack__group').order_by('due')[:BATCH]]
         room = min(BATCH - len(due), _new_left_today(request.user))
         new = list(items.exclude(progress__user=request.user)
                    .order_by('pack__published_at', KIND_ORDER, 'order')[:max(0, room)])
@@ -368,7 +374,7 @@ def api_grade(request):
 def mistakes(request):
     rows = (Progress.objects.filter(user=request.user, lapses__gt=0, item__pack__status=LessonPack.PUBLISHED,
                                     item__pack__group__memberships__user=request.user)
-            .select_related('item__pack').order_by('-lapses', 'due').distinct())
+            .select_related('item__pack__group').order_by('-lapses', 'due').distinct())
     language = _language(request)
     rows = list(rows)
     _with_helper([p.item for p in rows], language['lang'])
