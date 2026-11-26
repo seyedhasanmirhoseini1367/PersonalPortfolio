@@ -18,7 +18,7 @@ from django.conf import settings
 from django.db import close_old_connections, transaction
 
 from . import subjects
-from .models import LessonPack, Scene, StudyItem
+from .models import LessonPack, StudyItem
 
 logger = logging.getLogger(__name__)
 
@@ -110,12 +110,9 @@ def build_pack(pack, images=(), text='', lookup=None):
         rows, summary = subject.build(source, lookup=lookup, note=lambda msg: _note(pack, msg))
         if not rows:
             raise RuntimeError('Nothing could be built from this text. Try clearer photos or paste the text.')
-        scene_rows = _scene_rows(pack, source, subject, note=lambda msg: _note(pack, msg))
         with transaction.atomic():
             pack.items.all().delete()
             StudyItem.objects.bulk_create([StudyItem(pack=pack, **row) for row in rows])
-            pack.scenes.all().delete()
-            Scene.objects.bulk_create([Scene(pack=pack, **row) for row in scene_rows])
             pack.summary = summary
             pack.translations = {}
             pack.status = LessonPack.DRAFT
@@ -129,56 +126,6 @@ def build_pack(pack, images=(), text='', lookup=None):
         pack.progress_note = ''
         pack.save(update_fields=['status', 'error', 'progress_note'])
     return pack
-
-
-def _scene_rows(pack, source, subject, note=lambda msg: None):
-    """Role-play scenes from the subject's scene writer. A failure here never fails the lesson itself."""
-    try:
-        return subject.build_scenes(source, note=note) if source else []
-    except Exception:
-        logger.exception('LearningJourney scenes for pack %s failed', pack.pk)
-        return []
-
-
-def make_scenes(pack):
-    """(Re)write the scenes of an existing lesson. Keeps the old ones if nothing valid comes back."""
-    rows = _scene_rows(pack, pack.source_text, subjects.get(pack.group.subject))
-    if rows:
-        with transaction.atomic():
-            pack.scenes.all().delete()
-            Scene.objects.bulk_create([Scene(pack=pack, **row) for row in rows])
-    return len(rows)
-
-
-_scene_jobs = set()
-_scene_lock = threading.Lock()
-
-
-def start_scenes(pack):
-    """Write scenes for an existing lesson in the background. Returns False if one is already running."""
-    with _scene_lock:
-        if pack.pk in _scene_jobs:
-            return False
-        _scene_jobs.add(pack.pk)
-
-    def work(own_thread=True):
-        try:
-            make_scenes(LessonPack.objects.select_related('group').get(pk=pack.pk))
-        finally:
-            with _scene_lock:
-                _scene_jobs.discard(pack.pk)
-            if own_thread:
-                close_old_connections()
-
-    if getattr(settings, 'JOURNEY_RUN_INLINE', False):
-        work(own_thread=False)
-    else:
-        threading.Thread(target=work, name=f'journey-scenes-{pack.pk}', daemon=True).start()
-    return True
-
-
-def scenes_running(pack):
-    return pack.pk in _scene_jobs
 
 
 def start(pack, images=(), text=''):

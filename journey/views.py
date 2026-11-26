@@ -1,12 +1,8 @@
 """LearningJourney pages and the small JSON API used by the review screen."""
-import json
-import re
-import time
 
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.core.cache import cache
 from django.db.models import Case, Count, Q, Sum, When
 from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -14,8 +10,8 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from . import pipeline, srs, subjects, translate
-from .models import (AVATAR_PARTS, HELPER_LANGUAGES, HELPER_NAMES, RTL_LANGUAGES, LearnerProfile, LessonPack, Membership,
-                     Progress, Scene, SceneResult, StudyGroup, StudyItem, clean_avatar)
+from .models import (HELPER_LANGUAGES, HELPER_NAMES, RTL_LANGUAGES, LearnerProfile, LessonPack, Membership, Progress,
+                     StudyGroup, StudyItem)
 
 MAX_IMAGE_BYTES = 12 * 1024 * 1024
 NEW_PER_DAY = getattr(settings, 'JOURNEY_NEW_PER_DAY', 20)
@@ -104,18 +100,8 @@ def home(request):
     return render(request, 'journey/home.html', {
         'groups': groups, 'recent': recent, 'counts': due_counts(request.user), 'mistakes': mistakes,
         'helper_choices': HELPER_LANGUAGES, 'subject_choices': subjects.choices(), 'default_subject': subjects.DEFAULT,
-        'avatar': (avatar := LearnerProfile.for_user(request.user).avatar_spec()), 'avatar_fields': _avatar_fields(avatar),
         **_language(request),
     })
-
-
-AVATAR_LABELS = {'skin': 'Skin', 'hair': 'Hair', 'hair_color': 'Hair colour', 'shirt': 'Shirt', 'extra': 'Extra'}
-
-
-def _avatar_fields(avatar):
-    return [{'part': part, 'label': AVATAR_LABELS[part],
-             'options': [{'value': o, 'checked': avatar.get(part) == o, 'color': o.startswith('#')} for o in options]}
-            for part, options in AVATAR_PARTS.items()]
 
 
 @login_required
@@ -173,7 +159,6 @@ def group(request, code):
     return render(request, 'journey/group.html', {
         'group': group, 'subject': group.subject_info, 'packs': visible, 'members': group.memberships.select_related('user'),
         'is_owner': group.is_owner(request.user), 'counts': due_counts(request.user, group),
-        'board': scene_board(group),
     })
 
 
@@ -268,7 +253,6 @@ def pack(request, pk):
         'n_low': sum(1 for i in items if i.confidence == StudyItem.LOW and i.kind == StudyItem.WORD),
         'summary_extra': (pack.translations or {}).get(lang, '') if lang else '',
         'translating': translating, 'speech_lang': pack.group.subject_info.speech_lang, **language,
-        'scenes': _scenes_with_results(pack, request.user), 'scenes_running': pipeline.scenes_running(pack),
     })
 
 
@@ -396,203 +380,3 @@ def mistakes(request):
     rows = list(rows)
     _with_helper([p.item for p in rows], language['lang'])
     return render(request, 'journey/mistakes.html', {'rows': rows, **language})
-
-
-# ── scenes: role-play games built from a lesson ─────────────────────────────
-
-def _scene_for(user, pk):
-    scene = get_object_or_404(Scene.objects.select_related('pack__group'), pk=pk)
-    pack = scene.pack
-    if not pack.group.is_member(user) or (pack.status != LessonPack.PUBLISHED and not pack.can_edit(user)):
-        raise Http404('Not available')
-    return scene
-
-
-def _scenes_with_results(pack, user):
-    scenes = list(pack.scenes.all())
-    results = {r.scene_id: r for r in SceneResult.objects.filter(user=user, scene__in=scenes)}
-    for sc in scenes:
-        sc.my_result = results.get(sc.pk)
-    return scenes
-
-
-def stars_for(score, max_score):
-    if score <= 0 or max_score <= 0:
-        return 0
-    ratio = score / max_score
-    return 3 if ratio >= 0.85 else 2 if ratio >= 0.55 else 1
-
-
-def scene_board(group):
-    """Members ranked by the sum of their best scene scores in this group."""
-    rows = (SceneResult.objects.filter(scene__pack__group=group, scene__pack__status=LessonPack.PUBLISHED)
-            .values('user__username').annotate(points=Sum('best_score'), stars=Sum('best_stars'))
-            .order_by('-points')[:20])
-    return list(rows)
-
-
-@login_required
-def scene(request, pk):
-    scene = _scene_for(request.user, pk)
-    me = LearnerProfile.for_user(request.user)
-    result = SceneResult.objects.filter(user=request.user, scene=scene).first()
-    return render(request, 'journey/scene.html', {
-        'scene': scene, 'pack': scene.pack, 'group': scene.pack.group, 'setting': scene.setting_info,
-        'result': result, 'speech_lang': scene.pack.group.subject_info.speech_lang,
-        'game': {'steps': scene.steps, 'max': scene.max_score, 'npc': clean_avatar({}, seed=scene.npc_name),
-                 'me': me.avatar_spec(), 'best': result.best_score if result else 0},
-    })
-
-
-@login_required
-@require_POST
-def scene_finish(request, pk):
-    scene = _scene_for(request.user, pk)
-    try:
-        score = max(0, min(int(request.POST.get('score', 0)), scene.max_score))
-        missed = [int(i) for i in request.POST.getlist('missed') if str(i).isdigit()]
-    except (TypeError, ValueError):
-        return JsonResponse({'error': 'Send score and missed steps.'}, status=400)
-    stars = stars_for(score, scene.max_score)
-    result, _ = SceneResult.objects.get_or_create(user=request.user, scene=scene)
-    result.plays += 1
-    result.last_score = score
-    new_best = score > result.best_score
-    if new_best:
-        result.best_score, result.best_stars = score, stars
-    result.save()
-    added = _review_missed_words(request.user, scene, missed)
-    return JsonResponse({'stars': stars, 'score': score, 'best': result.best_score, 'new_best': new_best,
-                         'added': added, 'plays': result.plays})
-
-
-def _review_missed_words(user, scene, missed):
-    """Words of this lesson that appear in lines the player got wrong come up in today's review."""
-    from .subjects.base import word_in
-    lines = [scene.steps[i].get('fi', '') for i in set(missed)
-             if 0 <= i < len(scene.steps) and scene.steps[i].get('who') == 'you']
-    if not lines or scene.pack.status != LessonPack.PUBLISHED:
-        return 0
-    added = 0
-    now = timezone.now()
-    for item in scene.pack.items.filter(kind=StudyItem.WORD):
-        forms = [f for f in (item.form_in_text, item.front) if f]
-        if not any(word_in(f, line) for f in forms for line in lines):
-            continue
-        progress, created = Progress.objects.get_or_create(user=user, item=item)
-        if not created and progress.reps > 0:
-            srs.schedule(progress, srs.AGAIN, now)
-        progress.due = min(progress.due, now)
-        progress.save()
-        added += 1
-    return added
-
-
-@login_required
-@require_POST
-def scene_make(request, pk):
-    pack = _pack_for(request.user, pk)
-    if pack.status != LessonPack.PUBLISHED and not pack.can_edit(request.user):
-        raise Http404('Not available')
-    if not pack.source_text:
-        messages.error(request, 'This lesson has no text to build a scene from.')
-    elif pipeline.start_scenes(pack):
-        messages.success(request, 'Writing scenes for this lesson. Reload in a minute.')
-    else:
-        messages.info(request, 'Scenes for this lesson are already being written.')
-    return redirect(pack)
-
-
-@login_required
-@require_POST
-def avatar_save(request):
-    profile = LearnerProfile.for_user(request.user)
-    profile.avatar = clean_avatar({part: request.POST.get(part) for part in AVATAR_PARTS}, seed=request.user.username)
-    profile.save(update_fields=['avatar'])
-    messages.success(request, 'Your character is saved.')
-    nxt = request.POST.get('next', '')
-    return redirect(nxt if nxt.startswith('/learn/') else 'journey:home')
-
-
-# ── the town: a walkable world where lesson scenes become people ────────────
-
-@login_required
-def town(request):
-    from . import town as town_data
-    return render(request, 'journey/town.html', {'town': town_data.build(request.user)})
-
-
-# Town progress and live presence. Positions live a few seconds in the cache (one web
-# process), so classmates in the same groups see each other walk around.
-TOWN_W, TOWN_H, TILE = 36, 26, 16
-PRESENCE_TTL = 12           # seconds a position stays visible after the last update
-QUEST_KEY = re.compile(r'^(scene\d{1,9}|starter-[a-z]{2,20})$')
-
-
-def _clean_town(data, old=None):
-    """Merge saved progress: quests keep their best stars; coins never go down (no shop yet)."""
-    old = old if isinstance(old, dict) else {}
-    data = data if isinstance(data, dict) else {}
-    done = dict(old.get('done') or {})
-    for k, v in (data.get('done') or {}).items():
-        if isinstance(k, str) and QUEST_KEY.match(k) and isinstance(v, int) and 0 <= v <= 3:
-            done[k] = max(v, done.get(k, 0))
-    coins = old.get('coins', 0)
-    if isinstance(data.get('coins'), int):
-        coins = max(coins, min(data['coins'], 100000))
-    sprite = data.get('sprite') if data.get('sprite') in town_player_choices() else old.get('sprite')
-    return {'coins': coins, 'done': done, 'sprite': sprite}
-
-
-def town_player_choices():
-    from .town import PLAYER_CHOICES
-    return PLAYER_CHOICES
-
-
-@login_required
-def town_state(request):
-    profile = LearnerProfile.for_user(request.user)
-    if request.method == 'POST':
-        try:
-            data = json.loads(request.body or b'{}')
-        except ValueError:
-            return JsonResponse({'error': 'Send JSON.'}, status=400)
-        profile.town = _clean_town(data, profile.town)
-        profile.save(update_fields=['town'])
-    return JsonResponse(_clean_town(profile.town))
-
-
-def _peer_ids(user):
-    key = f'lj-peers-{user.pk}'
-    ids = cache.get(key)
-    if ids is None:
-        groups = Membership.objects.filter(user=user).values('group')
-        ids = list(Membership.objects.filter(group__in=groups).exclude(user=user)
-                   .values_list('user_id', flat=True).distinct())
-        cache.set(key, ids, 60)
-    return ids
-
-
-@login_required
-@require_POST
-def town_presence(request):
-    try:
-        data = json.loads(request.body or b'{}')
-        x = max(0.0, min(float(data.get('x', 0)), TOWN_W * TILE))
-        y = max(0.0, min(float(data.get('y', 0)), TOWN_H * TILE))
-    except (TypeError, ValueError):
-        return JsonResponse({'error': 'Send x and y.'}, status=400)
-    frame = data.get('f') if data.get('f') in town_player_choices() else town_player_choices()[0]
-    me = {'id': request.user.pk, 'name': request.user.username[:24], 'x': round(x, 1), 'y': round(y, 1), 'f': frame,
-          'flip': bool(data.get('flip')), 'moving': bool(data.get('moving')), 't': time.time()}
-    old = cache.get(f'lj-pos-{request.user.pk}') or {}
-    if data.get('emote') == 'wave':
-        me['emote'] = time.time()
-    elif old.get('emote') and time.time() - old['emote'] < 3:
-        me['emote'] = old['emote']
-    cache.set(f'lj-pos-{request.user.pk}', me, PRESENCE_TTL)
-    now = time.time()
-    peers = [p for p in cache.get_many([f'lj-pos-{i}' for i in _peer_ids(request.user)]).values()
-             if now - p.get('t', 0) < PRESENCE_TTL]
-    return JsonResponse({'peers': [{**p, 'emote_age': round(now - p['emote'], 1) if p.get('emote') else None}
-                                   for p in peers]})

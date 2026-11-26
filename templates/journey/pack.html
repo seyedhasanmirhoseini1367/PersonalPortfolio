@@ -34,28 +34,6 @@
     <p class="lj-msg" role="status"><i class="fas fa-language"></i> Translating this lesson into {{ lang_name }}. Reload in a minute to see it; English is shown meanwhile.</p>
     {% endif %}
 
-    <section class="lj-card">
-        <div class="lj-row"><h2><i class="fas fa-masks-theater"></i> Play a scene</h2>
-            {% if scenes %}<span class="muted">You play one role in a conversation from this lesson.</span>{% endif %}</div>
-        {% if scenes %}
-        <div class="lj-scenes">
-            {% for sc in scenes %}{% with st=sc.setting_info %}
-            <a class="lj-scene" href="{{ sc.get_absolute_url }}" style="--sc-light:{{ st.light }};--sc-dark:{{ st.dark }}">
-                <i class="fas {{ st.icon }}" aria-hidden="true"></i>
-                <span><b>{{ sc.title }}</b><small>{{ st.label }} · {{ sc.turns }} turns</small></span>
-                <span class="lj-scene-stars" aria-label="{{ sc.my_result.best_stars|default:0 }} of 3 stars">{% for s in '123' %}<span class="{% if sc.my_result and sc.my_result.best_stars >= forloop.counter %}on{% endif %}">★</span>{% endfor %}</span>
-            </a>
-            {% endwith %}{% endfor %}
-        </div>
-        {% elif scenes_running %}
-        <p class="muted"><i class="fas fa-spinner fa-spin"></i> Writing scenes for this lesson. Reload in a minute.</p>
-        {% else %}
-        <p class="muted">This lesson has no scene yet. The AI can write a short role-play from it, using only words from the lesson.</p>
-        <form method="post" action="{% url 'journey:scene_make' pack.pk %}">{% csrf_token %}
-            <button class="lj-btn" type="submit"><i class="fas fa-wand-magic-sparkles"></i> Make a scene</button></form>
-        {% endif %}
-    </section>
-
     {% if pack.summary %}<section class="lj-card"><h2>About this lesson</h2><p>{{ pack.summary }}</p>
         {% if summary_extra %}<p class="lj-extra" dir="{{ lang_dir }}" lang="{{ lang }}">{{ summary_extra }}</p>{% endif %}</section>{% endif %}
 

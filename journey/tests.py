@@ -522,156 +522,20 @@ class SceneWriterTests(TestCase):
 
 
 @override_settings(JOURNEY_RUN_INLINE=True)
-class SceneFlowTests(TestCase):
-    def setUp(self):
-        self.me = User.objects.create_user('hasan', 'h@example.test', 'pw-hasan-123!')
-        self.friend = User.objects.create_user('friend', 'f@example.test', 'pw-friend-123!')
-        self.stranger = User.objects.create_user('stranger', 's@example.test', 'pw-stranger-123!')
-        self.client.force_login(self.me)
-        self.client.post(reverse('journey:group_create'), {'name': 'Suomi A1'})
-        self.group = StudyGroup.objects.get()
-        Membership.objects.create(group=self.group, user=self.friend)
-        with patched_pipeline(), mock.patch.object(finnish, 'scene_writer', return_value=SCENE):
-            self.client.post(reverse('journey:pack_new', args=[self.group.invite_code]), {'title': 'K3', 'text': TEXT})
-        self.pack = LessonPack.objects.get()
-
-    def test_lesson_build_writes_the_scene(self):
-        from .models import Scene
-        self.assertEqual(self.pack.status, LessonPack.DRAFT, self.pack.error)
-        self.assertEqual(Scene.objects.filter(pack=self.pack).count(), 1, 'the off-topic scene is dropped')
-
-    def test_scene_failure_never_fails_the_lesson(self):
-        with patched_pipeline(), mock.patch.object(finnish, 'scene_writer', side_effect=RuntimeError('quota')):
-            self.client.post(reverse('journey:pack_new', args=[self.group.invite_code]), {'title': 'K4', 'text': TEXT})
-        pack = LessonPack.objects.get(title='K4')
+class FlashcardsOnlyTests(TestCase):
+    def test_game_pages_are_gone_and_lessons_write_no_scenes(self):
+        me = User.objects.create_user('solo', password='x')
+        self.client.force_login(me)
+        for path in ('/learn/town/', '/learn/character/', '/learn/scene/1/'):
+            self.assertEqual(self.client.get(path).status_code, 404, path)
+        home = self.client.get(reverse('journey:home'))
+        self.assertNotContains(home, 'Explore the town')
+        self.assertNotContains(home, 'Your character')
+        self.client.post(reverse('journey:group_create'), {'name': 'Solo', 'subject': 'finnish'})
+        group = StudyGroup.objects.get(name='Solo')
+        with patched_pipeline():
+            self.client.post(reverse('journey:pack_new', args=[group.invite_code]), {'title': 'L1', 'text': TEXT})
+        pack = LessonPack.objects.get(title='L1')
         self.assertEqual(pack.status, LessonPack.DRAFT)
         self.assertFalse(pack.scenes.exists())
-
-    def test_playing_scores_best_result_and_sends_missed_words_to_review(self):
-        from .models import SceneResult
-        self.pack.publish()
-        scene = self.pack.scenes.get()
-        self.client.force_login(self.friend)
-        page = self.client.get(scene.get_absolute_url())
-        self.assertContains(page, 'Meeting a neighbour')
-        self.assertContains(page, 'avatar.js')
-        self.assertContains(self.client.get(self.pack.get_absolute_url()), 'Play a scene')
-
-        # Step 3 is "Keittiössä on pöytä ja kaksi tuolia." and keittiö is a word of this lesson.
-        r = self.client.post(reverse('journey:scene_finish', args=[scene.pk]), {'score': 99999, 'missed': ['3']}).json()
-        self.assertEqual(r['score'], scene.max_score, 'scores are capped at the maximum')
-        self.assertEqual(r['stars'], 3)
-        self.assertEqual(r['added'], 1)
-        keittio = self.pack.items.get(kind='word', front='keittiö')
-        self.assertLessEqual(Progress.objects.get(user=self.friend, item=keittio).due, timezone.now())
-
-        r = self.client.post(reverse('journey:scene_finish', args=[scene.pk]), {'score': 100}).json()
-        self.assertEqual((r['stars'], r['best'], r['new_best']), (1, scene.max_score, False))
-        res = SceneResult.objects.get(user=self.friend, scene=scene)
-        self.assertEqual((res.plays, res.best_stars, res.last_score), (2, 3, 100))
-
-        board = self.client.get(self.group.get_absolute_url())
-        self.assertContains(board, 'Scene points')
-        self.assertContains(board, str(scene.max_score))
-
-    def test_drafts_and_strangers(self):
-        scene = self.pack.scenes.get()
-        self.client.force_login(self.friend)
-        self.assertEqual(self.client.get(scene.get_absolute_url()).status_code, 404, 'draft scenes are hidden from members')
-        self.client.force_login(self.me)
-        self.assertEqual(self.client.get(scene.get_absolute_url()).status_code, 200, 'the author can try it first')
-        self.client.force_login(self.stranger)
-        self.assertEqual(self.client.post(reverse('journey:scene_finish', args=[scene.pk]), {'score': 10}).status_code, 404)
-
-    def test_make_scenes_for_an_existing_lesson(self):
-        self.pack.scenes.all().delete()
-        self.pack.publish()
-        self.client.force_login(self.friend)
-        self.assertContains(self.client.get(self.pack.get_absolute_url()), 'Make a scene')
-        with mock.patch.object(finnish, 'scene_writer', return_value=SCENE):
-            self.client.post(reverse('journey:scene_make', args=[self.pack.pk]))
-        self.assertEqual(self.pack.scenes.count(), 1)
-
-    def test_character_is_saved_and_cleaned(self):
-        from .models import AVATAR_PARTS, LearnerProfile
-        self.assertContains(self.client.get(reverse('journey:home')), 'Your character')
-        self.client.post(reverse('journey:avatar_save'), {'skin': '#a86b3c', 'hair': 'curly', 'hair_color': 'red;}<x>',
-                                                          'shirt': '#3fae74', 'extra': 'glasses'})
-        spec = LearnerProfile.objects.get(user=self.me).avatar_spec()
-        self.assertEqual((spec['skin'], spec['hair'], spec['extra']), ('#a86b3c', 'curly', 'glasses'))
-        self.assertIn(spec['hair_color'], AVATAR_PARTS['hair_color'], 'unknown values are replaced')
-
-
-@override_settings(JOURNEY_RUN_INLINE=True)
-class TownTests(TestCase):
-    def setUp(self):
-        self.me = User.objects.create_user('hasan', 'h@example.test', 'pw-hasan-123!')
-        self.client.force_login(self.me)
-
-    def test_town_has_starter_people_and_uses_lesson_scenes(self):
-        from . import town
-        data = town.build(self.me)
-        self.assertEqual([p['key'] for p in data['places']], ['cafe', 'market', 'station', 'home'])
-        self.assertFalse(any(p['from_lesson'] for p in data['places']))
-        for p in data['places']:
-            for s in p['scene']['steps']:
-                if s['who'] == 'you':
-                    self.assertEqual(s['options'][s['answer']], s['fi'])
-        self.client.post(reverse('journey:group_create'), {'name': 'Suomi A1'})
-        group = StudyGroup.objects.get()
-        with patched_pipeline(), mock.patch.object(finnish, 'scene_writer', return_value=SCENE):
-            self.client.post(reverse('journey:pack_new', args=[group.invite_code]), {'title': 'K3', 'text': TEXT})
-        LessonPack.objects.get().publish()
-        home = next(p for p in town.build(self.me)['places'] if p['key'] == 'home')
-        self.assertTrue(home['from_lesson'])
-        self.assertEqual(home['scene']['title'], 'Meeting a neighbour')
-        r = self.client.get(reverse('journey:town'))
-        self.assertContains(r, 'phaser')
-        self.assertContains(r, 'town-data')
-
-
-class TownOnlineTests(TestCase):
-    def setUp(self):
-        from django.core.cache import cache
-        cache.clear()
-        self.me = User.objects.create_user('hasan', 'h@example.test', 'pw-hasan-123!')
-        self.friend = User.objects.create_user('friend', 'f@example.test', 'pw-friend-123!')
-        self.stranger = User.objects.create_user('stranger', 's@example.test', 'pw-stranger-123!')
-        g = StudyGroup.objects.create(name='Suomi', created_by=self.me)
-        Membership.objects.create(group=g, user=self.me, role=Membership.OWNER)
-        Membership.objects.create(group=g, user=self.friend)
-
-    def _post(self, url, data):
-        import json
-        return self.client.post(url, json.dumps(data), content_type='application/json')
-
-    def test_progress_is_saved_and_merged(self):
-        self.client.force_login(self.me)
-        url = reverse('journey:town_state')
-        self.assertEqual(self.client.get(url).json(), {'coins': 0, 'done': {}, 'sprite': None})
-        self._post(url, {'coins': 34, 'done': {'starter-cafe': 2, 'bad key!': 3, 'scene7': 9}, 'sprite': 99})
-        self._post(url, {'coins': 10, 'done': {'starter-cafe': 1, 'scene7': 3}, 'sprite': 12345})
-        self.assertEqual(self.client.get(url).json(),
-                         {'coins': 34, 'done': {'starter-cafe': 2, 'scene7': 3}, 'sprite': 99})
-
-    def test_classmates_see_each_other_and_strangers_do_not(self):
-        url = reverse('journey:town_presence')
-        self.client.force_login(self.friend)
-        self.assertEqual(self._post(url, {'x': 100, 'y': 120, 'f': 88, 'moving': True}).json()['peers'], [])
-        self.client.force_login(self.stranger)
-        self._post(url, {'x': 50, 'y': 50, 'f': 85})
-        self.client.force_login(self.me)
-        peers = self._post(url, {'x': 200, 'y': 9999, 'f': 99, 'emote': 'wave'}).json()['peers']
-        self.assertEqual([(p['name'], p['x'], p['f'], p['moving']) for p in peers], [('friend', 100.0, 88, True)])
-        self.client.force_login(self.friend)
-        peers = self._post(url, {'x': 101, 'y': 120, 'f': 88}).json()['peers']
-        self.assertEqual(len(peers), 1)
-        me = peers[0]
-        self.assertEqual((me['name'], me['y']), ('hasan', 26 * 16), 'positions are kept inside the town')
-        self.assertIsNotNone(me['emote_age'], 'a wave is passed on')
-
-    def test_bad_presence_is_refused(self):
-        self.client.force_login(self.me)
-        self.assertEqual(self._post(reverse('journey:town_presence'), {'x': 'left'}).status_code, 400)
-        self.client.logout()
-        self.assertEqual(self._post(reverse('journey:town_presence'), {'x': 1, 'y': 1}).status_code, 302)
+        self.assertNotContains(self.client.get(pack.get_absolute_url()), 'Play a scene')
