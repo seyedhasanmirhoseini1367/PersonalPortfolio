@@ -7,6 +7,7 @@
     <header class="lj-head">
         <a class="lj-eyebrow" href="{% url 'journey:home' %}"><i class="fas fa-arrow-left"></i> LearningJourney</a>
         <h1>{{ group.name }}</h1>
+        <span class="lj-chip" style="align-self:flex-start" title="{{ subject.description }}"><i class="fas fa-book-open"></i> {{ subject.name }}</span>
         <p class="muted">Invite classmates with this code. They sign in on hasanai.net and choose “Join with a code”.</p>
         <div class="lj-inline"><span class="lj-code" id="lj-code">{{ group.invite_code }}</span>
             <button class="lj-btn ghost" type="button" id="lj-copy"><i class="fas fa-copy"></i> Copy code</button></div>

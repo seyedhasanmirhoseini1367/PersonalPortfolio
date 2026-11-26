@@ -22,7 +22,7 @@
     <form method="post" enctype="multipart/form-data" class="lj-card lj-form" id="lj-form">{% csrf_token %}
         <label for="lj-title">Lesson title
             <input id="lj-title" class="lj-input" name="title" maxlength="120" value="{{ title|default:'' }}"
-                   placeholder="Kappale 3 – Asunto" required></label>
+                   placeholder="{{ subject.title_placeholder }}" required></label>
 
         <div class="lj-drop" id="lj-drop">
             <b>Photos ({{ max_images }} at a time)</b>
@@ -38,7 +38,7 @@
         </div>
 
         <label for="lj-text">Or paste the lesson text
-            <textarea id="lj-text" name="text" placeholder="Minä asun Tampereella. Asuntoni on pieni, mutta valoisa…">{{ text|default:'' }}</textarea></label>
+            <textarea id="lj-text" name="text" placeholder="{{ subject.text_placeholder }}">{{ text|default:'' }}</textarea></label>
 
         <p class="muted">Today you can still send {{ images_left }} photo{{ images_left|pluralize }} and {{ packs_left }} lesson{{ packs_left|pluralize }}.</p>
         <button class="lj-btn moss" type="submit" id="lj-submit"><i class="fas fa-wand-magic-sparkles"></i> Build the lesson</button>

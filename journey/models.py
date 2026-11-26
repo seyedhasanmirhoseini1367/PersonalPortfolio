@@ -11,7 +11,6 @@ from django.db import models
 from django.urls import reverse
 from django.utils import timezone
 
-LANGUAGES = [('fi', 'Finnish')]
 
 # English is always shown. A member may add one more language they know better.
 HELPER_LANGUAGES = [
@@ -51,7 +50,8 @@ def new_invite_code():
 
 class StudyGroup(models.Model):
     name = models.CharField(max_length=80)
-    language = models.CharField(max_length=8, choices=LANGUAGES, default='fi')
+    subject = models.CharField(max_length=24, default='finnish',
+                               help_text='Which agents build its lessons; a key in journey.subjects.SUBJECTS.')
     invite_code = models.CharField(max_length=12, unique=True, default=new_invite_code)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
                                    related_name='journey_groups_created')
@@ -65,6 +65,11 @@ class StudyGroup(models.Model):
 
     def get_absolute_url(self):
         return reverse('journey:group', args=[self.invite_code])
+
+    @property
+    def subject_info(self):
+        from . import subjects
+        return subjects.get(self.subject)
 
     def is_member(self, user):
         return user.is_authenticated and self.memberships.filter(user=user).exists()

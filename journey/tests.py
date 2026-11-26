@@ -9,6 +9,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from . import pipeline, srs
+from .subjects import finnish
 from .models import LessonPack, Membership, Progress, StudyGroup, StudyItem
 
 User = get_user_model()
@@ -94,7 +95,7 @@ class SrsTests(TestCase):
 
 class QualityTests(TestCase):
     def test_words_are_grounded_and_deduplicated(self):
-        words = pipeline.clean_words(LING['words'], TEXT)
+        words = finnish.clean_words(LING['words'], TEXT)
         self.assertEqual([w['lemma'] for w in words], ['asua', 'keittiö', 'kahvi', 'lentokone'])
         kahvi = words[2]
         self.assertEqual(kahvi['example'], '', 'an example that is not in the text is dropped')
@@ -102,20 +103,20 @@ class QualityTests(TestCase):
         self.assertFalse(words[3]['grounded'], 'a form the text does not contain is flagged')
 
     def test_sentences_must_be_in_text_with_a_real_cloze(self):
-        sentences = pipeline.clean_sentences(LING['sentences'], TEXT)
+        sentences = finnish.clean_sentences(LING['sentences'], TEXT)
         self.assertEqual([s['cloze'] for s in sentences], ['kahvia'])
 
     def test_questions_need_four_distinct_options_and_a_valid_answer(self):
-        self.assertEqual([q['question'] for q in pipeline.clean_questions(TEACH['questions'])], ['Missä minä asun?'])
+        self.assertEqual([q['question'] for q in finnish.clean_questions(TEACH['questions'])], ['Missä minä asun?'])
 
     def test_grammar_examples_tables_and_phrases(self):
-        g = pipeline.clean_grammar(TEACH['grammar'], TEXT)
+        g = finnish.clean_grammar(TEACH['grammar'], TEXT)
         self.assertEqual(g[0]['examples'], ['Keittiössä on pöytä ja kaksi tuolia.'])
-        self.assertEqual([t['lemma'] for t in pipeline.clean_tables(TEACH['tables'], TEXT)], ['asua'])
-        self.assertEqual(len(pipeline.clean_phrases(TEACH['phrases'])), 1)
+        self.assertEqual([t['lemma'] for t in finnish.clean_tables(TEACH['tables'], TEXT)], ['asua'])
+        self.assertEqual(len(finnish.clean_phrases(TEACH['phrases'])), 1)
 
     def test_checker_grades_confidence(self):
-        words = pipeline.check_words(pipeline.clean_words(LING['words'], TEXT), fake_lookup)
+        words = finnish.check_words(finnish.clean_words(LING['words'], TEXT), fake_lookup)
         by = {w['lemma']: w for w in words}
         self.assertEqual(by['asua']['confidence'], StudyItem.HIGH)
         self.assertEqual(by['kahvi']['meaning_en'], 'coffee', 'an empty English meaning is filled from Wiktionary')
@@ -125,12 +126,24 @@ class QualityTests(TestCase):
         import requests
         session = mock.Mock()
         session.get.side_effect = requests.ConnectionError
-        self.assertEqual(pipeline.wiktionary_lookup('talo', session), (None, ''))
+        self.assertEqual(finnish.wiktionary_lookup('talo', session), (None, ''))
 
 
-def patched_pipeline():
-    return mock.patch.multiple(pipeline, linguist=mock.Mock(return_value=LING), teacher=mock.Mock(return_value=TEACH),
-                               read_images=mock.Mock(return_value=TEXT), wiktionary_lookup=fake_lookup)
+class patched_pipeline:
+    """Mock the AI and the network: the reader in pipeline, the Finnish agents and Wiktionary in the subject."""
+    def __enter__(self):
+        self.patches = [
+            mock.patch.object(pipeline, 'read_images', mock.Mock(return_value=TEXT)),
+            mock.patch.multiple(finnish, linguist=mock.Mock(return_value=LING), teacher=mock.Mock(return_value=TEACH),
+                                wiktionary_lookup=fake_lookup),
+        ]
+        for p in self.patches:
+            p.start()
+        return self
+
+    def __exit__(self, *exc):
+        for p in reversed(self.patches):
+            p.stop()
 
 
 @override_settings(JOURNEY_RUN_INLINE=True)
@@ -203,8 +216,8 @@ class FlowTests(TestCase):
         self.assertFalse(LessonPack.objects.exists())
 
     def test_ai_failure_leaves_a_failed_pack_with_a_reason(self):
-        with mock.patch.object(pipeline, 'linguist', side_effect=RuntimeError('quota exceeded')), \
-             mock.patch.object(pipeline, 'teacher', return_value={}):
+        with mock.patch.object(finnish, 'linguist', side_effect=RuntimeError('quota exceeded')), \
+             mock.patch.object(finnish, 'teacher', return_value={}):
             self.client.post(reverse('journey:pack_new', args=[self.group.invite_code]), {'title': 'Fails', 'text': TEXT})
         pack = LessonPack.objects.get(title='Fails')
         self.assertEqual(pack.status, LessonPack.FAILED)
@@ -368,3 +381,53 @@ class LanguageTests(TestCase):
         with mock.patch.object(translate, '_ask') as ask:
             self.client.get(self.pack.get_absolute_url())
         ask.assert_not_called()
+
+
+@override_settings(JOURNEY_RUN_INLINE=True)
+class SubjectTests(TestCase):
+    def setUp(self):
+        self.me = User.objects.create_user('hasan', 'h@example.test', 'pw-hasan-123!')
+        self.client.force_login(self.me)
+
+    def test_finnish_is_the_default_and_unknown_subjects_are_refused(self):
+        self.client.post(reverse('journey:group_create'), {'name': 'Suomi A1'})
+        self.assertEqual(StudyGroup.objects.get().subject, 'finnish')
+        self.client.post(reverse('journey:group_create'), {'name': 'Bad', 'subject': 'alchemy'})
+        self.assertFalse(StudyGroup.objects.filter(name='Bad').exists())
+        r = self.client.get(reverse('journey:home'))
+        self.assertContains(r, 'Finnish (Suomi)')
+
+    def test_photos_are_read_with_the_subjects_prompt(self):
+        from .subjects import finnish as fin_module
+        self.client.post(reverse('journey:group_create'), {'name': 'Suomi A1'})
+        group = StudyGroup.objects.get()
+        img = SimpleUploadedFile('p.png', png_bytes(), content_type='image/png')
+        with patched_pipeline():
+            self.client.post(reverse('journey:pack_new', args=[group.invite_code]), {'title': 'P', 'images': [img]})
+            prompt = pipeline.read_images.call_args[0][1]
+        self.assertEqual(prompt, fin_module.Finnish.read_prompt)
+
+    def test_a_new_subject_plugs_in_its_own_agents(self):
+        from . import subjects
+        from .subjects.base import Subject
+
+        class Biology(Subject):
+            key, name, speech_lang = 'biology', 'Biology', ''
+
+            def build(self, source, lookup=None, note=lambda m: None):
+                note('Finding terms…')
+                return [dict(kind=StudyItem.PHRASE, order=0, front='Photosynthesis', meaning_en='Plants make sugar from light.')], 'Cells and energy.'
+
+        with mock.patch.dict(subjects.SUBJECTS, {'biology': Biology()}):
+            self.client.post(reverse('journey:group_create'), {'name': 'Bio 1', 'subject': 'biology'})
+            group = StudyGroup.objects.get(name='Bio 1')
+            self.client.post(reverse('journey:pack_new', args=[group.invite_code]),
+                             {'title': 'Cells', 'text': 'Photosynthesis happens in chloroplasts of plant cells.'})
+            pack = LessonPack.objects.get(title='Cells')
+            self.assertEqual(pack.status, LessonPack.DRAFT, pack.error)
+            self.assertEqual(pack.summary, 'Cells and energy.')
+            self.assertEqual(list(pack.items.values_list('front', flat=True)), ['Photosynthesis'])
+            pack.publish()
+            card = self.client.get(reverse('journey:api_due')).json()['cards'][0]
+            self.assertEqual(card['speech'], '', 'a subject without a speech language gets no read-aloud')
+            self.assertContains(self.client.get(group.get_absolute_url()), 'Biology')
