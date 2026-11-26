@@ -23,7 +23,7 @@ DRAFT_DAYS = getattr(settings, 'JOURNEY_KEEP_DRAFT_DAYS', 30)
 STUCK_MINUTES = 60
 CHECK_EVERY = 3600
 
-_last_check = 0.0
+_last_check = None   # None: never checked in this process, so the first call runs
 
 
 def run(now=None):
@@ -46,7 +46,7 @@ def run(now=None):
 def maybe_run():
     """Called by the idle worker every few minutes; runs at most once an hour."""
     global _last_check
-    if time.monotonic() - _last_check < CHECK_EVERY:
+    if _last_check is not None and time.monotonic() - _last_check < CHECK_EVERY:
         return None
     _last_check = time.monotonic()
     return run()

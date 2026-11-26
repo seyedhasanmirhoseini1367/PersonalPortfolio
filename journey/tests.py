@@ -471,6 +471,6 @@ class CleanupTests(TestCase):
 
     def test_maybe_run_checks_at_most_hourly(self):
         from . import cleanup
-        cleanup._last_check = 0.0
+        cleanup._last_check = None
         self.assertIsNotNone(cleanup.maybe_run())
         self.assertIsNone(cleanup.maybe_run())
