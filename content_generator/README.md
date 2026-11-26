@@ -14,13 +14,71 @@ Live at `hasanai.net/ai-content-generator/` (sign-in required, with a daily job 
 The pipeline is a [LangGraph](https://github.com/langchain-ai/langgraph) state graph
 (`pipeline/pipeline.py`). Each node is one agent; they share a single `PipelineState`.
 
+The graph runs in three stages: first it **understands** the company and the task,
+then it **writes and checks** in a loop, and finally it **judges, translates and
+finishes** the result.
+
+```mermaid
+flowchart TD
+    IN[/"<b>Input</b><br/>company documents · competitor documents<br/>goal · format · keywords · tone · languages"/]
+
+    subgraph S1["① Understand the company and the task"]
+        direction TB
+        A["<b>ingest</b><br/>split company documents into<br/>searchable chunks (RAG store)"]
+        B["<b>classify</b><br/>intent of the goal (inform, persuade …)<br/>+ section structure"]
+        C["<b>analyze_brand</b><br/>brand profile: tone, values,<br/>audience, forbidden words"]
+        D["<b>competitors</b><br/>what competitors say,<br/>gaps we can fill"]
+        E["<b>build_brief</b><br/>angle, key points,<br/>SEO controls"]
+        A --> B --> C --> D --> E
+    end
+
+    subgraph S2["② Write and check (rewrite loop)"]
+        direction TB
+        F["<b>write</b><br/>English draft from the brief,<br/>using retrieved company facts"]
+        G["<b>geo</b><br/>restructure for AI search engines<br/>+ <b>grounding</b>: invented numbers → [ADD STAT]"]
+        H["<b>evaluate</b><br/>customer fit · GEO checklist · naturalness<br/>(+ length / sections for long formats)"]
+        Q{"loop score ≥ 70<br/>and structure OK?"}
+        R{"attempts left?<br/>(max 2 drafts)"}
+        F --> G --> H --> Q
+        Q -- "no" --> R
+        R -- "yes: send the judges'<br/>feedback to the writer" --> F
+    end
+
+    subgraph S3["③ Judge, translate and finish"]
+        direction TB
+        I["<b>competitor_judge</b><br/>one-off comparison of the<br/>final draft with competitors"]
+        J["<b>localize</b><br/>translate to Finnish (if chosen),<br/>keeping the brand voice"]
+        K["<b>finalize</b><br/>final fact check · image/video prompts<br/>· overall score = average of 4 judges"]
+        I --> J --> K
+    end
+
+    OUT[/"<b>Output</b><br/>English (+ Finnish) text · score 0–100<br/>judge feedback · fact-check report"/]
+
+    IN --> A
+    E --> F
+    Q -- "yes" --> I
+    R -- "no: keep the best effort" --> I
+    K --> OUT
+
+    CACHE[("AnalysisCache<br/>classify · brand · competitors<br/>reused across runs")]
+    CACHE -.-> B
+    CACHE -.-> C
+    CACHE -.-> D
 ```
-ingest → classify → analyze_brand → competitors → build_brief
-       → write → geo → evaluate ──(score too low, 1 retry)──┐
-                          │                                 │
-                          └──────────── passed ─────────────┘
-       → competitor_judge → localize → finalize
-```
+
+**Reading the diagram**
+
+- **Stage ① runs once per job.** Its three analysis steps (dashed lines) are cached, so
+  generating a second format from the same material skips them.
+- **Stage ② is the quality loop.** Every draft is fact-checked *before* it is scored, so an
+  invented statistic can never be the reason a draft passes. If the draft scores under 70
+  (or a long article has the wrong length or too few sections), the writer gets the
+  judges' written feedback and tries again. At most two drafts are written, which keeps
+  the number of model calls (and the free-tier cost) predictable. After the second draft
+  the pipeline moves on even if the draft did not pass, and the score shows that.
+- **Stage ③ runs once on the final draft.** The competitor judge is outside the loop
+  because it is the most expensive comparison and rarely changes after a rewrite; its
+  score is part of the final average (see *The score* below).
 
 | # | Node | Agent file | What it does |
 |---|------|------------|--------------|
