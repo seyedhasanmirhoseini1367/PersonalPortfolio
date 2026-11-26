@@ -79,7 +79,7 @@ def ensure(pack, lang):
             return True
         _running.add(key)
 
-    def work():
+    def work(own_thread=True):
         try:
             translate_pack(LessonPack.objects.get(pk=pack.pk), lang)
         except Exception:
@@ -87,10 +87,11 @@ def ensure(pack, lang):
         finally:
             with _lock:
                 _running.discard(key)
-            close_old_connections()
+            if own_thread:   # never close the connection of the request that called us
+                close_old_connections()
 
     if getattr(settings, 'JOURNEY_RUN_INLINE', False):
-        work()
+        work(own_thread=False)
         pack.refresh_from_db()
         return needed(pack, lang)
     threading.Thread(target=work, name=f'journey-translate-{pack.pk}-{lang}', daemon=True).start()
