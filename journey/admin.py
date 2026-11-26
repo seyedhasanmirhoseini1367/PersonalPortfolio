@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import LessonPack, Membership, Progress, StudyGroup, StudyItem
+from .models import LearnerProfile, LessonPack, Membership, Progress, StudyGroup, StudyItem
 
 
 class MembershipInline(admin.TabularInline):
@@ -19,7 +19,7 @@ class StudyGroupAdmin(admin.ModelAdmin):
 class StudyItemInline(admin.TabularInline):
     model = StudyItem
     extra = 0
-    fields = ['kind', 'order', 'front', 'form_in_text', 'grammar', 'meaning_fa', 'meaning_en', 'confidence']
+    fields = ['kind', 'order', 'front', 'form_in_text', 'grammar', 'meaning_en', 'confidence']
 
 
 @admin.register(LessonPack)
@@ -35,3 +35,9 @@ class ProgressAdmin(admin.ModelAdmin):
     list_display = ['user', 'item', 'reps', 'interval', 'lapses', 'due']
     list_filter = ['user']
     raw_id_fields = ['item']
+
+
+@admin.register(LearnerProfile)
+class LearnerProfileAdmin(admin.ModelAdmin):
+    list_display = ['user', 'helper_language']
+    list_filter = ['helper_language']

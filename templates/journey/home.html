@@ -28,6 +28,18 @@
     </section>
 
     <section class="lj-card">
+        <form method="post" action="{% url 'journey:set_language' %}" class="lj-form">{% csrf_token %}
+            <label for="lj-lang">Second language (optional)
+                <span class="muted" style="font-weight:400">Meanings and explanations are always in English. Pick a language you know
+                    better to see it next to the English.</span>
+                <select id="lj-lang" name="helper_language" class="lj-input">
+                    {% for code, name in helper_choices %}<option value="{{ code }}"{% if code == lang %} selected{% endif %}>{{ name }}</option>{% endfor %}
+                </select></label>
+            <button class="lj-btn ghost" type="submit" style="align-self:flex-start"><i class="fas fa-language"></i> Save language</button>
+        </form>
+    </section>
+
+    <section class="lj-card">
         <h2>Your groups</h2>
         {% if groups %}
         <ul class="lj-list">

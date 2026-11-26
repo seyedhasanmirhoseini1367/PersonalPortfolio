@@ -8,8 +8,9 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
-from . import pipeline, srs
-from .models import LessonPack, Membership, Progress, StudyGroup, StudyItem
+from . import pipeline, srs, translate
+from .models import (HELPER_LANGUAGES, HELPER_NAMES, RTL_LANGUAGES, LearnerProfile, LessonPack, Membership,
+                     Progress, StudyGroup, StudyItem)
 
 MAX_IMAGE_BYTES = 12 * 1024 * 1024
 NEW_PER_DAY = getattr(settings, 'JOURNEY_NEW_PER_DAY', 20)
@@ -61,13 +62,26 @@ def due_counts(user, group=None):
     return {'due': due, 'new': min(unseen, _new_left_today(user)), 'unseen': unseen}
 
 
-def _card(item):
+def _card(item, lang=''):
     return {
         'id': item.pk, 'kind': item.kind, 'front': item.front, 'form': item.form_in_text,
-        'grammar': item.grammar, 'fa': item.meaning_fa, 'en': item.meaning_en, 'example': item.example,
+        'grammar': item.grammar, 'en': item.meaning_en, 'extra': item.helper(lang), 'example': item.example,
         'cloze': (item.data or {}).get('cloze', ''), 'pack': item.pack.title,
         'confidence': item.confidence,
     }
+
+
+def _language(request):
+    lang = LearnerProfile.language_of(request.user)
+    return {'lang': lang, 'lang_name': HELPER_NAMES.get(lang, ''), 'lang_dir': 'rtl' if lang in RTL_LANGUAGES else 'ltr'}
+
+
+def _with_helper(items, lang):
+    """Attach the second-language text for templates (empty when none chosen or not translated yet)."""
+    for i in items:
+        i.extra = i.helper(lang)
+        i.extra_body = i.helper(lang, 'body')
+    return items
 
 
 # ── home and groups ─────────────────────────────────────────────────────────
@@ -83,7 +97,22 @@ def home(request):
     mistakes = Progress.objects.filter(user=request.user, lapses__gt=0).count()
     return render(request, 'journey/home.html', {
         'groups': groups, 'recent': recent, 'counts': due_counts(request.user), 'mistakes': mistakes,
+        'helper_choices': HELPER_LANGUAGES, **_language(request),
     })
+
+
+@login_required
+@require_POST
+def set_language(request):
+    lang = request.POST.get('helper_language', '')
+    if lang and lang not in HELPER_NAMES:
+        messages.error(request, 'Pick a language from the list.')
+    else:
+        LearnerProfile.objects.update_or_create(user=request.user, defaults={'helper_language': lang})
+        messages.success(request, f'Second language: {HELPER_NAMES[lang]}. Lessons are translated the first time you open them.'
+                         if lang else 'English only. No second language is shown.')
+    nxt = request.POST.get('next', '')
+    return redirect(nxt if nxt.startswith('/learn/') else 'journey:home')
 
 
 @login_required
@@ -201,14 +230,22 @@ def pack(request, pk):
     can_edit = pack.can_edit(request.user)
     if pack.status in (LessonPack.PROCESSING, LessonPack.FAILED) or (pack.status == LessonPack.DRAFT and not can_edit):
         return render(request, 'journey/pack_wait.html', {'pack': pack, 'can_edit': can_edit})
-    items = list(pack.items.all())
+    language = _language(request)
+    lang = language['lang']
+    translating = translate.ensure(pack, lang) if pack.status == LessonPack.PUBLISHED else False
+    if translating:
+        pack.refresh_from_db()
+    items = _with_helper(list(pack.items.all()), lang)
     by_kind = {k: [i for i in items if i.kind == k] for k, _ in StudyItem.KINDS}
     template = 'journey/pack_review.html' if pack.status == LessonPack.DRAFT else 'journey/pack.html'
-    questions = [{'q': i.front, 'fa': i.meaning_fa, 'options': i.data.get('options', []),
-                  'answer': i.data.get('answer', 0), 'why': i.body} for i in by_kind[StudyItem.QUESTION]]
+    questions = [{'q': i.front, 'en': i.meaning_en, 'extra': i.extra, 'options': i.data.get('options', []),
+                  'answer': i.data.get('answer', 0), 'why': i.body, 'why_extra': i.extra_body}
+                 for i in by_kind[StudyItem.QUESTION]]
     return render(request, template, {
         'pack': pack, 'group': pack.group, 'can_edit': can_edit, 'by_kind': by_kind, 'questions': questions,
         'n_low': sum(1 for i in items if i.confidence == StudyItem.LOW and i.kind == StudyItem.WORD),
+        'summary_extra': (pack.translations or {}).get(lang, '') if lang else '',
+        'translating': translating, **language,
     })
 
 
@@ -218,7 +255,7 @@ def pack_status(request, pk):
     return JsonResponse({'status': pack.status, 'note': pack.progress_note, 'error': pack.error})
 
 
-EDITABLE = ('front', 'form_in_text', 'grammar', 'meaning_fa', 'meaning_en', 'example', 'body')
+EDITABLE = ('front', 'form_in_text', 'grammar', 'meaning_en', 'example', 'body')
 
 
 @login_required
@@ -302,7 +339,13 @@ def api_due(request):
         new = list(items.exclude(progress__user=request.user)
                    .order_by('pack__published_at', KIND_ORDER, 'order')[:max(0, room)])
         cards = due + new
-    return JsonResponse({'cards': [_card(i) for i in cards], 'counts': due_counts(request.user, group)})
+    language = _language(request)
+    lang = language['lang']
+    if lang:   # lessons not yet in the learner's language get translated for next time
+        for p in {c.pack_id: c.pack for c in cards}.values():
+            translate.ensure(p, lang)
+    return JsonResponse({'cards': [_card(i, lang) for i in cards], 'counts': due_counts(request.user, group),
+                         'lang': lang, 'lang_dir': language['lang_dir']})
 
 
 @login_required
@@ -326,4 +369,7 @@ def mistakes(request):
     rows = (Progress.objects.filter(user=request.user, lapses__gt=0, item__pack__status=LessonPack.PUBLISHED,
                                     item__pack__group__memberships__user=request.user)
             .select_related('item__pack').order_by('-lapses', 'due').distinct())
-    return render(request, 'journey/mistakes.html', {'rows': rows})
+    language = _language(request)
+    rows = list(rows)
+    _with_helper([p.item for p in rows], language['lang'])
+    return render(request, 'journey/mistakes.html', {'rows': rows, **language})

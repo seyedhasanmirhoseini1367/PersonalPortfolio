@@ -23,11 +23,12 @@ details.lj-src pre{white-space:pre-wrap;font-size:.9rem;margin:8px 0 0;max-heigh
         <a class="lj-eyebrow" href="{{ group.get_absolute_url }}"><i class="fas fa-arrow-left"></i> {{ group.name }}</a>
         <h1>Check “{{ pack.title }}”</h1>
         <p class="muted">Only you and the group owner can see this draft. Fix anything wrong,
-           tick “Remove” on what you don’t need, then publish it to the group.</p>
+           tick “Remove” on what you don’t need, then publish it to the group. Check the English here: after publishing,
+           each member’s optional second language is translated from it automatically.</p>
         {% if n_low %}<p><span class="lj-chip low">Unsure</span> {{ n_low }} word{{ n_low|pluralize }} could not be confirmed. Check those first.</p>{% endif %}
     </header>
 
-    {% if pack.summary %}<section class="lj-card"><h2>About this lesson</h2><p class="fa" dir="rtl">{{ pack.summary }}</p></section>{% endif %}
+    {% if pack.summary %}<section class="lj-card"><h2>About this lesson</h2><p>{{ pack.summary }}</p></section>{% endif %}
 
     <form method="post" action="{% url 'journey:pack_edit' pack.pk %}" class="lj-form">{% csrf_token %}
 
@@ -41,7 +42,6 @@ details.lj-src pre{white-space:pre-wrap;font-size:.9rem;margin:8px 0 0;max-heigh
                 <label>Base form<input class="lj-input fi" name="{{ i.pk }}-front" value="{{ i.front }}" lang="fi"></label>
                 <label>In the text<input class="lj-input fi" name="{{ i.pk }}-form_in_text" value="{{ i.form_in_text }}" lang="fi"></label>
                 <label>Grammar<input class="lj-input" name="{{ i.pk }}-grammar" value="{{ i.grammar }}"></label>
-                <label>Persian<input class="lj-input fa" dir="rtl" name="{{ i.pk }}-meaning_fa" value="{{ i.meaning_fa }}"></label>
                 <label>English<input class="lj-input" name="{{ i.pk }}-meaning_en" value="{{ i.meaning_en }}"></label>
                 <label class="wide">Example from the lesson<input class="lj-input fi" name="{{ i.pk }}-example" value="{{ i.example }}" lang="fi"></label>
             </div>
@@ -59,7 +59,6 @@ details.lj-src pre{white-space:pre-wrap;font-size:.9rem;margin:8px 0 0;max-heigh
                     <label class="lj-del"><input type="checkbox" name="{{ i.pk }}-delete"> Remove</label></div>
                 <label class="wide">Sentence<input class="lj-input fi" name="{{ i.pk }}-front" value="{{ i.front }}" lang="fi"></label>
                 <label>Hidden word<input class="lj-input fi" name="{{ i.pk }}-cloze" value="{{ i.data.cloze }}" lang="fi"></label>
-                <label>Persian<input class="lj-input fa" dir="rtl" name="{{ i.pk }}-meaning_fa" value="{{ i.meaning_fa }}"></label>
                 <label>English<input class="lj-input" name="{{ i.pk }}-meaning_en" value="{{ i.meaning_en }}"></label>
             </div>
         {% endfor %}
@@ -74,7 +73,6 @@ details.lj-src pre{white-space:pre-wrap;font-size:.9rem;margin:8px 0 0;max-heigh
             <div class="lj-item">
                 <div class="lj-item-top"><span></span><label class="lj-del"><input type="checkbox" name="{{ i.pk }}-delete"> Remove</label></div>
                 <label>Finnish<input class="lj-input fi" name="{{ i.pk }}-front" value="{{ i.front }}" lang="fi"></label>
-                <label>Persian<input class="lj-input fa" dir="rtl" name="{{ i.pk }}-meaning_fa" value="{{ i.meaning_fa }}"></label>
                 <label>English<input class="lj-input" name="{{ i.pk }}-meaning_en" value="{{ i.meaning_en }}"></label>
             </div>
         {% endfor %}
@@ -89,7 +87,7 @@ details.lj-src pre{white-space:pre-wrap;font-size:.9rem;margin:8px 0 0;max-heigh
             <div class="lj-item">
                 <div class="lj-item-top"><span></span><label class="lj-del"><input type="checkbox" name="{{ i.pk }}-delete"> Remove</label></div>
                 <label class="wide">Title<input class="lj-input" name="{{ i.pk }}-front" value="{{ i.front }}"></label>
-                <label class="wide">Explanation (Persian)<textarea class="lj-input fa" dir="rtl" name="{{ i.pk }}-body">{{ i.body }}</textarea></label>
+                <label class="wide">Explanation<textarea class="lj-input" name="{{ i.pk }}-body">{{ i.body }}</textarea></label>
                 {% if i.data.examples %}<p class="wide muted fi">{{ i.data.examples|join:" · " }}</p>{% endif %}
             </div>
         {% endfor %}

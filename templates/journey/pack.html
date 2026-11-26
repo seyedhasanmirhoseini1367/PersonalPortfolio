@@ -30,13 +30,19 @@
         </div>
     </header>
 
-    {% if pack.summary %}<section class="lj-card"><h2>About this lesson</h2><p class="fa" dir="rtl">{{ pack.summary }}</p></section>{% endif %}
+    {% if translating %}
+    <p class="lj-msg" role="status"><i class="fas fa-language"></i> Translating this lesson into {{ lang_name }}. Reload in a minute to see it; English is shown meanwhile.</p>
+    {% endif %}
+
+    {% if pack.summary %}<section class="lj-card"><h2>About this lesson</h2><p>{{ pack.summary }}</p>
+        {% if summary_extra %}<p class="lj-extra" dir="{{ lang_dir }}" lang="{{ lang }}">{{ summary_extra }}</p>{% endif %}</section>{% endif %}
 
     {% if by_kind.grammar %}
     <section class="lj-card"><h2>Grammar</h2>
         {% for g in by_kind.grammar %}
         <div class="lj-note"><b>{{ g.front }}</b>
-            {% if g.body %}<p class="fa" dir="rtl">{{ g.body }}</p>{% endif %}
+            {% if g.body %}<p>{{ g.body }}</p>{% endif %}
+            {% if g.extra_body %}<p class="lj-extra" dir="{{ lang_dir }}" lang="{{ lang }}">{{ g.extra_body }}</p>{% endif %}
             {% for e in g.data.examples %}<span class="fi" lang="fi">{{ e }}</span>{% endfor %}
         </div>
         {% endfor %}
@@ -52,8 +58,8 @@
                     <button class="lj-speak" type="button" data-speak="{{ w.front }}" aria-label="Listen to {{ w.front }}"><i class="fas fa-volume-high"></i></button></div>
                 {% if w.form_in_text %}<small>in the text: <span class="fi" lang="fi">{{ w.form_in_text }}</span></small>{% endif %}
                 {% if w.grammar %}<small>{{ w.grammar }}</small>{% endif %}
-                {% if w.meaning_fa %}<span class="fa" dir="rtl">{{ w.meaning_fa }}</span>{% endif %}
                 {% if w.meaning_en %}<span>{{ w.meaning_en }}</span>{% endif %}
+                {% if w.extra %}<span class="lj-extra" dir="{{ lang_dir }}" lang="{{ lang }}">{{ w.extra }}</span>{% endif %}
                 {% if w.example %}<small class="fi" lang="fi">“{{ w.example }}”</small>{% endif %}
             </div>
         {% endfor %}
@@ -67,7 +73,7 @@
         {% for p in by_kind.phrase %}
             <li class="lj-row" style="border-bottom:1px solid var(--border);padding-bottom:8px">
                 <span><span class="fi" lang="fi">{{ p.front }}</span><br>
-                    <small class="muted">{% if p.meaning_fa %}<span class="fa" dir="rtl">{{ p.meaning_fa }}</span>{% endif %}{% if p.meaning_fa and p.meaning_en %} · {% endif %}{{ p.meaning_en }}</small></span>
+                    <small class="muted">{{ p.meaning_en }}{% if p.extra %} · <span class="lj-extra" dir="{{ lang_dir }}" lang="{{ lang }}">{{ p.extra }}</span>{% endif %}</small></span>
                 <button class="lj-speak" type="button" data-speak="{{ p.front }}" aria-label="Listen"><i class="fas fa-volume-high"></i></button>
             </li>
         {% endfor %}
@@ -112,19 +118,26 @@
 
     const box = document.getElementById('lj-quiz');
     if (!box) return;
+    const DIR = '{{ lang_dir }}', LANG = '{{ lang }}';
     const qs = JSON.parse(document.getElementById('lj-questions').textContent);
     qs.forEach((q, n) => {
         const wrap = document.createElement('div'); wrap.className = 'lj-q';
         const h = document.createElement('b'); h.lang = 'fi'; h.textContent = (n + 1) + '. ' + q.q; wrap.appendChild(h);
-        if (q.fa) { const fa = document.createElement('small'); fa.className = 'fa muted'; fa.dir = 'rtl'; fa.textContent = q.fa; wrap.appendChild(fa); }
+        const note = (text, extra) => {
+            const s = document.createElement('small'); s.className = 'muted'; s.textContent = text || '';
+            if (extra) { const x = document.createElement('span'); x.className = 'lj-extra'; x.dir = DIR; x.lang = LANG;
+                x.textContent = extra; s.append(document.createElement('br'), x); }
+            return s;
+        };
+        if (q.en || q.extra) wrap.appendChild(note(q.en, q.extra));
         const opts = document.createElement('div'); opts.className = 'lj-opts';
-        const why = document.createElement('p'); why.className = 'fa muted'; why.dir = 'rtl'; why.hidden = true; why.textContent = q.why || '';
+        const why = document.createElement('p'); why.hidden = true; why.appendChild(note(q.why, q.why_extra));
         q.options.forEach((o, i) => {
             const b = document.createElement('button'); b.type = 'button'; b.className = 'lj-opt'; b.lang = 'fi'; b.textContent = o;
             b.addEventListener('click', () => {
                 opts.querySelectorAll('button').forEach((x, j) => { x.disabled = true; if (j === q.answer) x.classList.add('right'); });
                 if (i !== q.answer) b.classList.add('wrong');
-                why.hidden = !q.why;
+                why.hidden = !(q.why || q.why_extra);
             });
             opts.appendChild(b);
         });

@@ -19,13 +19,13 @@ TEXT = ('Minä asun Tampereella. Asuntoni on pieni, mutta valoisa. '
 LING = {
     'words': [
         {'lemma': 'asua', 'form_in_text': 'asun', 'pos': 'verb', 'grammar': 'verbityyppi 1',
-         'meaning_fa': 'زندگی کردن', 'meaning_en': 'to live', 'example': 'Minä asun Tampereella.'},
+         'meaning_en': 'to live', 'example': 'Minä asun Tampereella.'},
         {'lemma': 'keittiö', 'form_in_text': 'keittiössä', 'pos': 'noun', 'grammar': 'inessiivi (in)',
-         'meaning_fa': 'آشپزخانه', 'meaning_en': 'kitchen', 'example': 'Keittiössä on pöytä ja kaksi tuolia.'},
+         'meaning_en': 'kitchen', 'example': 'Keittiössä on pöytä ja kaksi tuolia.'},
         {'lemma': 'kahvi', 'form_in_text': 'kahvia', 'pos': 'noun', 'grammar': 'partitiivi',
-         'meaning_fa': 'قهوه', 'meaning_en': '', 'example': 'An invented sentence not in the text.'},
+         'meaning_en': '', 'example': 'An invented sentence not in the text.'},
         {'lemma': 'lentokone', 'form_in_text': 'lentokoneessa', 'pos': 'noun', 'grammar': '',
-         'meaning_fa': 'هواپیما', 'meaning_en': 'aeroplane', 'example': ''},
+         'meaning_en': 'aeroplane', 'example': ''},
         {'lemma': 'asua', 'form_in_text': 'asun', 'meaning_en': 'duplicate'},
         {'lemma': '2026'},
     ],
@@ -37,8 +37,8 @@ LING = {
 }
 
 TEACH = {
-    'summary_fa': 'این درس درباره‌ی خانه است.',
-    'grammar': [{'title': 'Inessiivi: -ssa / -ssä', 'explanation_fa': 'یعنی «در»',
+    'summary_en': 'This lesson is about a home.',
+    'grammar': [{'title': 'Inessiivi: -ssa / -ssä', 'explanation_en': 'means "in"',
                  'examples': ['Keittiössä on pöytä ja kaksi tuolia.', 'Not from the text.']}],
     'phrases': [{'fi': 'Asun Tampereella.', 'meaning_en': 'I live in Tampere.'}, {'fi': 'asun tampereella.'}],
     'questions': [
@@ -178,7 +178,7 @@ class FlowTests(TestCase):
         self.assertEqual(word.confidence, StudyItem.HIGH)
         self.assertEqual(word.form_in_text, 'keittiössä')
         self.assertIn('inessiivi', word.grammar)
-        self.assertEqual(pack.summary, TEACH['summary_fa'])
+        self.assertEqual(pack.summary, TEACH['summary_en'])
         # The draft review page renders for the author.
         self.assertContains(self.client.get(pack.get_absolute_url()), 'Save and publish')
 
@@ -281,3 +281,90 @@ class FlowTests(TestCase):
                     pack.get_absolute_url(), reverse('journey:review'), reverse('journey:mistakes'),
                     reverse('journey:review') + f'?group={self.group.invite_code}'):
             self.assertEqual(self.client.get(url).status_code, 200, url)
+
+
+def fake_translator(calls):
+    """Returns a translator that echoes each id with a marked translation and counts calls."""
+    import json as _json
+    import re as _re
+
+    def ask(prompt):
+        calls.append(prompt)
+        payload = _json.loads(prompt[prompt.index('{"items"'):] if '{"items"' in prompt else prompt[prompt.rindex('\n{') + 1:])
+        return {'summary': 'FA: ' + payload.get('summary', ''),
+                'items': [{'id': r['id'], 'meaning': 'FA: ' + r['meaning'], 'body': ('FA: ' + r['body']) if r['body'] else ''}
+                          for r in payload['items']]}
+    return ask
+
+
+@override_settings(JOURNEY_RUN_INLINE=True)
+class LanguageTests(TestCase):
+    def setUp(self):
+        self.me = User.objects.create_user('hasan', 'h@example.test', 'pw-hasan-123!')
+        self.client.force_login(self.me)
+        self.client.post(reverse('journey:group_create'), {'name': 'Suomi A1'})
+        self.group = StudyGroup.objects.get()
+        with patched_pipeline():
+            self.client.post(reverse('journey:pack_new', args=[self.group.invite_code]), {'title': 'K3', 'text': TEXT})
+        self.pack = LessonPack.objects.get()
+        self.pack.publish()
+
+    def test_english_only_by_default_and_no_translation_runs(self):
+        from . import translate
+        with mock.patch.object(translate, 'translate_pack') as tp:
+            r = self.client.get(self.pack.get_absolute_url())
+            cards = self.client.get(reverse('journey:api_due')).json()
+        tp.assert_not_called()
+        self.assertContains(r, 'kitchen')
+        self.assertNotContains(r, 'lj-extra" dir')
+        self.assertTrue(all(c['extra'] == '' for c in cards['cards']))
+        self.assertEqual(cards['lang'], '')
+
+    def test_chosen_language_is_translated_once_and_shown_next_to_english(self):
+        from . import translate
+        from .models import LearnerProfile
+        r = self.client.post(reverse('journey:set_language'), {'helper_language': 'fa', 'next': '/learn/'})
+        self.assertRedirects(r, '/learn/', fetch_redirect_response=False)
+        self.assertEqual(LearnerProfile.language_of(self.me), 'fa')
+        calls = []
+        with mock.patch.object(translate, '_ask', side_effect=fake_translator(calls)):
+            page = self.client.get(self.pack.get_absolute_url())
+            self.client.get(self.pack.get_absolute_url())
+            cards = self.client.get(reverse('journey:api_due')).json()
+        self.assertEqual(len(calls), 1, 'one translation per lesson and language, then cached')
+        self.assertIn('Persian', calls[0])
+        self.pack.refresh_from_db()
+        self.assertEqual(self.pack.translations['fa'], 'FA: This lesson is about a home.')
+        self.assertContains(page, 'FA: kitchen')
+        self.assertContains(page, 'dir="rtl"')
+        self.assertContains(page, 'kitchen</span>')
+        self.assertEqual(cards['lang_dir'], 'rtl')
+        word = next(c for c in cards['cards'] if c['front'] == 'keittiö')
+        self.assertEqual((word['en'], word['extra']), ('kitchen', 'FA: kitchen'))
+
+    def test_unknown_language_is_refused_and_english_only_can_be_restored(self):
+        from .models import LearnerProfile
+        self.client.post(reverse('journey:set_language'), {'helper_language': 'xx'})
+        self.assertEqual(LearnerProfile.language_of(self.me), '')
+        self.client.post(reverse('journey:set_language'), {'helper_language': 'de'})
+        self.client.post(reverse('journey:set_language'), {'helper_language': ''})
+        self.assertEqual(LearnerProfile.language_of(self.me), '')
+
+    def test_translator_failure_keeps_english(self):
+        from . import translate
+        self.client.post(reverse('journey:set_language'), {'helper_language': 'ru'})
+        with mock.patch.object(translate, '_ask', side_effect=RuntimeError('quota')):
+            r = self.client.get(self.pack.get_absolute_url())
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, 'kitchen')
+        self.pack.refresh_from_db()
+        self.assertNotIn('ru', self.pack.translations)
+
+    def test_drafts_are_not_translated(self):
+        from . import translate
+        self.pack.status = LessonPack.DRAFT
+        self.pack.save()
+        self.client.post(reverse('journey:set_language'), {'helper_language': 'fa'})
+        with mock.patch.object(translate, '_ask') as ask:
+            self.client.get(self.pack.get_absolute_url())
+        ask.assert_not_called()

@@ -6,6 +6,7 @@ app_name = 'journey'
 
 urlpatterns = [
     path('', views.home, name='home'),
+    path('language/', views.set_language, name='set_language'),
     path('groups/new/', views.group_create, name='group_create'),
     path('groups/join/', views.group_join, name='group_join'),
     path('g/<str:code>/', views.group, name='group'),

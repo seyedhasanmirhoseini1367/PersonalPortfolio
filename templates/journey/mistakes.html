@@ -18,7 +18,7 @@
             <li class="lj-row" style="border-bottom:1px solid var(--border);padding-bottom:8px">
                 <span><span class="fi" lang="fi">{{ p.item.front }}</span>
                     {% if p.item.form_in_text %}<small class="muted"> · {{ p.item.form_in_text }}</small>{% endif %}<br>
-                    <small class="muted">{% if p.item.meaning_fa %}<span class="fa" dir="rtl">{{ p.item.meaning_fa }}</span> · {% endif %}{{ p.item.meaning_en }} · {{ p.item.pack.title }}</small></span>
+                    <small class="muted">{{ p.item.meaning_en }}{% if p.item.extra %} · <span class="lj-extra" dir="{{ lang_dir }}" lang="{{ lang }}">{{ p.item.extra }}</span>{% endif %} · {{ p.item.pack.title }}</small></span>
                 <span class="lj-chip low">forgot {{ p.lapses }}×</span>
             </li>
             {% endfor %}

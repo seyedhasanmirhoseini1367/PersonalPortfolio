@@ -13,7 +13,7 @@
 .lj-blank{display:inline-block;min-width:4ch;color:var(--lj-lake);letter-spacing:.05em}
 .lj-hit{color:var(--lj-moss);font-weight:800}
 .lj-back{display:flex;flex-direction:column;gap:6px;align-items:center;border-top:1px solid var(--border);padding-top:12px;width:100%}
-.lj-back .fa{font-size:1.15rem}
+.lj-back .lj-extra{font-size:1.05rem}
 .lj-kind{font-size:.72rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted)}
 .lj-grades{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
 .lj-grades button{flex-direction:column;gap:2px;padding:8px 6px}
@@ -88,10 +88,12 @@
         span.append(sentence.slice(i + word.length));
         return span;
     }
+    let LANG = '', DIR = 'ltr';
+    const extra = c => el('span', 'lj-extra', c.extra, {dir: DIR, lang: LANG});
     function meaning(c) {
         const box = el('div', 'lj-back');
-        if (c.fa) box.append(el('span', 'fa', c.fa, {dir: 'rtl'}));
         if (c.en) box.append(el('span', '', c.en));
+        if (c.extra) box.append(extra(c));
         return box;
     }
     function draw() {
@@ -111,8 +113,8 @@
         revealed = true;
         const back = el('div', 'lj-back');
         if (cur.kind === 'word') {
-            if (cur.fa) back.append(el('span', 'fa', cur.fa, {dir: 'rtl'}));
             if (cur.en) back.append(el('span', '', cur.en));
+            if (cur.extra) back.append(extra(cur));
             if (cur.form) back.append(el('small', 'muted', 'in the text: ' + cur.form));
             if (cur.grammar) back.append(el('small', 'muted', cur.grammar));
             if (cur.example) back.append(el('small', 'fi', '“' + cur.example + '”', {lang: 'fi'}));
@@ -167,7 +169,7 @@
 
     fetch(API_DUE, {headers: {'Accept': 'application/json'}})
         .then(r => r.json())
-        .then(d => { queue = d.cards || []; total = queue.length; next(); })
+        .then(d => { LANG = d.lang || ''; DIR = d.lang_dir || 'ltr'; queue = d.cards || []; total = queue.length; next(); })
         .catch(() => { card.innerHTML = ''; card.append(el('span', 'muted', 'Could not load your cards. Check your connection and reload.')); });
 })();
 </script>

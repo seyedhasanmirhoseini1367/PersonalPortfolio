@@ -103,18 +103,18 @@ def read_images(images):
 
 # ── 2 + 3. linguist and teacher ─────────────────────────────────────────────
 
-LINGUIST_PROMPT = """You help an A1-A2 learner of Finnish whose first language is Persian.
+LINGUIST_PROMPT = """You help an A1-A2 learner of Finnish who reads English.
 From the lesson text below, return JSON only:
 {{
  "words": [{{"lemma": "dictionary base form (nominative singular, or first infinitive for verbs)",
             "form_in_text": "the exact form used in the text",
             "pos": "noun|verb|adjective|adverb|pronoun|other",
             "grammar": "short label, e.g. 'inessiivi (in)', 'partitiivi', 'verbityyppi 1', 'k:∅ astevaihtelu'",
-            "meaning_fa": "Persian meaning in this text", "meaning_en": "English meaning in this text",
+            "meaning_en": "English meaning in this text",
             "example": "one sentence copied exactly from the text"}}],
  "sentences": [{{"sentence": "a useful sentence copied exactly from the text",
                 "cloze": "one word of that sentence to hide",
-                "meaning_fa": "Persian translation", "meaning_en": "English translation"}}]
+                "meaning_en": "English translation"}}]
 }}
 Rules: at most {max_words} of the most useful words, no names or numbers, no duplicates.
 Copy "example" and "sentence" character for character from the text. At most 12 sentences.
@@ -123,15 +123,15 @@ LESSON TEXT:
 {text}
 """
 
-TEACHER_PROMPT = """You are a Finnish teacher for an A1-A2 learner whose first language is Persian.
+TEACHER_PROMPT = """You are a Finnish teacher for an A1-A2 learner who reads English.
 From the lesson text below, return JSON only:
 {{
- "summary_fa": "3-4 sentences in Persian: what this lesson teaches (topic, key words, grammar)",
- "grammar": [{{"title": "e.g. Inessiivi: -ssa / -ssä", "explanation_fa": "a short explanation in Persian",
+ "summary_en": "3-4 plain English sentences: what this lesson teaches (topic, key words, grammar)",
+ "grammar": [{{"title": "e.g. Inessiivi: -ssa / -ssä", "explanation_en": "a short, simple explanation in English",
               "examples": ["sentences copied exactly from the text"]}}],
- "phrases": [{{"fi": "a ready-to-use Finnish phrase from or based on the text", "meaning_fa": "...", "meaning_en": "..."}}],
- "questions": [{{"question": "a simple comprehension question in Finnish", "question_fa": "the same in Persian",
-                "options": ["four short Finnish answers"], "answer": 0, "explanation_fa": "why, in Persian"}}],
+ "phrases": [{{"fi": "a ready-to-use Finnish phrase from or based on the text", "meaning_en": "..."}}],
+ "questions": [{{"question": "a simple comprehension question in Finnish", "question_en": "the same in English",
+                "options": ["four short Finnish answers"], "answer": 0, "explanation_en": "why, in English"}}],
  "tables": [{{"lemma": "an important verb from the text (first infinitive)", "meaning_en": "...",
              "rows": [["minä", "..."], ["sinä", "..."], ["hän", "..."], ["me", "..."], ["te", "..."], ["he", "..."]]}}]
 }}
@@ -195,7 +195,7 @@ def clean_words(words, text):
         out.append(dict(
             lemma=lemma, form_in_text=form if form.lower() != key else '',
             pos=_s(w.get('pos'), 20), grammar=_s(w.get('grammar'), 160),
-            meaning_fa=_s(w.get('meaning_fa'), 400), meaning_en=_s(w.get('meaning_en'), 400),
+            meaning_en=_s(w.get('meaning_en'), 400),
             example=example if in_text(example, text) else '',
             # A form the text does not contain means the model misread or invented it.
             grounded=word_in(form or lemma, text)))
@@ -211,8 +211,7 @@ def clean_sentences(sentences, text):
         if not in_text(sentence, text) or not word_in(cloze, sentence) or norm(sentence) in seen:
             continue
         seen.add(norm(sentence))
-        out.append(dict(sentence=sentence, cloze=cloze,
-                        meaning_fa=_s(s.get('meaning_fa'), 400), meaning_en=_s(s.get('meaning_en'), 400)))
+        out.append(dict(sentence=sentence, cloze=cloze, meaning_en=_s(s.get('meaning_en'), 400)))
     return out[:12]
 
 
@@ -229,8 +228,8 @@ def clean_questions(questions):
         if (len(options) != 4 or not all(options) or len({o.lower() for o in options}) != 4
                 or not 0 <= answer < 4 or not _s(q.get('question'))):
             continue
-        out.append(dict(question=_s(q.get('question')), question_fa=_s(q.get('question_fa')),
-                        options=options, answer=answer, explanation_fa=_s(q.get('explanation_fa'), 600)))
+        out.append(dict(question=_s(q.get('question')), question_en=_s(q.get('question_en')),
+                        options=options, answer=answer, explanation_en=_s(q.get('explanation_en'), 600)))
     return out[:5]
 
 
@@ -240,7 +239,7 @@ def clean_grammar(notes, text):
         if not isinstance(g, dict) or not _s(g.get('title')):
             continue
         examples = [_s(e, 300) for e in (g.get('examples') or []) if in_text(e, text)]
-        out.append(dict(title=_s(g.get('title'), 160), explanation_fa=_s(g.get('explanation_fa'), 1500),
+        out.append(dict(title=_s(g.get('title'), 160), explanation_en=_s(g.get('explanation_en'), 1500),
                         examples=examples[:4]))
     return out[:4]
 
@@ -253,7 +252,7 @@ def clean_phrases(phrases):
         fi = _s(p.get('fi'), 200)
         if fi and fi.lower() not in seen:
             seen.add(fi.lower())
-            out.append(dict(fi=fi, meaning_fa=_s(p.get('meaning_fa'), 400), meaning_en=_s(p.get('meaning_en'), 400)))
+            out.append(dict(fi=fi, meaning_en=_s(p.get('meaning_en'), 400)))
     return out[:10]
 
 
@@ -356,21 +355,19 @@ def build_pack(pack, images=(), text='', lookup=None):
         for i, w in enumerate(words):
             label = ' · '.join(x for x in (w['pos'], w['grammar']) if x)
             items.append(StudyItem(pack=pack, kind=StudyItem.WORD, order=i, front=w['lemma'],
-                                   form_in_text=w['form_in_text'], grammar=label[:160], meaning_fa=w['meaning_fa'],
+                                   form_in_text=w['form_in_text'], grammar=label[:160],
                                    meaning_en=w['meaning_en'], example=w['example'], confidence=w['confidence']))
         for i, s in enumerate(sentences):
             items.append(StudyItem(pack=pack, kind=StudyItem.SENTENCE, order=i, front=s['sentence'],
-                                   meaning_fa=s['meaning_fa'], meaning_en=s['meaning_en'],
-                                   data={'cloze': s['cloze']}, confidence=StudyItem.HIGH))
+                                   meaning_en=s['meaning_en'], data={'cloze': s['cloze']}, confidence=StudyItem.HIGH))
         for i, p in enumerate(phrases):
-            items.append(StudyItem(pack=pack, kind=StudyItem.PHRASE, order=i, front=p['fi'],
-                                   meaning_fa=p['meaning_fa'], meaning_en=p['meaning_en']))
+            items.append(StudyItem(pack=pack, kind=StudyItem.PHRASE, order=i, front=p['fi'], meaning_en=p['meaning_en']))
         for i, g in enumerate(grammar):
             items.append(StudyItem(pack=pack, kind=StudyItem.GRAMMAR, order=i, front=g['title'],
-                                   body=g['explanation_fa'], data={'examples': g['examples']}))
+                                   body=g['explanation_en'], data={'examples': g['examples']}))
         for i, q in enumerate(questions):
             items.append(StudyItem(pack=pack, kind=StudyItem.QUESTION, order=i, front=q['question'],
-                                   meaning_fa=q['question_fa'], body=q['explanation_fa'],
+                                   meaning_en=q['question_en'], body=q['explanation_en'],
                                    data={'options': q['options'], 'answer': q['answer']}))
         for i, t in enumerate(tables):
             items.append(StudyItem(pack=pack, kind=StudyItem.TABLE, order=i, front=t['lemma'],
@@ -378,11 +375,12 @@ def build_pack(pack, images=(), text='', lookup=None):
         with transaction.atomic():
             pack.items.all().delete()
             StudyItem.objects.bulk_create(items)
-            pack.summary = _s(teach.get('summary_fa'), 1500)
+            pack.summary = _s(teach.get('summary_en'), 1500)
+            pack.translations = {}
             pack.status = LessonPack.DRAFT
             pack.progress_note = ''
             pack.error = ''
-            pack.save(update_fields=['summary', 'status', 'progress_note', 'error'])
+            pack.save(update_fields=['summary', 'translations', 'status', 'progress_note', 'error'])
     except Exception as exc:
         logger.exception('LearningJourney pack %s failed', pack.pk)
         pack.status = LessonPack.FAILED

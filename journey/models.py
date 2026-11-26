@@ -13,6 +13,34 @@ from django.utils import timezone
 
 LANGUAGES = [('fi', 'Finnish')]
 
+# English is always shown. A member may add one more language they know better.
+HELPER_LANGUAGES = [
+    ('', 'None (English only)'), ('ar', 'Arabic · العربية'), ('bn', 'Bengali · বাংলা'), ('zh', 'Chinese · 中文'),
+    ('et', 'Estonian · Eesti'), ('tl', 'Filipino'), ('fr', 'French · Français'), ('de', 'German · Deutsch'),
+    ('hi', 'Hindi · हिन्दी'), ('it', 'Italian · Italiano'), ('ja', 'Japanese · 日本語'), ('ku', 'Kurdish · Kurdî'),
+    ('ne', 'Nepali · नेपाली'), ('fa', 'Persian · فارسی'), ('pl', 'Polish · Polski'), ('pt', 'Portuguese · Português'),
+    ('ru', 'Russian · Русский'), ('so', 'Somali · Soomaali'), ('es', 'Spanish · Español'), ('sv', 'Swedish · Svenska'),
+    ('th', 'Thai · ไทย'), ('ti', 'Tigrinya · ትግርኛ'), ('tr', 'Turkish · Türkçe'), ('uk', 'Ukrainian · Українська'),
+    ('ur', 'Urdu · اردو'), ('vi', 'Vietnamese · Tiếng Việt'),
+]
+HELPER_NAMES = {code: name.split(' · ')[0] for code, name in HELPER_LANGUAGES if code}
+RTL_LANGUAGES = {'ar', 'fa', 'ur', 'he'}
+
+
+class LearnerProfile(models.Model):
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='journey_profile')
+    helper_language = models.CharField(max_length=8, choices=HELPER_LANGUAGES, blank=True, default='',
+                                       help_text='Optional second language shown next to English.')
+
+    def __str__(self):
+        return f'{self.user} ({self.helper_language or "English only"})'
+
+    @classmethod
+    def language_of(cls, user):
+        if not user.is_authenticated:
+            return ''
+        return cls.objects.filter(user=user).values_list('helper_language', flat=True).first() or ''
+
 # No 0/O or 1/I/L, so a code read aloud in class is typed right.
 CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'
 
@@ -74,7 +102,9 @@ class LessonPack(models.Model):
     error = models.TextField(blank=True)
     image_count = models.PositiveSmallIntegerField(default=0)
     source_text = models.TextField(blank=True, help_text='The lesson text, typed in or read from the photos.')
-    summary = models.TextField(blank=True)
+    summary = models.TextField(blank=True, help_text='In English.')
+    translations = models.JSONField(default=dict, blank=True,
+                                    help_text='Summary per helper language: {"fa": "..."}; a key means the whole pack is translated.')
     created_at = models.DateTimeField(auto_now_add=True)
     published_at = models.DateTimeField(null=True, blank=True)
 
@@ -112,11 +142,12 @@ class StudyItem(models.Model):
     front = models.CharField(max_length=300, help_text='Base form, sentence, phrase, note title or question.')
     form_in_text = models.CharField(max_length=120, blank=True, help_text='The form seen in the lesson, e.g. talossa.')
     grammar = models.CharField(max_length=160, blank=True, help_text='Case, verb type, gradation...')
-    meaning_fa = models.CharField(max_length=400, blank=True)
-    meaning_en = models.CharField(max_length=400, blank=True)
+    meaning_en = models.CharField(max_length=400, blank=True, help_text='English meaning or translation.')
     example = models.CharField(max_length=400, blank=True, help_text='A sentence from the lesson.')
-    body = models.TextField(blank=True, help_text='Longer text: grammar explanation or question explanation.')
+    body = models.TextField(blank=True, help_text='Longer English text: grammar explanation or question explanation.')
     data = models.JSONField(default=dict, blank=True, help_text='Cloze answer, quiz options, table rows.')
+    translations = models.JSONField(default=dict, blank=True,
+                                    help_text='Per helper language: {"fa": {"meaning": "...", "body": "..."}}')
     confidence = models.CharField(max_length=8, choices=CONFIDENCE, default=MEDIUM)
 
     class Meta:
@@ -128,6 +159,9 @@ class StudyItem(models.Model):
     @property
     def reviewable(self):
         return self.kind in self.REVIEWABLE
+
+    def helper(self, lang, field='meaning'):
+        return ((self.translations or {}).get(lang) or {}).get(field, '') if lang else ''
 
 
 class Progress(models.Model):
