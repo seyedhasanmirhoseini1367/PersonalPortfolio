@@ -1,0 +1,22 @@
+{# Today's and this week's quests. Needs `quests` (game.quests_for). #}
+<section class="lj-card lj-quests" aria-labelledby="lj-quests-h">
+    <div class="lj-row"><h2 id="lj-quests-h"><i class="fas fa-compass" style="color:var(--lj-lake)"></i> Quests</h2>
+        <small class="muted">Picked from your own cards · new ones every day</small></div>
+    {% if quests %}
+    <ul class="lj-qlist">
+        {% for q in quests %}
+        <li class="lj-q{% if q.done_at %} done{% endif %}">
+            <span class="lj-q-ic" aria-hidden="true"><i class="fas {% if q.done_at %}fa-check{% elif q.period == 'week' %}fa-calendar-week{% else %}fa-flag{% endif %}"></i></span>
+            <span class="lj-q-main">
+                <span class="lj-q-top"><b>{{ q.title }}</b>{% if q.period == 'week' %} <span class="lj-chip">this week</span>{% endif %}</span>
+                <small class="muted">{{ q.detail }}</small>
+                <span class="lj-xpbar thin" role="progressbar" aria-label="{{ q.title }}" aria-valuemin="0" aria-valuemax="{{ q.target }}" aria-valuenow="{{ q.progress }}"><i style="width:{{ q.pct }}%"></i></span>
+            </span>
+            <span class="lj-q-side"><b>{{ q.progress }}/{{ q.target }}</b><small>+{{ q.xp }} XP · {{ q.coins }} <i class="fas fa-coins" aria-label="coins"></i></small></span>
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p class="muted">Quests start once you have a published lesson to practise.</p>
+    {% endif %}
+</section>

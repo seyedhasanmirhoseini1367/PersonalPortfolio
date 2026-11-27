@@ -10,6 +10,15 @@
         <p class="muted">Counted from your own answers, with what each number means underneath.</p>
     </header>
 
+    {% include 'journey/_game_bar.html' %}
+
+    <section class="lj-card" aria-labelledby="lj-know-h">
+        <h2 id="lj-know-h">How well you know your cards</h2>
+        <p class="muted">Each step is harder than the one before. Recognising a card is a start; typing it yourself shows you can
+            recall it; still knowing it three weeks later is what lasts.</p>
+        {% include 'journey/_ladder.html' with k=knowledge %}
+    </section>
+
     <section class="lj-card">
         <h2>All subjects</h2>
         {% include 'journey/_progress.html' %}
@@ -27,8 +36,42 @@
             <div class="lj-stat"><b>{{ s.progress.weak }}</b><span>weak</span></div>
             <div class="lj-stat"><b>{{ s.progress.week_total }}</b><span>answers this week</span></div>
         </div>
+        {% include 'journey/_ladder.html' with k=s.knowledge %}
     </section>
     {% endfor %}
+
+    <section class="lj-card" aria-labelledby="lj-ach-h">
+        <div class="lj-row"><h2 id="lj-ach-h">Achievements</h2>
+            <small class="muted">{{ achievements|length }} in all</small></div>
+        <div class="lj-ach">
+            {% for a in achievements %}
+            <div class="lj-a {{ a.tier }}{% if not a.unlocked_at %} locked{% endif %}">
+                <span class="medal" aria-hidden="true"><i class="fas {{ a.icon }}"></i></span>
+                <span class="lj-a-main"><b>{{ a.name }}</b><small class="muted">{{ a.desc }}</small>
+                    {% if a.unlocked_at %}<small class="muted">{{ a.tier|capfirst }} · {{ a.unlocked_at|date:'j M Y' }}</small>
+                    {% else %}<span class="lj-xpbar thin" role="progressbar" aria-label="{{ a.name }}" aria-valuemin="0" aria-valuemax="{{ a.at }}" aria-valuenow="{{ a.value }}"><i style="width:{{ a.pct }}%"></i></span>
+                    <small class="muted">{{ a.value }} / {{ a.at }}</small>{% endif %}</span>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+
+    <section class="lj-card" aria-labelledby="lj-hist-h">
+        <h2 id="lj-hist-h">Recent rewards</h2>
+        {% if history %}
+        <ul class="lj-hist">
+            {% for e in history %}
+            <li><span>{{ e.get_kind_display }}{% if e.note %}: {{ e.note|truncatechars:60 }}{% endif %}<br>
+                <small class="muted">{{ e.created_at|date:'j M, H:i' }}</small></span>
+                <span class="amt">{% if e.xp %}+{{ e.xp }} XP{% endif %}{% if e.coins %} {% if e.coins > 0 %}+{% endif %}{{ e.coins }} <i class="fas fa-coins" style="color:#c8962e" aria-label="coins"></i>{% endif %}</span></li>
+            {% endfor %}
+        </ul>
+        <p class="muted"><small>Typed answers 10 XP, multiple choice 5, flashcards 3, +5 when you remember a card after a week or more.
+            Each card pays once a day; answers stop paying after {{ me.cap }} XP a day.</small></p>
+        {% else %}
+        <p class="muted">Rewards show up here once you practise.</p>
+        {% endif %}
+    </section>
 
     <section class="lj-card">
         <form method="post" action="{% url 'journey:set_language' %}" class="lj-form">{% csrf_token %}

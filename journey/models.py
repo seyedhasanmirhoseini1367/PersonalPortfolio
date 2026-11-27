@@ -30,9 +30,10 @@ class LearnerProfile(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='journey_profile')
     helper_language = models.CharField(max_length=8, choices=HELPER_LANGUAGES, blank=True, default='',
                                        help_text='Optional second language shown next to English.')
-    # Left from the removed character editor and town game; kept so no saved data is dropped.
-    avatar = models.JSONField(default=dict, blank=True, help_text='Unused.')
-    town = models.JSONField(default=dict, blank=True, help_text='Unused.')
+    # The town (journey.town_decor, /learn/town/). Rows from the old character editor and town game are
+    # ignored: only known keys are read.
+    avatar = models.JSONField(default=dict, blank=True, help_text='{"sprite": 0-5}: the character in the town')
+    town = models.JSONField(default=dict, blank=True, help_text='{"town_owned": [...]}: decorations bought for the town')
 
     def __str__(self):
         return f'{self.user} ({self.helper_language or "English only"})'
@@ -255,10 +256,78 @@ class ReviewLog(models.Model):
     grade = models.PositiveSmallIntegerField()
     mode = models.CharField(max_length=8, choices=MODES, default=FLASH)
     correct = models.BooleanField(null=True, help_text='Checked by the app (typed or chosen); empty for self-graded cards.')
+    verified = models.BooleanField(default=False, help_text='The server checked the answer itself (rewards trust only these).')
+    scheduled = models.BooleanField(default=False, help_text='The card was due by the schedule (not an extra round).')
+    first = models.BooleanField(default=False, help_text='The first answer ever on this card.')
     at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         indexes = [models.Index(fields=['user', 'at'])]
+
+
+class RewardEvent(models.Model):
+    """The ledger of XP and coins. Every reward is one row; `key` makes each reward happen at most once.
+
+    Balances are sums over this table, so every point can be traced to the learning that earned it.
+    """
+    ANSWER, LESSON, QUEST, ACHIEVEMENT, LEVEL, PURCHASE = 'answer', 'lesson', 'quest', 'achievement', 'level', 'purchase'
+    SCENE = 'scene'
+    KINDS = [(ANSWER, 'Answer'), (LESSON, 'Lesson complete'), (QUEST, 'Quest'), (ACHIEVEMENT, 'Achievement'),
+             (LEVEL, 'Level up'), (PURCHASE, 'Purchase'), (SCENE, 'Conversation')]
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='journey_rewards')
+    kind = models.CharField(max_length=12, choices=KINDS)
+    key = models.CharField(max_length=80, help_text='e.g. answer:<item>:<day>, quest:<pk>, achievement:<code>')
+    xp = models.IntegerField(default=0)
+    coins = models.IntegerField(default=0, help_text='Negative for a purchase.')
+    group = models.ForeignKey(StudyGroup, null=True, blank=True, on_delete=models.SET_NULL, related_name='+')
+    note = models.CharField(max_length=160, blank=True)
+    day = models.DateField(help_text='Local date it was earned.')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['user', 'key'], name='journey_reward_once')]
+        indexes = [models.Index(fields=['user', 'day'])]
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'{self.user} {self.key}: {self.xp} XP, {self.coins} coins'
+
+
+class Quest(models.Model):
+    """A daily or weekly goal, picked by fixed rules from the learner's own cards. Progress is counted from ReviewLog."""
+    DAY, WEEK = 'day', 'week'
+    PERIODS = [(DAY, 'Daily'), (WEEK, 'Weekly')]
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='journey_quests')
+    period = models.CharField(max_length=4, choices=PERIODS, default=DAY)
+    starts = models.DateField(help_text='The day, or the Monday of the week.')
+    code = models.CharField(max_length=24)
+    title = models.CharField(max_length=120)
+    detail = models.CharField(max_length=200, blank=True, help_text='Why this quest helps.')
+    target = models.PositiveSmallIntegerField()
+    xp = models.PositiveSmallIntegerField(default=0)
+    coins = models.PositiveSmallIntegerField(default=0)
+    group = models.ForeignKey(StudyGroup, null=True, blank=True, on_delete=models.CASCADE, related_name='+')
+    done_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['user', 'period', 'starts', 'code'], name='journey_quest_once')]
+        ordering = ['period', 'pk']
+
+    def __str__(self):
+        return f'{self.user} {self.starts} {self.title}'
+
+
+class Achievement(models.Model):
+    """An unlocked achievement. What each code means lives in journey.game.ACHIEVEMENTS."""
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='journey_achievements')
+    code = models.CharField(max_length=24)
+    unlocked_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['user', 'code'], name='journey_achievement_once')]
+        ordering = ['-unlocked_at']
 
 
 SETTINGS = {

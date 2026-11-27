@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load static %}
 {% block title %}LearningJourney{% endblock %}
 {% block meta_description %}Turn your own study material into flashcards, questions and daily practice.{% endblock %}
 {% block extra_css %}{% include 'journey/_style.html' %}{% endblock %}
@@ -12,6 +13,8 @@
         <p class="muted">Pick a subject to see its lessons. Inside a lesson you add your material, check what the AI made,
            and practise.</p>
     </header>
+
+    {% include 'journey/_game_bar.html' %}
 
     {% if counts.due or counts.new or tips %}
     <section class="lj-card">
@@ -30,6 +33,8 @@
         {% endif %}
     </section>
     {% endif %}
+
+    {% if places %}{% include 'journey/_quests.html' %}{% endif %}
 
     <div class="lj-subjects">
         {% for s in places %}
@@ -51,6 +56,13 @@
             <small>Finnish, maths, programming, science or anything else</small>
         </button>
     </div>
+
+    {% if places %}
+    <a class="lj-wteaser" href="{% url 'journey:town' %}" aria-label="Open the town">
+        <img class="lj-wteaser-scene" src="{% static 'journey/town/preview.png' %}" alt="" width="1280" height="480" loading="lazy">
+        <span class="lj-wteaser-text"><b>The town</b><small>Walk around, order at the café, chat at the bus stop: the language you learn, used in real situations.</small></span>
+    </a>
+    {% endif %}
 
     <section class="lj-card" id="lj-new"{% if places %} hidden{% endif %}>
         <h2>New subject</h2>
