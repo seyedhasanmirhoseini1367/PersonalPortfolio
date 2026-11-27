@@ -125,6 +125,70 @@ details.lj-more summary{cursor:pointer;font-weight:700}
 @media (max-width:560px){.lj-stepper .t{font-size:.68rem}.lj-lesson .next{display:none}}
 .lj-speak{border:1px solid var(--border);background:transparent;color:var(--lj-lake);border-radius:999px;width:38px;height:38px;cursor:pointer}
 @media (max-width:560px){.lj-card{padding:14px}.lj-stat b{font-size:1.6rem}}
+.lj-wteaser{position:relative;display:block;border-radius:18px;overflow:hidden;border:1px solid var(--border);aspect-ratio:1200/380;
+  text-decoration:none;color:#fff}
+.lj-wteaser-scene{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;image-rendering:pixelated}.lj-wteaser-scene svg{width:100%;height:100%;display:block}
+.lj-wteaser-text{position:absolute;left:0;right:0;bottom:0;padding:28px 18px 14px;display:flex;flex-direction:column;gap:2px;
+  background:linear-gradient(transparent,rgba(8,20,34,.72))}
+.lj-wteaser-text small{opacity:.9}
+.lj-wteaser:hover{color:#fff;box-shadow:0 8px 26px rgba(10,30,50,.18)}
+@media (max-width:560px){.lj-wteaser{aspect-ratio:16/9}}
+/* ── progression: level bar, quests, achievements ── */
+.lj-wide{max-width:1120px}
+.lj-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.lj-btn.sm{min-height:36px;padding:6px 12px;font-size:.85rem}
+.lj-xpbar{display:block;height:8px;border-radius:99px;background:color-mix(in srgb,var(--lj-lake) 14%,transparent);overflow:hidden}
+.lj-xpbar.thin{height:5px;margin-top:4px}
+.lj-xpbar i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,var(--lj-lake),var(--lj-moss));transition:width .6s ease}
+.lj-gbar{display:flex;align-items:center;gap:14px;padding:12px 16px;border:1px solid var(--border);border-radius:16px;
+  background:var(--bg-card);text-decoration:none;color:var(--text)}
+.lj-gbar:hover{border-color:var(--lj-lake);color:var(--text)}
+.lj-gbar-em{flex:none;position:relative;display:flex}
+.lj-face{width:56px;height:56px;border-radius:50%;background-color:color-mix(in srgb,var(--lj-lake) 16%,var(--bg-card));
+  border:3px solid var(--lj-lake);background-repeat:no-repeat;image-rendering:pixelated}
+.lj-face.none{display:flex;align-items:center;justify-content:center;color:var(--lj-lake);font-size:1.3rem}
+.lj-lv{position:absolute;right:-4px;bottom:-4px;min-width:22px;height:22px;padding:0 5px;border-radius:11px;background:var(--lj-lake);
+  color:#fff;font-size:.75rem;font-weight:800;display:flex;align-items:center;justify-content:center;border:2px solid var(--bg-card)}
+.lj-gbar-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px}
+.lj-gbar-top{display:flex;align-items:baseline;gap:4px;flex-wrap:wrap}
+.lj-gbar-xp{margin-left:auto;font-size:.82rem;font-weight:700;color:var(--text-muted);font-variant-numeric:tabular-nums}
+.lj-gbar-meta{display:flex;gap:16px;flex-wrap:wrap;font-size:.84rem;color:var(--text-muted);font-weight:600}
+.lj-gbar-meta .fa-fire{color:#e0743a}.lj-gbar-meta .fa-coins{color:#c8962e}.lj-gbar-meta .fa-bolt{color:var(--lj-lake)}
+.lj-qlist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.lj-q{display:flex;gap:12px;align-items:flex-start;padding:12px;border:1px solid var(--border);border-radius:12px}
+.lj-q.done{background:color-mix(in srgb,var(--lj-moss) 7%,transparent);border-color:color-mix(in srgb,var(--lj-moss) 45%,var(--border))}
+.lj-q-ic{flex:none;width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;
+  background:color-mix(in srgb,var(--lj-lake) 13%,transparent);color:var(--lj-lake)}
+.lj-q.done .lj-q-ic{background:var(--lj-moss);color:#fff}
+.lj-q-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.lj-q-main small{line-height:1.4}
+.lj-q-side{flex:none;text-align:right;display:flex;flex-direction:column;gap:2px;font-variant-numeric:tabular-nums}
+.lj-q-side small{color:var(--text-muted);white-space:nowrap}.lj-q-side .fa-coins{color:#c8962e}
+.lj-ach{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
+.lj-a{display:flex;gap:10px;align-items:flex-start;padding:12px;border:1px solid var(--border);border-radius:12px}
+.medal{flex:none;width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff}
+.bronze .medal,.medal.bronze{background:linear-gradient(135deg,#d9a27a,#9a5f37)}
+.silver .medal,.medal.silver{background:linear-gradient(135deg,#cfd6de,#7f8a97)}
+.gold .medal,.medal.gold{background:linear-gradient(135deg,#f4d47c,#b07d1c)}
+.lj-a.locked .medal{background:var(--border);color:var(--text-muted)}
+.lj-a.locked b{color:var(--text-muted)}
+.lj-a-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.lj-ladder{display:flex;flex-direction:column;gap:8px}
+.lj-rung{display:grid;grid-template-columns:120px 1fr 56px;gap:10px;align-items:center;font-size:.88rem}
+.lj-rung .lj-xpbar{height:10px}
+.lj-rung b{text-align:right;font-variant-numeric:tabular-nums}
+.lj-hist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.lj-hist li{display:flex;gap:10px;padding:7px 0;border-bottom:1px solid var(--border);font-size:.88rem}
+.lj-hist li:last-child{border:0}
+.lj-hist .amt{margin-left:auto;white-space:nowrap;font-weight:700;font-variant-numeric:tabular-nums}
+.lj-gain{position:absolute;right:16px;top:12px;font-weight:800;font-size:.95rem;color:var(--lj-moss);pointer-events:none;
+  animation:lj-up 1.1s ease forwards}
+@keyframes lj-up{from{opacity:0;transform:translateY(6px)}20%{opacity:1}to{opacity:0;transform:translateY(-18px)}}
+.lj-sum{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;width:100%;max-width:420px;text-align:left}
+.lj-sum li{display:flex;gap:10px;align-items:center}
+.lj-sum .medal{width:28px;height:28px;font-size:.8rem}
+@media (max-width:560px){.lj-rung{grid-template-columns:92px 1fr 44px}
+  .lj-q-side small{display:none}}
 @media (prefers-reduced-motion:reduce){.lj *{transition:none!important;animation:none!important}}
 </style>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;600&display=swap">

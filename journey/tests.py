@@ -482,7 +482,7 @@ class FlashcardsOnlyTests(TestCase):
     def test_game_pages_are_gone_and_lessons_write_no_scenes(self):
         me = User.objects.create_user('solo', password='x')
         self.client.force_login(me)
-        for path in ('/learn/town/', '/learn/character/', '/learn/scene/1/'):
+        for path in ('/learn/character/', '/learn/scene/1/'):   # /learn/town/ is the new Phaser town
             self.assertEqual(self.client.get(path).status_code, 404, path)
         home = self.client.get(reverse('journey:home'))
         self.assertNotContains(home, 'Explore the town')
@@ -1187,3 +1187,441 @@ class LessonStepTests(TestCase):
             log = ReviewLog.objects.create(user=self.me, item=item, grade=4)
             ReviewLog.objects.filter(pk=log.pk).update(at=now - timedelta(days=days))
         self.assertEqual(jviews.progress_summary(self.me)['streak'], 2)
+
+
+
+# ── rewards, quests, achievements and the world ───────────────────────────
+
+from . import answers, game  # noqa: E402
+from .models import Achievement, LearnerProfile, Quest, ReviewLog, RewardEvent  # noqa: E402
+
+
+class GameBase(TestCase):
+    def setUp(self):
+        self.me = User.objects.create_user('player', 'player@example.test', 'x')
+        self.client.force_login(self.me)
+        self.space = StudyGroup.objects.create(name='Suomi', is_personal=True, subject='finnish', created_by=self.me)
+        Membership.objects.create(group=self.space, user=self.me, role=Membership.OWNER)
+        self.pack = LessonPack.objects.create(group=self.space, title='Kappale 1', created_by=self.me)
+        mk = lambda **kw: StudyItem.objects.create(pack=self.pack, **kw)   # noqa: E731
+        self.words = [mk(kind='word', front=f, form_in_text=f + 'ssa', meaning_en=m, order=i)
+                      for i, (f, m) in enumerate([('talo', 'house'), ('koira', 'dog'), ('kissa', 'cat'),
+                                                  ('auto', 'car'), ('kirja', 'book')])]
+        self.table = mk(kind='table', front='asua', meaning_en='to live',
+                        data={'rows': [['minä', 'asun'], ['sinä', 'asut'], ['hän', 'asuu']]})
+        self.question = mk(kind='question', front='Missä?', data={'options': ['a', 'b', 'c', 'd'], 'answer': 2})
+        self.pack.publish()
+
+    def answer(self, item, grade='good', mode='type', given=None, **extra):
+        body = {'item': item.pk, 'grade': grade, 'mode': mode, **extra}
+        if given is not None:
+            body['given'] = given
+        r = self.client.post(reverse('journey:api_grade'), body)
+        self.assertEqual(r.status_code, 200, r.content)
+        return r.json()
+
+    def xp(self):
+        return game.totals(self.me)[0]
+
+    def answer_xp(self):
+        return sum(RewardEvent.objects.filter(user=self.me, kind=RewardEvent.ANSWER).values_list('xp', flat=True))
+
+
+class AnswerCheckTests(GameBase):
+    def test_the_server_decides_if_a_typed_answer_is_right(self):
+        talo = self.words[0]
+        self.assertEqual(answers.verify(talo, 'type', ' Talo! '), answers.OK)
+        self.assertEqual(answers.verify(talo, 'type', 'talossa'), answers.OK, 'the form in the text counts too')
+        self.assertEqual(answers.verify(self.words[3], 'type', 'autoo'), answers.CLOSE)
+        self.assertEqual(answers.verify(talo, 'type', 'kala'), answers.WRONG, 'two letters off a short word is wrong')
+        self.assertEqual(answers.verify(talo, 'choice', 'house'), answers.OK)
+        self.assertEqual(answers.verify(self.question, 'choice', 'c'), answers.OK)
+        self.assertEqual(answers.verify(self.question, 'choice', 'a'), answers.WRONG)
+        self.assertEqual(answers.verify(self.table, 'type', 'asut', row=1), answers.OK)
+        self.assertEqual(answers.verify(self.table, 'type', 'asuu', row=-1), None, 'no negative indexes')
+        self.assertEqual(answers.verify(self.table, 'type', 'asuu', row='x'), None)
+
+    def test_a_browser_that_claims_right_for_a_wrong_answer_is_not_believed(self):
+        d = self.answer(self.words[0], 'good', 'type', given='banana', correct='1')
+        log = ReviewLog.objects.get()
+        self.assertEqual((log.correct, log.verified, d['verdict']), (False, True, 'no'))
+        self.assertEqual(self.answer_xp(), 1, 'only the small first-answer point')
+
+    def test_old_pages_without_the_answer_still_work_but_count_as_self_graded(self):
+        self.answer(self.words[0], 'good', 'type', correct='1')
+        log = ReviewLog.objects.get()
+        self.assertEqual((log.correct, log.verified, log.first), (True, False, True))
+        self.assertEqual(self.answer_xp(), 3)
+
+
+class RewardTests(GameBase):
+    def test_xp_follows_the_kind_of_evidence(self):
+        self.answer(self.words[0], 'good', 'type', given='talo')
+        self.answer(self.words[1], 'good', 'choice', given='dog')
+        self.answer(self.words[2], 'good', 'flash')
+        self.answer(self.words[3], 'hard', 'type', given='autoo')
+        self.assertEqual(self.answer_xp(), 10 + 5 + 3 + 6)
+
+    def test_one_card_pays_once_a_day_keeping_the_best_result(self):
+        w = self.words[0]
+        self.answer(w, 'again', 'type', given='nope')
+        self.assertEqual(self.answer_xp(), 1)
+        self.answer(w, 'good', 'type', given='talo')
+        self.assertEqual(self.answer_xp(), 10, 'the better answer replaces the first')
+        for _ in range(5):
+            self.answer(w, 'good', 'type', given='talo', extra='1')
+        self.assertEqual(self.answer_xp(), 10, 'repeating the same card adds nothing')
+        self.assertEqual(RewardEvent.objects.filter(kind=RewardEvent.ANSWER).count(), 1)
+
+    def test_remembering_after_a_week_earns_the_retention_bonus(self):
+        w = self.words[0]
+        Progress.objects.create(user=self.me, item=w, interval=8, reps=3, due=timezone.now() - timedelta(hours=1))
+        self.answer(w, 'good', 'type', given='talo')
+        log = ReviewLog.objects.get()
+        self.assertTrue(log.scheduled)
+        self.assertEqual(self.answer_xp(), 15)
+
+    def test_answers_stop_paying_at_the_daily_cap(self):
+        with mock.patch.object(game, 'DAILY_XP_CAP', 25):
+            for w in self.words:
+                self.answer(w, 'good', 'type', given=w.front)
+        self.assertEqual(self.answer_xp(), 25)
+
+    def test_a_lesson_pays_once_when_every_card_was_right(self):
+        for w in self.words:
+            self.answer(w, 'good', 'type', given=w.front)
+        self.answer(self.table, 'good', 'type', given='asuu', row=2)
+        self.assertFalse(RewardEvent.objects.filter(kind=RewardEvent.LESSON).exists())
+        d = self.answer(self.question, 'good', 'choice', given='c')
+        self.assertEqual(d['reward']['lesson'], 'Kappale 1')
+        self.answer(self.question, 'good', 'choice', given='c', extra='1')
+        self.assertEqual(RewardEvent.objects.filter(kind=RewardEvent.LESSON).count(), 1)
+
+    def test_achievements_unlock_once_and_levels_pay_coins(self):
+        d = self.answer(self.words[0], 'good', 'type', given='talo')
+        self.assertIn('First step', [a['name'] for a in d['reward']['unlocked']])
+        self.answer(self.words[1], 'good', 'type', given='koira')
+        self.assertEqual(Achievement.objects.filter(code='first_answer').count(), 1)
+        self.assertEqual(RewardEvent.objects.filter(key='achievement:first_answer').count(), 1)
+        game.grant(self.me, RewardEvent.QUEST, 'test:big', 400)
+        before = game.totals(self.me)[1]
+        paid = game.check_levels(self.me, 0)
+        self.assertEqual(paid, game.LEVEL_COINS * (game.level_for(self.xp()) - 1))
+        self.assertEqual(game.check_levels(self.me, 0), 0, 'level coins are paid once')
+        self.assertEqual(game.totals(self.me)[1], before + paid)
+
+    def test_levels(self):
+        self.assertEqual([game.level_for(x) for x in (0, 99, 100, 299, 300, 600, 1000)], [1, 1, 2, 2, 3, 4, 5])
+        self.assertEqual(game.rank_for(12), 'Practitioner')
+
+    def test_a_broken_reward_never_breaks_practice(self):
+        with mock.patch.object(game, '_on_answer', side_effect=RuntimeError('boom')), self.assertLogs('journey.game', 'ERROR'):
+            d = self.answer(self.words[0], 'good', 'type', given='talo')
+        self.assertIsNone(d['reward'])
+        self.assertTrue(Progress.objects.filter(user=self.me, item=self.words[0], reps=1).exists())
+
+    def test_rewards_are_per_learner(self):
+        other = User.objects.create_user('other', 'other@example.test', 'x')
+        self.answer(self.words[0], 'good', 'type', given='talo')
+        self.assertEqual(game.totals(other), (0, 0))
+        self.client.force_login(other)
+        self.assertEqual(self.client.post(reverse('journey:api_grade'),
+                                          {'item': self.words[0].pk, 'grade': 'good'}).status_code, 404)
+
+
+class QuestTests(GameBase):
+    def test_daily_quests_come_from_the_learners_own_cards_and_pay_once(self):
+        quests = game.quests_for(self.me)
+        codes = {q.code for q in quests if q.period == Quest.DAY}
+        self.assertIn('new', codes, 'seven unseen cards: a learn-new quest')
+        self.assertLessEqual(len(codes), 3)
+        self.assertEqual({q.pk for q in game.quests_for(self.me)}, {q.pk for q in quests}, 'the same quests all day')
+        new = next(q for q in quests if q.code == 'new')
+        self.assertEqual(new.target, 7)
+        for w in self.words + [self.table, self.question]:
+            given = {'table': 'asun', 'question': 'c'}.get(w.kind, w.front)
+            self.answer(w, 'good', 'choice' if w.kind == 'question' else 'type', given=given, row=0)
+        new.refresh_from_db()
+        self.assertIsNotNone(new.done_at)
+        self.assertEqual(RewardEvent.objects.filter(key=f'quest:{new.pk}').count(), 1)
+        game.check_quests(self.me)
+        self.assertEqual(RewardEvent.objects.filter(key=f'quest:{new.pk}').count(), 1)
+
+    def test_without_published_cards_only_town_quests_remain(self):
+        LessonPack.objects.update(status=LessonPack.DRAFT)
+        self.assertEqual({q.code for q in game.quests_for(self.me)}, {'talk', 'w_talks'},
+                         'a Finnish learner can still talk in town; nothing asks for cards that do not exist')
+        StudyGroup.objects.update(subject='math')
+        Quest.objects.all().delete()
+        self.assertEqual(game.quests_for(self.me), [])
+
+    def test_quest_targets_never_ask_for_more_cards_than_exist(self):
+        Progress.objects.bulk_create([Progress(user=self.me, item=w, reps=1, interval=1, due=timezone.now() - timedelta(days=1))
+                                      for w in self.words[:4]])
+        due = next(q for q in game.quests_for(self.me) if q.code == 'due')
+        self.assertEqual(due.target, 4)
+
+
+class GamePagesTests(GameBase):
+    def test_home_progress_and_practice_show_the_level(self):
+        self.answer(self.words[0], 'good', 'type', given='talo')
+        home = self.client.get(reverse('journey:home'))
+        self.assertContains(home, 'Level 1')
+        self.assertContains(home, 'Quests')
+        self.assertContains(home, 'lj-face none', msg_prefix='no character chosen yet')
+        self.client.post(reverse('journey:api_town_avatar'), {'sprite': 2})
+        self.assertContains(self.client.get(reverse('journey:home')), 'background-position')
+        prog = self.client.get(reverse('journey:progress'))
+        self.assertContains(prog, 'First step')
+        self.assertContains(prog, 'Kept long-term')
+        self.assertContains(self.client.get(reverse('journey:review')), 'id="lj-lvl"')
+
+    def test_the_old_world_page_is_gone(self):
+        self.assertEqual(self.client.get('/learn/world/').status_code, 404)
+
+
+# ── the town: map, conversations and their rewards ─────────────────────────
+
+from . import scenes, town_map  # noqa: E402
+
+
+class TownMapTests(TestCase):
+    def test_the_committed_map_matches_the_generator(self):
+        import json
+        from django.conf import settings
+        committed = json.loads((settings.BASE_DIR / 'static/journey/town/town.json').read_text(encoding='utf-8'))
+        self.assertEqual(committed, json.loads(json.dumps(town_map.to_tiled(town_map.build()))),
+                         'run: python manage.py build_town_map')
+
+    def test_every_door_can_be_reached_from_the_start(self):
+        t = town_map.build()
+        spawn = next(o for o in t.objects if o['type'] == 'spawn')
+        start = (spawn['x'] // 16, spawn['y'] // 16)
+        self.assertNotIn(start, t.solid)
+        seen, todo = {start}, [start]
+        while todo:
+            x, y = todo.pop()
+            for nx, ny in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):
+                if 0 <= nx < town_map.W and 0 <= ny < town_map.H and (nx, ny) not in t.solid and (nx, ny) not in seen:
+                    seen.add((nx, ny))
+                    todo.append((nx, ny))
+        places = [o for o in t.objects if o['type'] == 'place']
+        self.assertGreaterEqual(len(places), 2)
+        for o in places:
+            self.assertIn((o['x'] // 16, o['y'] // 16), seen, o['name'])
+
+    def test_every_scene_answer_is_a_real_option(self):
+        for scene in scenes.SCENES.values():
+            for turn in scene['turns']:
+                self.assertTrue(0 <= turn['answer'] < len(turn['options']))
+            self.assertNotIn('answer', str(scenes.public(scene)))
+
+
+class TownTests(TestCase):
+    def setUp(self):
+        self.me = User.objects.create_user('walker', 'walker@example.test', 'x')
+        self.client.force_login(self.me)
+        self.scene = scenes.get('cafe', 'finnish')
+
+    def start(self):
+        return self.client.post(reverse('journey:api_scene_start', args=['cafe'])).json()
+
+    def reply(self, turn, choice, key='cafe'):
+        return self.client.post(reverse('journey:api_scene_answer', args=[key]), {'turn': turn, 'choice': choice})
+
+    def shown(self, turn, original):
+        """Where the page shows an option, since the order is shuffled for every conversation."""
+        return self.client.session['town_scene']['order'][turn].index(original)
+
+    def play(self, wrong_first=(), key='cafe'):
+        scene = scenes.get(key, 'finnish')
+        self.client.post(reverse('journey:api_scene_start', args=[key]))
+        last = None
+        for i, t in enumerate(scene['turns']):
+            if i in wrong_first:
+                r = self.reply(i, self.shown(i, (t['answer'] + 1) % len(t['options'])), key).json()
+                self.assertFalse(r['right'])
+                self.assertTrue(r['meaning'])
+            last = self.reply(i, self.shown(i, t['answer']), key).json()
+            self.assertTrue(last['right'], (key, i))
+        return last
+
+    def test_the_page_and_the_state(self):
+        self.assertContains(self.client.get(reverse('journey:town')), 'id="tw-stage"')
+        s = self.client.get(reverse('journey:api_town')).json()
+        self.assertIsNone(s['sprite'])
+        self.assertTrue(s['places']['bakery']['locked'])
+        self.assertFalse(s['places']['cafe']['locked'])
+        self.assertNotIn('answer', str(self.start()))
+
+    def test_a_conversation_pays_once_a_day_and_counts_first_tries(self):
+        done = self.play(wrong_first={0, 3})
+        self.assertTrue(done['done'])
+        self.assertEqual(done['first_try'], 4)
+        self.assertTrue(done['reward']['paid'])
+        event = RewardEvent.objects.get(user=self.me, kind=RewardEvent.SCENE)
+        self.assertEqual((event.xp, event.coins), (scenes.XP_PER_TURN * 4 + 2, scenes.COINS))
+        again = self.play()
+        self.assertFalse(again['reward']['paid'])
+        self.assertEqual(RewardEvent.objects.filter(user=self.me, kind=RewardEvent.SCENE).count(), 1)
+        self.assertTrue(self.client.get(reverse('journey:api_town')).json()['places']['cafe']['done_today'])
+
+    def test_turns_cannot_be_skipped_or_answered_without_starting(self):
+        self.assertEqual(self.reply(0, 0).status_code, 409)
+        self.start()
+        self.assertEqual(self.reply(3, 0).status_code, 409)
+        self.assertEqual(self.reply(0, 9).status_code, 409)
+        self.assertEqual(self.reply(0, 'x').status_code, 400)
+        self.assertEqual(self.client.post(reverse('journey:api_scene_start', args=['nowhere'])).status_code, 404)
+        self.assertFalse(RewardEvent.objects.filter(user=self.me).exists())
+
+    def test_finished_phrases_become_cards_once(self):
+        save = reverse('journey:api_scene_save', args=['cafe'])
+        self.assertEqual(self.client.post(save).status_code, 409, 'only after finishing the conversation')
+        self.play()
+        r = self.client.post(save).json()
+        self.assertEqual((r['created'], r['count']), (True, len(self.scene['turns'])))
+        pack = LessonPack.objects.get(created_by=self.me)
+        self.assertEqual((pack.status, pack.group.subject, pack.group.is_personal), (LessonPack.PUBLISHED, 'finnish', True))
+        self.assertTrue(pack.items.filter(kind=StudyItem.PHRASE, front='Saisinko kahvin, kiitos.').exists())
+        self.assertFalse(self.client.post(save).json()['created'])
+        self.assertEqual(LessonPack.objects.filter(created_by=self.me).count(), 1)
+
+    def test_replies_are_shuffled_and_checked_in_the_shown_order(self):
+        orders = set()
+        for _ in range(12):
+            shown = self.start()['turns'][0]['options']
+            orders.add(tuple(shown))
+            right = self.scene['turns'][0]['options'][self.scene['turns'][0]['answer']][0]
+            self.assertTrue(self.reply(0, shown.index(right)).json()['right'])
+        self.assertGreater(len(orders), 1, 'the right reply is not always in the same place')
+
+    def test_new_places_open_by_level_and_all_scenes_can_be_finished(self):
+        r = self.client.post(reverse('journey:api_scene_start', args=['bakery']))
+        self.assertEqual(r.status_code, 403)
+        self.assertIn('level 3', r.json()['error'])
+        from . import game
+        game.grant(self.me, RewardEvent.QUEST, 'test:levels', 2000)
+        state = self.client.get(reverse('journey:api_town')).json()
+        self.assertFalse(any(p['locked'] for p in state['places'].values()))
+        self.assertTrue(state['greetings'])
+        for key in ('cafe', 'bakery', 'market', 'bus'):
+            self.assertTrue(self.play(key=key)['done'], key)
+        self.assertEqual(RewardEvent.objects.filter(user=self.me, kind=RewardEvent.SCENE).count(), 4)
+
+    def test_the_academy_lists_language_lessons(self):
+        self.play()
+        self.client.post(reverse('journey:api_scene_save', args=['cafe']))
+        lessons = self.client.get(reverse('journey:api_town')).json()['lessons']
+        self.assertEqual(len(lessons), 1)
+        self.assertEqual(lessons[0]['new'], len(self.scene['turns']))
+        self.assertTrue(lessons[0]['practise'].endswith('/practice/'))
+
+    def test_choosing_a_character(self):
+        url = reverse('journey:api_town_avatar')
+        self.assertEqual(self.client.post(url, {'sprite': 9}).status_code, 400)
+        self.assertEqual(self.client.post(url, {'sprite': 'x'}).status_code, 400)
+        self.client.post(url, {'sprite': 3})
+        self.assertEqual(self.client.get(reverse('journey:api_town')).json()['sprite'], 3)
+
+    def test_strangers_are_sent_to_sign_in(self):
+        self.client.logout()
+        self.assertEqual(self.client.get(reverse('journey:town')).status_code, 302)
+        self.assertEqual(self.client.post(reverse('journey:api_scene_start', args=['cafe'])).status_code, 302)
+
+
+
+# ── the town joined to quests, achievements, coins and practice ────────────
+
+from . import town_decor  # noqa: E402
+
+
+class TownProgressTests(TownTests):
+    def test_a_conversation_counts_for_the_daily_and_weekly_town_quests(self):
+        self.client.post(reverse('journey:api_town_avatar'), {'sprite': 1})   # has been to the town
+        from . import game
+        codes = {q.code: q for q in game.quests_for(self.me)}
+        self.assertIn('talk', codes)
+        self.assertIn('w_talks', codes)
+        self.play()
+        talk = Quest.objects.get(user=self.me, code='talk')
+        self.assertIsNotNone(talk.done_at)
+        self.assertEqual(RewardEvent.objects.filter(key=f'quest:{talk.pk}').count(), 1)
+        week = next(q for q in game.quests_for(self.me) if q.code == 'w_talks')
+        self.assertEqual(week.progress, 1)
+
+    def test_arriving_in_town_adds_its_quests_the_same_day(self):
+        from . import game
+        self.client.get(reverse('journey:api_town'))   # today's quests are made before a character is picked
+        self.assertNotIn('talk', {q.code for q in game.quests_for(self.me)})
+        self.client.post(reverse('journey:api_town_avatar'), {'sprite': 0})
+        self.assertTrue({'talk', 'w_talks'} <= {q.code for q in game.quests_for(self.me)})
+        self.client.post(reverse('journey:api_town_avatar'), {'sprite': 1})
+        self.assertEqual(Quest.objects.filter(user=self.me, code='talk').count(), 1)
+
+    def test_people_who_never_came_to_town_get_no_town_quests(self):
+        from . import game
+        self.assertNotIn('talk', {q.code for q in game.quests_for(self.me)})
+
+    def test_a_conversation_keeps_the_streak_going(self):
+        from . import game
+        self.assertEqual(game.streak(self.me), 0)
+        self.play()
+        self.assertEqual(game.streak(self.me), 1)
+
+    def test_conversation_achievements(self):
+        self.play(wrong_first={2})
+        have = set(Achievement.objects.filter(user=self.me).values_list('code', flat=True))
+        self.assertIn('talk_1', have)
+        self.assertNotIn('talk_flawless', have, 'one reply was wrong first')
+        from . import game
+        game.grant(self.me, RewardEvent.QUEST, 'test:lv', 300)
+        self.play(key='bus')
+        self.assertTrue(Achievement.objects.filter(user=self.me, code='talk_flawless').exists())
+
+
+class TownDecorTests(TestCase):
+    def setUp(self):
+        self.me = User.objects.create_user('decor', 'decor@example.test', 'x')
+        self.client.force_login(self.me)
+
+    def buy(self, item):
+        return self.client.post(reverse('journey:api_town_buy'), {'item': item})
+
+    def test_buying_needs_coins_and_the_level_and_happens_once(self):
+        from . import game
+        self.assertEqual(self.buy('park_benches').status_code, 409)
+        game.grant(self.me, RewardEvent.QUEST, 'test:coins', 0, 100)
+        self.assertEqual(self.buy('flags').json()['message'], 'Flags open at level 5.')
+        r = self.buy('park_benches')
+        self.assertEqual(r.status_code, 200, r.content)
+        self.assertEqual(self.buy('park_benches').status_code, 409)
+        self.assertEqual(self.buy('castle').status_code, 409)
+        self.assertEqual(game.totals(self.me)[1], 70)
+        state = self.client.get(reverse('journey:api_town')).json()
+        self.assertEqual(len(state['decor']['tiles']), 2)
+        self.assertTrue(next(i for i in state['shop'] if i['code'] == 'park_benches')['owned'])
+
+    def test_every_door_stays_reachable_with_all_decorations(self):
+        t = town_map.build()
+        for _, _, _, _, tiles, _ in town_decor.DECOR.values():
+            for x, y, _, _, solid in tiles:
+                self.assertNotIn((x, y), t.solid, 'decorations go on free tiles')
+                if solid:
+                    t.solid.add((x, y))
+        spawn = next(o for o in t.objects if o['type'] == 'spawn')
+        seen, todo = {(spawn['x'] // 16, spawn['y'] // 16)}, [(spawn['x'] // 16, spawn['y'] // 16)]
+        while todo:
+            x, y = todo.pop()
+            for n in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):
+                if 0 <= n[0] < town_map.W and 0 <= n[1] < town_map.H and n not in t.solid and n not in seen:
+                    seen.add(n)
+                    todo.append(n)
+        for o in t.objects:
+            if o['type'] == 'place':
+                self.assertIn((o['x'] // 16, o['y'] // 16), seen, o['name'])
+
+    def test_the_town_replaces_the_old_world_in_the_menu(self):
+        home = self.client.get(reverse('journey:home'))
+        self.assertContains(home, reverse('journey:town'))
+        self.assertNotContains(home, 'Your world')

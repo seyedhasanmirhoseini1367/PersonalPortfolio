@@ -11,12 +11,13 @@ from django.contrib.auth.decorators import login_required
 from django.db.models import Case, Count, Q, Sum, When
 from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
-from . import extract, pipeline, srs, subjects, translate
+from . import answers, extract, game, pipeline, scenes, srs, subjects, town_decor, translate
 from .models import (HELPER_LANGUAGES, HELPER_NAMES, LEVELS, RTL_LANGUAGES, LearnerProfile, LessonPack, Membership,
-                     Progress, ReviewLog, StudyGroup, StudyItem)
+                     Progress, Quest, ReviewLog, RewardEvent, StudyGroup, StudyItem)
 
 NEW_PER_DAY = getattr(settings, 'JOURNEY_NEW_PER_DAY', 20)
 DAILY_IMAGES = getattr(settings, 'JOURNEY_DAILY_IMAGES', 30)
@@ -207,8 +208,34 @@ def home(request):
         'places': places, 'counts': due_counts(request.user),
         'tips': recommendations(request.user, [p for p in places if p.is_personal]),
         'subject_choices': subjects.SUBJECTS.values(), 'default_subject': subjects.DEFAULT, 'levels': LEVELS,
-        'nav': 'home',
+        'nav': 'home', **_game_context(request.user),
     })
+
+
+TOWN_PEOPLE = (23, 104, 185, 266, 347, 428)   # first frame of each character in the town sprite sheet
+
+
+def _face(user, scale=3):
+    """The learner's town character, as CSS for a background sprite (or None before they chose one)."""
+    from django.templatetags.static import static
+    avatar = LearnerProfile.objects.filter(user=user).values_list('avatar', flat=True).first() or {}
+    sprite = avatar.get('sprite') if isinstance(avatar, dict) else None
+    if not isinstance(sprite, int) or not 0 <= sprite < len(TOWN_PEOPLE):
+        return None
+    frame, size = TOWN_PEOPLE[sprite] + 1, 16 * scale      # facing down
+    # The face sits in a 56 px circle: centre the 48 px sprite and nudge it down a little.
+    x, y = (frame % 27) * size - 4, (frame // 27) * size - 6
+    return {'sheet': static('journey/town/tiles.png'), 'size': f'{27 * size}px {18 * size}px', 'pos': f'-{x}px -{y}px'}
+
+
+def _game_context(user, quests=True):
+    status = game.status(user)
+    out = {'me': status, 'face': _face(user)}
+    if quests:
+        out['quests'] = game.quests_for(user)
+        if game.check_quests(user, out['quests']):   # pays any quest finished since the last answer
+            out['me'] = game.status(user)
+    return out
 
 
 @login_required
@@ -216,8 +243,13 @@ def progress(request):
     places = _subjects_of(request.user)
     for s in places:
         s.progress = progress_summary(request.user, s)
+    for s in places:
+        s.knowledge = game.knowledge(request.user, _reviewable(request.user, s))
     return render(request, 'journey/progress.html', {
         'progress': progress_summary(request.user), 'places': places,
+        'knowledge': game.knowledge(request.user, _reviewable(request.user)),
+        'achievements': game.achievements(request.user), 'history': game.history(request.user),
+        **_game_context(request.user, quests=False),
         'mistakes': Progress.objects.filter(user=request.user, lapses__gt=0).count(),
         'helper_choices': HELPER_LANGUAGES, 'nav': 'progress', **_language(request),
     })
@@ -680,7 +712,7 @@ def review(request):
     group, pack = _scope(request)
     return render(request, 'journey/review.html', {
         'group': group, 'pack': pack, 'counts': due_counts(request.user, group), 'mode': request.GET.get('mode', ''),
-        'style': request.GET.get('style', ''),
+        'style': request.GET.get('style', ''), 'me': game.status(request.user),
         'nav': 'mistakes' if request.GET.get('mode') == 'mistakes' else ('home' if (group or pack) else 'practice'),
     })
 
@@ -732,17 +764,27 @@ def api_grade(request):
         grade = srs.GRADES[request.POST.get('grade', '')]
     except (TypeError, ValueError, KeyError):
         return JsonResponse({'error': 'Send item and grade (again, hard, good or easy).'}, status=400)
-    item = get_object_or_404(_reviewable(request.user), pk=item_id)
-    progress, _ = Progress.objects.get_or_create(user=request.user, item=item)
-    if request.POST.get('extra') != '1' or progress.reps == 0:   # extra practice does not move the schedule
+    item = get_object_or_404(_reviewable(request.user).select_related('pack__group'), pk=item_id)
+    progress, created = Progress.objects.get_or_create(user=request.user, item=item)
+    extra = request.POST.get('extra') == '1'
+    scheduled = not created and not extra and progress.due <= timezone.now()
+    prev_interval = progress.interval
+    if not extra or progress.reps == 0:   # extra practice does not move the schedule
         srs.schedule(progress, grade)
         progress.save()
     mode = request.POST.get('mode', '')
     mode = mode if mode in dict(ReviewLog.MODES) else ReviewLog.FLASH
-    correct = {'1': True, '0': False}.get(request.POST.get('correct', '')) if mode != ReviewLog.FLASH else None
-    ReviewLog.objects.create(user=request.user, item=item, grade=grade, mode=mode, correct=correct)
+    # The server checks typed and chosen answers itself; the browser's own verdict is only kept for old pages.
+    verdict = answers.verify(item, mode, request.POST.get('given', ''), request.POST.get('row'))         if mode != ReviewLog.FLASH and 'given' in request.POST else None
+    if verdict is not None:
+        correct = verdict != answers.WRONG
+    else:
+        correct = {'1': True, '0': False}.get(request.POST.get('correct', '')) if mode != ReviewLog.FLASH else None
+    entry = ReviewLog.objects.create(user=request.user, item=item, grade=grade, mode=mode, correct=correct,
+                                     verified=verdict is not None, scheduled=scheduled, first=created)
     return JsonResponse({'due': progress.due.isoformat(), 'interval': progress.interval,
-                         'again': grade < 3, 'lapses': progress.lapses})
+                         'again': grade < 3, 'lapses': progress.lapses, 'verdict': verdict,
+                         'reward': game.on_answer(request.user, entry, verdict, prev_interval)})
 
 
 @login_required
@@ -754,3 +796,166 @@ def mistakes(request):
     rows = list(rows)
     _with_helper([p.item for p in rows], language['lang'])
     return render(request, 'journey/mistakes.html', {'rows': rows, 'nav': 'mistakes', **language})
+
+
+# ── the town: a small game world for language subjects ───────────────────
+
+TOWN_SPRITES = 6
+PLACE_LEVELS = {'bus': 2, 'bakery': 3, 'market': 4}   # the café, academy, home and quest board are open
+
+
+def _town_language(user):
+    """The language the town speaks. Only Finnish has scenes so far."""
+    return 'finnish'
+
+
+@login_required
+def town(request):
+    from django.templatetags.static import static
+    from django.middleware.csrf import get_token
+    config = {
+        'map': static('journey/town/town.json'), 'tiles': static('journey/town/tiles.png'),
+        'state': reverse('journey:api_town'), 'avatar': reverse('journey:api_town_avatar'), 'buy': reverse('journey:api_town_buy'),
+        'due': reverse('journey:api_due'), 'grade': reverse('journey:api_grade'),
+        'scene': reverse('journey:api_scene_start', args=['KEY']).replace('start/', ''),
+        'csrf': get_token(request), 'debug': settings.DEBUG,
+    }
+    return render(request, 'journey/town.html', {'nav': 'town', 'town_config': config})
+
+
+def _today_key(key):
+    return f'scene:{key}:{timezone.localdate().isoformat()}'
+
+
+@login_required
+def api_town(request):
+    """Everything the town needs to draw the learner's state. Read-only."""
+    user = request.user
+    status = game.status(user)
+    profile = LearnerProfile.for_user(user)
+    avatar = profile.avatar if isinstance(profile.avatar, dict) else {}
+    sprite = avatar.get('sprite')
+    done = {k.split(':')[1] for k in RewardEvent.objects.filter(user=user, kind=RewardEvent.SCENE,
+                                                                 day=timezone.localdate()).values_list('key', flat=True)}
+    places = {key: {'locked': status['level'] < level, 'level': level, 'done_today': key in done}
+              for key, level in PLACE_LEVELS.items()}
+    places['cafe'] = {'locked': False, 'done_today': 'cafe' in done}
+    language = _town_language(user)
+    lessons = []
+    for pack in (LessonPack.objects.filter(group__memberships__user=user, group__subject=language,
+                                           status=LessonPack.PUBLISHED).select_related('group').order_by('-published_at')[:8]):
+        c = _lesson_counts(user, pack)
+        lessons.append({'id': pack.pk, 'title': pack.title, 'space': pack.group.name, 'due': c['due'], 'new': c['new'], 'total': c['total'],
+                        'practise': reverse('journey:lesson_practice', args=[pack.pk]), 'open': pack.get_absolute_url()})
+    unlocked = len(game.unlocked(user))
+    return JsonResponse({
+        'lessons': lessons, 'links': {'subjects': reverse('journey:home'), 'review': reverse('journey:review'),
+                                      'progress': reverse('journey:progress')},
+        'achievements': {'unlocked': unlocked, 'total': len(game.ACHIEVEMENTS)},
+        'shop': town_decor.shop(user, status), 'decor': town_decor.placed(user),
+        'greetings': [list(g) for g in scenes.GREETINGS.get(language, [])],
+        'me': {k: status[k] for k in ('level', 'rank', 'xp', 'coins', 'pct', 'into', 'span', 'streak', 'today_xp')},
+        'name': user.get_full_name() or user.get_username(),
+        'sprite': sprite if isinstance(sprite, int) and 0 <= sprite < TOWN_SPRITES else None,
+        'quests': [{'title': q.title, 'detail': q.detail, 'progress': q.progress, 'target': q.target, 'done': bool(q.done_at),
+                    'week': q.period == Quest.WEEK, 'xp': q.xp, 'coins': q.coins} for q in game.quests_for(user)],
+        'places': places,
+    })
+
+
+@login_required
+@require_POST
+def api_town_buy(request):
+    ok, message = town_decor.buy(request.user, request.POST.get('item', ''))
+    return JsonResponse({'ok': ok, 'message': message}, status=200 if ok else 409)
+
+
+@login_required
+@require_POST
+def api_town_avatar(request):
+    try:
+        sprite = int(request.POST.get('sprite', ''))
+    except ValueError:
+        sprite = -1
+    if not 0 <= sprite < TOWN_SPRITES:
+        return JsonResponse({'error': 'Pick one of the characters.'}, status=400)
+    profile = LearnerProfile.for_user(request.user)
+    avatar = profile.avatar if isinstance(profile.avatar, dict) else {}
+    first_visit = 'sprite' not in avatar
+    profile.avatar = {**avatar, 'sprite': sprite}
+    profile.save(update_fields=['avatar'])
+    if first_visit:
+        game.add_town_quests(request.user)
+    return JsonResponse({'sprite': sprite})
+
+
+def _scene_or_404(user, key):
+    scene = scenes.get(key, _town_language(user))
+    if scene is None:
+        raise Http404('No such place')
+    return scene
+
+
+@login_required
+@require_POST
+def api_scene_start(request, key):
+    scene = _scene_or_404(request.user, key)
+    level = PLACE_LEVELS.get(key)
+    if level and game.status(request.user)['level'] < level:
+        return JsonResponse({'error': f'This place opens at level {level}.'}, status=403)
+    order = scenes.shuffle(scene)
+    request.session['town_scene'] = {'key': key, 'turn': 0, 'missed': [], 'order': order}
+    done = RewardEvent.objects.filter(user=request.user, key=_today_key(key)).exists()
+    return JsonResponse({**scenes.public(scene, order), 'done_today': done})
+
+
+@login_required
+@require_POST
+def api_scene_answer(request, key):
+    """One reply in a conversation. The server keeps the place in the conversation, so turns cannot be skipped."""
+    scene = _scene_or_404(request.user, key)
+    state = request.session.get('town_scene') or {}
+    try:
+        turn, choice = int(request.POST.get('turn', '')), int(request.POST.get('choice', ''))
+    except ValueError:
+        return JsonResponse({'error': 'Send turn and choice.'}, status=400)
+    if (state.get('key') != key or state.get('turn') != turn or turn >= len(scene['turns'])
+            or not 0 <= choice < len(scene['turns'][turn]['options'])):
+        return JsonResponse({'error': 'Start the conversation again.'}, status=409)
+    right, meaning = scenes.check(scene, turn, choice, state.get('order'))
+    out = {'right': right, 'meaning': meaning, 'done': False}
+    if not right:
+        state['missed'] = sorted(set(state['missed']) | {turn})
+    else:
+        state['turn'] = turn + 1
+        if state['turn'] == len(scene['turns']):
+            first_try = len(scene['turns']) - len(state['missed'])
+            out.update(done=True, first_try=first_try, turns=len(scene['turns']),
+                       reward=game.on_scene(request.user, key, scene['title'], scenes.XP_PER_TURN * first_try + 2,
+                                            scenes.COINS))
+            state = {}
+    request.session['town_scene'] = state
+    return JsonResponse(out)
+
+
+@login_required
+@require_POST
+def api_scene_save(request, key):
+    """Keep the replies from a finished conversation as phrase cards in the learner's own language space."""
+    scene = _scene_or_404(request.user, key)
+    if not RewardEvent.objects.filter(user=request.user, kind=RewardEvent.SCENE, key__startswith=f'scene:{key}:').exists():
+        return JsonResponse({'error': 'Finish the conversation first.'}, status=409)
+    language = _town_language(request.user)
+    space = (StudyGroup.objects.filter(is_personal=True, subject=language, memberships__user=request.user,
+                                       memberships__role=Membership.OWNER).order_by('pk').first()
+             or _new_space(request.user, language))
+    title = f'{scene["title"]} · town phrases'
+    pack, created = LessonPack.objects.get_or_create(group=space, title=title, defaults={
+        'created_by': request.user, 'summary': scene['goal'], 'source_kind': 'text'})
+    if created:
+        StudyItem.objects.bulk_create([
+            StudyItem(pack=pack, kind=StudyItem.PHRASE, order=i, front=fi, meaning_en=en, example=say,
+                      confidence=StudyItem.HIGH, source_ref=f'Town: {scene["title"]}')
+            for i, (fi, en, say) in enumerate(scenes.phrases(scene))])
+        pack.publish()
+    return JsonResponse({'url': pack.get_absolute_url(), 'created': created, 'count': pack.items.count()})

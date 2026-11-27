@@ -1,0 +1,124 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Town — LearningJourney{% endblock %}
+{% block extra_css %}{% include 'journey/_style.html' %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap">
+<link rel="stylesheet" href="{% static 'journey/town/town.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="lj lj-wide">
+    {% include 'journey/_nav.html' %}
+    <section class="tw" id="tw" aria-label="The town: walk around and talk to people in the language you are learning">
+        <div class="tw-stage" id="tw-stage"></div>
+
+        <div class="tw-hud" aria-live="polite">
+            <div class="tw-me">
+                <canvas id="tw-me-face" width="32" height="32" aria-hidden="true"></canvas>
+                <div class="tw-me-main">
+                    <b id="tw-name">…</b>
+                    <span class="tw-lvl"><span id="tw-level">Level –</span><span class="tw-bar"><i id="tw-xp"></i></span></span>
+                </div>
+            </div>
+            <div class="tw-stats">
+                <span class="tw-stat" title="Coins"><span class="tw-coin" aria-hidden="true"></span><b id="tw-coins">0</b></span>
+                <span class="tw-stat" title="Days in a row"><span class="tw-flame" aria-hidden="true"></span><b id="tw-streak">0</b></span>
+                <button class="tw-icon" id="tw-map-btn" type="button" aria-label="Places in town"><svg class="tw-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2-6-2zM9 4v14M15 6v14"/></svg></button>
+                <button class="tw-icon" id="tw-quests-btn" type="button" aria-label="Quests"><span class="tw-i-quest" aria-hidden="true"></span><span class="tw-dot" id="tw-qdot" hidden></span></button>
+                <button class="tw-icon" id="tw-sound" type="button" aria-label="Sound off" aria-pressed="false"><svg class="tw-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor" stroke="none"/><path class="wave" d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/><path class="mute" d="M16 9l5 6M21 9l-5 6"/></svg></button>
+            </div>
+        </div>
+
+        <div class="tw-prompt" id="tw-prompt" hidden>
+            <b id="tw-prompt-title"></b><small id="tw-prompt-sub"></small>
+            <button type="button" id="tw-prompt-go"><kbd>E</kbd> <span id="tw-prompt-act">Enter</span></button>
+        </div>
+        <div class="tw-hint" id="tw-hint">Walk with the arrow keys or WASD, or tap where to go. Press <kbd>E</kbd> at a door.</div>
+        <div class="tw-toast" id="tw-toast" role="status" hidden></div>
+
+        <div class="tw-panel tw-dialog" id="tw-dialog" role="dialog" aria-modal="true" aria-labelledby="tw-npc-name" hidden>
+            <div class="tw-dlg-head">
+                <canvas class="tw-portrait" id="tw-portrait" width="64" height="64" aria-hidden="true"></canvas>
+                <div class="tw-who"><b id="tw-npc-name">…</b><small id="tw-npc-role"></small></div>
+                <ol class="tw-steps" id="tw-steps" aria-label="Progress in the conversation"></ol>
+                <button class="tw-x" type="button" data-close aria-label="Leave the conversation">×</button>
+            </div>
+            <p class="tw-goal" id="tw-goal"></p>
+            <div class="tw-say">
+                <p class="tw-line" id="tw-line" lang="fi"></p>
+                <button class="tw-listen" id="tw-listen" type="button" aria-label="Listen"><svg class="tw-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor" stroke="none"/><path class="wave" d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/></svg></button>
+            </div>
+            <button class="tw-link" id="tw-en-toggle" type="button" aria-expanded="false">Show in English</button>
+            <p class="tw-en" id="tw-en" hidden></p>
+            <div class="tw-options" id="tw-options" role="group" aria-label="Your reply"></div>
+            <p class="tw-feedback" id="tw-feedback" aria-live="polite"></p>
+            <div class="tw-result" id="tw-result" hidden></div>
+        </div>
+
+        <div class="tw-panel tw-quests" id="tw-questpanel" role="dialog" aria-modal="true" aria-labelledby="tw-q-h" hidden>
+            <div class="tw-dlg-head"><div class="tw-board-ic" aria-hidden="true"></div>
+                <div class="tw-who"><b id="tw-q-h">Ilmoitustaulu</b><small>Quest board · goals from your own cards</small></div>
+                <button class="tw-x" type="button" data-close aria-label="Close">×</button></div>
+            <ul class="tw-qlist" id="tw-qlist"></ul>
+            <a class="tw-btn" href="{% url 'journey:review' %}">Practise your cards</a>
+        </div>
+
+        <div class="tw-panel" id="tw-lessons" role="dialog" aria-modal="true" aria-labelledby="tw-l-h" hidden>
+            <div class="tw-dlg-head"><div class="tw-board-ic academy" aria-hidden="true"></div>
+                <div class="tw-who"><b id="tw-l-h">Akatemia</b><small>Your language lessons · practise what is due</small></div>
+                <button class="tw-x" type="button" data-close aria-label="Close">×</button></div>
+            <ul class="tw-qlist" id="tw-llist"></ul>
+            <div class="tw-row"><a class="tw-btn" id="tw-l-review" href="#">Today’s review</a>
+                <a class="tw-btn ghost" id="tw-l-add" href="#">Add a lesson</a></div>
+        </div>
+
+        <div class="tw-panel" id="tw-home" role="dialog" aria-modal="true" aria-labelledby="tw-h-h" hidden>
+            <div class="tw-dlg-head"><canvas class="tw-portrait" id="tw-home-face" width="64" height="64" aria-hidden="true"></canvas>
+                <div class="tw-who"><b id="tw-h-h">Koti</b><small>Home · you and your progress</small></div>
+                <button class="tw-x" type="button" data-close aria-label="Close">×</button></div>
+            <div class="tw-cards" id="tw-hstats"></div>
+            <div class="tw-row"><button class="tw-btn" type="button" id="tw-change">Change character</button>
+                <a class="tw-btn ghost" id="tw-h-progress" href="#">Progress and achievements</a></div>
+            <h3 class="tw-sub">Make the town yours</h3>
+            <p class="tw-note">Coins come from finished lessons, quests, achievements and new levels.</p>
+            <ul class="tw-shop" id="tw-shop"></ul>
+        </div>
+
+        <div class="tw-panel" id="tw-practice" role="dialog" aria-modal="true" aria-labelledby="tw-pr-h" hidden>
+            <div class="tw-dlg-head"><div class="tw-board-ic academy" aria-hidden="true"></div>
+                <div class="tw-who"><b id="tw-pr-h">Harjoitus</b><small id="tw-pr-sub">Practice</small></div>
+                <ol class="tw-steps" id="tw-pr-steps" aria-label="Cards in this round"></ol>
+                <button class="tw-x" type="button" data-close aria-label="Stop practising">×</button></div>
+            <p class="tw-goal" id="tw-pr-ask"></p>
+            <div class="tw-say"><p class="tw-line" id="tw-pr-front"></p>
+                <button class="tw-listen" id="tw-pr-listen" type="button" aria-label="Listen"><svg class="tw-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor" stroke="none"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/></svg></button></div>
+            <p class="tw-en" id="tw-pr-hint"></p>
+            <div class="tw-options" id="tw-pr-options" role="group" aria-label="Your answer"></div>
+            <p class="tw-feedback" id="tw-pr-feedback" aria-live="polite"></p>
+            <div class="tw-result" id="tw-pr-result" hidden></div>
+        </div>
+
+        <div class="tw-panel" id="tw-places" role="dialog" aria-modal="true" aria-labelledby="tw-p-h" hidden>
+            <div class="tw-dlg-head"><div class="tw-who"><b id="tw-p-h">Kartta</b><small>Places in town · pick one to walk there</small></div>
+                <button class="tw-x" type="button" data-close aria-label="Close">×</button></div>
+            <ul class="tw-plist" id="tw-plist"></ul>
+        </div>
+
+        <div class="tw-panel tw-pick" id="tw-pick" role="dialog" aria-modal="true" aria-labelledby="tw-pick-h" hidden>
+            <h2 id="tw-pick-h">Choose who you are in town</h2>
+            <p>You can change this later.</p>
+            <div class="tw-pick-row" id="tw-pick-row"></div>
+        </div>
+
+        <div class="tw-loading" id="tw-loading">Loading the town…</div>
+    </section>
+    <p class="tw-credit muted"><small>Town graphics: <a href="https://kenney.nl/assets/rpg-urban-pack" rel="noopener">RPG Urban Pack by Kenney</a> (CC0).</small></p>
+</div>
+{{ town_config|json_script:"tw-config" }}
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/3.80.1/phaser.min.js" integrity="sha512-zQK11u7QyhUWLmhK+Kyn4Oac0n2d5+AcuEiCagfm2YrGa2wMrdbj5EJammEmGU7bGnckmRoNTUT29Dl+DaRSlg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="{% static 'journey/town/town.js' %}"></script>
+{% endblock %}

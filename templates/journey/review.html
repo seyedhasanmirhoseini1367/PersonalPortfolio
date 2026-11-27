@@ -40,6 +40,9 @@
 .lj-g-good{background:var(--lj-lake)!important}
 .lj-g-easy{background:var(--lj-moss)!important}
 .lj-keys{font-size:.8rem;color:var(--text-muted);text-align:center}
+.lj-rv-top{position:relative}
+.lj-lvl{display:flex;align-items:center;gap:10px;font-size:.82rem;color:var(--text-muted);font-weight:700}
+.lj-lvl .lj-xpbar{flex:1;height:6px}
 @media (max-width:420px){.lj-grades{grid-template-columns:repeat(2,1fr)}}
 </style>{% endblock %}
 
@@ -58,6 +61,9 @@
             <button type="button" data-mode="type" aria-pressed="false" title="Write the answer yourself">Type the answer</button>
             <button type="button" data-mode="choice" aria-pressed="false" title="Pick the right answer from four">Multiple choice</button>
         </div>
+        <div class="lj-lvl lj-rv-top" id="lj-lvl"><span id="lj-lvl-n">Level {{ me.level }}</span>
+            <span class="lj-xpbar" aria-hidden="true"><i id="lj-lvl-bar" style="width:{{ me.pct }}%"></i></span>
+            <span id="lj-sxp">+0 XP</span></div>
         <div class="lj-row"><span class="muted" id="lj-left">Loading…</span>
             <button class="lj-speak" type="button" id="lj-say" aria-label="Listen" hidden><i class="fas fa-volume-high"></i></button></div>
         <div class="lj-bar-p" aria-hidden="true"><i id="lj-progress"></i></div>
@@ -95,6 +101,9 @@
     try { mode = localStorage.getItem('lj-practice-mode') || 'mixed'; } catch (e) { /* private mode */ }
     if (['mixed', 'flash', 'type', 'choice'].includes('{{ style|escapejs }}')) mode = '{{ style|escapejs }}';
     let LANG = '', DIR = 'ltr';
+    // What this session earned, as the server reports it after each answer.
+    const won = {xp: 0, coins: 0, quests: [], unlocked: [], lessons: [], level: null};
+    let pending = 0;
 
     const el = (tag, cls, text, attrs = {}) => {
         const e = document.createElement(tag);
@@ -139,15 +148,16 @@
             const rows = (c.rows || []).filter(r => r[0] && r[1]);
             if (!rows.length) return {mode: 'flash'};
             const row = rows[Math.floor(Math.random() * rows.length)];
+            const ri = c.rows.indexOf(row);   // the server checks the answer against this row
             const others = [...new Set(rows.map(r => r[1]).filter(f => norm(f) !== norm(row[1])))];
             if (m === 'choice' && others.length >= 3) {
                 const opts = others.sort(() => Math.random() - 0.5).slice(0, 3);
                 const at = Math.floor(Math.random() * 4);
                 opts.splice(at, 0, row[1]);
-                return {mode: 'choice', options: opts, answer: at, row};
+                return {mode: 'choice', options: opts, answer: at, row, ri};
             }
-            if (m === 'type') return {mode: 'type', ask: 'Write the verb form', answers: [row[1]], row};
-            return {mode: 'flash', row};
+            if (m === 'type') return {mode: 'type', ask: 'Write the verb form', answers: [row[1]], row, ri};
+            return {mode: 'flash', row, ri};
         }
         if (m === 'type') {
             if (c.kind === 'word') return {mode: 'type', ask: 'Write it in the language you are learning', answers: [c.front, c.form]};
@@ -280,6 +290,7 @@
     }
     function check(value) {
         if (state !== 'ask') return;
+        cur.given = value;
         const given = norm(value);
         const answers = cur.task.answers.filter(Boolean).map(norm);
         let verdict = 'no';
@@ -294,6 +305,7 @@
     }
     function choose(i) {
         if (state !== 'ask') return;
+        cur.given = cur.task.options[i];
         const right = i === cur.task.answer;
         result = right;
         card.querySelectorAll('.lj-choice').forEach((b, j) => {
@@ -310,10 +322,49 @@
         const m = c.task.mode;
         const body = new URLSearchParams({item: c.id, grade: g, mode: m});
         if (m !== 'flash' && result !== null) body.set('correct', result ? '1' : '0');
+        if (m !== 'flash' && c.given != null) body.set('given', c.given);
+        if (c.task.ri != null && c.task.ri >= 0) body.set('row', c.task.ri);
         if (EXTRA) body.set('extra', '1');
-        fetch(API_GRADE, {method: 'POST', body, headers: {'X-CSRFToken': CSRF}}).catch(() => {});
+        pending++;
+        fetch(API_GRADE, {method: 'POST', body, headers: {'X-CSRFToken': CSRF}})
+            .then(r => r.ok ? r.json() : null).then(d => d && reward(d.reward)).catch(() => {})
+            .finally(() => { pending--; if (!cur) summary(); });
         if (g === 'again') { queue.push(c); again++; } else { done++; }
         next();
+    }
+    function reward(r) {
+        if (!r) return;
+        won.xp += r.xp; won.coins += r.coins;
+        won.quests.push(...r.quests); won.unlocked.push(...r.unlocked);
+        if (r.lesson) won.lessons.push(r.lesson);
+        if (r.level_up) won.level = r.level_up;
+        $('lj-sxp').textContent = '+' + won.xp + ' XP';
+        $('lj-lvl-n').textContent = 'Level ' + r.level;
+        $('lj-lvl-bar').style.width = r.pct + '%';
+        if (r.xp > 0) {
+            const g = el('span', 'lj-gain', '+' + r.xp + ' XP');
+            $('lj-lvl').append(g);
+            setTimeout(() => g.remove(), 1200);
+        }
+    }
+    // The end screen lists what was earned once every answer has been counted by the server.
+    function summary() {
+        const box = $('lj-won');
+        if (!box || pending) return;
+        box.innerHTML = '';
+        const add = (medal, icon, text) => {
+            const li = el('li');
+            li.append(el('span', 'medal ' + medal, null, {'aria-hidden': 'true'}));
+            li.firstChild.append(el('i', 'fas ' + icon));
+            li.append(el('span', '', text));
+            box.append(li);
+        };
+        if (won.xp) add('silver', 'fa-bolt', won.xp + ' XP earned' + (won.coins ? ' and ' + won.coins + ' coins' : ''));
+        if (won.level) add('gold', 'fa-mountain-sun', 'Level ' + won.level.level + ' reached · ' + won.level.rank);
+        won.lessons.forEach(t => add('gold', 'fa-book-open', 'Lesson complete: ' + t));
+        won.quests.forEach(t => add('bronze', 'fa-flag', 'Quest done: ' + t));
+        won.unlocked.forEach(a => add(a.tier, a.icon, 'Achievement: ' + a.name));
+        box.hidden = !box.childNodes.length;
     }
     function finish() {
         card.innerHTML = ''; card.classList.remove('tap');
@@ -327,11 +378,14 @@
             : ('{{ mode|escapejs }}' === 'mistakes'
                 ? 'Your mistake notebook is empty. Cards you forget after learning them show up here.'
                 : 'No cards are due. Add a lesson, or come back tomorrow.')));
+        if (total) { const w = el('ul', 'lj-sum', null, {id: 'lj-won', 'aria-live': 'polite'}); w.hidden = true; card.append(w); }
         const row = el('div', 'lj-inline');
         {% if pack or group %}if (total) row.append(el('a', 'lj-btn', 'Practise again', {href: location.href}));{% endif %}
+        if (total) row.append(el('a', 'lj-btn ghost', 'The town', {href: '{% url "journey:town" %}'}));
         row.append(el('a', 'lj-btn ghost', BACK, {href: HOME}));
         card.append(row);
         cur = null; state = 'idle';
+        summary();
     }
     function next() { cur = queue.shift(); cur ? draw() : finish(); }
 

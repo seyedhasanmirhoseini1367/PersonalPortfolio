@@ -1,0 +1,14 @@
+{# Depth of knowing. Needs `k` from game.knowledge. #}
+{% if k.total %}
+<div class="lj-ladder">
+    {% widthratio k.seen k.total 100 as p1 %}{% widthratio k.recognised k.total 100 as p2 %}
+    {% widthratio k.recalled k.total 100 as p3 %}{% widthratio k.retained k.total 100 as p4 %}
+    <div class="lj-rung" title="Cards you have practised at least once"><span>Seen</span><span class="lj-xpbar"><i style="width:{{ p1 }}%"></i></span><b>{{ k.seen }}</b></div>
+    <div class="lj-rung" title="Answered right: picked from four or self-graded"><span>Recognised</span><span class="lj-xpbar"><i style="width:{{ p2 }}%"></i></span><b>{{ k.recognised }}</b></div>
+    <div class="lj-rung" title="Typed correctly, checked by the app"><span>Recalled</span><span class="lj-xpbar"><i style="width:{{ p3 }}%"></i></span><b>{{ k.recalled }}</b></div>
+    <div class="lj-rung" title="Next review three weeks or more away"><span>Kept long-term</span><span class="lj-xpbar"><i style="width:{{ p4 }}%"></i></span><b>{{ k.retained }}</b></div>
+    <small class="muted">Out of {{ k.total }} card{{ k.total|pluralize }}.</small>
+</div>
+{% else %}
+<p class="muted">No published cards yet.</p>
+{% endif %}

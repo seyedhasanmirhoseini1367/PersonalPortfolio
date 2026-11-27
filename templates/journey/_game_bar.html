@@ -1,0 +1,14 @@
+{# Level, XP to the next level, coins and streak. Needs `me` (game.status) and `face` (the town character). #}
+<a class="lj-gbar" href="{% url 'journey:town' %}" aria-label="Level {{ me.level }}, {{ me.rank }}. Open the town">
+    <span class="lj-gbar-em">{% if face %}<span class="lj-face" style="background-image:url({{ face.sheet }});background-size:{{ face.size }};background-position:{{ face.pos }}" aria-hidden="true"></span>{% else %}<span class="lj-face none" aria-hidden="true"><i class="fas fa-user"></i></span>{% endif %}<span class="lj-lv">{{ me.level }}</span></span>
+    <span class="lj-gbar-main">
+        <span class="lj-gbar-top"><b>Level {{ me.level }}</b> <span class="muted">· {{ me.rank }}</span>
+            <span class="lj-gbar-xp">{{ me.into }} / {{ me.span }} XP</span></span>
+        <span class="lj-xpbar" role="progressbar" aria-label="XP to the next level" aria-valuemin="0" aria-valuemax="{{ me.span }}" aria-valuenow="{{ me.into }}"><i style="width:{{ me.pct }}%"></i></span>
+        <span class="lj-gbar-meta">
+            <span title="XP earned today"><i class="fas fa-bolt" aria-hidden="true"></i> {{ me.today_xp }} today</span>
+            <span title="Days in a row"><i class="fas fa-fire" aria-hidden="true"></i> {{ me.streak }} day{{ me.streak|pluralize }}</span>
+            <span title="Coins for decorating the town"><i class="fas fa-coins" aria-hidden="true"></i> {{ me.coins }}</span>
+        </span>
+    </span>
+</a>
