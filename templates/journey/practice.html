@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+{% block title %}Practise{% if pack %} {{ pack.title }}{% elif group %} {{ group.name }}{% endif %} — LearningJourney{% endblock %}
+{% block extra_css %}{% include 'journey/_style.html' %}{% endblock %}
+
+{% block content %}
+<div class="lj">
+    {% include 'journey/_nav.html' %}
+    {% include 'journey/_crumbs.html' with here='Practise' %}
+    <header class="lj-head">
+        <h1>Practise {% if pack %}“{{ pack.title }}”{% elif group %}{{ group.name }}{% else %}everything{% endif %}</h1>
+        {% if pack %}{% include 'journey/_stepper.html' with at=3 %}{% endif %}
+        <p class="muted">{% if counts.due or counts.new %}{{ counts.due }} due · {{ counts.new }} new{% else %}Nothing is due: an extra round does not change your schedule{% endif %} · {{ total }} cards</p>
+    </header>
+
+    {% if total %}
+    {% with base=pack|yesno:'lesson,group' %}
+    <div class="lj-picks">
+        <a class="lj-pick rec" href="{% url 'journey:review' %}?{% if pack %}lesson={{ pack.pk }}{% else %}group={{ group.invite_code }}{% endif %}&style=mixed">
+            <i class="fas fa-shuffle"></i><b>Mixed <span class="lj-chip high">recommended</span></b>
+            <small>Flashcards for new cards, typing and multiple choice once you have seen them. Best for remembering.</small></a>
+        <a class="lj-pick" href="{% url 'journey:review' %}?{% if pack %}lesson={{ pack.pk }}{% else %}group={{ group.invite_code }}{% endif %}&style=flash">
+            <i class="fas fa-clone"></i><b>Flashcards</b>
+            <small>See the card, remember the answer, then say how well you knew it.</small></a>
+        {% if has_types %}
+        <a class="lj-pick" href="{% url 'journey:review' %}?{% if pack %}lesson={{ pack.pk }}{% else %}group={{ group.invite_code }}{% endif %}&style=type">
+            <i class="fas fa-keyboard"></i><b>Type the answer</b>
+            <small>Write it yourself{% if has_tables %}, including verb forms{% endif %}. Hardest, and the best test that you really know it.</small></a>
+        {% endif %}
+        <a class="lj-pick" href="{% url 'journey:review' %}?{% if pack %}lesson={{ pack.pk }}{% else %}group={{ group.invite_code }}{% endif %}&style=choice">
+            <i class="fas fa-list-check"></i><b>Multiple choice</b>
+            <small>Pick the right answer from four. Good for a quick first round.</small></a>
+    </div>
+    {% endwith %}
+    {% else %}
+    <div class="lj-empty">There are no cards to practise here yet.</div>
+    {% endif %}
+</div>
+{% endblock %}

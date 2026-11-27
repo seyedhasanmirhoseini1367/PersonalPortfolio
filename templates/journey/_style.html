@@ -79,6 +79,50 @@
 .lj-ref{font-size:.75rem;color:var(--text-muted);display:inline-flex;gap:4px;align-items:center}
 .lj-quote{font-size:.85rem;color:var(--text-muted);border-inline-start:3px solid var(--border);padding-inline-start:8px;font-style:italic}
 details.lj-more summary{cursor:pointer;font-weight:700}
+.lj-crumbs{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:.85rem;color:var(--text-muted)}
+.lj-crumbs a{color:var(--lj-lake);text-decoration:none;font-weight:600}
+.lj-crumbs a:hover{text-decoration:underline}
+.lj-crumbs i{font-size:.6rem;opacity:.6}
+.lj-crumbs [aria-current]{color:var(--text);font-weight:700}
+.lj-stepper{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(4,1fr);gap:6px;counter-reset:s}
+.lj-stepper li{display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;font-size:.8rem;font-weight:700;color:var(--text-muted);position:relative}
+.lj-stepper li:not(:last-child)::after{content:"";position:absolute;top:16px;left:calc(50% + 20px);right:calc(-50% + 20px);height:2px;background:var(--border)}
+.lj-stepper li.done:not(:last-child)::after{background:var(--lj-moss)}
+.lj-stepper .n{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid var(--border);background:var(--bg-card)}
+.lj-stepper li.done .n{background:var(--lj-moss);border-color:var(--lj-moss);color:#fff}
+.lj-stepper li.now .n{border-color:var(--lj-lake);color:var(--lj-lake);box-shadow:0 0 0 4px color-mix(in srgb,var(--lj-lake) 18%,transparent)}
+.lj-stepper li.now{color:var(--text)}
+.lj-big{display:flex;align-items:center;gap:16px;padding:18px;border-radius:16px;border:2px solid var(--lj-moss);
+  background:color-mix(in srgb,var(--lj-moss) 8%,var(--bg-card))}
+.lj-big b{font-size:1.15rem}
+.lj-subjects{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+.lj-subject{display:flex;flex-direction:column;gap:10px;padding:16px;border:1px solid var(--border);border-radius:16px;text-decoration:none;
+  color:var(--text);background:var(--bg-card);min-width:0;min-height:150px}
+.lj-subject:hover{border-color:var(--lj-lake);color:var(--text);box-shadow:0 4px 18px rgba(0,0,0,.06)}
+.lj-subject .ic{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;
+  background:color-mix(in srgb,var(--lj-lake) 14%,transparent);color:var(--lj-lake)}
+.lj-subject small{color:var(--text-muted)}
+.lj-subject .meta{margin-top:auto;display:flex;gap:8px;flex-wrap:wrap}
+.lj-subject.new{border-style:dashed;align-items:center;justify-content:center;text-align:center;cursor:pointer}
+.lj-lessons{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.lj-lesson{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--border);border-radius:12px;text-decoration:none;color:var(--text)}
+.lj-lesson:hover{border-color:var(--lj-lake);color:var(--text)}
+.lj-lesson .ic{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex:none}
+.lj-lesson .ic.published{background:color-mix(in srgb,var(--lj-moss) 16%,transparent);color:var(--lj-moss)}
+.lj-lesson .ic.draft,.lj-lesson .ic.empty{background:color-mix(in srgb,var(--lj-amber) 18%,transparent);color:#a06f12}
+.lj-lesson .ic.processing{background:color-mix(in srgb,var(--lj-lake) 16%,transparent);color:var(--lj-lake)}
+.lj-lesson .ic.failed{background:color-mix(in srgb,var(--lj-berry) 16%,transparent);color:var(--lj-berry)}
+.lj-lesson .main{flex:1;min-width:0}
+.lj-lesson small{color:var(--text-muted)}
+.lj-lesson .next{font-size:.82rem;font-weight:700;color:var(--lj-lake);white-space:nowrap}
+.lj-chip.empty{color:#a06f12;border-color:var(--lj-amber)}
+.lj-picks{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.lj-pick{display:flex;flex-direction:column;gap:8px;padding:18px;border:2px solid var(--border);border-radius:16px;text-decoration:none;color:var(--text);background:var(--bg-card)}
+.lj-pick:hover{border-color:var(--lj-lake);color:var(--text)}
+.lj-pick.rec{border-color:var(--lj-moss)}
+.lj-pick i{font-size:1.5rem;color:var(--lj-lake)}
+.lj-pick small{color:var(--text-muted);line-height:1.45}
+@media (max-width:560px){.lj-stepper .t{font-size:.68rem}.lj-lesson .next{display:none}}
 .lj-speak{border:1px solid var(--border);background:transparent;color:var(--lj-lake);border-radius:999px;width:38px;height:38px;cursor:pointer}
 @media (max-width:560px){.lj-card{padding:14px}.lj-stat b{font-size:1.6rem}}
 @media (prefers-reduced-motion:reduce){.lj *{transition:none!important;animation:none!important}}

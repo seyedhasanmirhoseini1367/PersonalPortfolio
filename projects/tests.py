@@ -1,3 +1,4 @@
+import io
 import json
 
 from django.contrib.auth import get_user_model
@@ -89,3 +90,34 @@ class SiteSearchTests(TestCase):
         r = self.client.get('/projects/')
         self.assertContains(r, 'Search or ask AI')
         self.assertContains(r, 'Kaggle S6E11 live')
+
+
+class EnsureSuperuserTests(TestCase):
+    """The admin must stay signed in across deploys: the command runs on every server start."""
+    def test_password_is_written_only_when_it_changes(self):
+        from unittest import mock
+        from django.contrib.auth import get_user_model
+        from django.core.management import call_command
+        env = {'SUPERUSER_USERNAME': 'owner', 'SUPERUSER_PASSWORD': 'first-pass-123!'}
+        with mock.patch.dict('os.environ', env):
+            call_command('ensure_superuser', stdout=io.StringIO())
+            user = get_user_model().objects.get(username='owner')
+            first = user.password
+            self.assertTrue(user.is_superuser and user.check_password('first-pass-123!'))
+            call_command('ensure_superuser', stdout=io.StringIO())
+            user.refresh_from_db()
+            self.assertEqual(user.password, first, 'an unchanged password keeps its hash, so sessions stay valid')
+        with mock.patch.dict('os.environ', dict(env, SUPERUSER_PASSWORD='second-pass-456!')):
+            call_command('ensure_superuser', stdout=io.StringIO())
+        user.refresh_from_db()
+        self.assertTrue(user.check_password('second-pass-456!'))
+
+    def test_no_password_in_the_code(self):
+        from unittest import mock
+        from django.contrib.auth import get_user_model
+        from django.core.management import call_command
+        with mock.patch.dict('os.environ', {'SUPERUSER_USERNAME': 'fresh'}, clear=False):
+            import os
+            os.environ.pop('SUPERUSER_PASSWORD', None)
+            call_command('ensure_superuser', stdout=io.StringIO())
+        self.assertFalse(get_user_model().objects.get(username='fresh').has_usable_password())

@@ -35,10 +35,6 @@ class Subject:
         """
         raise NotImplementedError
 
-    def build_scenes(self, source, note=lambda msg: None):
-        """Optional role-play scenes from the lesson: a list of dicts with Scene fields. Default: none."""
-        return []
-
 
 # ── shared helpers for agents ────────────────────────────────────────────────
 

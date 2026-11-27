@@ -35,7 +35,9 @@ def run(now=None):
                      error='Building this lesson was interrupted. Press “Try again”, or add it again.'))
     failed, _ = LessonPack.objects.filter(status=LessonPack.FAILED,
                                           created_at__lt=now - timedelta(days=FAILED_DAYS)).delete()
-    drafts, _ = LessonPack.objects.filter(status=LessonPack.DRAFT,
+    # Only drafts that were never published: a lesson that got new material is a draft again, and
+    # deleting it would delete everyone's progress on its old cards.
+    drafts, _ = LessonPack.objects.filter(status__in=[LessonPack.DRAFT, LessonPack.EMPTY], published_at__isnull=True,
                                           created_at__lt=now - timedelta(days=DRAFT_DAYS)).delete()
     PendingUpload.objects.filter(pack__status=LessonPack.FAILED).delete()   # files of failed builds are not kept
     counts = {'stuck': stuck, 'deleted': failed + drafts}

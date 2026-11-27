@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+{% block title %}Progress — LearningJourney{% endblock %}
+{% block extra_css %}{% include 'journey/_style.html' %}{% endblock %}
+
+{% block content %}
+<div class="lj">
+    {% include 'journey/_nav.html' %}
+    <header class="lj-head">
+        <h1>Your progress</h1>
+        <p class="muted">Counted from your own answers, with what each number means underneath.</p>
+    </header>
+
+    <section class="lj-card">
+        <h2>All subjects</h2>
+        {% include 'journey/_progress.html' %}
+        {% if mistakes %}<a class="lj-btn ghost" href="{% url 'journey:mistakes' %}" style="align-self:flex-start"><i class="fas fa-book-medical"></i> Mistake notebook ({{ mistakes }})</a>{% endif %}
+    </section>
+
+    {% for s in places %}
+    <section class="lj-card">
+        <div class="lj-row"><h2><i class="fas {{ s.info.icon }}" style="color:var(--lj-lake)"></i> {{ s.name }}</h2>
+            <a href="{{ s.get_absolute_url }}">Open →</a></div>
+        <div class="lj-stats">
+            <div class="lj-stat"><b>{{ s.progress.seen }}</b><span>of {{ s.progress.total }} cards started</span></div>
+            <div class="lj-stat"><b>{{ s.progress.mastered }}</b><span>mastered</span></div>
+            <div class="lj-stat"><b>{{ s.progress.produced }}</b><span>typed correctly</span></div>
+            <div class="lj-stat"><b>{{ s.progress.weak }}</b><span>weak</span></div>
+            <div class="lj-stat"><b>{{ s.progress.week_total }}</b><span>answers this week</span></div>
+        </div>
+    </section>
+    {% endfor %}
+
+    <section class="lj-card">
+        <form method="post" action="{% url 'journey:set_language' %}" class="lj-form">{% csrf_token %}
+            <input type="hidden" name="next" value="{% url 'journey:progress' %}">
+            <label for="lj-lang">Second language (optional)
+                <span class="muted" style="font-weight:400">Meanings and explanations are always in English. Pick a language you know
+                    better to see it next to the English.</span>
+                <select id="lj-lang" name="helper_language" class="lj-input">
+                    {% for code, name in helper_choices %}<option value="{{ code }}"{% if code == lang %} selected{% endif %}>{{ name }}</option>{% endfor %}
+                </select></label>
+            <button class="lj-btn ghost" type="submit" style="align-self:flex-start"><i class="fas fa-language"></i> Save language</button>
+        </form>
+    </section>
+</div>
+{% endblock %}

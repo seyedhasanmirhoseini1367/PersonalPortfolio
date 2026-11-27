@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+{% block title %}{{ pack.title }} — LearningJourney{% endblock %}
+{% block extra_css %}{% include 'journey/_style.html' %}{% endblock %}
+
+{% block content %}
+<div class="lj">
+    {% include 'journey/_nav.html' %}
+    {% include 'journey/_crumbs.html' with pack=None here=pack.title %}
+    <header class="lj-head">
+        <h1>{{ pack.title }}</h1>
+        {% include 'journey/_stepper.html' with at=0 %}
+    </header>
+
+    {% if pack.status == 'failed' %}
+    <section class="lj-card" style="border-color:var(--lj-berry)">
+        <b class="lj-chip failed" style="align-self:flex-start">The last build did not work</b>
+        <p>{{ pack.error }}</p>
+        {% if pack.source_text %}
+        <form method="post" action="{% url 'journey:pack_edit' pack.pk %}">{% csrf_token %}
+            <button class="lj-btn" name="action" value="retry"><i class="fas fa-rotate"></i> Try again with the same material</button></form>
+        <p class="muted">Or add the material again below.</p>
+        {% endif %}
+    </section>
+    {% endif %}
+
+    <section class="lj-card">
+        <h2><span class="lj-chip" style="margin-inline-end:6px">Step 1</span> Add your material</h2>
+        <p class="muted">Photos of the book or whiteboard, a PDF, a Word file, or text: you can mix them. The AI then builds
+           {% if subject.text_lang %}word cards, sentences, grammar notes, phrases and questions{% else %}concepts, key ideas,
+           questions and fill-in-the-blank cards{% endif %} for you to check.</p>
+        {% include 'journey/_material_form.html' %}
+    </section>
+
+    <details class="lj-card lj-more"><summary>Rename or delete this lesson</summary>
+        <div class="lj-grid" style="margin-top:12px">
+            <form method="post" action="{% url 'journey:pack_edit' pack.pk %}" class="lj-inline">{% csrf_token %}
+                <input class="lj-input" name="title" maxlength="120" value="{{ pack.title }}" aria-label="Lesson name">
+                <button class="lj-btn ghost" name="action" value="rename">Rename</button></form>
+            <form method="post" action="{% url 'journey:pack_edit' pack.pk %}">{% csrf_token %}
+                <button class="lj-btn ghost" name="action" value="delete" onclick="return confirm('Delete this lesson?')"><i class="fas fa-trash"></i> Delete lesson</button></form>
+        </div>
+    </details>
+</div>
+{% endblock %}

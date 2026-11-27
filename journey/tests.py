@@ -135,7 +135,7 @@ class patched_pipeline:
         self.patches = [
             mock.patch.object(pipeline, 'read_images', mock.Mock(return_value=TEXT)),
             mock.patch.multiple(finnish, linguist=mock.Mock(return_value=LING), teacher=mock.Mock(return_value=TEACH),
-                                wiktionary_lookup=fake_lookup, scene_writer=mock.Mock(return_value={})),
+                                wiktionary_lookup=fake_lookup),
         ]
         for p in self.patches:
             p.start()
@@ -252,7 +252,7 @@ class FlowTests(TestCase):
         reviewable = pack.items.filter(kind__in=StudyItem.REVIEWABLE).count()
         self.assertEqual(len(cards), reviewable)
         self.assertTrue(all(c['kind'] in StudyItem.REVIEWABLE for c in cards))
-        rank = {'word': 0, 'concept': 0, 'sentence': 1, 'phrase': 2, 'question': 2}
+        rank = {'word': 0, 'concept': 0, 'sentence': 1, 'phrase': 2, 'question': 2, 'table': 2}
         order = [rank[c['kind']] for c in cards]
         self.assertEqual(order, sorted(order), 'new cards: words first, then sentences, then phrases and questions')
         first = cards[0]['id']
@@ -290,8 +290,9 @@ class FlowTests(TestCase):
     def test_pages_render(self):
         _, pack = self._make_pack()
         pack.publish()
-        for url in (reverse('journey:home'), self.group.get_absolute_url(), reverse('journey:pack_new', args=[self.group.invite_code]),
+        for url in (reverse('journey:home'), self.group.get_absolute_url(), reverse('journey:progress'),
                     pack.get_absolute_url(), reverse('journey:review'), reverse('journey:mistakes'),
+                    reverse('journey:lesson_practice', args=[pack.pk]), reverse('journey:review') + f'?lesson={pack.pk}',
                     reverse('journey:review') + f'?group={self.group.invite_code}'):
             self.assertEqual(self.client.get(url).status_code, 200, url)
 
@@ -476,51 +477,6 @@ class CleanupTests(TestCase):
         self.assertIsNone(cleanup.maybe_run())
 
 
-SCENE = {'scenes': [{
-    'title': 'Meeting a neighbour', 'setting': 'home', 'situation_en': 'You meet your neighbour Aino.',
-    'npc_name': 'Aino', 'npc_role': 'neighbour', 'you_role': 'new resident',
-    'steps': [
-        {'who': 'npc', 'fi': 'Hei! Missä sinä asut?', 'en': 'Hi! Where do you live?'},
-        {'who': 'you', 'fi': 'Minä asun Tampereella.', 'en': 'I live in Tampere.',
-         'wrong': ['Minä asua Tampere.', 'Sinä asun Tampereella?']},
-        {'who': 'npc', 'fi': 'Kiva! Onko keittiössä pöytä?', 'en': 'Nice! Is there a table in the kitchen?'},
-        {'who': 'you', 'fi': 'Keittiössä on pöytä ja kaksi tuolia.', 'en': 'There is a table and two chairs.',
-         'wrong': ['Keittiö on pöydän.', 'Keittiössä ei kahvia.']},
-        {'who': 'npc', 'fi': 'Mitä sinä juot aamulla?', 'en': 'What do you drink in the morning?'},
-        {'who': 'you', 'fi': 'Juon aamulla kahvia.', 'en': 'I drink coffee in the morning.',
-         'wrong': ['Juon aamulla kahvi.', 'Juot aamulla kahvia.']},
-    ]}, {
-    'title': 'Off topic', 'setting': 'spaceship',
-    'steps': [{'who': 'npc', 'fi': 'Lentokone lähtee huomenna Helsingistä.'},
-              {'who': 'you', 'fi': 'Haluan matkustaa Japaniin ensi vuonna.', 'wrong': ['x y', 'z w']}]}]}
-
-
-class SceneWriterTests(TestCase):
-    def test_grounded_scene_is_kept_with_shuffled_options(self):
-        import random
-        scene = finnish.clean_scene(SCENE['scenes'][0], TEXT, rng=random.Random(3))
-        self.assertIsNotNone(scene)
-        self.assertEqual(scene['setting'], 'home')
-        turns = [s for s in scene['steps'] if s['who'] == 'you']
-        self.assertEqual(len(turns), 3)
-        for t in turns:
-            self.assertEqual(len(t['options']), 3)
-            self.assertEqual(t['options'][t['answer']], t['fi'])
-
-    def test_scenes_that_stray_from_the_lesson_are_dropped(self):
-        self.assertIsNone(finnish.clean_scene(SCENE['scenes'][1], TEXT))
-        short = dict(SCENE['scenes'][0], steps=SCENE['scenes'][0]['steps'][:2])
-        self.assertIsNone(finnish.clean_scene(short, TEXT), 'fewer than three turns is not a scene')
-        bad_place = dict(SCENE['scenes'][0], setting='moon')
-        self.assertEqual(finnish.clean_scene(bad_place, TEXT)['setting'], 'street')
-
-    def test_a_turn_without_three_distinct_options_is_skipped(self):
-        steps = [dict(s) for s in SCENE['scenes'][0]['steps']]
-        steps[1]['wrong'] = ['Minä asun Tampereella.', '']
-        scene = finnish.clean_scene(dict(SCENE['scenes'][0], steps=steps), TEXT)
-        self.assertIsNone(scene, 'only two turns remain, so the scene is dropped')
-
-
 @override_settings(JOURNEY_RUN_INLINE=True)
 class FlashcardsOnlyTests(TestCase):
     def test_game_pages_are_gone_and_lessons_write_no_scenes(self):
@@ -638,21 +594,11 @@ class SpaceTests(TestCase):
         self.other = User.objects.create_user('other', 'other@example.test', 'x')
         self.client.force_login(self.me)
 
-    def test_add_a_lesson_makes_a_private_finnish_space_on_first_use(self):
-        r = self.client.get(reverse('journey:lesson_add'))
-        self.assertContains(r, 'Build the lesson')
-        space = StudyGroup.objects.get()
-        self.assertTrue(space.is_personal)
-        self.assertEqual(space.subject, 'finnish')
-        with patched_pipeline():
-            self.client.post(reverse('journey:lesson_add'), {'space': space.invite_code, 'text': TEXT})
-        pack = LessonPack.objects.get()
-        self.assertEqual(pack.group, space)
-        self.assertEqual(pack.status, LessonPack.DRAFT, pack.error)
-        self.assertEqual(pack.title, TEXT[:80].strip(), 'an empty title falls back to the first line')
+    def test_the_old_add_page_leads_to_the_subjects(self):
+        self.assertRedirects(self.client.get(reverse('journey:lesson_add')), reverse('journey:home'))
         home = self.client.get(reverse('journey:home'))
-        self.assertContains(home, 'Your learning spaces')
-        self.assertContains(home, space.name)
+        self.assertContains(home, 'Your subjects')
+        self.assertContains(home, 'New subject')
 
     def test_a_private_space_cannot_be_joined_or_seen(self):
         self.client.post(reverse('journey:space_create'), {'subject': 'math', 'name': 'Calculus', 'level': 'beginner'})
@@ -898,7 +844,7 @@ class PracticeTests(TestCase):
         self.assertEqual(logs, [('type', True), ('choice', False), ('flash', None)])
         summary = jviews.progress_summary(self.me)
         self.assertEqual((summary['produced'], summary['seen'], summary['streak'], summary['week_total']), (1, 3, 1, 3))
-        self.assertContains(self.client.get(reverse('journey:home')), 'typed correctly')
+        self.assertContains(self.client.get(reverse('journey:progress')), 'typed correctly')
         self.assertContains(self.client.get(reverse('journey:review')), 'Multiple choice')
 
     def test_library_search_filters_and_privacy(self):
@@ -914,7 +860,7 @@ class PracticeTests(TestCase):
 
     def test_every_page_renders(self):
         self.pack.publish()
-        for name in ('home', 'library', 'review', 'mistakes', 'lesson_add'):
+        for name in ('home', 'library', 'review', 'mistakes', 'progress'):
             self.assertEqual(self.client.get(reverse(f'journey:{name}')).status_code, 200, name)
         for url in (self.space.get_absolute_url(), self.pack.get_absolute_url()):
             self.assertEqual(self.client.get(url).status_code, 200, url)
@@ -1123,3 +1069,121 @@ class GeneralRobustnessTests(TestCase):
             general.checker(long, questions, concepts)
         self.assertLessEqual(len(sent['p']), MAX_PROMPT_CHARS)
         self.assertIn('Term 14', sent['p'], 'every item reaches the checker')
+
+
+
+# ── step by step: subject → lesson → material → check → practise ─────────
+
+@override_settings(JOURNEY_RUN_INLINE=True)
+class LessonStepTests(TestCase):
+    def setUp(self):
+        self.me = User.objects.create_user('steps', 'steps@example.test', 'x')
+        self.other = User.objects.create_user('nosy', 'nosy@example.test', 'x')
+        self.client.force_login(self.me)
+        self.client.post(reverse('journey:space_create'), {'subject': 'finnish', 'name': 'Suomi'})
+        self.space = StudyGroup.objects.get(name='Suomi')
+
+    def _lesson(self, title='Kappale 1'):
+        r = self.client.post(reverse('journey:lesson_create', args=[self.space.invite_code]), {'title': title})
+        pack = LessonPack.objects.get(title=title)
+        self.assertRedirects(r, pack.get_absolute_url())
+        return pack
+
+    def test_the_whole_path_from_subject_to_practice(self):
+        self.assertContains(self.client.get(self.space.get_absolute_url()), 'New lesson')
+        pack = self._lesson()
+        self.assertEqual(pack.status, LessonPack.EMPTY)
+        page = self.client.get(pack.get_absolute_url())
+        self.assertContains(page, 'Add your material')
+        self.assertContains(page, 'aria-current="step"')
+        self.assertContains(self.client.get(self.space.get_absolute_url()), 'Add material →')
+        with patched_pipeline():
+            self.client.post(reverse('journey:lesson_material', args=[pack.pk]), {'text': TEXT})
+        pack.refresh_from_db()
+        self.assertEqual(pack.status, LessonPack.DRAFT, pack.error)
+        self.assertContains(self.client.get(pack.get_absolute_url()), 'Check what the AI made')
+        r = self.client.post(reverse('journey:pack_edit', args=[pack.pk]), {'action': 'publish'})
+        self.assertRedirects(r, reverse('journey:lesson_practice', args=[pack.pk]))
+        picker = self.client.get(r.url)
+        self.assertContains(picker, 'Mixed')
+        self.assertContains(picker, f'lesson={pack.pk}&style=type')
+        cards = self.client.get(reverse('journey:api_due') + f'?lesson={pack.pk}').json()
+        self.assertFalse(cards['extra'])
+        self.assertTrue(all(c['pack'] == pack.title for c in cards['cards']))
+        table = next(c for c in cards['cards'] if c['kind'] == 'table')
+        self.assertEqual(len(table['rows']), 6, 'verb tables are practised as conjugation drills')
+        self.assertContains(self.client.get(pack.get_absolute_url()), 'Practise this lesson')
+
+    def test_new_cards_of_a_lesson_ignore_the_daily_limit_and_extra_rounds_keep_the_schedule(self):
+        pack = self._lesson()
+        with patched_pipeline():
+            self.client.post(reverse('journey:lesson_material', args=[pack.pk]), {'text': TEXT})
+        pack.publish()
+        from . import views
+        with mock.patch.object(views, 'NEW_PER_DAY', 0):
+            cards = self.client.get(reverse('journey:api_due') + f'?lesson={pack.pk}').json()['cards']
+        self.assertTrue(cards, 'practising one lesson on purpose is not blocked by the new-cards limit')
+        for c in cards:
+            self.client.post(reverse('journey:api_grade'), {'item': c['id'], 'grade': 'good'})
+        again = self.client.get(reverse('journey:api_due') + f'?lesson={pack.pk}').json()
+        self.assertTrue(again['extra'])
+        item = again['cards'][0]['id']
+        before = Progress.objects.get(user=self.me, item_id=item).due
+        self.client.post(reverse('journey:api_grade'), {'item': item, 'grade': 'again', 'extra': '1'})
+        self.assertEqual(Progress.objects.get(user=self.me, item_id=item).due, before)
+
+    def test_more_material_is_added_after_the_old_cards_and_checked_again(self):
+        pack = self._lesson()
+        with patched_pipeline():
+            self.client.post(reverse('journey:lesson_material', args=[pack.pk]), {'text': TEXT})
+        pack.publish()
+        word = pack.items.get(kind='word', front='asua')
+        Progress.objects.create(user=self.me, item=word, interval=6, reps=2)
+        before = set(pack.items.values_list('pk', flat=True))
+        more = dict(LING, words=LING['words'] + [{'lemma': 'pöytä', 'form_in_text': 'pöytä', 'pos': 'noun',
+                                                    'meaning_en': 'table', 'example': ''}])
+        with patched_pipeline(), mock.patch.object(finnish, 'linguist', return_value=more):
+            self.client.post(reverse('journey:lesson_material', args=[pack.pk]), {'text': 'Keittiössä on pöytä ja kaksi tuolia. Pöytä on iso.'})
+        pack.refresh_from_db()
+        self.assertEqual(pack.status, LessonPack.DRAFT, pack.error)
+        self.assertTrue(before <= set(pack.items.values_list('pk', flat=True)), 'old cards stay')
+        self.assertTrue(Progress.objects.filter(item=word, interval=6).exists(), 'progress on them stays')
+        self.assertEqual(pack.items.filter(kind='word', front='asua').count(), 1, 'nothing is duplicated')
+        self.assertTrue(pack.items.filter(kind='word', front='pöytä').exists())
+        self.assertIn('Pöytä on iso.', pack.source_text)
+        self.assertTrue(any(label.endswith('Paragraph 1') and '·' in label for label, _ in pack.source_parts[1:]))
+        self.assertContains(self.client.get(pack.get_absolute_url()), 'New material was added')
+        from . import cleanup
+        LessonPack.objects.filter(pk=pack.pk).update(created_at=timezone.now() - timedelta(days=60))
+        cleanup.run()
+        self.assertTrue(LessonPack.objects.filter(pk=pack.pk).exists(), 'a once-published lesson is never cleaned up')
+
+    def test_a_failed_addition_keeps_the_lesson_as_it_was(self):
+        pack = self._lesson()
+        with patched_pipeline():
+            self.client.post(reverse('journey:lesson_material', args=[pack.pk]), {'text': TEXT})
+        pack.publish()
+        n = pack.items.count()
+        with patched_pipeline(), mock.patch.object(finnish, 'linguist', side_effect=RuntimeError('quota')):
+            self.client.post(reverse('journey:lesson_material', args=[pack.pk]), {'text': 'Uusi teksti, jossa on monta sanaa.'})
+        pack.refresh_from_db()
+        self.assertEqual((pack.status, pack.items.count()), (LessonPack.PUBLISHED, n))
+        self.assertIn('quota', pack.error)
+        self.assertContains(self.client.get(pack.get_absolute_url()), 'Adding more material did not work')
+
+    def test_only_editors_add_material_and_strangers_see_nothing(self):
+        pack = self._lesson()
+        self.client.force_login(self.other)
+        self.assertEqual(self.client.post(reverse('journey:lesson_material', args=[pack.pk]), {'text': TEXT}).status_code, 404)
+        self.assertEqual(self.client.get(reverse('journey:lesson_practice', args=[pack.pk])).status_code, 404)
+        self.assertEqual(self.client.post(reverse('journey:lesson_create', args=[self.space.invite_code]),
+                                          {'title': 'x'}).status_code, 404)
+
+    def test_streak_survives_a_day_without_practice_yet(self):
+        pack = self._lesson()
+        item = StudyItem.objects.create(pack=pack, kind=StudyItem.WORD, front='a', meaning_en='b')
+        now = timezone.now()
+        for days in (1, 2):
+            log = ReviewLog.objects.create(user=self.me, item=item, grade=4)
+            ReviewLog.objects.filter(pk=log.pk).update(at=now - timedelta(days=days))
+        self.assertEqual(jviews.progress_summary(self.me)['streak'], 2)
