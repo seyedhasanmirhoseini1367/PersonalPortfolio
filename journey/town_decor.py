@@ -1,32 +1,22 @@
 """Things a learner can add to the town with coins. Bought once, kept forever, shown only in their own town.
 
-Each item is drawn from the same Kenney tiles as the map (or, for lights and flags, drawn by the game) at fixed
-places that never block a path: journey.tests checks that every door stays reachable with all of them in place.
-Coins only come from real progress (finished lessons, quests, achievements, levels), so this is a way to show
-progress, not to buy it.
+Where each one stands is decided by the town page (static/journey/town3d/town3d.js, DECOR), on spots that never
+block a path. Coins only come from real progress (finished lessons, quests, achievements, levels), so this is a
+way to show progress, not to buy it.
 """
 from django.db import transaction
 
 from . import game
 from .models import LearnerProfile, RewardEvent
 
-POTTED, POTTED_AUTUMN, BENCH, PARK_LAMP = 286, 367, (270, 271), (169, 196)
-CRATES = (301, 302, 276, 303)
-
-# code: name, what it is, price, level needed, tiles [(x, y, tile, layer, solid)], effect drawn by the game
+# code: name, what it is, price, level needed
 DECOR = {
-    'street_trees': ('Street trees', 'Trees in planters at the ends of the streets.', 40, 1,
-                     [(0, 8, POTTED, 'decor', True), (0, 13, POTTED_AUTUMN, 'decor', True),
-                      (39, 8, POTTED_AUTUMN, 'decor', True), (39, 14, POTTED, 'decor', True)], None),
-    'park_benches': ('Park benches', 'Two more places to sit by the pond.', 30, 1,
-                     [(12, 22, BENCH[0], 'decor', True), (13, 22, BENCH[1], 'decor', True)], None),
-    'park_lamps': ('Park lamps', 'Lamps that light the park after dark.', 60, 2,
-                   [(1, 23, PARK_LAMP[0], 'above', False), (1, 24, PARK_LAMP[1], 'decor', True),
-                    (15, 23, PARK_LAMP[0], 'above', False), (15, 24, PARK_LAMP[1], 'decor', True)], None),
-    'fairy_lights': ('Fairy lights', 'Strings of small lights on the café and the bakery.', 100, 3, [], 'lights'),
-    'market_stall': ('Market stall', 'A third row of crates at the market.', 80, 4,
-                     [(x, 16, CRATES[i % len(CRATES)], 'decor', True) for i, x in enumerate((28, 29, 30, 31, 33, 34, 35))], None),
-    'flags': ('Flags', 'Finnish flags on the academy roof.', 120, 5, [], 'flags'),
+    'street_trees': ('Street trees', 'Trees in planters along the shops.', 40, 1),
+    'park_benches': ('Park benches', 'Benches by the pond and under the trees.', 30, 1),
+    'park_lamps': ('Park lamps', 'Lamps along the park paths, lit in the evening.', 60, 2),
+    'fairy_lights': ('Fairy lights', 'A string of small lights over the café terrace.', 100, 3),
+    'market_stall': ('Market stall', 'A third stall at the market.', 80, 4),
+    'flags': ('Flags', 'Finnish flags on the academy roof.', 120, 5),
 }
 
 
@@ -40,25 +30,14 @@ def shop(user, status=None):
     status = status or game.status(user)
     have = set(owned(user))
     return [{'code': c, 'name': n, 'desc': d, 'price': p, 'level': lv, 'owned': c in have, 'locked': status['level'] < lv,
-             'afford': status['coins'] >= p} for c, (n, d, p, lv, _, _) in DECOR.items()]
-
-
-def placed(user):
-    """What the game draws for this learner: tiles to put down and effects to switch on."""
-    tiles, fx = [], []
-    for code in owned(user):
-        _, _, _, _, t, effect = DECOR[code]
-        tiles += [{'x': x, 'y': y, 'tile': tile, 'layer': layer, 'solid': solid} for x, y, tile, layer, solid in t]
-        if effect:
-            fx.append(effect)
-    return {'tiles': tiles, 'fx': fx}
+             'afford': status['coins'] >= p} for c, (n, d, p, lv) in DECOR.items()]
 
 
 def buy(user, code):
     """Spend coins on a decoration. Returns (ok, message). Safe against double clicks and races."""
     if code not in DECOR:
         return False, 'That item does not exist.'
-    name, _, price, level, _, _ = DECOR[code]
+    name, _, price, level = DECOR[code]
     with transaction.atomic():
         profile = LearnerProfile.objects.select_for_update().get(pk=LearnerProfile.for_user(user).pk)
         town = profile.town if isinstance(profile.town, dict) else {}

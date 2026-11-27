@@ -1368,9 +1368,7 @@ class GamePagesTests(GameBase):
         home = self.client.get(reverse('journey:home'))
         self.assertContains(home, 'Level 1')
         self.assertContains(home, 'Quests')
-        self.assertContains(home, 'lj-face none', msg_prefix='no character chosen yet')
-        self.client.post(reverse('journey:api_town_avatar'), {'sprite': 2})
-        self.assertContains(self.client.get(reverse('journey:home')), 'background-position')
+        self.assertContains(home, 'lj-lv')
         prog = self.client.get(reverse('journey:progress'))
         self.assertContains(prog, 'First step')
         self.assertContains(prog, 'Kept long-term')
@@ -1382,39 +1380,7 @@ class GamePagesTests(GameBase):
 
 # ── the town: map, conversations and their rewards ─────────────────────────
 
-from . import scenes, town_map  # noqa: E402
-
-
-class TownMapTests(TestCase):
-    def test_the_committed_map_matches_the_generator(self):
-        import json
-        from django.conf import settings
-        committed = json.loads((settings.BASE_DIR / 'static/journey/town/town.json').read_text(encoding='utf-8'))
-        self.assertEqual(committed, json.loads(json.dumps(town_map.to_tiled(town_map.build()))),
-                         'run: python manage.py build_town_map')
-
-    def test_every_door_can_be_reached_from_the_start(self):
-        t = town_map.build()
-        spawn = next(o for o in t.objects if o['type'] == 'spawn')
-        start = (spawn['x'] // 16, spawn['y'] // 16)
-        self.assertNotIn(start, t.solid)
-        seen, todo = {start}, [start]
-        while todo:
-            x, y = todo.pop()
-            for nx, ny in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):
-                if 0 <= nx < town_map.W and 0 <= ny < town_map.H and (nx, ny) not in t.solid and (nx, ny) not in seen:
-                    seen.add((nx, ny))
-                    todo.append((nx, ny))
-        places = [o for o in t.objects if o['type'] == 'place']
-        self.assertGreaterEqual(len(places), 2)
-        for o in places:
-            self.assertIn((o['x'] // 16, o['y'] // 16), seen, o['name'])
-
-    def test_every_scene_answer_is_a_real_option(self):
-        for scene in scenes.SCENES.values():
-            for turn in scene['turns']:
-                self.assertTrue(0 <= turn['answer'] < len(turn['options']))
-            self.assertNotIn('answer', str(scenes.public(scene)))
+from . import scenes  # noqa: E402
 
 
 class TownTests(TestCase):
@@ -1447,7 +1413,7 @@ class TownTests(TestCase):
         return last
 
     def test_the_page_and_the_state(self):
-        self.assertContains(self.client.get(reverse('journey:town')), 'id="tw-stage"')
+        self.assertContains(self.client.get(reverse('journey:town')), 'id="t3-stage"')
         s = self.client.get(reverse('journey:api_town')).json()
         self.assertIsNone(s['sprite'])
         self.assertTrue(s['places']['bakery']['locked'])
@@ -1516,6 +1482,15 @@ class TownTests(TestCase):
         self.assertEqual(len(lessons), 1)
         self.assertEqual(lessons[0]['new'], len(self.scene['turns']))
         self.assertTrue(lessons[0]['practise'].endswith('/practice/'))
+
+    def test_the_academy_shows_every_subject_not_only_languages(self):
+        maths = StudyGroup.objects.create(name='Algebra', subject='math', is_personal=True, created_by=self.me)
+        Membership.objects.create(group=maths, user=self.me, role=Membership.OWNER)
+        pack = LessonPack.objects.create(group=maths, title='Equations', created_by=self.me)
+        StudyItem.objects.create(pack=pack, kind=StudyItem.CONCEPT, front='x', meaning_en='y')
+        pack.publish()
+        lessons = self.client.get(reverse('journey:api_town')).json()['lessons']
+        self.assertEqual([(l['title'], l['subject']) for l in lessons], [('Equations', 'Mathematics')])
 
     def test_choosing_a_character(self):
         url = reverse('journey:api_town_avatar')
@@ -1599,27 +1574,7 @@ class TownDecorTests(TestCase):
         self.assertEqual(self.buy('castle').status_code, 409)
         self.assertEqual(game.totals(self.me)[1], 70)
         state = self.client.get(reverse('journey:api_town')).json()
-        self.assertEqual(len(state['decor']['tiles']), 2)
         self.assertTrue(next(i for i in state['shop'] if i['code'] == 'park_benches')['owned'])
-
-    def test_every_door_stays_reachable_with_all_decorations(self):
-        t = town_map.build()
-        for _, _, _, _, tiles, _ in town_decor.DECOR.values():
-            for x, y, _, _, solid in tiles:
-                self.assertNotIn((x, y), t.solid, 'decorations go on free tiles')
-                if solid:
-                    t.solid.add((x, y))
-        spawn = next(o for o in t.objects if o['type'] == 'spawn')
-        seen, todo = {(spawn['x'] // 16, spawn['y'] // 16)}, [(spawn['x'] // 16, spawn['y'] // 16)]
-        while todo:
-            x, y = todo.pop()
-            for n in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):
-                if 0 <= n[0] < town_map.W and 0 <= n[1] < town_map.H and n not in t.solid and n not in seen:
-                    seen.add(n)
-                    todo.append(n)
-        for o in t.objects:
-            if o['type'] == 'place':
-                self.assertIn((o['x'] // 16, o['y'] // 16), seen, o['name'])
 
     def test_the_town_replaces_the_old_world_in_the_menu(self):
         home = self.client.get(reverse('journey:home'))

@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Town — LearningJourney{% endblock %}
+{% block extra_css %}{% include 'journey/_style.html' %}
+<link rel="stylesheet" href="{% static 'journey/town3d/town3d.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="lj lj-town">
+    {% include 'journey/_nav.html' %}
+    <section class="t3" id="t3" aria-label="The town: one world for everything you learn">
+        <div class="t3-stage" id="t3-stage"></div>
+        <div class="t3-labels" id="t3-labels" aria-hidden="true"></div>
+
+        <header class="t3-hud">
+            <button class="t3-me" id="t3-me" type="button" aria-label="Your profile">
+                <img class="t3-face" id="t3-face" alt="" width="44" height="44">
+                <span class="t3-me-main">
+                    <b id="t3-name">…</b>
+                    <span class="t3-sub"><span id="t3-level">Level –</span> · <span id="t3-rank"></span></span>
+                    <span class="t3-xp" role="progressbar" aria-label="XP to the next level" id="t3-xpbar"><i id="t3-xp"></i></span>
+                </span>
+            </button>
+            <div class="t3-right">
+                <span class="t3-chip" title="Coins"><i class="fas fa-coins" aria-hidden="true"></i><b id="t3-coins">0</b></span>
+                <span class="t3-chip" title="Days in a row"><i class="fas fa-fire" aria-hidden="true"></i><b id="t3-streak">0</b></span>
+                <button class="t3-icon" id="t3-places-btn" type="button" aria-label="Places in town"><i class="fas fa-map" aria-hidden="true"></i></button>
+                <button class="t3-icon" id="t3-quests-btn" type="button" aria-label="Quests"><i class="fas fa-flag" aria-hidden="true"></i><span class="t3-dot" id="t3-qdot" hidden></span></button>
+                <button class="t3-icon" id="t3-sound" type="button" aria-label="Sound off" aria-pressed="false"><i class="fas fa-volume-xmark" aria-hidden="true"></i></button>
+                <button class="t3-icon" id="t3-full" type="button" aria-label="Full screen"><i class="fas fa-expand" aria-hidden="true"></i></button>
+            </div>
+        </header>
+
+        <div class="t3-bottom">
+            <button class="t3-action" id="t3-action" type="button" hidden></button>
+            <p class="t3-hint" id="t3-hint">Click anywhere to walk, or click a building to go in. Scroll to zoom.</p>
+        </div>
+        <div class="t3-toast" id="t3-toast" role="status" hidden></div>
+
+        <aside class="t3-panel" id="t3-panel" role="dialog" aria-modal="false" aria-labelledby="t3-p-title" hidden>
+            <header class="t3-p-head">
+                <span class="t3-p-icon" id="t3-p-icon" aria-hidden="true"></span>
+                <div><h2 id="t3-p-title"></h2><p id="t3-p-sub"></p></div>
+                <button class="t3-close" type="button" data-close aria-label="Close"><i class="fas fa-xmark" aria-hidden="true"></i></button>
+            </header>
+            <div class="t3-p-body" id="t3-p-body"></div>
+        </aside>
+
+        <div class="t3-pick" id="t3-pick" role="dialog" aria-modal="true" aria-labelledby="t3-pick-h" hidden>
+            <div class="t3-pick-card">
+                <h2 id="t3-pick-h">Who are you in town?</h2>
+                <p>Pick a character. You can change it later at home.</p>
+                <div class="t3-pick-row" id="t3-pick-row"></div>
+            </div>
+        </div>
+
+        <div class="t3-loading" id="t3-loading"><span class="t3-spin" aria-hidden="true"></span><span id="t3-load-text">Building the town…</span></div>
+    </section>
+    <p class="t3-credit muted"><small>3D models: City Kits and Mini Characters by <a href="https://kenney.nl" rel="noopener">Kenney</a> (CC0).</small></p>
+</div>
+{{ town_config|json_script:"t3-config" }}
+{% endblock %}
+
+{% block extra_js %}
+<script type="importmap">
+{"imports": {"three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+             "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}
+</script>
+<script type="module" src="{% static 'journey/town3d/town3d.js' %}"></script>
+{% endblock %}
