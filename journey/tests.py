@@ -1347,6 +1347,7 @@ class QuestTests(GameBase):
         game.check_quests(self.me)
         self.assertEqual(RewardEvent.objects.filter(key=f'quest:{new.pk}').count(), 1)
 
+    @override_settings(JOURNEY_TOWN=True)
     def test_without_published_cards_only_town_quests_remain(self):
         LessonPack.objects.update(status=LessonPack.DRAFT)
         self.assertEqual({q.code for q in game.quests_for(self.me)}, {'talk', 'w_talks'},
@@ -1383,6 +1384,7 @@ class GamePagesTests(GameBase):
 from . import scenes  # noqa: E402
 
 
+@override_settings(JOURNEY_TOWN=True)
 class TownTests(TestCase):
     def setUp(self):
         self.me = User.objects.create_user('walker', 'walker@example.test', 'x')
@@ -1555,6 +1557,7 @@ class TownProgressTests(TownTests):
         self.assertTrue(Achievement.objects.filter(user=self.me, code='talk_flawless').exists())
 
 
+@override_settings(JOURNEY_TOWN=True)
 class TownDecorTests(TestCase):
     def setUp(self):
         self.me = User.objects.create_user('decor', 'decor@example.test', 'x')
@@ -1575,6 +1578,16 @@ class TownDecorTests(TestCase):
         self.assertEqual(game.totals(self.me)[1], 70)
         state = self.client.get(reverse('journey:api_town')).json()
         self.assertTrue(next(i for i in state['shop'] if i['code'] == 'park_benches')['owned'])
+
+    @override_settings(JOURNEY_TOWN=False)
+    def test_the_town_is_hidden_while_it_is_switched_off(self):
+        home = self.client.get(reverse('journey:home'))
+        self.assertNotContains(home, reverse('journey:town'))
+        for url in (reverse('journey:town'), reverse('journey:api_town')):
+            self.assertEqual(self.client.get(url).status_code, 404, url)
+        self.assertEqual(self.client.post(reverse('journey:api_scene_start', args=['cafe'])).status_code, 404)
+        from . import game
+        self.assertFalse(any(a['code'].startswith('talk_') for a in game.achievements(self.me)))
 
     def test_the_town_replaces_the_old_world_in_the_menu(self):
         home = self.client.get(reverse('journey:home'))

@@ -91,12 +91,16 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'projects.site_search.live_chip',
+                'journey.views.town_switch',
             ],
         },
     },
 ]
 
 WSGI_APPLICATION = 'PersonalPortfolio.wsgi.application'
+
+# LearningJourney's 3D town. Off unless JOURNEY_TOWN=1: it is still being finished, so the live site hides it.
+JOURNEY_TOWN = config('JOURNEY_TOWN', default=False, cast=bool)
 
 # ── Database ───────────────────────────────────────────────────────────────────
 # Uses SQLite locally; set DATABASE_URL in .env for PostgreSQL in production.

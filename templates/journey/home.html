@@ -57,7 +57,7 @@
         </button>
     </div>
 
-    {% if places %}
+    {% if places and TOWN_ON %}
     <a class="lj-wteaser" href="{% url 'journey:town' %}" aria-label="Open the town">
         <img class="lj-wteaser-scene" src="{% static 'journey/town3d/preview.jpg' %}" alt="" width="730" height="412" loading="lazy">
         <span class="lj-wteaser-text"><b>The town</b><small>One town for everything you learn: lessons at the academy, conversations at the café, quests, and a home of your own.</small></span>

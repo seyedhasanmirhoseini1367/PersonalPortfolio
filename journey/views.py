@@ -796,6 +796,7 @@ def _town_language(user):
 
 @login_required
 def town(request):
+    _town_on()
     from django.middleware.csrf import get_token
     config = {
         'models': settings.STATIC_URL + 'journey/town3d/', 'state': reverse('journey:api_town'), 'avatar': reverse('journey:api_town_avatar'), 'buy': reverse('journey:api_town_buy'),
@@ -806,6 +807,16 @@ def town(request):
     return render(request, 'journey/town3d.html', {'nav': 'town', 'town_config': config})
 
 
+def town_switch(request):
+    """Template context: whether the town is shown (settings.JOURNEY_TOWN)."""
+    return {'TOWN_ON': getattr(settings, 'JOURNEY_TOWN', False)}
+
+
+def _town_on():
+    if not getattr(settings, 'JOURNEY_TOWN', False):
+        raise Http404('The town is not open yet')
+
+
 def _today_key(key):
     return f'scene:{key}:{timezone.localdate().isoformat()}'
 
@@ -813,6 +824,7 @@ def _today_key(key):
 @login_required
 def api_town(request):
     """Everything the town needs to draw the learner's state. Read-only."""
+    _town_on()
     user = request.user
     status = game.status(user)
     profile = LearnerProfile.for_user(user)
@@ -862,6 +874,7 @@ def api_town(request):
 @login_required
 @require_POST
 def api_town_buy(request):
+    _town_on()
     ok, message = town_decor.buy(request.user, request.POST.get('item', ''))
     return JsonResponse({'ok': ok, 'message': message}, status=200 if ok else 409)
 
@@ -869,6 +882,7 @@ def api_town_buy(request):
 @login_required
 @require_POST
 def api_town_avatar(request):
+    _town_on()
     try:
         sprite = int(request.POST.get('sprite', ''))
     except ValueError:
@@ -886,6 +900,7 @@ def api_town_avatar(request):
 
 
 def _scene_or_404(user, key):
+    _town_on()
     scene = scenes.get(key, _town_language(user))
     if scene is None:
         raise Http404('No such place')
