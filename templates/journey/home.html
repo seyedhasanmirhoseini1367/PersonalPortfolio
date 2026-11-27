@@ -8,22 +8,19 @@
     {% include 'journey/_nav.html' %}
     <header class="lj-head">
         <span class="lj-eyebrow">LearningJourney</span>
-        <h1>Learn from your own material</h1>
-        <p class="muted">Add photos, PDFs, Word files or text. AI turns them into cards and questions, you check them once,
-           then practise a little every day.</p>
+        <h1>Your subjects</h1>
+        <p class="muted">Pick a subject to see its lessons. Inside a lesson you add your material, check what the AI made,
+           and practise.</p>
     </header>
 
+    {% if counts.due or counts.new or tips %}
     <section class="lj-card">
         <div class="lj-row">
             <div class="lj-stats">
                 <div class="lj-stat"><b>{{ counts.due }}</b><span>due for review</span></div>
                 <div class="lj-stat"><b>{{ counts.new }}</b><span>new today</span></div>
-                <div class="lj-stat"><b>{{ mistakes }}</b><span>in mistake notebook</span></div>
             </div>
-            <div class="lj-inline">
-                <a class="lj-btn" href="{% url 'journey:review' %}"><i class="fas fa-layer-group"></i> Start today’s practice</a>
-                <a class="lj-btn moss" href="{% url 'journey:lesson_add' %}"><i class="fas fa-plus"></i> Add a lesson</a>
-            </div>
+            {% if counts.due or counts.new %}<a class="lj-btn" href="{% url 'journey:review' %}"><i class="fas fa-layer-group"></i> Today’s review</a>{% endif %}
         </div>
         {% if tips %}
         <ul class="lj-tips">
@@ -32,101 +29,77 @@
         </ul>
         {% endif %}
     </section>
-
-    <section class="lj-card">
-        <div class="lj-row"><h2>Your learning spaces</h2>
-            <span class="muted">Private to you. One per subject or course.</span></div>
-        {% if spaces %}
-        <div class="lj-spaces">
-            {% for s in spaces %}
-            <a class="lj-space" href="{{ s.get_absolute_url }}">
-                <span class="lj-row" style="justify-content:flex-start;flex-wrap:nowrap"><span class="ic"><i class="fas {{ s.info.icon }}"></i></span>
-                    <span><b>{{ s.name }}</b><br><small>{{ s.info.name }}{% if s.level %} · {{ s.get_level_display }}{% endif %}</small></span></span>
-                <small>{{ s.n_packs }} lesson{{ s.n_packs|pluralize }} · {{ s.counts.due }} due · {{ s.counts.new }} new</small>
-            </a>
-            {% endfor %}
-        </div>
-        {% else %}
-        <div class="lj-empty">No space yet. Create one below, or just press “Add a lesson”: a Finnish space is made for you.</div>
-        {% endif %}
-        <details class="lj-more"{% if not spaces %} open{% endif %}><summary>New learning space</summary>
-            <form method="post" action="{% url 'journey:space_create' %}" class="lj-form" style="margin-top:12px">{% csrf_token %}
-                <div class="lj-grid">
-                    <label for="lj-space-subject">Subject
-                        <select id="lj-space-subject" name="subject" class="lj-input">
-                            {% for s in subject_choices %}<option value="{{ s.key }}"{% if s.key == default_subject %} selected{% endif %}>{{ s.name }}</option>{% endfor %}
-                        </select></label>
-                    <label for="lj-space-name">Name (optional)
-                        <input id="lj-space-name" class="lj-input" name="name" maxlength="80" placeholder="e.g. Suomi B1, Linear algebra"></label>
-                    <label for="lj-space-level">Level (optional)
-                        <select id="lj-space-level" name="level" class="lj-input">
-                            {% for code, name in levels %}<option value="{{ code }}">{{ name }}</option>{% endfor %}
-                        </select></label>
-                </div>
-                <button class="lj-btn" type="submit" style="align-self:flex-start"><i class="fas fa-plus"></i> Create space</button>
-            </form>
-        </details>
-    </section>
-
-    <section class="lj-card">
-        <h2>Your progress</h2>
-        {% include 'journey/_progress.html' %}
-    </section>
-
-    {% if recent %}
-    <section class="lj-card">
-        <div class="lj-row"><h2>Recent lessons</h2><a href="{% url 'journey:library' %}">All in the library →</a></div>
-        <ul class="lj-list">
-            {% for p in recent %}
-            <li><a class="lj-li" href="{{ p.get_absolute_url }}">
-                <span><b>{{ p.title }}</b><br><small>{{ p.group.name }} · {{ p.created_at|date:"j M" }}</small></span>
-                <span class="lj-chip {{ p.status }}">{{ p.get_status_display }}</span></a></li>
-            {% endfor %}
-        </ul>
-    </section>
     {% endif %}
 
-    <section class="lj-card">
-        <div class="lj-row"><h2>Groups</h2><span class="muted">Optional: study with classmates.</span></div>
-        {% if groups %}
-        <ul class="lj-list">
-            {% for g in groups %}
-            <li><a class="lj-li" href="{{ g.get_absolute_url }}">
-                <span><b>{{ g.name }}</b><br><small>{{ g.n_members }} member{{ g.n_members|pluralize }} · {{ g.n_packs }} lesson{{ g.n_packs|pluralize }}</small></span>
-                <i class="fas fa-chevron-right muted"></i></a></li>
-            {% endfor %}
-        </ul>
-        {% endif %}
-        <details class="lj-more"><summary>Create or join a group</summary>
-        <div class="lj-grid" style="margin-top:12px">
-            <form method="post" action="{% url 'journey:group_create' %}" class="lj-form">{% csrf_token %}
-                <label for="lj-new-group">Create a group
-                    <input id="lj-new-group" class="lj-input" name="name" maxlength="80" placeholder="Suomi A1 – Tuesday class" required></label>
-                <label for="lj-subject">Subject
-                    <select id="lj-subject" name="subject" class="lj-input">
+    <div class="lj-subjects">
+        {% for s in places %}
+        <a class="lj-subject" href="{{ s.get_absolute_url }}">
+            <span class="lj-row" style="justify-content:flex-start;flex-wrap:nowrap">
+                <span class="ic"><i class="fas {{ s.info.icon }}"></i></span>
+                <span style="min-width:0"><b>{{ s.name }}</b><br><small>{{ s.info.name }}{% if s.level %} · {{ s.get_level_display }}{% endif %}</small></span>
+            </span>
+            <small>{{ s.n_packs }} lesson{{ s.n_packs|pluralize }} ready{% if not s.is_personal %} · <i class="fas fa-users"></i> group of {{ s.n_members }}{% endif %}</small>
+            <span class="meta">
+                {% if s.counts.due %}<span class="lj-chip processing">{{ s.counts.due }} due</span>{% endif %}
+                {% if s.counts.new %}<span class="lj-chip">{{ s.counts.new }} new</span>{% endif %}
+                {% if s.todo %}<span class="lj-chip empty">{{ s.todo }} to finish</span>{% endif %}
+            </span>
+        </a>
+        {% endfor %}
+        <button class="lj-subject new" type="button" id="lj-new-open" aria-controls="lj-new">
+            <span class="ic"><i class="fas fa-plus"></i></span><b>New subject</b>
+            <small>Finnish, maths, programming, science or anything else</small>
+        </button>
+    </div>
+
+    <section class="lj-card" id="lj-new"{% if places %} hidden{% endif %}>
+        <h2>New subject</h2>
+        <form method="post" action="{% url 'journey:space_create' %}" class="lj-form">{% csrf_token %}
+            <div class="lj-grid">
+                <label for="lj-space-subject">Subject
+                    <select id="lj-space-subject" name="subject" class="lj-input">
                         {% for s in subject_choices %}<option value="{{ s.key }}"{% if s.key == default_subject %} selected{% endif %}>{{ s.name }}</option>{% endfor %}
                     </select></label>
-                <button class="lj-btn" type="submit"><i class="fas fa-plus"></i> Create</button>
-            </form>
-            <form method="post" action="{% url 'journey:group_join' %}" class="lj-form">{% csrf_token %}
-                <label for="lj-join-code">Join with a code
-                    <input id="lj-join-code" class="lj-input" name="code" maxlength="12" placeholder="e.g. K7TQ4M" autocapitalize="characters" required></label>
-                <button class="lj-btn ghost" type="submit"><i class="fas fa-right-to-bracket"></i> Join</button>
-            </form>
-        </div>
+                <label for="lj-space-name">Name (optional)
+                    <input id="lj-space-name" class="lj-input" name="name" maxlength="80" placeholder="e.g. Suomi B1, Linear algebra"></label>
+                <label for="lj-space-level">Level (optional)
+                    <select id="lj-space-level" name="level" class="lj-input">
+                        {% for code, name in levels %}<option value="{{ code }}">{{ name }}</option>{% endfor %}
+                    </select></label>
+            </div>
+            <button class="lj-btn" type="submit" style="align-self:flex-start"><i class="fas fa-plus"></i> Create subject</button>
+        </form>
+        <details class="lj-more"><summary>Study with classmates instead</summary>
+            <div class="lj-grid" style="margin-top:12px">
+                <form method="post" action="{% url 'journey:group_create' %}" class="lj-form">{% csrf_token %}
+                    <label for="lj-new-group">Create a class group
+                        <input id="lj-new-group" class="lj-input" name="name" maxlength="80" placeholder="Suomi A1 – Tuesday class" required></label>
+                    <label for="lj-subject">Subject
+                        <select id="lj-subject" name="subject" class="lj-input">
+                            {% for s in subject_choices %}<option value="{{ s.key }}"{% if s.key == default_subject %} selected{% endif %}>{{ s.name }}</option>{% endfor %}
+                        </select></label>
+                    <button class="lj-btn ghost" type="submit"><i class="fas fa-users"></i> Create group</button>
+                </form>
+                <form method="post" action="{% url 'journey:group_join' %}" class="lj-form">{% csrf_token %}
+                    <label for="lj-join-code">Join with a code
+                        <input id="lj-join-code" class="lj-input" name="code" maxlength="12" placeholder="e.g. K7TQ4M" autocapitalize="characters" required></label>
+                    <button class="lj-btn ghost" type="submit"><i class="fas fa-right-to-bracket"></i> Join</button>
+                </form>
+            </div>
         </details>
     </section>
 
-    <section class="lj-card">
-        <form method="post" action="{% url 'journey:set_language' %}" class="lj-form">{% csrf_token %}
-            <label for="lj-lang">Second language (optional)
-                <span class="muted" style="font-weight:400">Meanings and explanations are always in English. Pick a language you know
-                    better to see it next to the English.</span>
-                <select id="lj-lang" name="helper_language" class="lj-input">
-                    {% for code, name in helper_choices %}<option value="{{ code }}"{% if code == lang %} selected{% endif %}>{{ name }}</option>{% endfor %}
-                </select></label>
-            <button class="lj-btn ghost" type="submit" style="align-self:flex-start"><i class="fas fa-language"></i> Save language</button>
-        </form>
-    </section>
+    <p class="muted" style="font-size:.85rem"><a href="{% url 'journey:library' %}"><i class="fas fa-magnifying-glass"></i> Search all your lessons</a></p>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('lj-new-open').addEventListener('click', () => {
+    const box = document.getElementById('lj-new');
+    box.hidden = false;
+    box.scrollIntoView({behavior: 'smooth', block: 'start'});
+    document.getElementById('lj-space-subject').focus({preventScroll: true});
+});
+</script>
 {% endblock %}

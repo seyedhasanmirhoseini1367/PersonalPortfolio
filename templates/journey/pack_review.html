@@ -27,9 +27,14 @@ details.lj-src pre{white-space:pre-wrap;font-size:.9rem;margin:8px 0 0;max-heigh
 {% block content %}
 <div class="lj">
     {% include 'journey/_nav.html' %}
+    {% include 'journey/_crumbs.html' with pack=None here=pack.title %}
     <header class="lj-head">
-        <a class="lj-eyebrow" href="{{ group.get_absolute_url }}"><i class="fas fa-arrow-left"></i> {{ group.name }}</a>
-        <h1>Check “{{ pack.title }}”</h1>
+        <h1>{{ pack.title }}</h1>
+        {% include 'journey/_stepper.html' with at=2 %}
+        {% if pack.error %}<p class="lj-msg error"><i class="fas fa-triangle-exclamation"></i> Adding more material did not work: {{ pack.error }}</p>{% endif %}
+        {% if pack.published_at %}<p class="lj-msg"><i class="fas fa-circle-info"></i> New material was added. Check the new cards and publish again;
+            until then this lesson is out of practice. Your progress on its old cards is kept.</p>{% endif %}
+        <h2><span class="lj-chip" style="margin-inline-end:6px">Step 3</span> Check what the AI made</h2>
         <p class="muted">Only you{% if not group.is_personal %} and the group owner{% endif %} can see this draft. Fix anything wrong,
            tick “Remove” on what you don’t need, then publish it. Each item shows how sure the app is:
            <span class="lj-chip high">Verified</span> found in your material and checked,
@@ -167,9 +172,13 @@ details.lj-src pre{white-space:pre-wrap;font-size:.9rem;margin:8px 0 0;max-heigh
     <div class="lj-bar">
         <button class="lj-btn ghost" name="action" value="delete" formnovalidate id="lj-del-pack"><i class="fas fa-trash"></i> Delete lesson</button>
         <button class="lj-btn ghost" name="action" value="save"><i class="fas fa-floppy-disk"></i> Save</button>
-        <button class="lj-btn moss" name="action" value="publish"><i class="fas fa-paper-plane"></i> Save and publish</button>
+        <button class="lj-btn moss" name="action" value="publish"><i class="fas fa-play"></i> Save and publish</button>
     </div>
     </form>
+
+    <details class="lj-card lj-more"><summary><i class="fas fa-file-circle-plus"></i> Add more material to this lesson</summary>
+        <div style="margin-top:12px">{% include 'journey/_material_form.html' %}</div>
+    </details>
 
     <form method="post" action="{% url 'journey:pack_edit' pack.pk %}" class="lj-card lj-form">{% csrf_token %}
         <h2>Add your own card</h2>

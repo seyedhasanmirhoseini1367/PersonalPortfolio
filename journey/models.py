@@ -26,36 +26,13 @@ HELPER_NAMES = {code: name.split(' · ')[0] for code, name in HELPER_LANGUAGES i
 RTL_LANGUAGES = {'ar', 'fa', 'ur', 'he'}
 
 
-# Parts a cartoon character is drawn from (static/journey/avatar.js draws them).
-AVATAR_PARTS = {
-    'skin': ['#f6d7c3', '#eac09a', '#d39b6a', '#a86b3c', '#6e4527'],
-    'hair': ['short', 'long', 'curly', 'bun', 'bald', 'cap'],
-    'hair_color': ['#2b2118', '#5a3a22', '#a5672f', '#e0b45a', '#c2c2c2', '#b8473a', '#3b5bdb'],
-    'shirt': ['#2f8fd8', '#d9546b', '#3fae74', '#e0a43a', '#7c5cd6', '#33414d'],
-    'extra': ['none', 'glasses', 'scarf', 'earrings', 'beard'],
-}
-
-
-def clean_avatar(spec, seed=''):
-    """Keep only known parts; fill gaps deterministically from seed so everyone has a character."""
-    spec = spec if isinstance(spec, dict) else {}
-    h = sum(ord(c) * (i + 1) for i, c in enumerate(seed or 'x'))
-    out = {}
-    for n, (part, options) in enumerate(AVATAR_PARTS.items()):
-        out[part] = spec.get(part) if spec.get(part) in options else options[(h // (n + 1)) % len(options)]
-    if not spec.get('extra'):
-        out['extra'] = 'none'
-    return out
-
-
 class LearnerProfile(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='journey_profile')
     helper_language = models.CharField(max_length=8, choices=HELPER_LANGUAGES, blank=True, default='',
                                        help_text='Optional second language shown next to English.')
-    avatar = models.JSONField(default=dict, blank=True,
-                              help_text='Cartoon character: {"skin","hair","hair_color","shirt","extra"}; see AVATAR_PARTS.')
-    town = models.JSONField(default=dict, blank=True,
-                            help_text='Town game progress: {"coins": int, "done": {quest: stars}, "sprite": frame}.')
+    # Left from the removed character editor and town game; kept so no saved data is dropped.
+    avatar = models.JSONField(default=dict, blank=True, help_text='Unused.')
+    town = models.JSONField(default=dict, blank=True, help_text='Unused.')
 
     def __str__(self):
         return f'{self.user} ({self.helper_language or "English only"})'
@@ -63,9 +40,6 @@ class LearnerProfile(models.Model):
     @classmethod
     def for_user(cls, user):
         return cls.objects.get_or_create(user=user)[0]
-
-    def avatar_spec(self):
-        return clean_avatar(self.avatar, seed=self.user.username)
 
     @classmethod
     def language_of(cls, user):
@@ -141,14 +115,17 @@ class Membership(models.Model):
 
 
 class LessonPack(models.Model):
-    PROCESSING, DRAFT, PUBLISHED, FAILED = 'processing', 'draft', 'published', 'failed'
-    STATUSES = [(PROCESSING, 'Processing'), (DRAFT, 'Draft'), (PUBLISHED, 'Published'), (FAILED, 'Failed')]
+    EMPTY, PROCESSING, DRAFT, PUBLISHED, FAILED = 'empty', 'processing', 'draft', 'published', 'failed'
+    STATUSES = [(EMPTY, 'Needs material'), (PROCESSING, 'Building'), (DRAFT, 'To check'), (PUBLISHED, 'Ready'),
+                (FAILED, 'Failed')]
+    # The steps a lesson goes through, as shown on its page.
+    STEPS = ['Add material', 'Build', 'Check', 'Practise']
     SOURCE_KINDS = [('text', 'Text'), ('photos', 'Photos'), ('pdf', 'PDF'), ('docx', 'Word document'), ('mixed', 'Mixed')]
 
     group = models.ForeignKey(StudyGroup, on_delete=models.CASCADE, related_name='packs')
     title = models.CharField(max_length=120)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='journey_packs')
-    status = models.CharField(max_length=12, choices=STATUSES, default=PROCESSING)
+    status = models.CharField(max_length=12, choices=STATUSES, default=EMPTY)
     progress_note = models.CharField(max_length=120, blank=True)
     error = models.TextField(blank=True)
     image_count = models.PositiveSmallIntegerField(default=0)
@@ -176,6 +153,11 @@ class LessonPack(models.Model):
 
     def can_edit(self, user):
         return user.is_authenticated and (user == self.created_by or self.group.is_owner(user))
+
+    @property
+    def step(self):
+        """Index into STEPS of where the lesson is now."""
+        return {self.EMPTY: 0, self.FAILED: 0, self.PROCESSING: 1, self.DRAFT: 2, self.PUBLISHED: 3}[self.status]
 
     def part_at(self, offset):
         label = ''
@@ -209,7 +191,7 @@ class StudyItem(models.Model):
              (GRAMMAR, 'Grammar note'), (QUESTION, 'Comprehension question'), (TABLE, 'Inflection table'),
              (CONCEPT, 'Concept'), (NOTE, 'Key idea')]
     # Kinds that go into the daily spaced-repetition review.
-    REVIEWABLE = (WORD, SENTENCE, PHRASE, CONCEPT, QUESTION)
+    REVIEWABLE = (WORD, SENTENCE, PHRASE, CONCEPT, QUESTION, TABLE)   # a table is practised one form at a time
 
     HIGH, MEDIUM, LOW = 'high', 'medium', 'low'
     CONFIDENCE = [(HIGH, 'Verified'), (MEDIUM, 'Needs review'), (LOW, 'Low confidence')]
@@ -295,7 +277,9 @@ SETTINGS = {
 
 
 class Scene(models.Model):
-    """A short role-play built from a lesson: the learner plays one role in a dialogue.
+    """Not used since the role-play pages were removed; kept so stored rows are not dropped.
+
+    A short role-play built from a lesson: the learner plays one role in a dialogue.
 
     steps: [{"who": "npc", "fi": "...", "en": "..."},
             {"who": "you", "fi": "correct line", "en": "...",
@@ -317,9 +301,6 @@ class Scene(models.Model):
 
     def __str__(self):
         return f'{self.pack}: {self.title}'
-
-    def get_absolute_url(self):
-        return reverse('journey:scene', args=[self.pk])
 
     @property
     def setting_info(self):

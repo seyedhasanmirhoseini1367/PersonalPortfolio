@@ -1,0 +1,8 @@
+{# The lesson's steps; "at" is the current one (0-3). #}
+<ol class="lj-stepper" aria-label="Lesson steps">
+    {% for label in pack.STEPS %}
+    <li class="{% if forloop.counter0 < at %}done{% elif forloop.counter0 == at %}now{% endif %}"{% if forloop.counter0 == at %} aria-current="step"{% endif %}>
+        <span class="n">{% if forloop.counter0 < at %}<i class="fas fa-check"></i>{% else %}{{ forloop.counter }}{% endif %}</span><span class="t">{{ label }}</span>
+    </li>
+    {% endfor %}
+</ol>

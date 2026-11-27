@@ -78,6 +78,7 @@ def _card(item, lang=''):
         'grammar': item.grammar, 'en': item.meaning_en, 'extra': item.helper(lang), 'example': item.example,
         'body': item.body, 'cloze': data.get('cloze', ''), 'options': data.get('options', []),
         'answer': data.get('answer', 0), 'quote': data.get('quote', ''), 'source': item.source_ref,
+        'rows': data.get('rows', []),
         'pack': item.pack.title, 'speech': item.pack.group.subject_info.speech_lang,
         'tl': item.pack.group.subject_info.text_lang, 'confidence': item.confidence,
     }
@@ -118,6 +119,8 @@ def progress_summary(user, group=None):
     week = [{'day': today - timedelta(days=d), 'n': per_day.get((today - timedelta(days=d)).date(), 0)}
             for d in range(6, -1, -1)]
     streak, day = 0, today.date()
+    if not per_day.get(day):   # nothing yet today: the streak still counts up to yesterday
+        day -= timedelta(days=1)
     while per_day.get(day):
         streak += 1
         day -= timedelta(days=1)
@@ -161,8 +164,9 @@ def recommendations(user, spaces):
                          'href': s.get_absolute_url(), 'cta': 'Open'})
     drafts = LessonPack.objects.filter(created_by=user, status=LessonPack.DRAFT).count()
     if drafts:
-        tips.append({'icon': 'fa-pen-to-square', 'text': _n(drafts, 'draft lesson waits', 'draft lessons wait') + ' for your check.',
-                     'url': 'journey:library', 'cta': 'Check drafts'})
+        first = LessonPack.objects.filter(created_by=user, status=LessonPack.DRAFT).order_by('-created_at').first()
+        tips.append({'icon': 'fa-pen-to-square', 'text': _n(drafts, 'lesson waits', 'lessons wait') + ' for your check.',
+                     'href': first.get_absolute_url(), 'cta': 'Check'})
     return tips[:4]
 
 
@@ -182,21 +186,40 @@ def _new_space(user, subject_key, name='', level=''):
 
 # ── home, spaces and groups ──────────────────────────────────────────────────
 
+def _subjects_of(user):
+    """Every space and group the learner is in, as subject cards, personal ones first."""
+    places = list(StudyGroup.objects.filter(memberships__user=user)
+                  .annotate(n_packs=Count('packs', filter=Q(packs__status=LessonPack.PUBLISHED), distinct=True),
+                            n_members=Count('memberships', distinct=True))
+                  .order_by('-is_personal', 'name'))
+    for s in places:
+        s.counts = due_counts(user, s)
+        s.info = s.subject_info
+        s.todo = (s.packs.filter(Q(created_by=user) | Q(group__memberships__user=user, group__memberships__role=Membership.OWNER))
+                  .filter(status__in=[LessonPack.DRAFT, LessonPack.EMPTY, LessonPack.FAILED]).distinct().count())
+    return places
+
+
 @login_required
 def home(request):
-    spaces = list(_spaces_of(request.user, True))
-    for s in spaces:
-        s.counts = due_counts(request.user, s)
-        s.info = s.subject_info
+    places = _subjects_of(request.user)
     return render(request, 'journey/home.html', {
-        'spaces': spaces, 'groups': _spaces_of(request.user, False),
-        'recent': _visible_packs(request.user).select_related('group')[:6],
-        'counts': due_counts(request.user),
+        'places': places, 'counts': due_counts(request.user),
+        'tips': recommendations(request.user, [p for p in places if p.is_personal]),
+        'subject_choices': subjects.SUBJECTS.values(), 'default_subject': subjects.DEFAULT, 'levels': LEVELS,
+        'nav': 'home',
+    })
+
+
+@login_required
+def progress(request):
+    places = _subjects_of(request.user)
+    for s in places:
+        s.progress = progress_summary(request.user, s)
+    return render(request, 'journey/progress.html', {
+        'progress': progress_summary(request.user), 'places': places,
         'mistakes': Progress.objects.filter(user=request.user, lapses__gt=0).count(),
-        'tips': recommendations(request.user, spaces), 'progress': progress_summary(request.user),
-        'helper_choices': HELPER_LANGUAGES, 'subject_choices': subjects.SUBJECTS.values(),
-        'default_subject': subjects.DEFAULT, 'levels': LEVELS, 'nav': 'home',
-        **_language(request),
+        'helper_choices': HELPER_LANGUAGES, 'nav': 'progress', **_language(request),
     })
 
 
@@ -225,8 +248,8 @@ def space_create(request):
         messages.error(request, f'You can have up to {MAX_SPACES} learning spaces.')
         return redirect('journey:home')
     space = _new_space(request.user, subject, request.POST.get('name', '').strip(), request.POST.get('level', ''))
-    messages.success(request, f'“{space.name}” is ready. Add your first material.')
-    return redirect('journey:pack_new', code=space.invite_code)
+    messages.success(request, f'“{space.name}” is ready. Create its first lesson.')
+    return redirect(space)
 
 
 @login_required
@@ -272,8 +295,24 @@ def group(request, code):
     return render(request, 'journey/group.html', {
         'group': group, 'subject': group.subject_info, 'packs': visible, 'members': group.memberships.select_related('user'),
         'is_owner': group.is_owner(request.user), 'counts': due_counts(request.user, group),
-        'progress': progress_summary(request.user, group), 'levels': LEVELS, 'nav': 'home',
+        'levels': LEVELS, 'nav': 'home', 'supported': subjects.is_supported(group.subject),
     })
+
+
+@login_required
+@require_POST
+def lesson_create(request, code):
+    """Step 0: name the lesson. Its own page then asks for the material."""
+    group = _group_for(request.user, code)
+    if not subjects.is_supported(group.subject):
+        messages.error(request, str(subjects.UnknownSubject(group.subject)))
+        return redirect(group)
+    title = request.POST.get('title', '').strip()[:120]
+    if not title:
+        messages.error(request, 'Give the lesson a name, for example “Kappale 3 – Asunto”.')
+        return redirect(group)
+    pack = LessonPack.objects.create(group=group, title=title, created_by=request.user, status=LessonPack.EMPTY)
+    return redirect(pack)
 
 
 @login_required
@@ -315,52 +354,37 @@ def group_leave(request, code):
     return redirect('journey:home')
 
 
-# ── new lesson ──────────────────────────────────────────────────────────────
+# ── material ────────────────────────────────────────────────────────────────
 
-def _uploads_today(user):
+def _builds_today(user):
+    """Builds started today, and photos sent today, for the daily limits."""
     since = _start_of_today()
-    packs = LessonPack.objects.filter(created_by=user, created_at__gte=since)
+    packs = LessonPack.objects.filter(created_by=user).filter(Q(started_at__gte=since) | Q(created_at__gte=since) |
+                                                              Q(status=LessonPack.PROCESSING))
     return packs.count(), packs.aggregate(n=Sum('image_count'))['n'] or 0
 
 
-@login_required
-def lesson_add(request):
-    """“Add a lesson” from anywhere: pick the space; a first-time learner gets a Finnish space made for them."""
-    places = list(StudyGroup.objects.filter(memberships__user=request.user).order_by('-is_personal', 'name'))
-    if not places:
-        places = [_new_space(request.user, subjects.DEFAULT)]
-    chosen = request.POST.get('space') or request.GET.get('space') or places[0].invite_code
-    space = next((p for p in places if p.invite_code == chosen.upper()), places[0])
-    return pack_new(request, space.invite_code, places=places)
+def _limits(user):
+    n_builds, n_images = _builds_today(user)
+    return {'images_left': max(0, DAILY_IMAGES - n_images), 'packs_left': max(0, DAILY_PACKS - n_builds),
+            'max_files': pipeline.MAX_FILES, 'file_types': extract.FILE_TYPES, 'max_pages': extract.MAX_PDF_PAGES,
+            'n_builds': n_builds, 'n_images': n_images}
 
 
-@login_required
-def pack_new(request, code, places=None):
-    group = _group_for(request.user, code)
-    if not subjects.is_supported(group.subject):
-        messages.error(request, str(subjects.UnknownSubject(group.subject)))
-        return redirect(group)
-    n_packs, n_images = _uploads_today(request.user)
-    ctx = {'group': group, 'images_left': max(0, DAILY_IMAGES - n_images), 'max_files': pipeline.MAX_FILES,
-           'packs_left': max(0, DAILY_PACKS - n_packs), 'subject': group.subject_info, 'places': places,
-           'file_types': extract.FILE_TYPES, 'max_pages': extract.MAX_PDF_PAGES, 'nav': 'add'}
-    if request.method != 'POST':
-        return render(request, 'journey/pack_new.html', ctx)
-
-    title = request.POST.get('title', '').strip()[:120]
+def _take_material(request, limits):
+    """Check the uploaded files and text. Returns (files, text, n_photos, errors); nothing is stored yet."""
     text = request.POST.get('text', '').strip()
-    focus = request.POST.get('focus', '').strip()[:200]
     uploads = request.FILES.getlist('files') + request.FILES.getlist('images')
     errors = []
     if not uploads and len(text) < 20:
         errors.append('Add a photo or a file, or paste the text (20 characters or more).')
     if len(uploads) > pipeline.MAX_FILES:
         errors.append(f'Send at most {pipeline.MAX_FILES} files at a time.')
-    if n_packs >= DAILY_PACKS:
-        errors.append(f'You have made {DAILY_PACKS} lessons today. More can be added tomorrow.')
+    if limits['n_builds'] >= DAILY_PACKS:
+        errors.append(f'You have built {DAILY_PACKS} lessons today. More can be added tomorrow.')
     n_photos = sum(1 for f in uploads if extract.EXTRACTORS['image'].accepts(f.name, f.content_type))
-    if n_images + n_photos > DAILY_IMAGES:
-        errors.append(f'You can send {ctx["images_left"]} more photo(s) today (limit {DAILY_IMAGES} a day).')
+    if limits['n_images'] + n_photos > DAILY_IMAGES:
+        errors.append(f'You can send {limits["images_left"]} more photo(s) today (limit {DAILY_IMAGES} a day).')
     files = []
     if not errors:
         for f in uploads:
@@ -372,17 +396,61 @@ def pack_new(request, code, places=None):
                 files.append((ex.kind, f.name, ex.prepare(f)))
             except ValueError as exc:
                 errors.append(str(exc))
+    return files, text, n_photos, errors, uploads
+
+
+@login_required
+def lesson_add(request):
+    """Old “Add a lesson” address: lessons now start inside a subject."""
+    return redirect('journey:home')
+
+
+@login_required
+def pack_new(request, code):
+    """One step: a new lesson with its material (the subject page's form names it first instead)."""
+    group = _group_for(request.user, code)
+    if not subjects.is_supported(group.subject):
+        messages.error(request, str(subjects.UnknownSubject(group.subject)))
+        return redirect(group)
+    if request.method != 'POST':
+        return redirect(group.get_absolute_url() + '#new-lesson')
+    files, text, n_photos, errors, uploads = _take_material(request, _limits(request.user))
+    title = request.POST.get('title', '').strip()[:120]
     if not title:
         first = uploads[0].name.rsplit('.', 1)[0] if uploads else text.split('\n', 1)[0]
         title = first.strip()[:80].strip() or 'Untitled lesson'
     if errors:
         for e in errors:
             messages.error(request, e)
-        ctx.update(title=request.POST.get('title', ''), text=text, focus=focus)
-        return render(request, 'journey/pack_new.html', ctx, status=400)
+        return render(request, 'journey/group.html', {
+            'group': group, 'subject': group.subject_info, 'packs': [], 'counts': due_counts(request.user, group),
+            'levels': LEVELS, 'nav': 'home', 'supported': True}, status=400)
+    pack = LessonPack.objects.create(group=group, title=title, created_by=request.user,
+                                     focus=request.POST.get('focus', '').strip()[:200], image_count=n_photos)
+    pipeline.queue(pack, files, text)
+    return redirect(pack)
 
-    pack = LessonPack.objects.create(group=group, title=title, created_by=request.user, focus=focus,
-                                     image_count=n_photos, progress_note='Waiting for its turn…')
+
+@login_required
+@require_POST
+def lesson_material(request, pk):
+    """Step 1: add material to this lesson (its first, or more later). The worker builds it."""
+    pack = _pack_for(request.user, pk)
+    if not pack.can_edit(request.user):
+        raise Http404('Only the person who added this lesson, or the group owner, can add to it')
+    if pack.status == LessonPack.PROCESSING:
+        messages.info(request, 'This lesson is still being built. Add more when it is done.')
+        return redirect(pack)
+    files, text, n_photos, errors, _ = _take_material(request, _limits(request.user))
+    if errors:
+        for e in errors:
+            messages.error(request, e)
+        return redirect(pack)
+    focus = request.POST.get('focus', '').strip()[:200]
+    if focus:
+        pack.focus = focus
+    pack.image_count += n_photos
+    pack.save(update_fields=['focus', 'image_count'])
     pipeline.queue(pack, files, text)
     return redirect(pack)
 
@@ -417,8 +485,12 @@ def library(request):
 def pack(request, pk):
     pack = _pack_for(request.user, pk)
     can_edit = pack.can_edit(request.user)
-    if pack.status in (LessonPack.PROCESSING, LessonPack.FAILED) or (pack.status == LessonPack.DRAFT and not can_edit):
-        return render(request, 'journey/pack_wait.html', {'pack': pack, 'can_edit': can_edit})
+    base = {'pack': pack, 'group': pack.group, 'can_edit': can_edit, 'subject': pack.group.subject_info, 'nav': 'home'}
+    if pack.status in (LessonPack.EMPTY, LessonPack.FAILED) and can_edit:
+        return render(request, 'journey/lesson_add.html', {**base, **_limits(request.user)})
+    if pack.status in (LessonPack.PROCESSING, LessonPack.FAILED, LessonPack.EMPTY) or \
+            (pack.status == LessonPack.DRAFT and not can_edit):
+        return render(request, 'journey/pack_wait.html', base)
     language = _language(request)
     lang = language['lang']
     translating = translate.ensure(pack, lang) if pack.status == LessonPack.PUBLISHED else False
@@ -438,7 +510,14 @@ def pack(request, pk):
         'summary_extra': (pack.translations or {}).get(lang, '') if lang else '',
         'translating': translating, 'speech_lang': subject.speech_lang, 'tl': subject.text_lang, 'subject': subject,
         'cut': len(pack.source_text) > subject.max_chars, 'add_kinds': _addable(subject), **language,
+        **_limits(request.user), 'nav': 'home', 'practice_counts': _lesson_counts(request.user, pack),
     })
+
+
+def _lesson_counts(user, pack):
+    items = _reviewable(user).filter(pack=pack)
+    return {'total': items.count(), 'due': Progress.objects.filter(user=user, item__in=items, due__lte=timezone.now()).count(),
+            'new': items.exclude(progress__user=user).count()}
 
 
 def _addable(subject):
@@ -548,8 +627,9 @@ def pack_edit(request, pk):
 
     if action == 'publish' and pack.status == LessonPack.DRAFT:
         pack.publish()
-        messages.success(request, 'Published. It is in your daily practice now.' if pack.group.is_personal
-                         else 'Published. Everyone in the group can now study this lesson.')
+        messages.success(request, 'Published. Choose how to practise it.' if pack.group.is_personal
+                         else 'Published. Everyone in the group can now study it. Choose how to practise it.')
+        return redirect('journey:lesson_practice', pk=pack.pk)
     else:
         messages.success(request, f'Saved.{f" Removed {removed} item(s)." if removed else ""}')
     return redirect(pack)
@@ -557,23 +637,71 @@ def pack_edit(request, pk):
 
 # ── practice ────────────────────────────────────────────────────────────────
 
+def _scope(request):
+    """What a practice session covers: one lesson, one subject, or everything due today."""
+    lesson = request.GET.get('lesson', '')
+    code = request.GET.get('group', '')
+    if lesson.isdigit():
+        pack = _pack_for(request.user, int(lesson))
+        if pack.status != LessonPack.PUBLISHED:
+            raise Http404('This lesson is not published yet')
+        return pack.group, pack
+    return (_group_for(request.user, code) if code else None), None
+
+
+def _picker(request, group, pack):
+    items = _reviewable(request.user, group)
+    if pack:
+        items = items.filter(pack=pack)
+    kinds = set(items.values_list('kind', flat=True))
+    return render(request, 'journey/practice.html', {
+        'group': group, 'pack': pack, 'nav': 'home' if (group or pack) else 'practice',
+        'counts': _lesson_counts(request.user, pack) if pack else due_counts(request.user, group),
+        'has_types': bool(kinds & {StudyItem.WORD, StudyItem.PHRASE, StudyItem.SENTENCE, StudyItem.CONCEPT, StudyItem.TABLE}),
+        'has_tables': StudyItem.TABLE in kinds, 'total': items.count(),
+    })
+
+
+@login_required
+def lesson_practice(request, pk):
+    pack = _pack_for(request.user, pk)
+    if pack.status != LessonPack.PUBLISHED:
+        return redirect(pack)
+    return _picker(request, pack.group, pack)
+
+
+@login_required
+def group_practice(request, code):
+    return _picker(request, _group_for(request.user, code), None)
+
+
 @login_required
 def review(request):
-    code = request.GET.get('group', '')
-    group = _group_for(request.user, code) if code else None
+    group, pack = _scope(request)
     return render(request, 'journey/review.html', {
-        'group': group, 'counts': due_counts(request.user, group), 'mode': request.GET.get('mode', ''),
-        'nav': 'mistakes' if request.GET.get('mode') == 'mistakes' else 'practice',
+        'group': group, 'pack': pack, 'counts': due_counts(request.user, group), 'mode': request.GET.get('mode', ''),
+        'style': request.GET.get('style', ''),
+        'nav': 'mistakes' if request.GET.get('mode') == 'mistakes' else ('home' if (group or pack) else 'practice'),
     })
 
 
 @login_required
 def api_due(request):
-    code = request.GET.get('group', '')
-    group = _group_for(request.user, code) if code else None
+    group, pack = _scope(request)
     items = _reviewable(request.user, group).select_related('pack__group')
     now = timezone.now()
-    if request.GET.get('mode') == 'mistakes':
+    extra = False
+    if pack:
+        # One lesson, chosen on purpose: its due and new cards (no daily limit on new ones); when none are
+        # left, a round of extra practice that does not move the review schedule.
+        items = items.filter(pack=pack)
+        cards = [p.item for p in Progress.objects.filter(user=request.user, due__lte=now, item__in=items)
+                 .select_related('item__pack__group').order_by('due')[:BATCH]]
+        cards += list(items.exclude(progress__user=request.user).order_by(KIND_ORDER, 'order')[:BATCH - len(cards)])
+        if not cards:
+            extra = True
+            cards = list(items.order_by('?')[:20])
+    elif request.GET.get('mode') == 'mistakes':
         cards = [p.item for p in Progress.objects.filter(user=request.user, lapses__gt=0, item__in=items)
                  .select_related('item__pack__group').order_by('-lapses', 'due')[:BATCH]]
     else:
@@ -588,8 +716,12 @@ def api_due(request):
     if lang:   # lessons not yet in the learner's language get translated for next time
         for p in {c.pack_id: c.pack for c in cards}.values():
             translate.ensure(p, lang)
-    return JsonResponse({'cards': [_card(i, lang) for i in cards], 'counts': due_counts(request.user, group),
-                         'lang': lang, 'lang_dir': language['lang_dir']})
+    seen = set(Progress.objects.filter(user=request.user, item__in=[c.pk for c in cards]).values_list('item_id', flat=True))
+    out = [_card(i, lang) for i in cards]
+    for c in out:
+        c['seen'] = c['id'] in seen   # "Mixed" shows new cards as flashcards first
+    return JsonResponse({'cards': out, 'counts': due_counts(request.user, group),
+                         'lang': lang, 'lang_dir': language['lang_dir'], 'extra': extra})
 
 
 @login_required
@@ -602,8 +734,9 @@ def api_grade(request):
         return JsonResponse({'error': 'Send item and grade (again, hard, good or easy).'}, status=400)
     item = get_object_or_404(_reviewable(request.user), pk=item_id)
     progress, _ = Progress.objects.get_or_create(user=request.user, item=item)
-    srs.schedule(progress, grade)
-    progress.save()
+    if request.POST.get('extra') != '1' or progress.reps == 0:   # extra practice does not move the schedule
+        srs.schedule(progress, grade)
+        progress.save()
     mode = request.POST.get('mode', '')
     mode = mode if mode in dict(ReviewLog.MODES) else ReviewLog.FLASH
     correct = {'1': True, '0': False}.get(request.POST.get('correct', '')) if mode != ReviewLog.FLASH else None

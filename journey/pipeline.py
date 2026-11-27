@@ -20,7 +20,7 @@ import os
 from datetime import timedelta
 
 from django.conf import settings
-from django.db import transaction
+from django.db import models, transaction
 from django.db.models import F, Q
 from django.utils import timezone
 
@@ -166,45 +166,65 @@ def read_photo_batches(images, prompt):
     return parts
 
 
-def _gather(pack, subject):
-    """Read every queued file into labelled parts, add the typed text, then drop the files."""
+def _read_uploads(pack, subject):
+    """Read the queued files (typed text is queued too, as a "text" upload) into labelled parts."""
     uploads = list(pack.uploads.all())
-    documents = sum(1 for u in uploads if u.kind != 'image')
+    others = [u for u in uploads if u.kind != 'text']
+    documents = sum(1 for u in uploads if u.kind not in ('image', 'text'))
     parts, kinds, seen = [], set(), {}
     photos = [u for u in uploads if u.kind == 'image']
     if photos:   # several photos per AI call: far fewer requests against the free quotas
         _note(pack, f'Reading {len(photos)} photo(s)…')
         parts += read_photo_batches([bytes(u.data) for u in photos], subject.read_prompt)
         kinds.add('photos')
-    for n, up in enumerate([u for u in uploads if u.kind != 'image'], 1):
+    rest = [u for u in uploads if u.kind != 'image']
+    for n, up in enumerate(rest, 1):
         ex = extract.EXTRACTORS[up.kind]
-        _note(pack, f'Reading {up.name or ex.label} ({n} of {len(uploads)})…')
+        if up.kind == 'text':
+            text = bytes(up.data).decode('utf-8')
+            parts += [('Your text', text)] if others else ex.extract(text, 1, subject)
+            kinds.add('text')
+            continue
+        _note(pack, f'Reading {up.name or ex.label} ({n} of {len(rest)})…')
         seen[up.kind] = seen.get(up.kind, 0) + 1
         found = ex.extract(bytes(up.data), seen[up.kind], subject)
-        if documents > 1 and up.kind != 'image':
+        if documents > 1:
             found = [(f'{up.name[:28]} · {label}', text) for label, text in found]
         parts += found
-        kinds.add('photos' if up.kind == 'image' else up.kind)
-    typed = pack.source_text.strip()
-    if typed:
-        parts += [('Your text', typed)] if uploads else extract.EXTRACTORS['text'].extract(typed, 1, subject)
-        kinds.add('text')
-    source, offsets = '', []
+        kinds.add(up.kind)
+    return parts, kinds
+
+
+def _attach(pack, parts, kinds, append):
+    """Add the new parts to the lesson's text (after what it already has, when adding material).
+
+    Returns only the new text: the AI builds items from what was just added.
+    """
+    source = pack.source_text if append else ''
+    offsets = list(pack.source_parts or []) if append else []
+    if append and len(source) >= MAX_SOURCE_CHARS - 200:
+        raise RuntimeError('This lesson is full. Start a new lesson for more material.')
+    today = timezone.localdate()
+    prefix = f'{today.day} {today:%b} · ' if append else ''
+    start = len(source) + (2 if source else 0)
     for label, text in parts:
         text = (text or '').strip()
         if not text:
             continue
         if source:
             source += '\n\n'
-        offsets.append([label[:60], len(source)])
+        offsets.append([(prefix + label)[:60], len(source)])
         source += text
+    old_kind = pack.source_kind if append else ''
+    if old_kind and old_kind not in kinds:
+        kinds = kinds | {old_kind}
     with transaction.atomic():
         pack.source_text = source[:MAX_SOURCE_CHARS]
         pack.source_parts = [o for o in offsets if o[1] < MAX_SOURCE_CHARS]
         pack.source_kind = next(iter(kinds)) if len(kinds) == 1 else ('mixed' if kinds else 'text')
         pack.save(update_fields=['source_text', 'source_parts', 'source_kind'])
         pack.uploads.all().delete()   # originals are not kept
-    return pack.source_text
+    return pack.source_text[start:]
 
 
 def locate(pack, rows):
@@ -236,11 +256,13 @@ def locate(pack, rows):
 KEEP_ORDER = [StudyItem.WORD, StudyItem.CONCEPT, StudyItem.SENTENCE, StudyItem.PHRASE, StudyItem.QUESTION]
 
 
-def drop_duplicates(rows):
-    """Remove practised items whose text repeats another one (any kind, any section of the material)."""
+def drop_duplicates(rows, existing=()):
+    """Remove practised items whose text repeats another one (any kind, any part of the material),
+    including items the lesson already has from earlier material."""
     from .subjects.base import norm
-    seen, out = set(), []
     rank = {k: i for i, k in enumerate(KEEP_ORDER)}
+    seen = {norm(front) for kind, front in existing if kind in rank}
+    out = []
     for row in sorted(rows, key=lambda r: (rank.get(r['kind'], 99), r.get('order', 0))):
         if row['kind'] in rank:
             key = norm(row['front'])
@@ -258,42 +280,68 @@ def _build(subject, source, lookup, note, context):
     return subject.build(source, **kwargs)
 
 
+def _fail(pack, message, had_items):
+    """A lesson that already had items keeps them and its status; only a first build becomes FAILED."""
+    if pack.uploads.exists() and not had_items:
+        # The files could not all be read. They are deleted now, so a retry would build from the
+        # typed text alone and silently miss the photos: clear the text so "Try again" asks for them.
+        pack.source_text, pack.source_parts = '', []
+        pack.save(update_fields=['source_text', 'source_parts'])
+    pack.uploads.all().delete()
+    if had_items:
+        pack.status = LessonPack.PUBLISHED if pack.published_at else LessonPack.DRAFT
+    else:
+        pack.status = LessonPack.FAILED
+    pack.error = str(message)[:1000]
+    pack.progress_note = ''
+    pack.save(update_fields=['status', 'error', 'progress_note'])
+
+
 def build_pack(pack, lookup=None):
-    """Fill a pack with draft items. Leaves it DRAFT, or FAILED with an error message."""
+    """Build items from the lesson's new material.
+
+    First build: the lesson becomes DRAFT (or FAILED with a reason).
+    Adding material to a lesson that has items: new items are added after the old ones, and the
+    lesson goes back to DRAFT so the new ones are checked before practice; old items and everyone's
+    progress on them stay. If that fails, the lesson keeps its items and status, with the reason shown.
+    """
+    had_items = pack.items.exists()
     try:
         subject = subjects.get(pack.group.subject)   # an unknown subject fails the build, never falls back
-        if pack.uploads.exists() or not pack.source_parts:
-            source = _gather(pack, subject)
+        if pack.uploads.exists():
+            parts, kinds = _read_uploads(pack, subject)
+            new_text = _attach(pack, parts, kinds, append=had_items)
+        elif not had_items:
+            new_text = pack.source_text   # "Try again": the files were already read
         else:
-            source = pack.source_text   # a retry: the files were already read
-        if len(source) < 20:
+            raise RuntimeError('Nothing new was added.')
+        if len(new_text.strip()) < 20:
             raise RuntimeError('There is too little text to build a lesson from.')
         context = {'level': pack.group.level, 'focus': pack.focus}
-        rows, summary = _build(subject, source, lookup, lambda msg: _note(pack, msg), context)
+        rows, summary = _build(subject, new_text, lookup, lambda msg: _note(pack, msg), context)
+        existing = list(pack.items.values_list('kind', 'front'))
+        rows = drop_duplicates(rows, existing)
         if not rows:
-            raise RuntimeError('Nothing could be built from this material. Try clearer photos or paste the text.')
-        rows = locate(pack, drop_duplicates(rows))
+            raise RuntimeError('Everything in this material is already in the lesson.' if had_items else
+                               'Nothing could be built from this material. Try clearer photos or paste the text.')
+        rows = locate(pack, rows)
         with transaction.atomic():
-            pack.items.all().delete()
+            if had_items:   # new items go after the old ones of the same kind
+                last = {k: n for k, n in pack.items.values_list('kind').annotate(n=models.Max('order'))}
+                for row in rows:
+                    row['order'] = last.get(row['kind'], -1) + 1 + row.get('order', 0)
+            else:
+                pack.items.all().delete()
             StudyItem.objects.bulk_create([StudyItem(pack=pack, **row) for row in rows])
-            pack.summary = summary
-            pack.translations = {}
+            pack.summary = f'{pack.summary}\n\n{summary}'.strip() if had_items and summary else (summary or pack.summary)
+            pack.translations = {}   # translated again, with the new items, when next opened
             pack.status = LessonPack.DRAFT
             pack.progress_note = ''
             pack.error = ''
             pack.save(update_fields=['summary', 'translations', 'status', 'progress_note', 'error'])
     except Exception as exc:
         logger.exception('LearningJourney pack %s failed', pack.pk)
-        if pack.uploads.exists():
-            # The files could not all be read. They are deleted now, so a retry would build from the
-            # typed text alone and silently miss the photos: clear the text so "Try again" asks for them.
-            pack.source_text, pack.source_parts = '', []
-            pack.save(update_fields=['source_text', 'source_parts'])
-        pack.uploads.all().delete()
-        pack.status = LessonPack.FAILED
-        pack.error = str(exc)[:1000]
-        pack.progress_note = ''
-        pack.save(update_fields=['status', 'error', 'progress_note'])
+        _fail(pack, exc, had_items)
     return pack
 
 
@@ -313,15 +361,17 @@ def _wake_worker():
 def queue(pack, files=(), text=''):
     """Store the checked files and the typed text, then hand the build to the background worker.
 
-    files: [(kind, name, bytes)] from extract.Extractor.prepare.
+    files: [(kind, name, bytes)] from extract.Extractor.prepare. Works for a new lesson and for
+    adding material to one that already has items.
     """
+    files = list(files)
+    if (text or '').strip():
+        files.append(('text', 'Your text', text.strip()[:MAX_SOURCE_CHARS].encode('utf-8')))
     PendingUpload.objects.bulk_create([PendingUpload(pack=pack, order=i, kind=k, name=name[:160], data=data)
                                        for i, (k, name, data) in enumerate(files)])
-    pack.source_text = (text or '').strip()[:MAX_SOURCE_CHARS]
-    pack.source_parts = []
     pack.status, pack.error, pack.started_at, pack.attempts = LessonPack.PROCESSING, '', None, 0
     pack.progress_note = 'Waiting for its turn…'
-    pack.save(update_fields=['source_text', 'source_parts', 'status', 'error', 'started_at', 'attempts', 'progress_note'])
+    pack.save(update_fields=['status', 'error', 'started_at', 'attempts', 'progress_note'])
     _wake_worker()
     pack.refresh_from_db()
     return pack
@@ -351,10 +401,8 @@ def run_pending(limit=3):
             continue
         pack = LessonPack.objects.select_related('group').get(pk=pk)
         if pack.attempts > MAX_ATTEMPTS:
-            pack.uploads.all().delete()
-            pack.status, pack.progress_note = LessonPack.FAILED, ''
-            pack.error = 'Building this lesson was interrupted twice. Press “Try again”, or add it again.'
-            pack.save(update_fields=['status', 'progress_note', 'error'])
+            _fail(pack, 'Building this lesson was interrupted twice. Press “Try again”, or add it again.',
+                  pack.items.exists())
             continue
         build_pack(pack)
         ran += 1

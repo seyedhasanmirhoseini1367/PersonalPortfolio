@@ -1,0 +1,6 @@
+<nav class="lj-crumbs" aria-label="Where you are">
+    <a href="{% url 'journey:home' %}">Subjects</a>
+    {% if group %}<i class="fas fa-chevron-right" aria-hidden="true"></i><a href="{{ group.get_absolute_url }}">{{ group.name }}</a>{% endif %}
+    {% if pack %}<i class="fas fa-chevron-right" aria-hidden="true"></i><a href="{{ pack.get_absolute_url }}">{{ pack.title }}</a>{% endif %}
+    {% if here %}<i class="fas fa-chevron-right" aria-hidden="true"></i><span aria-current="page">{{ here }}</span>{% endif %}
+</nav>

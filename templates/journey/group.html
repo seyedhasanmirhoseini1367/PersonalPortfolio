@@ -5,57 +5,58 @@
 {% block content %}
 <div class="lj">
     {% include 'journey/_nav.html' %}
+    {% include 'journey/_crumbs.html' %}
     <header class="lj-head">
-        <a class="lj-eyebrow" href="{% url 'journey:home' %}"><i class="fas fa-arrow-left"></i> LearningJourney</a>
-        <h1>{{ group.name }}</h1>
+        <div class="lj-row">
+            <h1>{{ group.name }}</h1>
+            {% if counts.due or counts.new %}
+            <a class="lj-btn" href="{% url 'journey:group_practice' group.invite_code %}"><i class="fas fa-play"></i> Practise this subject</a>
+            {% endif %}
+        </div>
         <div class="lj-inline">
             <span class="lj-chip" title="{{ subject.description }}"><i class="fas {{ subject.icon }}"></i> {{ subject.name }}</span>
             {% if group.level %}<span class="lj-chip">{{ group.get_level_display }}</span>{% endif %}
-            <span class="lj-chip">{% if group.is_personal %}<i class="fas fa-lock"></i> Private space{% else %}<i class="fas fa-users"></i> Group{% endif %}</span>
+            <span class="lj-chip">{% if group.is_personal %}<i class="fas fa-lock"></i> Only you{% else %}<i class="fas fa-users"></i> Class group{% endif %}</span>
+            {% if counts.due %}<span class="lj-chip processing">{{ counts.due }} due</span>{% endif %}
+            {% if counts.new %}<span class="lj-chip">{{ counts.new }} new today</span>{% endif %}
         </div>
-        {% if not group.is_personal %}
-        <p class="muted">Invite classmates with this code. They sign in on hasanai.net and choose “Join with a code”.</p>
-        <div class="lj-inline"><span class="lj-code" id="lj-code">{{ group.invite_code }}</span>
-            <button class="lj-btn ghost" type="button" id="lj-copy"><i class="fas fa-copy"></i> Copy code</button></div>
-        {% endif %}
     </header>
 
-    <section class="lj-card">
-        <div class="lj-row">
-            <div class="lj-stats">
-                <div class="lj-stat"><b>{{ counts.due }}</b><span>due here</span></div>
-                <div class="lj-stat"><b>{{ counts.new }}</b><span>new today</span></div>
-            </div>
-            <div class="lj-inline">
-                <a class="lj-btn" href="{% url 'journey:review' %}?group={{ group.invite_code }}"><i class="fas fa-layer-group"></i> Practise {{ group.kind_label|lower }}</a>
-                <a class="lj-btn moss" href="{% url 'journey:pack_new' group.invite_code %}"><i class="fas fa-plus"></i> Add a lesson</a>
-            </div>
+    {% if supported %}
+    <form method="post" action="{% url 'journey:lesson_create' group.invite_code %}" class="lj-card lj-form" id="new-lesson">{% csrf_token %}
+        <label for="lj-lesson-title">New lesson
+            <span class="muted" style="font-weight:400">Name it, then add photos, a PDF, a Word file or text on the next page.</span></label>
+        <div class="lj-inline">
+            <input id="lj-lesson-title" class="lj-input" name="title" maxlength="120" required placeholder="{{ subject.title_placeholder }}">
+            <button class="lj-btn moss" type="submit"><i class="fas fa-plus"></i> Create lesson</button>
         </div>
-    </section>
+    </form>
+    {% endif %}
 
     <section class="lj-card">
         <h2>Lessons</h2>
         {% if packs %}
-        <ul class="lj-list">
+        <ul class="lj-lessons">
             {% for p in packs %}
-            <li><a class="lj-li" href="{{ p.get_absolute_url }}">
-                <span><b>{{ p.title }}</b><br><small>{% if not group.is_personal %}added by {{ p.created_by.username }} · {% endif %}{{ p.n_items }} item{{ p.n_items|pluralize }} · {{ p.created_at|date:"j M Y" }}</small></span>
-                <span class="lj-chip {{ p.status }}">{{ p.get_status_display }}</span></a></li>
+            <li><a class="lj-lesson" href="{{ p.get_absolute_url }}">
+                <span class="ic {{ p.status }}"><i class="fas {% if p.status == 'published' %}fa-check{% elif p.status == 'processing' %}fa-spinner fa-spin{% elif p.status == 'failed' %}fa-triangle-exclamation{% elif p.status == 'draft' %}fa-pen{% else %}fa-file-circle-plus{% endif %}"></i></span>
+                <span class="main"><b>{{ p.title }}</b><br>
+                    <small>{{ p.get_status_display }}{% if p.n_items %} · {{ p.n_items }} item{{ p.n_items|pluralize }}{% endif %} · {{ p.created_at|date:"j M Y" }}{% if not group.is_personal %} · {{ p.created_by.username }}{% endif %}</small></span>
+                <span class="next">{% if p.status == 'published' %}Practise →{% elif p.status == 'draft' %}Check →{% elif p.status == 'processing' %}Building…{% elif p.status == 'failed' %}Fix →{% else %}Add material →{% endif %}</span>
+            </a></li>
             {% endfor %}
         </ul>
         {% else %}
-        <div class="lj-empty">No lessons yet. Choose “Add a lesson” and send photos, a PDF, a Word file or text.</div>
+        <div class="lj-empty">No lessons yet. Create one above: give it a name, then add your material.</div>
         {% endif %}
-    </section>
-
-    <section class="lj-card">
-        <h2>Progress here</h2>
-        {% include 'journey/_progress.html' %}
     </section>
 
     {% if not group.is_personal %}
     <section class="lj-card">
-        <h2>Members</h2>
+        <h2>Classmates</h2>
+        <p class="muted">Invite classmates with this code. They sign in on hasanai.net and choose “Join with a code”.</p>
+        <div class="lj-inline"><span class="lj-code" id="lj-code">{{ group.invite_code }}</span>
+            <button class="lj-btn ghost" type="button" id="lj-copy"><i class="fas fa-copy"></i> Copy code</button></div>
         <div class="lj-inline">
             {% for m in members %}<span class="lj-chip">{{ m.user.username }}{% if m.role == 'owner' %} · owner{% endif %}</span>{% endfor %}
         </div>
@@ -77,7 +78,7 @@
             </div>
             <div class="lj-inline">
                 <button class="lj-btn" name="action" value="save"><i class="fas fa-floppy-disk"></i> Save</button>
-                <button class="lj-btn ghost" name="action" value="delete" id="lj-delete-space" formnovalidate><i class="fas fa-trash"></i> Delete {{ group.kind_label|lower }}</button>
+                <button class="lj-btn ghost" name="action" value="delete" id="lj-delete-space" formnovalidate><i class="fas fa-trash"></i> Delete subject</button>
             </div>
         </form>
     </details>

@@ -22,14 +22,20 @@
 {% block content %}
 <div class="lj">
     {% include 'journey/_nav.html' %}
+    {% include 'journey/_crumbs.html' with pack=None here=pack.title %}
     <header class="lj-head">
-        <a class="lj-eyebrow" href="{{ group.get_absolute_url }}"><i class="fas fa-arrow-left"></i> {{ group.name }}</a>
         <h1>{{ pack.title }}</h1>
-        <div class="lj-inline">
-            <a class="lj-btn" href="{% url 'journey:review' %}?group={{ group.invite_code }}"><i class="fas fa-layer-group"></i> Practise</a>
-            <button class="lj-btn ghost" type="button" data-speak-text><i class="fas fa-volume-high"></i> Listen to the text</button>
-        </div>
+        {% include 'journey/_stepper.html' with at=3 %}
+        {% if pack.error %}<p class="lj-msg error"><i class="fas fa-triangle-exclamation"></i> Adding more material did not work: {{ pack.error }}</p>{% endif %}
     </header>
+
+    <a class="lj-big" href="{% url 'journey:lesson_practice' pack.pk %}" style="text-decoration:none;color:inherit">
+        <i class="fas fa-play" style="font-size:1.6rem;color:var(--lj-moss)"></i>
+        <span style="flex:1"><b>Practise this lesson</b><br>
+            <small class="muted">{% if practice_counts.due or practice_counts.new %}{{ practice_counts.due }} due · {{ practice_counts.new }} new{% else %}All caught up: practise again for extra rounds{% endif %}
+            · {{ practice_counts.total }} cards</small></span>
+        <span class="lj-btn moss">Start</span>
+    </a>
 
     {% if translating %}
     <p class="lj-msg" role="status"><i class="fas fa-language"></i> Translating this lesson into {{ lang_name }}. Reload in a minute to see it; English is shown meanwhile.</p>
@@ -129,9 +135,23 @@
 
     <details class="lj-card lj-more"{% if tl %} open{% endif %}><summary>The material</summary><pre class="lj-text{% if tl %} fi{% endif %}"{% if tl %} lang="{{ tl }}"{% endif %} id="lj-source">{{ pack.source_text }}</pre></details>
 
+    {% if speech_lang %}<button class="lj-btn ghost" type="button" data-speak-text style="align-self:flex-start"><i class="fas fa-volume-high"></i> Listen to the text</button>{% endif %}
+
     {% if can_edit %}
-    <form method="post" action="{% url 'journey:pack_edit' pack.pk %}">{% csrf_token %}
-        <button class="lj-btn ghost" name="action" value="delete"><i class="fas fa-trash"></i> Delete this lesson</button></form>
+    <details class="lj-card lj-more"><summary><i class="fas fa-file-circle-plus"></i> Add more material to this lesson</summary>
+        <p class="muted" style="margin-top:10px">New cards are added after the ones you have. The lesson goes back to “check” until
+           you publish it again; your progress on its cards is kept.</p>
+        <div style="margin-top:12px">{% include 'journey/_material_form.html' %}</div>
+    </details>
+    <details class="lj-card lj-more"><summary>Rename or delete this lesson</summary>
+        <div class="lj-grid" style="margin-top:12px">
+            <form method="post" action="{% url 'journey:pack_edit' pack.pk %}" class="lj-inline">{% csrf_token %}
+                <input class="lj-input" name="title" maxlength="120" value="{{ pack.title }}" aria-label="Lesson name">
+                <button class="lj-btn ghost" name="action" value="rename">Rename</button></form>
+            <form method="post" action="{% url 'journey:pack_edit' pack.pk %}">{% csrf_token %}
+                <button class="lj-btn ghost" name="action" value="delete" onclick="return confirm('Delete this lesson and everyone’s progress on it?')"><i class="fas fa-trash"></i> Delete lesson</button></form>
+        </div>
+    </details>
     {% endif %}
 </div>
 {{ questions|json_script:"lj-questions" }}

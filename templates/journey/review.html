@@ -3,7 +3,7 @@
 {% block extra_css %}{% include 'journey/_style.html' %}
 <style>
 .lj-rv{max-width:620px;width:100%;margin:0 auto;display:flex;flex-direction:column;gap:14px}
-.lj-modes{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;border:1px solid var(--border);border-radius:12px;padding:4px}
+.lj-modes{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;border:1px solid var(--border);border-radius:12px;padding:4px}
 .lj-modes button{border:0;background:transparent;color:var(--text-muted);border-radius:9px;padding:8px 6px;font:inherit;font-weight:700;
   font-size:.86rem;cursor:pointer;min-height:40px}
 .lj-modes button[aria-pressed="true"]{background:var(--lj-lake);color:#fff}
@@ -47,12 +47,13 @@
 <div class="lj">
     {% include 'journey/_nav.html' %}
     <header class="lj-head">
-        {% if group %}<a class="lj-eyebrow" href="{{ group.get_absolute_url }}"><i class="fas fa-arrow-left"></i> {{ group.name }}</a>{% endif %}
-        <h1>{% if mode == 'mistakes' %}Mistake notebook{% else %}Today’s practice{% endif %}</h1>
+        {% if group or pack %}{% include 'journey/_crumbs.html' with here='Practise' %}{% endif %}
+        <h1>{% if mode == 'mistakes' %}Mistake notebook{% elif pack %}{{ pack.title }}{% elif group %}{{ group.name }}{% else %}Today’s review{% endif %}</h1>
     </header>
 
     <div class="lj-rv">
         <div class="lj-modes" role="group" aria-label="How to practise">
+            <button type="button" data-mode="mixed" aria-pressed="false" title="Flashcards for new cards, then typing and multiple choice">Mixed</button>
             <button type="button" data-mode="flash" aria-pressed="true" title="See it, remember the answer, grade yourself">Flashcards</button>
             <button type="button" data-mode="type" aria-pressed="false" title="Write the answer yourself">Type the answer</button>
             <button type="button" data-mode="choice" aria-pressed="false" title="Pick the right answer from four">Multiple choice</button>
@@ -81,15 +82,18 @@
 {% include 'journey/_speak.html' %}
 <script>
 (() => {
-    const API_DUE = '{% url "journey:api_due" %}?{% if group %}group={{ group.invite_code }}&{% endif %}mode={{ mode|urlencode }}';
+    const API_DUE = '{% url "journey:api_due" %}?{% if pack %}lesson={{ pack.pk }}&{% elif group %}group={{ group.invite_code }}&{% endif %}mode={{ mode|urlencode }}';
     const API_GRADE = '{% url "journey:api_grade" %}';
     const CSRF = '{{ csrf_token }}';
-    const HOME = '{% if group %}{{ group.get_absolute_url }}{% else %}{% url "journey:home" %}{% endif %}';
+    const HOME = '{% if pack %}{{ pack.get_absolute_url }}{% elif group %}{{ group.get_absolute_url }}{% else %}{% url "journey:home" %}{% endif %}';
+    const BACK = '{% if pack %}Back to the lesson{% elif group %}Back to {{ group.name|escapejs }}{% else %}Back to your subjects{% endif %}';
+    let EXTRA = false;
     const $ = id => document.getElementById(id);
     const card = $('lj-card'), show = $('lj-show'), grades = $('lj-grades'), left = $('lj-left'), bar = $('lj-progress'), keys = $('lj-keys');
     let queue = [], all = [], cur = null, state = 'idle', done = 0, total = 0, again = 0, result = null;
-    let mode = 'flash';
-    try { mode = localStorage.getItem('lj-practice-mode') || 'flash'; } catch (e) { /* private mode */ }
+    let mode = 'mixed';
+    try { mode = localStorage.getItem('lj-practice-mode') || 'mixed'; } catch (e) { /* private mode */ }
+    if (['mixed', 'flash', 'type', 'choice'].includes('{{ style|escapejs }}')) mode = '{{ style|escapejs }}';
     let LANG = '', DIR = 'ltr';
 
     const el = (tag, cls, text, attrs = {}) => {
@@ -130,6 +134,21 @@
     // What a card asks for in each mode: the prompt shown, and the answer to type or choose.
     function task(c, m) {
         if (c.kind === 'question') return {mode: 'choice', options: c.options, answer: c.answer};
+        if (m === 'mixed') m = !c.seen ? 'flash' : (Math.random() < 0.5 ? 'type' : 'choice');
+        if (c.kind === 'table') {
+            const rows = (c.rows || []).filter(r => r[0] && r[1]);
+            if (!rows.length) return {mode: 'flash'};
+            const row = rows[Math.floor(Math.random() * rows.length)];
+            const others = [...new Set(rows.map(r => r[1]).filter(f => norm(f) !== norm(row[1])))];
+            if (m === 'choice' && others.length >= 3) {
+                const opts = others.sort(() => Math.random() - 0.5).slice(0, 3);
+                const at = Math.floor(Math.random() * 4);
+                opts.splice(at, 0, row[1]);
+                return {mode: 'choice', options: opts, answer: at, row};
+            }
+            if (m === 'type') return {mode: 'type', ask: 'Write the verb form', answers: [row[1]], row};
+            return {mode: 'flash', row};
+        }
         if (m === 'type') {
             if (c.kind === 'word') return {mode: 'type', ask: 'Write it in the language you are learning', answers: [c.front, c.form]};
             if (c.kind === 'phrase') return {mode: 'type', ask: 'Write the phrase', answers: [c.front]};
@@ -151,7 +170,14 @@
         return {mode: 'flash'};
     }
 
-    const KIND = {word: 'Word', sentence: 'Fill the blank', phrase: 'Phrase', concept: 'Concept', question: 'Question'};
+    const KIND = {word: 'Word', sentence: 'Fill the blank', phrase: 'Phrase', concept: 'Concept', question: 'Question', table: 'Verb form'};
+    function conjugation(c, row, show) {
+        const span = el('span', 'lj-front sentence', null, {lang: c.tl});
+        span.append(row[0] + ' ');
+        span.append(show ? el('span', 'lj-hit', row[1]) : el('span', 'lj-blank', '_'.repeat(Math.max(4, row[1].length)), {'aria-label': 'blank'}));
+        span.append(' (' + c.front + ')');
+        return span;
+    }
     function draw() {
         card.innerHTML = '';
         result = null;
@@ -165,8 +191,13 @@
         card.classList.toggle('tap', cur.task.mode === 'flash');
         const t = cur.task;
 
+        if (cur.kind === 'table') {
+            card.append(conjugation(cur, t.row, false));
+            if (cur.en) card.append(el('small', 'muted', cur.front + ' = ' + cur.en));
+        }
         if (t.mode === 'flash') {
-            if (cur.kind === 'word' || cur.kind === 'concept') card.append(el('span', 'lj-front', cur.front, {lang: cur.tl}));
+            if (cur.kind === 'table') { /* drawn above */ }
+            else if (cur.kind === 'word' || cur.kind === 'concept') card.append(el('span', 'lj-front', cur.front, {lang: cur.tl}));
             else if (cur.kind === 'sentence') { card.append(sentenceNode(cur, 'blank')); if (cur.en) card.append(meaning(cur)); }
             else card.append(meaning(cur));
             show.hidden = false; state = 'ask';
@@ -174,7 +205,8 @@
             return;
         }
         if (t.mode === 'type') {
-            if (cur.kind === 'sentence') { card.append(sentenceNode(cur, 'blank')); if (cur.en) card.append(meaning(cur)); }
+            if (cur.kind === 'table') { /* drawn above */ }
+            else if (cur.kind === 'sentence') { card.append(sentenceNode(cur, 'blank')); if (cur.en) card.append(meaning(cur)); }
             else if (cur.kind === 'concept') card.append(el('span', 'lj-front sentence', cur.en));
             else card.append(meaning(cur));
             card.append(el('small', 'muted', t.ask));
@@ -190,7 +222,8 @@
             return;
         }
         // choice
-        if (cur.kind === 'question') card.append(el('span', 'lj-front sentence', cur.front, {lang: cur.tl}));
+        if (cur.kind === 'table') { /* drawn above */ }
+        else if (cur.kind === 'question') card.append(el('span', 'lj-front sentence', cur.front, {lang: cur.tl}));
         else if (cur.kind === 'sentence') card.append(sentenceNode(cur, 'blank'));
         else if (cur.kind === 'phrase') card.append(meaning(cur));
         else card.append(el('span', 'lj-front', cur.front, {lang: cur.tl}));
@@ -226,6 +259,10 @@
             back.append(el('span', 'lj-front sentence', c.front, {lang: c.tl}));
         } else if (c.kind === 'question') {
             if (c.body) back.append(el('span', 'muted', c.body));
+        } else if (c.kind === 'table') {
+            const old = card.querySelector('.lj-front'); if (old) old.replaceWith(conjugation(c, c.task.row, true));
+            const tbl = el('small', 'muted', c.rows.map(r => r[0] + ' ' + r[1]).join(' · '), {lang: c.tl});
+            back.append(tbl);
         }
         const s = source(c); if (s) back.append(s);
         if (back.childNodes.length) card.append(back);
@@ -273,6 +310,7 @@
         const m = c.task.mode;
         const body = new URLSearchParams({item: c.id, grade: g, mode: m});
         if (m !== 'flash' && result !== null) body.set('correct', result ? '1' : '0');
+        if (EXTRA) body.set('extra', '1');
         fetch(API_GRADE, {method: 'POST', body, headers: {'X-CSRFToken': CSRF}}).catch(() => {});
         if (g === 'again') { queue.push(c); again++; } else { done++; }
         next();
@@ -284,11 +322,15 @@
         left.textContent = 'All done';
         card.append(el('span', 'lj-front', total ? 'Well done! 🎉' : 'Nothing to practise'));
         card.append(el('span', 'muted', total
-            ? done + ' card' + (done === 1 ? '' : 's') + ' reviewed' + (again ? ', ' + again + ' repeated' : '') + '. Come back tomorrow for the next ones.'
+            ? done + ' card' + (done === 1 ? '' : 's') + ' practised' + (again ? ', ' + again + ' repeated' : '') +
+              (EXTRA ? '. Extra rounds do not change your review schedule.' : '. The next review is planned for you.')
             : ('{{ mode|escapejs }}' === 'mistakes'
                 ? 'Your mistake notebook is empty. Cards you forget after learning them show up here.'
                 : 'No cards are due. Add a lesson, or come back tomorrow.')));
-        card.append(el('a', 'lj-btn ghost', 'Back', {href: HOME}));
+        const row = el('div', 'lj-inline');
+        {% if pack or group %}if (total) row.append(el('a', 'lj-btn', 'Practise again', {href: location.href}));{% endif %}
+        row.append(el('a', 'lj-btn ghost', BACK, {href: HOME}));
+        card.append(row);
         cur = null; state = 'idle';
     }
     function next() { cur = queue.shift(); cur ? draw() : finish(); }
@@ -316,7 +358,9 @@
 
     fetch(API_DUE, {headers: {'Accept': 'application/json'}})
         .then(r => r.json())
-        .then(d => { LANG = d.lang || ''; DIR = d.lang_dir || 'ltr'; all = d.cards || []; queue = all.slice(); total = queue.length; next(); })
+        .then(d => { LANG = d.lang || ''; DIR = d.lang_dir || 'ltr'; EXTRA = !!d.extra; all = d.cards || []; queue = all.slice(); total = queue.length;
+                     if (EXTRA && total) left.textContent = 'Extra round';
+                     next(); })
         .catch(() => { card.innerHTML = ''; card.append(el('span', 'muted', 'Could not load your cards. Check your connection and reload.')); });
 })();
 </script>
