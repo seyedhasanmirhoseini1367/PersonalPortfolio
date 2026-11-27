@@ -1088,3 +1088,38 @@ class WiktionaryCleanTests(TestCase):
         self.assertEqual(finnish._strip_html(raw), 'to go [with illative ] (somewhere)')
         self.assertTrue(finnish.meaning_matches('to go', 'to go [with illative]'))
         self.assertFalse(finnish.meaning_matches('six', 'spruce'))
+
+
+class GeneralRobustnessTests(TestCase):
+    def test_an_incomplete_answer_is_asked_again_once(self):
+        with mock.patch.object(general, 'analyst', side_effect=[{'summary_en': 'cut off'}, ANALYSIS]) as a, \
+             mock.patch.object(general, 'checker', return_value=VERDICT):
+            items, _ = general.Programming().build(GTEXT)
+        self.assertEqual(a.call_count, 2)
+        self.assertTrue(items)
+
+    def test_two_empty_answers_say_the_service_was_busy_not_that_the_material_is_empty(self):
+        with mock.patch.object(general, 'analyst', return_value={}):
+            with self.assertRaisesRegex(RuntimeError, 'busy or out of their free quota'):
+                general.General().build(GTEXT)
+        bogus = {'concepts': [{'term': 'Unicorn', 'definition': 'x', 'quote': 'not here'}]}
+        with mock.patch.object(general, 'analyst', return_value={'concepts': [], 'questions': [{'question': 'q'}]}):
+            with self.assertRaisesRegex(RuntimeError, 'nothing it made could be found'):
+                general.General().build(GTEXT)
+        self.assertTrue(bogus)
+
+    def test_prompts_fit_the_shared_clients_limit(self):
+        from content_generator.pipeline.agents.gemini_client import MAX_PROMPT_CHARS
+        long = 'word ' * 5000
+        for subject in (general.General(), general.Mathematics(), general.Programming(), general.Science()):
+            prompt = general.ANALYST_PROMPT.format(text=long[:subject.max_chars], level='advanced', hint=subject.hint,
+                                                   max_concepts=15, max_notes=5, max_questions=8, max_cloze=8,
+                                                   focus='f' * 230)
+            self.assertLessEqual(len(prompt), MAX_PROMPT_CHARS, subject.key)
+        sent = {}
+        with mock.patch.object(general, 'ask_json', side_effect=lambda p: sent.setdefault('p', p) and {}):
+            questions = [dict(question=f'Question {i}?', options=['a', 'b', 'c', 'd']) for i in range(8)]
+            concepts = [dict(term=f'Term {i}', definition='d' * 300) for i in range(15)]
+            general.checker(long, questions, concepts)
+        self.assertLessEqual(len(sent['p']), MAX_PROMPT_CHARS)
+        self.assertIn('Term 14', sent['p'], 'every item reaches the checker')

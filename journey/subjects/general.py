@@ -15,10 +15,11 @@ Nothing uncertain is shown as verified; the learner checks the draft before publ
 from ..models import StudyItem
 from .base import Subject, _s, ask_json, in_text, norm, word_in
 
-MAX_CONCEPTS = 25
-MAX_NOTES = 6
+MAX_CONCEPTS = 15   # keep the answer short enough that a rate-limited fallback model does not cut it off
+MAX_NOTES = 5
 MAX_QUESTIONS = 8
-MAX_CLOZE = 10
+MAX_CLOZE = 8
+PROMPT_LIMIT = 11800   # content_generator cuts prompts longer than 12,000 characters
 
 ANALYST_PROMPT = """You turn study material into learning content for a {level} learner who reads English.
 {hint}
@@ -70,7 +71,10 @@ def checker(text, questions, concepts):
                                       for i, q in enumerate(questions)],
                         'concepts': [{'id': i, 'term': c['term'], 'definition': c['definition']}
                                      for i, c in enumerate(concepts)]}, ensure_ascii=False)
-    return ask_json(CHECKER_PROMPT.format(text=text, items=items))
+    # Prompts over PROMPT_LIMIT are cut in the middle by the shared client, which would drop the
+    # items to check; shorten the material instead so every question and definition is sent.
+    room = PROMPT_LIMIT - len(CHECKER_PROMPT.format(text='', items=items))
+    return ask_json(CHECKER_PROMPT.format(text=text[:max(2000, room)], items=items))
 
 
 # ── quality: what the material supports ──────────────────────────────────
@@ -163,7 +167,7 @@ class General(Subject):
     description = 'Concepts, key ideas, multiple-choice questions and fill-in-the-blank sentences from any material.'
     icon = 'fa-shapes'
     hint = ''
-    max_chars = 24000
+    max_chars = 9000   # content_generator truncates every prompt to 12,000 characters; say honestly what is read
     read_prompt = ('These photos are pages of study material (textbook, notes, slides or whiteboard), in order. '
                    'Transcribe all the text exactly as written, page by page, keeping line breaks. Write formulas '
                    'in plain text (e.g. x^2 + 1). Do not explain or correct anything. If a word is unreadable, '
@@ -175,13 +179,29 @@ class General(Subject):
         context = context or {}
         text = source[:self.max_chars]
         note('Finding concepts, key ideas and questions…')
-        data = analyst(text, context.get('level', ''), self.hint, context.get('focus', ''))
-        concepts = clean_concepts(data.get('concepts'), text)
-        notes = clean_notes(data.get('notes'), text)
-        questions = clean_questions(data.get('questions'), text)
-        cloze = clean_cloze(data.get('cloze'), text)
-        if not concepts and not questions and not cloze:
-            raise RuntimeError('The AI found nothing to study in this material. Check that the text was read correctly.')
+        # A busy or rate-limited fallback model sometimes returns an empty or cut-off answer:
+        # ask once more before giving up, and say which of the two went wrong.
+        for attempt in range(2):
+            try:
+                data = analyst(text, context.get('level', ''), self.hint, context.get('focus', ''))
+            except Exception:
+                if attempt:
+                    raise
+                data = {}
+            concepts = clean_concepts(data.get('concepts'), text)
+            notes = clean_notes(data.get('notes'), text)
+            questions = clean_questions(data.get('questions'), text)
+            cloze = clean_cloze(data.get('cloze'), text)
+            if concepts or questions or cloze:
+                break
+            if attempt == 0:
+                note('The AI answer was incomplete; asking again…')
+        else:
+            if any(data.get(k) for k in ('concepts', 'questions', 'cloze')):
+                raise RuntimeError('The AI answered, but nothing it made could be found in your material, so it was '
+                                   'all dropped. Check that the text was read correctly.')
+            raise RuntimeError('The AI services are busy or out of their free quota and returned an incomplete answer. '
+                               'Press “Try again” in a few minutes.')
         note('Checking answers against the material…')
         try:
             verdict = checker(text, questions, concepts) if (questions or concepts) else {}
