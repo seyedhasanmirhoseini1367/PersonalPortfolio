@@ -18,6 +18,7 @@ from django.views.decorators.http import require_POST
 from . import answers, extract, game, pipeline, scenes, srs, subjects, town_decor, translate
 from .models import (HELPER_LANGUAGES, HELPER_NAMES, LEVELS, RTL_LANGUAGES, LearnerProfile, LessonPack, Membership,
                      Progress, Quest, ReviewLog, RewardEvent, StudyGroup, StudyItem)
+from .models import Achievement
 
 NEW_PER_DAY = getattr(settings, 'JOURNEY_NEW_PER_DAY', 20)
 DAILY_IMAGES = getattr(settings, 'JOURNEY_DAILY_IMAGES', 30)
@@ -212,25 +213,9 @@ def home(request):
     })
 
 
-TOWN_PEOPLE = (23, 104, 185, 266, 347, 428)   # first frame of each character in the town sprite sheet
-
-
-def _face(user, scale=3):
-    """The learner's town character, as CSS for a background sprite (or None before they chose one)."""
-    from django.templatetags.static import static
-    avatar = LearnerProfile.objects.filter(user=user).values_list('avatar', flat=True).first() or {}
-    sprite = avatar.get('sprite') if isinstance(avatar, dict) else None
-    if not isinstance(sprite, int) or not 0 <= sprite < len(TOWN_PEOPLE):
-        return None
-    frame, size = TOWN_PEOPLE[sprite] + 1, 16 * scale      # facing down
-    # The face sits in a 56 px circle: centre the 48 px sprite and nudge it down a little.
-    x, y = (frame % 27) * size - 4, (frame // 27) * size - 6
-    return {'sheet': static('journey/town/tiles.png'), 'size': f'{27 * size}px {18 * size}px', 'pos': f'-{x}px -{y}px'}
-
-
 def _game_context(user, quests=True):
     status = game.status(user)
-    out = {'me': status, 'face': _face(user)}
+    out = {'me': status}
     if quests:
         out['quests'] = game.quests_for(user)
         if game.check_quests(user, out['quests']):   # pays any quest finished since the last answer
@@ -811,16 +796,14 @@ def _town_language(user):
 
 @login_required
 def town(request):
-    from django.templatetags.static import static
     from django.middleware.csrf import get_token
     config = {
-        'map': static('journey/town/town.json'), 'tiles': static('journey/town/tiles.png'),
-        'state': reverse('journey:api_town'), 'avatar': reverse('journey:api_town_avatar'), 'buy': reverse('journey:api_town_buy'),
+        'models': settings.STATIC_URL + 'journey/town3d/', 'state': reverse('journey:api_town'), 'avatar': reverse('journey:api_town_avatar'), 'buy': reverse('journey:api_town_buy'),
         'due': reverse('journey:api_due'), 'grade': reverse('journey:api_grade'),
         'scene': reverse('journey:api_scene_start', args=['KEY']).replace('start/', ''),
         'csrf': get_token(request), 'debug': settings.DEBUG,
     }
-    return render(request, 'journey/town.html', {'nav': 'town', 'town_config': config})
+    return render(request, 'journey/town3d.html', {'nav': 'town', 'town_config': config})
 
 
 def _today_key(key):
@@ -842,17 +825,30 @@ def api_town(request):
     places['cafe'] = {'locked': False, 'done_today': 'cafe' in done}
     language = _town_language(user)
     lessons = []
-    for pack in (LessonPack.objects.filter(group__memberships__user=user, group__subject=language,
-                                           status=LessonPack.PUBLISHED).select_related('group').order_by('-published_at')[:8]):
+    # The academy holds every subject: the town is one world for all of a learner's learning.
+    for pack in (LessonPack.objects.filter(group__memberships__user=user, status=LessonPack.PUBLISHED)
+                 .select_related('group').distinct().order_by('-published_at')[:12]):
         c = _lesson_counts(user, pack)
-        lessons.append({'id': pack.pk, 'title': pack.title, 'space': pack.group.name, 'due': c['due'], 'new': c['new'], 'total': c['total'],
+        info = pack.group.subject_info
+        lessons.append({'id': pack.pk, 'title': pack.title, 'space': pack.group.name, 'subject': info.name, 'icon': info.icon,
+                        'due': c['due'], 'new': c['new'], 'total': c['total'],
                         'practise': reverse('journey:lesson_practice', args=[pack.pk]), 'open': pack.get_absolute_url()})
-    unlocked = len(game.unlocked(user))
+    have = list(Achievement.objects.filter(user=user).order_by('-unlocked_at').values_list('code', flat=True))
+    # Every subject the learner studies shows in the same town: how much of it is learned and kept.
+    studied = []
+    for g in StudyGroup.objects.filter(memberships__user=user).distinct().order_by('name')[:8]:
+        k = game.knowledge(user, _reviewable(user, g))
+        info = g.subject_info
+        studied.append({'name': g.name, 'subject': info.name, 'icon': info.icon, 'total': k['total'],
+                        'learned': k['recognised'], 'kept': k['retained'], 'url': g.get_absolute_url()})
     return JsonResponse({
-        'lessons': lessons, 'links': {'subjects': reverse('journey:home'), 'review': reverse('journey:review'),
-                                      'progress': reverse('journey:progress')},
-        'achievements': {'unlocked': unlocked, 'total': len(game.ACHIEVEMENTS)},
-        'shop': town_decor.shop(user, status), 'decor': town_decor.placed(user),
+        'lessons': lessons, 'subjects': studied, 'due': due_counts(user),
+        'links': {'subjects': reverse('journey:home'), 'review': reverse('journey:review'),
+                  'progress': reverse('journey:progress'), 'library': reverse('journey:library')},
+        'achievements': {'unlocked': len(have), 'total': len(game.ACHIEVEMENTS),
+                         'recent': [{'name': game.ACHIEVEMENTS[c][0], 'icon': game.ACHIEVEMENTS[c][2], 'tier': game.ACHIEVEMENTS[c][3]}
+                                    for c in have if c in game.ACHIEVEMENTS][:8]},
+        'shop': town_decor.shop(user, status),
         'greetings': [list(g) for g in scenes.GREETINGS.get(language, [])],
         'me': {k: status[k] for k in ('level', 'rank', 'xp', 'coins', 'pct', 'into', 'span', 'streak', 'today_xp')},
         'name': user.get_full_name() or user.get_username(),

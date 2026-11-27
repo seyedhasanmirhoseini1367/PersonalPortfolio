@@ -1,6 +1,6 @@
-{# Level, XP to the next level, coins and streak. Needs `me` (game.status) and `face` (the town character). #}
+{# Level, XP to the next level, coins and streak. Needs `me` (game.status). #}
 <a class="lj-gbar" href="{% url 'journey:town' %}" aria-label="Level {{ me.level }}, {{ me.rank }}. Open the town">
-    <span class="lj-gbar-em">{% if face %}<span class="lj-face" style="background-image:url({{ face.sheet }});background-size:{{ face.size }};background-position:{{ face.pos }}" aria-hidden="true"></span>{% else %}<span class="lj-face none" aria-hidden="true"><i class="fas fa-user"></i></span>{% endif %}<span class="lj-lv">{{ me.level }}</span></span>
+    <span class="lj-gbar-em"><span class="lj-face none" aria-hidden="true"><i class="fas fa-map-location-dot"></i></span><span class="lj-lv">{{ me.level }}</span></span>
     <span class="lj-gbar-main">
         <span class="lj-gbar-top"><b>Level {{ me.level }}</b> <span class="muted">· {{ me.rank }}</span>
             <span class="lj-gbar-xp">{{ me.into }} / {{ me.span }} XP</span></span>
