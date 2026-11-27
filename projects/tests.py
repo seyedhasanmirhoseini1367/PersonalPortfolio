@@ -121,3 +121,20 @@ class EnsureSuperuserTests(TestCase):
             os.environ.pop('SUPERUSER_PASSWORD', None)
             call_command('ensure_superuser', stdout=io.StringIO())
         self.assertFalse(get_user_model().objects.get(username='fresh').has_usable_password())
+
+
+
+class StripWwwTests(TestCase):
+    """www. and the bare domain kept separate sign-in cookies; www. now sends people to the bare domain."""
+
+    @override_settings(ALLOWED_HOSTS=['hasanai.net', 'www.hasanai.net'])
+    def test_www_goes_to_the_bare_domain_keeping_path_and_method(self):
+        r = self.client.get('/learn/town/?time=night', HTTP_HOST='www.hasanai.net')
+        self.assertEqual((r.status_code, r['Location']), (301, 'http://hasanai.net/learn/town/?time=night'))
+        r = self.client.post('/accounts/login/', {'username': 'x'}, HTTP_HOST='www.hasanai.net')
+        self.assertEqual(r.status_code, 308, 'a form post keeps its method')
+        self.assertNotEqual(self.client.get('/', HTTP_HOST='hasanai.net').status_code, 301)
+
+    @override_settings(ALLOWED_HOSTS=['www.example.org'])
+    def test_no_redirect_when_the_bare_domain_is_not_served(self):
+        self.assertNotIn(self.client.get('/', HTTP_HOST='www.example.org').status_code, (301, 308))
