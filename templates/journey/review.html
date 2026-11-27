@@ -381,7 +381,7 @@
         if (total) { const w = el('ul', 'lj-sum', null, {id: 'lj-won', 'aria-live': 'polite'}); w.hidden = true; card.append(w); }
         const row = el('div', 'lj-inline');
         {% if pack or group %}if (total) row.append(el('a', 'lj-btn', 'Practise again', {href: location.href}));{% endif %}
-        if (total) row.append(el('a', 'lj-btn ghost', 'The town', {href: '{% url "journey:town" %}'}));
+        {% if TOWN_ON %}if (total) row.append(el('a', 'lj-btn ghost', 'The town', {href: '{% url "journey:town" %}'}));{% endif %}
         row.append(el('a', 'lj-btn ghost', BACK, {href: HOME}));
         card.append(row);
         cur = null; state = 'idle';

@@ -273,6 +273,8 @@ def town_user(user):
     """Someone who has been to the town (picked a character there) or learns a language the town speaks."""
     from . import scenes
     from .models import LearnerProfile, StudyGroup
+    if not getattr(settings, 'JOURNEY_TOWN', False):   # no town, no town quests
+        return False
     avatar = LearnerProfile.objects.filter(user=user).values_list('avatar', flat=True).first() or {}
     return ((isinstance(avatar, dict) and 'sprite' in avatar)
             or StudyGroup.objects.filter(memberships__user=user, subject__in=scenes.LANGUAGE_SUBJECTS).exists())
@@ -535,6 +537,8 @@ def achievements(user):
     have = dict(Achievement.objects.filter(user=user).values_list('code', 'unlocked_at'))
     values, out = all_metrics(user), []
     for code in ACHIEVEMENTS:
+        if code.startswith('talk_') and code not in have and not getattr(settings, 'JOURNEY_TOWN', False):
+            continue   # town achievements are only listed while the town is open
         a = _info(code)
         a['value'] = min(values[a['metric']], a['at'])
         a['pct'] = round(100 * a['value'] / a['at'])

@@ -1,5 +1,5 @@
 {# Level, XP to the next level, coins and streak. Needs `me` (game.status). #}
-<a class="lj-gbar" href="{% url 'journey:town' %}" aria-label="Level {{ me.level }}, {{ me.rank }}. Open the town">
+<a class="lj-gbar" href="{% if TOWN_ON %}{% url 'journey:town' %}{% else %}{% url 'journey:progress' %}{% endif %}" aria-label="Level {{ me.level }}, {{ me.rank }}. {% if TOWN_ON %}Open the town{% else %}See your progress{% endif %}">
     <span class="lj-gbar-em"><span class="lj-face none" aria-hidden="true"><i class="fas fa-map-location-dot"></i></span><span class="lj-lv">{{ me.level }}</span></span>
     <span class="lj-gbar-main">
         <span class="lj-gbar-top"><b>Level {{ me.level }}</b> <span class="muted">· {{ me.rank }}</span>
