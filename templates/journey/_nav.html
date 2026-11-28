@@ -1,6 +1,6 @@
 <nav class="lj-nav" aria-label="LearningJourney">
     <a href="{% url 'journey:home' %}"{% if nav == 'home' %} aria-current="page"{% endif %}><i class="fas fa-shapes"></i><span>Subjects</span></a>
-    <a href="{% url 'journey:review' %}"{% if nav == 'practice' or nav == 'mistakes' %} aria-current="page"{% endif %}><i class="fas fa-layer-group"></i><span>Today’s review</span></a>
+    <a href="{% url 'journey:reviews' %}"{% if nav == 'practice' or nav == 'mistakes' %} aria-current="page"{% endif %}><i class="fas fa-layer-group"></i><span>Review</span></a>
     <a href="{% url 'journey:progress' %}"{% if nav == 'progress' %} aria-current="page"{% endif %}><i class="fas fa-chart-simple"></i><span>Progress</span></a>
     {% if TOWN_ON %}<a href="{% url 'journey:town' %}"{% if nav == 'town' %} aria-current="page"{% endif %}><i class="fas fa-map-location-dot"></i><span>Town</span></a>{% endif %}
 </nav>

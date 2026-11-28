@@ -17,7 +17,12 @@
 .lj-opt-row{display:flex;gap:6px;align-items:center}
 .lj-opt-row input[type=radio]{width:18px;height:18px;flex:none}
 .lj-bar{position:sticky;bottom:0;background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:12px;
-  display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;padding-bottom:calc(12px + env(safe-area-inset-bottom,0px))}
+  display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;padding:8px 10px;padding-bottom:calc(8px + env(safe-area-inset-bottom,0px))}
+@media (max-width:520px){
+  .lj-bar{flex-wrap:nowrap;gap:6px}
+  .lj-bar .lj-btn{padding:5px 10px;font-size:.82rem;min-height:34px;white-space:nowrap}
+  .lj-bar .lj-btn .t{display:none}
+}
 details.lj-src summary{cursor:pointer;font-weight:700}
 details.lj-src pre{white-space:pre-wrap;font-size:.9rem;margin:8px 0 0;max-height:320px;overflow:auto}
 .lj-section-tools{display:flex;gap:12px;flex-wrap:wrap}
@@ -32,9 +37,9 @@ details.lj-src pre{white-space:pre-wrap;font-size:.9rem;margin:8px 0 0;max-heigh
         <h1>{{ pack.title }}</h1>
         {% include 'journey/_stepper.html' with at=2 %}
         {% if pack.error %}<p class="lj-msg error"><i class="fas fa-triangle-exclamation"></i> Adding more material did not work: {{ pack.error }}</p>{% endif %}
-        {% if pack.published_at %}<p class="lj-msg"><i class="fas fa-circle-info"></i> New material was added. Check the new cards and publish again;
-            until then this lesson is out of practice. Your progress on its old cards is kept.</p>{% endif %}
-        <h2><span class="lj-chip" style="margin-inline-end:6px">Step 3</span> Check what the AI made</h2>
+        {% if checking_new %}<p class="lj-msg"><i class="fas fa-circle-info"></i> These are only the new cards from the material you added.
+            The rest of the lesson stays in practice. Check these and add them to practice.</p>{% endif %}
+        <h2><span class="lj-chip" style="margin-inline-end:6px">Step 3</span> {% if checking_new %}Check the new cards{% else %}Check what the AI made{% endif %}</h2>
         <p class="muted">Only you{% if not group.is_personal %} and the group owner{% endif %} can see this draft. Fix anything wrong,
            tick “Remove” on what you don’t need, then publish it. Each item shows how sure the app is:
            <span class="lj-chip high">Verified</span> found in your material and checked,
@@ -44,9 +49,25 @@ details.lj-src pre{white-space:pre-wrap;font-size:.9rem;margin:8px 0 0;max-heigh
             {{ subject.max_chars }} characters. Add the rest as another lesson.</p>{% endif %}
     </header>
 
-    {% if pack.summary %}<section class="lj-card"><h2>About this lesson</h2><p>{{ pack.summary }}</p></section>{% endif %}
+    {% if pack.summary and not checking_new %}<section class="lj-card"><h2>About this lesson</h2><p>{{ pack.summary }}</p></section>{% endif %}
+
+    <section class="lj-card lj-langpick">
+        <form method="post" action="{% url 'journey:set_language' %}" class="lj-row" style="gap:12px;flex-wrap:wrap">{% csrf_token %}
+            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+            <label for="lj-lang" style="flex:1;min-width:220px"><b>Second language</b> <span class="muted">(optional)</span>
+                <span class="muted" style="display:block;font-weight:400;font-size:.88rem">English is always there. Add a language you know
+                    better and its translation appears next to English, here and in practice. You can correct it below.</span>
+                <select id="lj-lang" name="helper_language" class="lj-input" style="margin-top:6px">
+                    {% for code, name in helper_choices %}<option value="{{ code }}"{% if code == lang %} selected{% endif %}>{{ name }}</option>{% endfor %}
+                </select></label>
+            <button class="lj-btn ghost" type="submit"><i class="fas fa-language"></i> Use it</button>
+        </form>
+        {% if translating %}<p class="muted" style="margin-top:8px" id="lj-translating" role="status"><i class="fas fa-spinner fa-spin"></i> Translating into {{ lang_name }}… it appears here by itself.</p>
+        {% include 'journey/_translating.html' %}{% endif %}
+    </section>
 
     <form method="post" action="{% url 'journey:pack_edit' pack.pk %}" class="lj-form" id="lj-edit">{% csrf_token %}
+    {% if checking_new %}<input type="hidden" name="check" value="new">{% endif %}
 
     {% if n_low or n_unchecked %}
     <section class="lj-card">
@@ -66,8 +87,9 @@ details.lj-src pre{white-space:pre-wrap;font-size:.9rem;margin:8px 0 0;max-heigh
                 {% include 'journey/_item_top.html' %}
                 <label>Base form<input class="lj-input fi" name="{{ i.pk }}-front" value="{{ i.front }}" lang="fi"></label>
                 <label>In the text<input class="lj-input fi" name="{{ i.pk }}-form_in_text" value="{{ i.form_in_text }}" lang="fi"></label>
-                <label>Grammar<input class="lj-input" name="{{ i.pk }}-grammar" value="{{ i.grammar }}"></label>
+                <label>Grammar <small class="muted">(optional)</small><input class="lj-input" name="{{ i.pk }}-grammar" value="{{ i.grammar }}"></label>
                 <label>English<input class="lj-input" name="{{ i.pk }}-meaning_en" value="{{ i.meaning_en }}"></label>
+                {% if lang %}<label>{{ lang_name }}<input class="lj-input" name="{{ i.pk }}-helper" value="{{ i.extra }}" dir="{{ lang_dir }}" lang="{{ lang }}"></label>{% endif %}
                 <label class="wide">Example from the lesson<input class="lj-input fi" name="{{ i.pk }}-example" value="{{ i.example }}" lang="fi"></label>
                 {% if i.data.dictionary %}<p class="wide lj-quote">Wiktionary: {{ i.data.dictionary }}</p>{% endif %}
             </div>
@@ -84,6 +106,8 @@ details.lj-src pre{white-space:pre-wrap;font-size:.9rem;margin:8px 0 0;max-heigh
                 {% include 'journey/_item_top.html' %}
                 <label>Term<input class="lj-input" name="{{ i.pk }}-front" value="{{ i.front }}"></label>
                 <label class="wide">Definition<textarea class="lj-input" name="{{ i.pk }}-meaning_en" style="min-height:60px">{{ i.meaning_en }}</textarea></label>
+                {% if lang %}<label class="wide">{{ lang_name }}<input class="lj-input" name="{{ i.pk }}-helper" value="{{ i.extra }}" dir="{{ lang_dir }}" lang="{{ lang }}"></label>{% endif %}
+
                 {% if i.data.quote %}<p class="wide lj-quote">“{{ i.data.quote }}”</p>{% endif %}
             </div>
         {% endfor %}
@@ -100,6 +124,8 @@ details.lj-src pre{white-space:pre-wrap;font-size:.9rem;margin:8px 0 0;max-heigh
                 <label class="wide">Sentence<input class="lj-input{% if tl %} fi{% endif %}" name="{{ i.pk }}-front" value="{{ i.front }}"{% if tl %} lang="{{ tl }}"{% endif %}></label>
                 <label>Hidden word<input class="lj-input{% if tl %} fi{% endif %}" name="{{ i.pk }}-cloze" value="{{ i.data.cloze }}"{% if tl %} lang="{{ tl }}"{% endif %}></label>
                 {% if tl %}<label>English<input class="lj-input" name="{{ i.pk }}-meaning_en" value="{{ i.meaning_en }}"></label>{% endif %}
+                {% if lang %}<label>{{ lang_name }}<input class="lj-input" name="{{ i.pk }}-helper" value="{{ i.extra }}" dir="{{ lang_dir }}" lang="{{ lang }}"></label>{% endif %}
+
             </div>
         {% endfor %}
         </div>
@@ -115,6 +141,7 @@ details.lj-src pre{white-space:pre-wrap;font-size:.9rem;margin:8px 0 0;max-heigh
                 {% if i.data.grounded is False %}<p class="wide muted">Not copied from the lesson: the AI built it from the lesson’s words.</p>{% endif %}
                 <label>Finnish<input class="lj-input fi" name="{{ i.pk }}-front" value="{{ i.front }}" lang="fi"></label>
                 <label>English<input class="lj-input" name="{{ i.pk }}-meaning_en" value="{{ i.meaning_en }}"></label>
+                {% if lang %}<label>{{ lang_name }}<input class="lj-input" name="{{ i.pk }}-helper" value="{{ i.extra }}" dir="{{ lang_dir }}" lang="{{ lang }}"></label>{% endif %}
             </div>
         {% endfor %}
         </div>
@@ -170,26 +197,18 @@ details.lj-src pre{white-space:pre-wrap;font-size:.9rem;margin:8px 0 0;max-heigh
     <details class="lj-card lj-src"><summary>Text the AI read</summary><pre{% if tl %} lang="{{ tl }}"{% endif %}>{{ pack.source_text }}</pre></details>
 
     <div class="lj-bar">
-        <button class="lj-btn ghost" name="action" value="delete" formnovalidate id="lj-del-pack"><i class="fas fa-trash"></i> Delete lesson</button>
+        {% if not checking_new %}<button class="lj-btn ghost" name="action" value="delete" formnovalidate id="lj-del-pack" aria-label="Delete lesson"><i class="fas fa-trash"></i><span class="t"> Delete lesson</span></button>{% endif %}
         <button class="lj-btn ghost" name="action" value="save"><i class="fas fa-floppy-disk"></i> Save</button>
-        <button class="lj-btn moss" name="action" value="publish"><i class="fas fa-play"></i> Save and publish</button>
+        <button class="lj-btn moss" name="action" value="publish"><i class="fas fa-play"></i> {% if checking_new %}Save and add to practice{% else %}Save and publish{% endif %}</button>
     </div>
     </form>
 
-    <details class="lj-card lj-more"><summary><i class="fas fa-file-circle-plus"></i> Add more material to this lesson</summary>
+    {% if not checking_new %}<details class="lj-card lj-more"><summary><i class="fas fa-file-circle-plus"></i> Add more material to this lesson</summary>
         <div style="margin-top:12px">{% include 'journey/_material_form.html' %}</div>
-    </details>
+    </details>{% endif %}
 
-    <form method="post" action="{% url 'journey:pack_edit' pack.pk %}" class="lj-card lj-form">{% csrf_token %}
-        <h2>Add your own card</h2>
-        <div class="lj-grid">
-            <label for="lj-new-kind">Kind<select id="lj-new-kind" name="new-kind" class="lj-input">
-                {% for k, label in add_kinds %}<option value="{{ k }}">{{ label }}</option>{% endfor %}</select></label>
-            <label for="lj-new-front">{% if tl %}Finnish{% else %}Term or question{% endif %}<input id="lj-new-front" class="lj-input" name="new-front" maxlength="300" required></label>
-            <label for="lj-new-meaning">{% if tl %}English{% else %}Answer or definition{% endif %}<input id="lj-new-meaning" class="lj-input" name="new-meaning" maxlength="400" required></label>
-        </div>
-        <button class="lj-btn ghost" name="action" value="add" style="align-self:flex-start"><i class="fas fa-plus"></i> Add card</button>
-    </form>
+    {% include 'journey/_add_card.html' %}
+
 </div>
 {% endblock %}
 
@@ -201,7 +220,7 @@ document.querySelectorAll('[data-section]').forEach(sec => {
         b.dataset.on = b.dataset.on === '1' ? '0' : '1';
     }));
 });
-document.getElementById('lj-del-pack').addEventListener('click', e => {
+document.getElementById('lj-del-pack')?.addEventListener('click', e => {
     if (!confirm('Delete this lesson? This cannot be undone.')) e.preventDefault();
 });
 </script>

@@ -5,6 +5,15 @@
 .lj-words{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
 .lj-word{border:1px solid var(--border);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:4px;min-width:0}
 .lj-word .top{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.lj-word .acts{display:flex;gap:6px;flex:none}
+.lj-icon-btn{width:34px;height:34px;border-radius:999px;border:1px solid var(--border);background:transparent;color:var(--text-muted);
+  cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
+.lj-icon-btn:hover{color:var(--lj-lake);border-color:var(--lj-lake)}
+.lj-icon-btn.del:hover{color:var(--lj-berry);border-color:var(--lj-berry)}
+.lj-wedit{display:flex;flex-direction:column;gap:6px;margin-top:6px;padding-top:8px;border-top:1px solid var(--border)}
+.lj-wedit label{font-size:.75rem;font-weight:700;color:var(--text-muted);display:flex;flex-direction:column;gap:3px}
+.lj-wedit .lj-input{min-height:36px;padding:6px 10px;font-size:.92rem}
+.lj-wedit .row{display:flex;gap:8px;flex-wrap:wrap}
 .lj-word .fi.big{font-size:1.15rem;font-weight:700}
 .lj-word small{color:var(--text-muted)}
 .lj-note{border-inline-start:3px solid var(--lj-lake);padding-inline-start:12px;display:flex;flex-direction:column;gap:6px}
@@ -29,6 +38,15 @@
         {% if pack.error %}<p class="lj-msg error"><i class="fas fa-triangle-exclamation"></i> Adding more material did not work: {{ pack.error }}</p>{% endif %}
     </header>
 
+    {% if pending and can_edit %}
+    <a class="lj-big" href="{{ pack.get_absolute_url }}?check=new" style="text-decoration:none;color:inherit;border-color:var(--lj-amber);background:color-mix(in srgb,var(--lj-amber) 9%,var(--bg-card))">
+        <i class="fas fa-list-check" style="font-size:1.5rem;color:var(--lj-amber)"></i>
+        <span style="flex:1"><b>{{ pending }} new card{{ pending|pluralize }} to check</b><br>
+            <small class="muted">From the material you added. The rest of the lesson stays in practice meanwhile.</small></span>
+        <span class="lj-btn" style="background:var(--lj-amber);color:#1a1a1a">Check them</span>
+    </a>
+    {% endif %}
+
     <a class="lj-big" href="{% url 'journey:lesson_practice' pack.pk %}" style="text-decoration:none;color:inherit">
         <i class="fas fa-play" style="font-size:1.6rem;color:var(--lj-moss)"></i>
         <span style="flex:1"><b>Practise this lesson</b><br>
@@ -38,7 +56,8 @@
     </a>
 
     {% if translating %}
-    <p class="lj-msg" role="status"><i class="fas fa-language"></i> Translating this lesson into {{ lang_name }}. Reload in a minute to see it; English is shown meanwhile.</p>
+    <p class="lj-msg" role="status" id="lj-translating"><i class="fas fa-spinner fa-spin"></i> Translating this lesson into {{ lang_name }}. It appears by itself; English is shown meanwhile.</p>
+    {% include 'journey/_translating.html' %}
     {% endif %}
 
     {% if pack.summary %}<section class="lj-card"><h2>About this lesson</h2><p>{{ pack.summary }}</p>
@@ -84,18 +103,35 @@
     {% endif %}
 
     {% if by_kind.word %}
-    <section class="lj-card"><h2>Words ({{ by_kind.word|length }})</h2>
+    <section class="lj-card" id="words"><h2>Words ({{ by_kind.word|length }})</h2>
         <div class="lj-words">
         {% for w in by_kind.word %}
-            <div class="lj-word">
+            <div class="lj-word" id="card-{{ w.pk }}">
                 <div class="top"><span class="fi big" lang="fi">{{ w.front }}</span>
-                    <button class="lj-speak" type="button" data-speak="{{ w.front }}" aria-label="Listen to {{ w.front }}"><i class="fas fa-volume-high"></i></button></div>
+                    <span class="acts">
+                    <button class="lj-speak" type="button" data-speak="{{ w.front }}" aria-label="Listen to {{ w.front }}"><i class="fas fa-volume-high"></i></button>
+                    {% if can_edit %}<button class="lj-icon-btn" type="button" data-edit="{{ w.pk }}" aria-expanded="false" aria-label="Edit {{ w.front }}"><i class="fas fa-pen"></i></button>
+                    <form method="post" action="{% url 'journey:pack_edit' pack.pk %}" data-confirm="Delete “{{ w.front }}”?">{% csrf_token %}
+                        <input type="hidden" name="{{ w.pk }}-delete" value="1"><input type="hidden" name="next" value="{{ pack.get_absolute_url }}#words">
+                        <button class="lj-icon-btn del" name="action" value="save" aria-label="Delete {{ w.front }}"><i class="fas fa-trash"></i></button></form>{% endif %}
+                    </span></div>
                 {% if w.form_in_text %}<small>in the text: <span class="fi" lang="fi">{{ w.form_in_text }}</span></small>{% endif %}
                 {% if w.grammar %}<small>{{ w.grammar }}</small>{% endif %}
                 {% if w.meaning_en %}<span>{{ w.meaning_en }}</span>{% endif %}
                 {% if w.extra %}<span class="lj-extra" dir="{{ lang_dir }}" lang="{{ lang }}">{{ w.extra }}</span>{% endif %}
                 {% if w.example %}<small class="fi" lang="fi">“{{ w.example }}”</small>{% endif %}
                 {% if w.source_ref %}<span class="lj-ref"><i class="fas fa-location-dot"></i> {{ w.source_ref }}</span>{% endif %}
+                {% if can_edit %}<form method="post" action="{% url 'journey:pack_edit' pack.pk %}" class="lj-wedit" id="edit-{{ w.pk }}" hidden>{% csrf_token %}
+                    <input type="hidden" name="next" value="{{ pack.get_absolute_url }}#card-{{ w.pk }}">
+                    <label>Base form<input class="lj-input fi" name="{{ w.pk }}-front" value="{{ w.front }}" lang="fi" required></label>
+                    <label>In the text<input class="lj-input fi" name="{{ w.pk }}-form_in_text" value="{{ w.form_in_text }}" lang="fi"></label>
+                    <label>Grammar (optional)<input class="lj-input" name="{{ w.pk }}-grammar" value="{{ w.grammar }}"></label>
+                    <label>English<input class="lj-input" name="{{ w.pk }}-meaning_en" value="{{ w.meaning_en }}" required></label>
+                    {% if lang %}<label>{{ lang_name }}<input class="lj-input" name="{{ w.pk }}-helper" value="{{ w.extra }}" dir="{{ lang_dir }}" lang="{{ lang }}"></label>{% endif %}
+                    <label>Example<input class="lj-input fi" name="{{ w.pk }}-example" value="{{ w.example }}" lang="fi"></label>
+                    <div class="row"><button class="lj-btn sm" name="action" value="save"><i class="fas fa-check"></i> Save</button>
+                        <button class="lj-btn ghost sm" type="button" data-edit="{{ w.pk }}">Cancel</button></div>
+                </form>{% endif %}
             </div>
         {% endfor %}
         </div>
@@ -139,10 +175,11 @@
 
     {% if can_edit %}
     <details class="lj-card lj-more"><summary><i class="fas fa-file-circle-plus"></i> Add more material to this lesson</summary>
-        <p class="muted" style="margin-top:10px">New cards are added after the ones you have. The lesson goes back to “check” until
-           you publish it again; your progress on its cards is kept.</p>
+        <p class="muted" style="margin-top:10px">New cards are added after the ones you have. Only the new cards wait for your check;
+           the rest of the lesson stays in practice, with your progress.</p>
         <div style="margin-top:12px">{% include 'journey/_material_form.html' %}</div>
     </details>
+    {% include 'journey/_add_card.html' %}
     <details class="lj-card lj-more"><summary>Rename or delete this lesson</summary>
         <div class="lj-grid" style="margin-top:12px">
             <form method="post" action="{% url 'journey:pack_edit' pack.pk %}" class="lj-inline">{% csrf_token %}
@@ -164,6 +201,14 @@
 (() => {
     if (!window.LJ_SPEECH) document.querySelectorAll('[data-speak],[data-speak-text]').forEach(b => { b.hidden = true; });
     document.querySelectorAll('[data-speak]').forEach(b => b.addEventListener('click', () => ljSpeak(b.dataset.speak)));
+    // edit a card in place; deleting asks first
+    document.querySelectorAll('[data-edit]').forEach(b => b.addEventListener('click', () => {
+        const form = document.getElementById('edit-' + b.dataset.edit);
+        form.hidden = !form.hidden;
+        document.querySelectorAll(`[data-edit="${b.dataset.edit}"][aria-expanded]`).forEach(x => x.setAttribute('aria-expanded', String(!form.hidden)));
+        if (!form.hidden) form.querySelector('input:not([type=hidden])').focus();
+    }));
+    document.querySelectorAll('form[data-confirm]').forEach(f => f.addEventListener('submit', e => { if (!confirm(f.dataset.confirm)) e.preventDefault(); }));
     const all = document.querySelector('[data-speak-text]');
     if (all) all.addEventListener('click', () => ljSpeak(document.getElementById('lj-source').textContent));
 

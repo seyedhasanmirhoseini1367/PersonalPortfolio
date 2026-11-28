@@ -8,61 +8,15 @@
 <div class="lj">
     {% include 'journey/_nav.html' %}
     <header class="lj-head">
-        <span class="lj-eyebrow">LearningJourney</span>
-        <h1>Your subjects</h1>
+        <div class="lj-row" style="align-items:flex-start;gap:12px">
+            <div><span class="lj-eyebrow">LearningJourney</span>
+                <h1>Your subjects</h1></div>
+            <button class="lj-btn" type="button" id="lj-new-open" aria-controls="lj-new" aria-expanded="{% if places %}false{% else %}true{% endif %}">
+                <i class="fas fa-plus"></i> New subject</button>
+        </div>
         <p class="muted">Pick a subject to see its lessons. Inside a lesson you add your material, check what the AI made,
            and practise.</p>
     </header>
-
-    {% include 'journey/_game_bar.html' %}
-
-    {% if counts.due or counts.new or tips %}
-    <section class="lj-card">
-        <div class="lj-row">
-            <div class="lj-stats">
-                <div class="lj-stat"><b>{{ counts.due }}</b><span>due for review</span></div>
-                <div class="lj-stat"><b>{{ counts.new }}</b><span>new today</span></div>
-            </div>
-            {% if counts.due or counts.new %}<a class="lj-btn" href="{% url 'journey:review' %}"><i class="fas fa-layer-group"></i> Today’s review</a>{% endif %}
-        </div>
-        {% if tips %}
-        <ul class="lj-tips">
-            {% for t in tips %}<li><i class="fas {{ t.icon }}" aria-hidden="true"></i><span>{{ t.text }}</span>
-                <a href="{% if t.href %}{{ t.href }}{% else %}{% url t.url %}{% endif %}">{{ t.cta }}</a></li>{% endfor %}
-        </ul>
-        {% endif %}
-    </section>
-    {% endif %}
-
-    {% if places %}{% include 'journey/_quests.html' %}{% endif %}
-
-    <div class="lj-subjects">
-        {% for s in places %}
-        <a class="lj-subject" href="{{ s.get_absolute_url }}">
-            <span class="lj-row" style="justify-content:flex-start;flex-wrap:nowrap">
-                <span class="ic"><i class="fas {{ s.info.icon }}"></i></span>
-                <span style="min-width:0"><b>{{ s.name }}</b><br><small>{{ s.info.name }}{% if s.level %} · {{ s.get_level_display }}{% endif %}</small></span>
-            </span>
-            <small>{{ s.n_packs }} lesson{{ s.n_packs|pluralize }} ready{% if not s.is_personal %} · <i class="fas fa-users"></i> group of {{ s.n_members }}{% endif %}</small>
-            <span class="meta">
-                {% if s.counts.due %}<span class="lj-chip processing">{{ s.counts.due }} due</span>{% endif %}
-                {% if s.counts.new %}<span class="lj-chip">{{ s.counts.new }} new</span>{% endif %}
-                {% if s.todo %}<span class="lj-chip empty">{{ s.todo }} to finish</span>{% endif %}
-            </span>
-        </a>
-        {% endfor %}
-        <button class="lj-subject new" type="button" id="lj-new-open" aria-controls="lj-new">
-            <span class="ic"><i class="fas fa-plus"></i></span><b>New subject</b>
-            <small>Finnish, maths, programming, science or anything else</small>
-        </button>
-    </div>
-
-    {% if places and TOWN_ON %}
-    <a class="lj-wteaser" href="{% url 'journey:town' %}" aria-label="Open the town">
-        <img class="lj-wteaser-scene" src="{% static 'journey/town3d/preview.jpg' %}" alt="" width="730" height="412" loading="lazy">
-        <span class="lj-wteaser-text"><b>The town</b><small>One town for everything you learn: lessons at the academy, conversations at the café, quests, and a home of your own.</small></span>
-    </a>
-    {% endif %}
 
     <section class="lj-card" id="lj-new"{% if places %} hidden{% endif %}>
         <h2>New subject</h2>
@@ -101,17 +55,50 @@
         </details>
     </section>
 
+    {% if counts.due or counts.new %}
+    <a class="lj-duebar" href="{% url 'journey:reviews' %}">
+        <i class="fas fa-layer-group" aria-hidden="true"></i>
+        <span><b>{{ counts.due }} due</b> · {{ counts.new }} new today</span>
+        <span class="go">Review →</span>
+    </a>
+    {% endif %}
+
+    <div class="lj-subjects">
+        {% for s in places %}
+        <a class="lj-subject" href="{{ s.get_absolute_url }}">
+            <span class="lj-row" style="justify-content:flex-start;flex-wrap:nowrap">
+                <span class="ic"><i class="fas {{ s.info.icon }}"></i></span>
+                <span style="min-width:0"><b>{{ s.name }}</b><br><small>{{ s.info.name }}{% if s.level %} · {{ s.get_level_display }}{% endif %}</small></span>
+            </span>
+            <small>{{ s.n_packs }} lesson{{ s.n_packs|pluralize }} ready{% if not s.is_personal %} · <i class="fas fa-users"></i> group of {{ s.n_members }}{% endif %}</small>
+            <span class="meta">
+                {% if s.counts.due %}<span class="lj-chip processing">{{ s.counts.due }} due</span>{% endif %}
+                {% if s.counts.new %}<span class="lj-chip">{{ s.counts.new }} new</span>{% endif %}
+                {% if s.todo %}<span class="lj-chip empty">{{ s.todo }} to finish</span>{% endif %}
+            </span>
+        </a>
+        {% endfor %}
+    </div>
+
+    {% if places and TOWN_ON %}
+    <a class="lj-wteaser" href="{% url 'journey:town' %}" aria-label="Open the town">
+        <img class="lj-wteaser-scene" src="{% static 'journey/town3d/preview.jpg' %}" alt="" width="730" height="412" loading="lazy">
+        <span class="lj-wteaser-text"><b>The town</b><small>One town for everything you learn: lessons at the academy, conversations at the café, quests, and a home of your own.</small></span>
+    </a>
+    {% endif %}
+
+
     <p class="muted" style="font-size:.85rem"><a href="{% url 'journey:library' %}"><i class="fas fa-magnifying-glass"></i> Search all your lessons</a></p>
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-document.getElementById('lj-new-open').addEventListener('click', () => {
+document.getElementById('lj-new-open').addEventListener('click', e => {
     const box = document.getElementById('lj-new');
-    box.hidden = false;
-    box.scrollIntoView({behavior: 'smooth', block: 'start'});
-    document.getElementById('lj-space-subject').focus({preventScroll: true});
+    box.hidden = !box.hidden;
+    e.currentTarget.setAttribute('aria-expanded', String(!box.hidden));
+    if (!box.hidden) document.getElementById('lj-space-subject').focus();
 });
 </script>
 {% endblock %}

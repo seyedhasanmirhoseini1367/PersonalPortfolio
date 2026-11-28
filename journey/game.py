@@ -156,7 +156,7 @@ def _pay_answer(user, item, xp):
 def _lesson_done(user, item):
     """A lesson is complete once every one of its cards has been answered right at least once."""
     pack = item.pack
-    cards = pack.items.filter(kind__in=StudyItem.REVIEWABLE)
+    cards = pack.items.filter(kind__in=StudyItem.REVIEWABLE, pending=False)
     total = cards.count()
     if not total or pack.status != LessonPack.PUBLISHED:
         return None
@@ -261,7 +261,7 @@ QUEST_TEXT = {
 
 
 def _reviewable(user):
-    return StudyItem.objects.filter(kind__in=StudyItem.REVIEWABLE, pack__status=LessonPack.PUBLISHED,
+    return StudyItem.objects.filter(kind__in=StudyItem.REVIEWABLE, pack__status=LessonPack.PUBLISHED, pending=False,
                                     pack__group__memberships__user=user)
 
 

@@ -1,0 +1,21 @@
+{# While a translation runs, check every few seconds and show it as soon as it is ready. #}
+<script>
+(() => {
+    const note = document.getElementById('lj-translating');
+    if (!note) return;
+    let dirty = false;
+    document.addEventListener('input', () => { dirty = true; });
+    const check = async () => {
+        try {
+            const html = await (await fetch(location.href, {credentials: 'same-origin'})).text();
+            if (!html.includes('id="lj-translating"')) {
+                if (!dirty) { location.reload(); return; }
+                note.innerHTML = '<i class="fas fa-check"></i> The translation is ready. Save your changes to see it.';
+                return;
+            }
+        } catch (e) { /* try again */ }
+        setTimeout(check, 6000);
+    };
+    setTimeout(check, 6000);
+})();
+</script>

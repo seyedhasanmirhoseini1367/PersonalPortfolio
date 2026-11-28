@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+{% block title %}Review — LearningJourney{% endblock %}
+{% block extra_css %}{% include 'journey/_style.html' %}{% endblock %}
+
+{% block content %}
+<div class="lj">
+    {% include 'journey/_nav.html' %}
+    <header class="lj-head">
+        <span class="lj-eyebrow">Review</span>
+        <h1>Review what you learned</h1>
+        <p class="muted">Today’s cards first: spaced repetition brings each card back just before you would forget it.</p>
+    </header>
+
+    {% include 'journey/_game_bar.html' %}
+
+    <div class="lj-revs">
+        <a class="lj-rev main" href="{% url 'journey:review' %}">
+            <span class="ic"><i class="fas fa-layer-group"></i></span>
+            <b>Today’s review</b>
+            <span><b class="n">{{ counts.due }}</b> due · {{ counts.new }} new</span>
+            <small>{% if counts.due or counts.new %}Every subject together, the cards that are due today.{% else %}All done for today. Come back tomorrow, or practise a subject below.{% endif %}</small>
+        </a>
+        <a class="lj-rev" href="{% url 'journey:mistakes' %}">
+            <span class="ic"><i class="fas fa-book-medical"></i></span>
+            <b>Mistake notebook</b>
+            <span><b class="n">{{ mistakes }}</b> card{{ mistakes|pluralize }}</span>
+            <small>Cards you forgot after learning them, the hardest ones first.</small>
+        </a>
+    </div>
+
+    {% if places %}
+    <section class="lj-card">
+        <h2>Practise one subject</h2>
+        <ul class="lj-lessons">
+            {% for s in places %}{% if s.n_packs %}
+            <li><a class="lj-lesson" href="{% url 'journey:group_practice' s.invite_code %}">
+                <span class="ic published"><i class="fas {{ s.info.icon }}"></i></span>
+                <span class="main"><b>{{ s.name }}</b><br><small>{{ s.info.name }} · {{ s.n_packs }} lesson{{ s.n_packs|pluralize }}</small></span>
+                {% if s.counts.due %}<span class="lj-chip processing">{{ s.counts.due }} due</span>{% endif %}
+                <span class="next">Practise →</span></a></li>
+            {% endif %}{% endfor %}
+        </ul>
+    </section>
+    {% endif %}
+
+    {% if tips %}
+    <section class="lj-card">
+        <h2>Suggestions</h2>
+        <ul class="lj-tips">
+            {% for t in tips %}<li><i class="fas {{ t.icon }}" aria-hidden="true"></i><span>{{ t.text }}</span>
+                <a href="{% if t.href %}{{ t.href }}{% else %}{% url t.url %}{% endif %}">{{ t.cta }}</a></li>{% endfor %}
+        </ul>
+    </section>
+    {% endif %}
+
+    {% include 'journey/_quests.html' %}
+</div>
+{% endblock %}
