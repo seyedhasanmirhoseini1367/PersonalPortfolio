@@ -53,7 +53,7 @@ def _start_of_today():
 
 
 def _reviewable(user, group=None):
-    qs = StudyItem.objects.filter(kind__in=StudyItem.REVIEWABLE, pack__status=LessonPack.PUBLISHED,
+    qs = StudyItem.objects.filter(kind__in=StudyItem.REVIEWABLE, pack__status=LessonPack.PUBLISHED, pending=False,
                                   pack__group__memberships__user=user)
     if group is not None:
         qs = qs.filter(pack__group=group)
@@ -207,9 +207,8 @@ def home(request):
     places = _subjects_of(request.user)
     return render(request, 'journey/home.html', {
         'places': places, 'counts': due_counts(request.user),
-        'tips': recommendations(request.user, [p for p in places if p.is_personal]),
         'subject_choices': subjects.SUBJECTS.values(), 'default_subject': subjects.DEFAULT, 'levels': LEVELS,
-        'nav': 'home', **_game_context(request.user),
+        'nav': 'home',
     })
 
 
@@ -221,6 +220,20 @@ def _game_context(user, quests=True):
         if game.check_quests(user, out['quests']):   # pays any quest finished since the last answer
             out['me'] = game.status(user)
     return out
+
+
+@login_required
+def reviews(request):
+    """Everything about reviewing in one place, so the Subjects page stays about subjects and lessons."""
+    places = _subjects_of(request.user)
+    return render(request, 'journey/reviews.html', {
+        'places': places, 'counts': due_counts(request.user),
+        'mistakes': Progress.objects.filter(user=request.user, lapses__gt=0, item__pending=False,
+                                            item__pack__status=LessonPack.PUBLISHED,
+                                            item__pack__group__memberships__user=request.user).distinct().count(),
+        'tips': recommendations(request.user, [p for p in places if p.is_personal]),
+        'nav': 'practice', **_game_context(request.user),
+    })
 
 
 @login_required
@@ -510,13 +523,18 @@ def pack(request, pk):
         return render(request, 'journey/pack_wait.html', base)
     language = _language(request)
     lang = language['lang']
-    translating = translate.ensure(pack, lang) if pack.status == LessonPack.PUBLISHED else False
+    translating = translate.ensure(pack, lang)
     if translating:
         pack.refresh_from_db()
-    items = _with_helper(list(pack.items.all()), lang)
+    pending = pack.items.filter(pending=True).count() if pack.status == LessonPack.PUBLISHED else 0
+    checking_new = bool(pending and can_edit and request.GET.get('check') == 'new')
+    # checking the new cards shows only them; the lesson page shows only cards that are in practice
+    items = list(pack.items.filter(pending=True) if checking_new else
+                 pack.items.all() if pack.status == LessonPack.DRAFT else pack.items.filter(pending=False))
+    items = _with_helper(items, lang)
     by_kind = {k: [i for i in items if i.kind == k] for k, _ in StudyItem.KINDS}
     subject = pack.group.subject_info
-    template = 'journey/pack_review.html' if pack.status == LessonPack.DRAFT else 'journey/pack.html'
+    template = 'journey/pack_review.html' if pack.status == LessonPack.DRAFT or checking_new else 'journey/pack.html'
     questions = [{'q': i.front, 'en': i.meaning_en, 'extra': i.extra, 'options': i.data.get('options', []),
                   'answer': i.data.get('answer', 0), 'why': i.body, 'why_extra': i.extra_body, 'source': i.source_ref}
                  for i in by_kind[StudyItem.QUESTION]]
@@ -528,6 +546,8 @@ def pack(request, pk):
         'translating': translating, 'speech_lang': subject.speech_lang, 'tl': subject.text_lang, 'subject': subject,
         'cut': len(pack.source_text) > subject.max_chars, 'add_kinds': _addable(subject), **language,
         **_limits(request.user), 'nav': 'home', 'practice_counts': _lesson_counts(request.user, pack),
+        'pending': pending, 'checking_new': checking_new, 'helper_choices': HELPER_LANGUAGES,
+        'added': request.GET.get('added') == '1', 'last_kind': request.GET.get('kind', ''),
     })
 
 
@@ -589,23 +609,39 @@ def pack_edit(request, pk):
 
     if action == 'add':
         kind = request.POST.get('new-kind', '')
-        front = request.POST.get('new-front', '').strip()[:300]
-        meaning = request.POST.get('new-meaning', '').strip()[:400]
+        get = lambda name, n: request.POST.get(f'new-{name}', '').strip()[:n]   # noqa: E731
+        front, meaning = get('front', 300), get('meaning', 400)
+        back = reverse('journey:pack', args=[pack.pk])
         if kind in dict(_addable(pack.group.subject_info)) and front and meaning:
-            StudyItem.objects.create(pack=pack, kind=kind, front=front, meaning_en=meaning, confidence=StudyItem.HIGH,
-                                     order=pack.items.filter(kind=kind).count(), source_ref='Added by you')
-            messages.success(request, 'Card added.')
+            item = StudyItem(pack=pack, kind=kind, front=front, meaning_en=meaning, confidence=StudyItem.HIGH,
+                             order=pack.items.filter(kind=kind).count(), source_ref='Added by you',
+                             form_in_text=get('form', 120), grammar=get('grammar', 160), example=get('example', 400))
+            if kind == StudyItem.SENTENCE:
+                cloze = get('cloze', 60)
+                item.data = {'cloze': cloze if cloze and cloze.lower() in front.lower() else front.split()[-1].strip('.,!?')}
+            lang = LearnerProfile.language_of(request.user)
+            if lang and get('helper', 400):
+                item.translations = {lang: {'meaning': get('helper', 400), 'body': ''}}
+            item.save()
+            if lang and not get('helper', 400) and lang in (pack.translations or {}):
+                pack.translations = {k: v for k, v in pack.translations.items() if k != lang}   # translate the new card next time
+                pack.save(update_fields=['translations'])
+            messages.success(request, f'Card added: {front}. Add the next one below.')
+            query = f'?added=1&kind={kind}' + ('&check=new' if request.POST.get('check') == 'new' else '')
         else:
-            messages.error(request, 'Fill in both sides of the new card.')
-        return redirect(pack)
+            messages.error(request, 'Fill in at least the word and its English meaning.')
+            query = '?check=new' if request.POST.get('check') == 'new' else ''
+        return redirect(back + query + '#add-card')
 
     removed = 0
+    lang = LearnerProfile.language_of(request.user)
+    checking_new = request.POST.get('check') == 'new'
     if action == 'remove_low':
-        removed, _ = pack.items.filter(confidence=StudyItem.LOW).delete()
+        removed, _ = pack.items.filter(confidence=StudyItem.LOW, **({'pending': True} if checking_new else {})).delete()
         messages.success(request, f'Removed {removed} low-confidence item(s).')
-        return redirect(pack)
+        return redirect(reverse('journey:pack', args=[pack.pk]) + ('?check=new' if checking_new else ''))
 
-    for item in pack.items.all():
+    for item in (pack.items.filter(pending=True) if checking_new else pack.items.all()):
         if request.POST.get(f'{item.pk}-delete'):
             item.delete()
             removed += 1
@@ -633,6 +669,12 @@ def pack_edit(request, pk):
                     (options != item.data.get('options') or answer != item.data.get('answer')):
                 item.data = {**item.data, 'options': options, 'answer': answer}
                 changed.append('data')
+        helper = request.POST.get(f'{item.pk}-helper')
+        if helper is not None and lang:
+            mine = (item.translations or {}).get(lang) or {}
+            if helper.strip()[:400] != mine.get('meaning', ''):
+                item.translations = {**(item.translations or {}), lang: {**mine, 'meaning': helper.strip()[:400]}}
+                changed.append('translations')
         if request.POST.get(f'{item.pk}-ok') and item.confidence != StudyItem.HIGH:
             item.confidence = StudyItem.HIGH
             changed.append('confidence')
@@ -647,9 +689,14 @@ def pack_edit(request, pk):
         messages.success(request, 'Published. Choose how to practise it.' if pack.group.is_personal
                          else 'Published. Everyone in the group can now study it. Choose how to practise it.')
         return redirect('journey:lesson_practice', pk=pack.pk)
-    else:
-        messages.success(request, f'Saved.{f" Removed {removed} item(s)." if removed else ""}')
-    return redirect(pack)
+    if action == 'publish' and checking_new:   # only the new cards join practice; the lesson never left it
+        n = pack.items.filter(pending=True).update(pending=False)
+        messages.success(request, f'{n} new card{"s" if n != 1 else ""} added to practice.')
+        return redirect('journey:lesson_practice', pk=pack.pk)
+    messages.success(request, f'Saved.{f" Removed {removed} item(s)." if removed else ""}')
+    if request.POST.get('next', '').startswith('/learn/'):
+        return redirect(request.POST['next'])
+    return redirect(reverse('journey:pack', args=[pack.pk]) + ('?check=new' if checking_new else ''))
 
 
 # ── practice ────────────────────────────────────────────────────────────────

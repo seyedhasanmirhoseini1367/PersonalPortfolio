@@ -29,7 +29,8 @@ Give every id back. Leave "meaning" or "body" empty when the input has none.
 
 
 def needed(pack, lang):
-    return bool(lang) and lang in HELPER_NAMES and pack.status == LessonPack.PUBLISHED and lang not in (pack.translations or {})
+    return (bool(lang) and lang in HELPER_NAMES and pack.status in (LessonPack.DRAFT, LessonPack.PUBLISHED)
+            and lang not in (pack.translations or {}))
 
 
 def _ask(prompt):
@@ -43,7 +44,8 @@ def translate_pack(pack, lang, ask=None):
     """Translate every item's English meaning and explanation, plus the summary. Saves and returns the pack."""
     ask = ask or _ask
     language = HELPER_NAMES[lang]
-    items = [i for i in pack.items.all() if i.meaning_en or i.body]
+    # Only items without this language yet: a translation someone already corrected is kept.
+    items = [i for i in pack.items.all() if (i.meaning_en or i.body) and not (i.translations or {}).get(lang)]
     summary, out = '', {}
     for start in range(0, max(len(items), 1), CHUNK):
         chunk = items[start:start + CHUNK]

@@ -211,6 +211,8 @@ class StudyItem(models.Model):
                                     help_text='Per helper language: {"fa": {"meaning": "...", "body": "..."}}')
     confidence = models.CharField(max_length=8, choices=CONFIDENCE, default=MEDIUM)
     source_ref = models.CharField(max_length=60, blank=True, help_text='Where in the material it came from, e.g. Page 3.')
+    pending = models.BooleanField(default=False, help_text='Added to a published lesson and not checked yet: '
+                                                           'kept out of practice until its owner checks it.')
 
     class Meta:
         ordering = ['kind', 'order', 'pk']

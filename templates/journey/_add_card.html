@@ -1,0 +1,40 @@
+{# Add your own card: the whole card at once, and after "Add" the form is back, empty, for the next one. #}
+<form method="post" action="{% url 'journey:pack_edit' pack.pk %}" class="lj-card lj-form lj-addcard" id="add-card">{% csrf_token %}
+    {% if checking_new %}<input type="hidden" name="check" value="new">{% endif %}
+    <div class="lj-row"><h2>Add your own card</h2>
+        {% if added %}<span class="lj-chip high"><i class="fas fa-check"></i> Added. Next one?</span>{% endif %}</div>
+    <div class="lj-grid">
+        <label for="lj-new-kind">Kind<select id="lj-new-kind" name="new-kind" class="lj-input">
+            {% for k, label in add_kinds %}<option value="{{ k }}"{% if k == last_kind %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+    </div>
+    <div class="lj-grid">
+        <label for="lj-new-front"><span data-for="word">{% if tl %}Word (base form){% else %}Term{% endif %}</span><span data-for="phrase">Phrase</span><span data-for="sentence">Sentence</span><span data-for="concept">Term</span>
+            <input id="lj-new-front" class="lj-input{% if tl %} fi{% endif %}" name="new-front" maxlength="300" required{% if tl %} lang="{{ tl }}"{% endif %}{% if added %} autofocus{% endif %}></label>
+        <label for="lj-new-form" data-for="word">In the text <small class="muted">(optional)</small>
+            <input id="lj-new-form" class="lj-input{% if tl %} fi{% endif %}" name="new-form" maxlength="120"{% if tl %} lang="{{ tl }}"{% endif %} placeholder="e.g. kahvilassa"></label>
+        <label for="lj-new-cloze" data-for="sentence">Word to hide
+            <input id="lj-new-cloze" class="lj-input{% if tl %} fi{% endif %}" name="new-cloze" maxlength="60"{% if tl %} lang="{{ tl }}"{% endif %}></label>
+        <label for="lj-new-grammar" data-for="word">Grammar <small class="muted">(optional)</small>
+            <input id="lj-new-grammar" class="lj-input" name="new-grammar" maxlength="160" placeholder="e.g. noun · inessive"></label>
+        <label for="lj-new-meaning">{% if tl %}English{% else %}Answer or definition{% endif %}
+            <input id="lj-new-meaning" class="lj-input" name="new-meaning" maxlength="400" required></label>
+        {% if lang %}<label for="lj-new-helper" data-for="word phrase sentence concept">{{ lang_name }} <small class="muted">(optional)</small>
+            <input id="lj-new-helper" class="lj-input" name="new-helper" maxlength="400" dir="{{ lang_dir }}" lang="{{ lang }}"></label>{% endif %}
+        <label for="lj-new-example" class="wide" data-for="word">Example sentence <small class="muted">(optional)</small>
+            <input id="lj-new-example" class="lj-input{% if tl %} fi{% endif %}" name="new-example" maxlength="400"{% if tl %} lang="{{ tl }}"{% endif %}></label>
+    </div>
+    <button class="lj-btn" name="action" value="add" style="align-self:flex-start"><i class="fas fa-plus"></i> Add card</button>
+</form>
+<script>
+(() => {
+    const kind = document.getElementById('lj-new-kind');
+    const show = () => document.querySelectorAll('#add-card [data-for]').forEach(el => {
+        const on = el.dataset.for.split(' ').includes(kind.value);
+        el.hidden = !on;
+        el.querySelectorAll('input').forEach(i => { i.disabled = !on; });
+    });
+    kind.addEventListener('change', show);
+    show();
+    {% if added %}document.getElementById('add-card').scrollIntoView({block: 'center'});{% endif %}
+})();
+</script>

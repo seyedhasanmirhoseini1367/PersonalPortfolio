@@ -374,14 +374,31 @@ class LanguageTests(TestCase):
         self.pack.refresh_from_db()
         self.assertNotIn('ru', self.pack.translations)
 
-    def test_drafts_are_not_translated(self):
+    def test_a_draft_is_translated_so_the_translation_can_be_checked(self):
         from . import translate
         self.pack.status = LessonPack.DRAFT
         self.pack.save()
         self.client.post(reverse('journey:set_language'), {'helper_language': 'fa'})
-        with mock.patch.object(translate, '_ask') as ask:
-            self.client.get(self.pack.get_absolute_url())
-        ask.assert_not_called()
+        calls = []
+        with mock.patch.object(translate, '_ask', side_effect=fake_translator(calls)):
+            page = self.client.get(self.pack.get_absolute_url())
+        self.assertTrue(calls)
+        self.assertContains(page, 'Second language')
+        item = self.pack.items.filter(kind='word').first()
+        self.assertContains(page, f'name="{item.pk}-helper"')
+
+    def test_a_corrected_translation_is_kept(self):
+        from . import translate
+        self.client.post(reverse('journey:set_language'), {'helper_language': 'fa'})
+        item = self.pack.items.filter(kind='word').first()
+        self.client.post(reverse('journey:pack_edit', args=[self.pack.pk]), {'action': 'save', f'{item.pk}-helper': 'زندگی کردن'})
+        item.refresh_from_db()
+        self.assertEqual(item.translations['fa']['meaning'], 'زندگی کردن')
+        calls = []
+        with mock.patch.object(translate, '_ask', side_effect=fake_translator(calls)):
+            translate.translate_pack(self.pack, 'fa')
+        item.refresh_from_db()
+        self.assertEqual(item.translations['fa']['meaning'], 'زندگی کردن', 'a person’s own translation is not replaced')
 
 
 @override_settings(JOURNEY_RUN_INLINE=True)
@@ -1132,6 +1149,30 @@ class LessonStepTests(TestCase):
         self.client.post(reverse('journey:api_grade'), {'item': item, 'grade': 'again', 'extra': '1'})
         self.assertEqual(Progress.objects.get(user=self.me, item_id=item).due, before)
 
+    def test_cards_are_translated_while_the_lesson_is_built(self):
+        from . import translate
+        self.client.post(reverse('journey:set_language'), {'helper_language': 'fa'})
+        pack = self._lesson()
+        calls = []
+        with patched_pipeline(), mock.patch.object(translate, '_ask', side_effect=fake_translator(calls)):
+            self.client.post(reverse('journey:lesson_material', args=[pack.pk]), {'text': TEXT})
+        pack.refresh_from_db()
+        self.assertEqual(pack.status, LessonPack.DRAFT)
+        self.assertIn('fa', pack.translations)
+        word = pack.items.get(kind='word', front='asua')
+        self.assertTrue(word.translations['fa']['meaning'].startswith('FA: '))
+        page = self.client.get(pack.get_absolute_url())
+        self.assertNotContains(page, 'id="lj-translating"', msg_prefix='Check opens with the translation ready')
+
+    def test_a_failed_translation_does_not_fail_the_lesson(self):
+        from . import translate
+        self.client.post(reverse('journey:set_language'), {'helper_language': 'fa'})
+        pack = self._lesson()
+        with patched_pipeline(), mock.patch.object(translate, '_ask', side_effect=RuntimeError('down')):
+            self.client.post(reverse('journey:lesson_material', args=[pack.pk]), {'text': TEXT})
+        pack.refresh_from_db()
+        self.assertEqual(pack.status, LessonPack.DRAFT, pack.error)
+
     def test_more_material_is_added_after_the_old_cards_and_checked_again(self):
         pack = self._lesson()
         with patched_pipeline():
@@ -1145,18 +1186,61 @@ class LessonStepTests(TestCase):
         with patched_pipeline(), mock.patch.object(finnish, 'linguist', return_value=more):
             self.client.post(reverse('journey:lesson_material', args=[pack.pk]), {'text': 'Keittiössä on pöytä ja kaksi tuolia. Pöytä on iso.'})
         pack.refresh_from_db()
-        self.assertEqual(pack.status, LessonPack.DRAFT, pack.error)
+        self.assertEqual(pack.status, LessonPack.PUBLISHED, pack.error)
+        self.assertFalse(pack.items.filter(pk__in=before, pending=True).exists(), 'old cards stay in practice')
+        new = pack.items.filter(pending=True)
+        self.assertTrue(new.filter(kind='word', front='pöytä').exists(), 'only the new cards wait for a check')
+        due = self.client.get(reverse('journey:api_due') + f'?lesson={pack.pk}').json()['cards']
+        self.assertFalse(any(c['id'] in set(new.values_list('pk', flat=True)) for c in due), 'new cards are not practised before the check')
         self.assertTrue(before <= set(pack.items.values_list('pk', flat=True)), 'old cards stay')
         self.assertTrue(Progress.objects.filter(item=word, interval=6).exists(), 'progress on them stays')
         self.assertEqual(pack.items.filter(kind='word', front='asua').count(), 1, 'nothing is duplicated')
         self.assertTrue(pack.items.filter(kind='word', front='pöytä').exists())
         self.assertIn('Pöytä on iso.', pack.source_text)
         self.assertTrue(any(label.endswith('Paragraph 1') and '·' in label for label, _ in pack.source_parts[1:]))
-        self.assertContains(self.client.get(pack.get_absolute_url()), 'New material was added')
+        page = self.client.get(pack.get_absolute_url())
+        self.assertContains(page, f'{new.count()} new card')
+        check = self.client.get(pack.get_absolute_url() + '?check=new')
+        self.assertContains(check, 'Check the new cards')
+        self.assertContains(check, 'pöytä')
+        self.assertNotContains(check, 'value="asua"', msg_prefix='the old cards are not checked again')
+        r = self.client.post(reverse('journey:pack_edit', args=[pack.pk]), {'action': 'publish', 'check': 'new'})
+        self.assertRedirects(r, reverse('journey:lesson_practice', args=[pack.pk]))
+        self.assertFalse(pack.items.filter(pending=True).exists())
         from . import cleanup
         LessonPack.objects.filter(pk=pack.pk).update(created_at=timezone.now() - timedelta(days=60))
         cleanup.run()
         self.assertTrue(LessonPack.objects.filter(pk=pack.pk).exists(), 'a once-published lesson is never cleaned up')
+
+    def test_a_card_added_by_hand_has_every_field_and_the_form_comes_back(self):
+        pack = self._lesson()
+        with patched_pipeline():
+            self.client.post(reverse('journey:lesson_material', args=[pack.pk]), {'text': TEXT})
+        r = self.client.post(reverse('journey:pack_edit', args=[pack.pk]), {
+            'action': 'add', 'new-kind': 'word', 'new-front': 'koti', 'new-form': 'kotona', 'new-grammar': 'noun',
+            'new-meaning': 'home', 'new-example': 'Olen kotona.'})
+        self.assertEqual(r['Location'], pack.get_absolute_url() + '?added=1&kind=word#add-card')
+        item = pack.items.get(front='koti')
+        self.assertEqual((item.form_in_text, item.grammar, item.example), ('kotona', 'noun', 'Olen kotona.'))
+        page = self.client.get(r['Location'])
+        self.assertContains(page, 'Added. Next one?')
+
+    def test_one_card_can_be_edited_or_deleted_on_the_lesson_page(self):
+        pack = self._lesson()
+        with patched_pipeline():
+            self.client.post(reverse('journey:lesson_material', args=[pack.pk]), {'text': TEXT})
+        pack.publish()
+        word = pack.items.get(kind='word', front='asua')
+        page = self.client.get(pack.get_absolute_url())
+        self.assertContains(page, f'id="edit-{word.pk}"')
+        self.client.post(reverse('journey:pack_edit', args=[pack.pk]), {'action': 'save', f'{word.pk}-meaning_en': 'to live, to dwell',
+                                                                         'next': pack.get_absolute_url()})
+        word.refresh_from_db()
+        self.assertEqual(word.meaning_en, 'to live, to dwell')
+        self.client.post(reverse('journey:pack_edit', args=[pack.pk]), {'action': 'save', f'{word.pk}-delete': '1'})
+        self.assertFalse(pack.items.filter(pk=word.pk).exists())
+        self.client.force_login(self.other)
+        self.assertEqual(self.client.post(reverse('journey:pack_edit', args=[pack.pk]), {'action': 'save'}).status_code, 404)
 
     def test_a_failed_addition_keeps_the_lesson_as_it_was(self):
         pack = self._lesson()
@@ -1367,9 +1451,11 @@ class GamePagesTests(GameBase):
     def test_home_progress_and_practice_show_the_level(self):
         self.answer(self.words[0], 'good', 'type', given='talo')
         home = self.client.get(reverse('journey:home'))
-        self.assertContains(home, 'Level 1')
-        self.assertContains(home, 'Quests')
-        self.assertContains(home, 'lj-lv')
+        self.assertNotContains(home, 'Quests', msg_prefix='the Subjects page is about subjects')
+        reviews = self.client.get(reverse('journey:reviews'))
+        self.assertContains(reviews, 'Level 1')
+        self.assertContains(reviews, 'Quests')
+        self.assertContains(reviews, 'Today’s review')
         prog = self.client.get(reverse('journey:progress'))
         self.assertContains(prog, 'First step')
         self.assertContains(prog, 'Kept long-term')

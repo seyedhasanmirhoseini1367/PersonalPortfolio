@@ -12,8 +12,8 @@
 .lj-card{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:12px;min-width:0}
 .lj-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
 .lj-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
-.lj-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;border-radius:10px;padding:10px 16px;
-  font-weight:700;font-size:.95rem;background:var(--lj-lake);color:#fff;text-decoration:none;cursor:pointer;min-height:44px}
+.lj-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;border-radius:10px;padding:7px 14px;
+  font-weight:700;font-size:.9rem;background:var(--lj-lake);color:#fff;text-decoration:none;cursor:pointer;min-height:38px}
 .lj-btn:hover{filter:brightness(1.08);color:#fff}
 .lj-btn:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 .lj-btn.ghost{background:transparent;color:var(--text);border:1px solid var(--border)}
@@ -123,7 +123,7 @@ details.lj-more summary{cursor:pointer;font-weight:700}
 .lj-pick i{font-size:1.5rem;color:var(--lj-lake)}
 .lj-pick small{color:var(--text-muted);line-height:1.45}
 @media (max-width:560px){.lj-stepper .t{font-size:.68rem}.lj-lesson .next{display:none}}
-.lj-speak{border:1px solid var(--border);background:transparent;color:var(--lj-lake);border-radius:999px;width:38px;height:38px;cursor:pointer}
+.lj-speak{border:1px solid var(--border);background:transparent;color:var(--lj-lake);border-radius:999px;width:34px;height:34px;cursor:pointer}
 @media (max-width:560px){.lj-card{padding:14px}.lj-stat b{font-size:1.6rem}}
 .lj-wteaser{position:relative;display:block;border-radius:18px;overflow:hidden;border:1px solid var(--border);aspect-ratio:1200/380;
   text-decoration:none;color:#fff}
@@ -133,10 +133,24 @@ details.lj-more summary{cursor:pointer;font-weight:700}
 .lj-wteaser-text small{opacity:.9}
 .lj-wteaser:hover{color:#fff;box-shadow:0 8px 26px rgba(10,30,50,.18)}
 @media (max-width:560px){.lj-wteaser{aspect-ratio:16/9}}
+.lj-duebar{display:flex;align-items:center;gap:12px;padding:12px 16px;border:1px solid var(--border);border-radius:14px;background:var(--bg-card);
+  color:var(--text);text-decoration:none}
+.lj-duebar>i{color:var(--lj-lake)}
+.lj-duebar .go{margin-left:auto;font-weight:700;color:var(--lj-lake)}
+.lj-duebar:hover{border-color:var(--lj-lake);color:var(--text)}
+.lj-revs{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.lj-rev{display:flex;flex-direction:column;gap:8px;padding:16px;border:1px solid var(--border);border-radius:16px;background:var(--bg-card);color:var(--text);text-decoration:none}
+.lj-rev:hover{border-color:var(--lj-lake);color:var(--text)}
+.lj-rev .ic{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;
+  background:color-mix(in srgb,var(--lj-lake) 13%,transparent);color:var(--lj-lake)}
+.lj-rev.main{border:2px solid var(--lj-moss)}
+.lj-rev.main .ic{background:color-mix(in srgb,var(--lj-moss) 15%,transparent);color:var(--lj-moss)}
+.lj-rev small{color:var(--text-muted)}
+.lj-rev b.n{font-size:1.6rem;line-height:1}
 /* ── progression: level bar, quests, achievements ── */
 .lj-wide{max-width:1120px}
 .lj-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
-.lj-btn.sm{min-height:36px;padding:6px 12px;font-size:.85rem}
+.lj-btn.sm{min-height:32px;padding:5px 11px;font-size:.84rem}
 .lj-xpbar{display:block;height:8px;border-radius:99px;background:color-mix(in srgb,var(--lj-lake) 14%,transparent);overflow:hidden}
 .lj-xpbar.thin{height:5px;margin-top:4px}
 .lj-xpbar i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,var(--lj-lake),var(--lj-moss));transition:width .6s ease}

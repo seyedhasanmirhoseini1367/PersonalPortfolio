@@ -301,9 +301,10 @@ def build_pack(pack, lookup=None):
     """Build items from the lesson's new material.
 
     First build: the lesson becomes DRAFT (or FAILED with a reason).
-    Adding material to a lesson that has items: new items are added after the old ones, and the
-    lesson goes back to DRAFT so the new ones are checked before practice; old items and everyone's
-    progress on them stay. If that fails, the lesson keeps its items and status, with the reason shown.
+    Adding material to a lesson that has items: new items are added after the old ones. A published
+    lesson stays published: only the new items wait for a check (pending) and stay out of practice until
+    then; old items and everyone's progress on them are untouched. If that fails, the lesson keeps its
+    items and status, with the reason shown.
     """
     had_items = pack.items.exists()
     try:
@@ -325,6 +326,7 @@ def build_pack(pack, lookup=None):
             raise RuntimeError('Everything in this material is already in the lesson.' if had_items else
                                'Nothing could be built from this material. Try clearer photos or paste the text.')
         rows = locate(pack, rows)
+        published = had_items and pack.published_at is not None
         with transaction.atomic():
             if had_items:   # new items go after the old ones of the same kind
                 last = {k: n for k, n in pack.items.values_list('kind').annotate(n=models.Max('order'))}
@@ -332,13 +334,15 @@ def build_pack(pack, lookup=None):
                     row['order'] = last.get(row['kind'], -1) + 1 + row.get('order', 0)
             else:
                 pack.items.all().delete()
-            StudyItem.objects.bulk_create([StudyItem(pack=pack, **row) for row in rows])
+            StudyItem.objects.bulk_create([StudyItem(pack=pack, pending=published, **row) for row in rows])
             pack.summary = f'{pack.summary}\n\n{summary}'.strip() if had_items and summary else (summary or pack.summary)
-            pack.translations = {}   # translated again, with the new items, when next opened
-            pack.status = LessonPack.DRAFT
-            pack.progress_note = ''
-            pack.error = ''
-            pack.save(update_fields=['summary', 'translations', 'status', 'progress_note', 'error'])
+            pack.translations = {}   # old translations are kept on their items; the new items are translated below
+            pack.save(update_fields=['summary', 'translations'])
+        _translate_now(pack)
+        pack.status = LessonPack.PUBLISHED if published else LessonPack.DRAFT
+        pack.progress_note = ''
+        pack.error = ''
+        pack.save(update_fields=['status', 'progress_note', 'error'])
     except Exception as exc:
         logger.exception('LearningJourney pack %s failed', pack.pk)
         _fail(pack, exc, had_items)
@@ -346,6 +350,21 @@ def build_pack(pack, lookup=None):
 
 
 # ── queue ────────────────────────────────────────────────────────────────────
+
+def _translate_now(pack):
+    """If the lesson's maker has a second language, translate the cards now, so Check opens with them ready.
+    A failed translation never fails the lesson: the page tries again when it is opened."""
+    from . import translate
+    from .models import LearnerProfile
+    lang = LearnerProfile.language_of(pack.created_by)
+    if not lang or lang not in translate.HELPER_NAMES:
+        return
+    _note(pack, f'Translating into {translate.HELPER_NAMES[lang]}…')
+    try:
+        translate.translate_pack(pack, lang)
+    except Exception:
+        logger.exception('LearningJourney translation of pack %s to %s failed during the build', pack.pk, lang)
+
 
 def _wake_worker():
     if getattr(settings, 'JOURNEY_RUN_INLINE', False):
